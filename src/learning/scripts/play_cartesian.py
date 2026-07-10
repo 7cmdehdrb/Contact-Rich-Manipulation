@@ -12,7 +12,7 @@ def main() -> None:
     add_common_args(parser, "src/learning/configs/reach_cartesian.yaml")
     parser.add_argument("--steps", type=int, default=32)
     args = parser.parse_args()
-    env, _ = make_env("cartesian", args.config, args.num_envs, args.device, args.seed)
+    env, _ = make_env("cartesian", args.config, args.num_envs, args.device, args.seed, args.backend)
     rollout_random(env, args.steps)
 
 

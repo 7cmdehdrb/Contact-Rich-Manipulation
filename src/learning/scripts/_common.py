@@ -7,7 +7,13 @@ from pathlib import Path
 
 import torch
 
-from src.learning.envs import ReachCartesianEnv, ReachEnvConfig, ReachJointEnv
+from src.learning.envs import (
+    NewtonReachCartesianEnv,
+    NewtonReachJointEnv,
+    ReachCartesianEnv,
+    ReachEnvConfig,
+    ReachJointEnv,
+)
 from src.learning.utils.config import load_yaml, repo_root
 
 
@@ -15,10 +21,19 @@ def add_common_args(parser: argparse.ArgumentParser, default_config: str) -> Non
     parser.add_argument("--config", type=Path, default=repo_root() / default_config)
     parser.add_argument("--num-envs", type=int, default=None)
     parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--rl-device", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--backend", choices=["newton", "kinematic"], default=None)
 
 
-def make_env(kind: str, config_path: Path, num_envs: int | None, device: str | None, seed: int | None):
+def make_env(
+    kind: str,
+    config_path: Path,
+    num_envs: int | None,
+    device: str | None,
+    seed: int | None,
+    backend: str | None = None,
+):
     raw_cfg = load_yaml(config_path)
     cfg = ReachEnvConfig.from_mapping(raw_cfg)
     if num_envs is not None:
@@ -27,7 +42,15 @@ def make_env(kind: str, config_path: Path, num_envs: int | None, device: str | N
         cfg.device = device
     if seed is not None:
         cfg.seed = seed
-    env = ReachJointEnv(cfg) if kind == "joint" else ReachCartesianEnv(cfg)
+    if backend is not None:
+        cfg.backend = backend
+
+    if cfg.backend == "newton":
+        env = NewtonReachJointEnv(cfg) if kind == "joint" else NewtonReachCartesianEnv(cfg)
+    elif cfg.backend == "kinematic":
+        env = ReachJointEnv(cfg) if kind == "joint" else ReachCartesianEnv(cfg)
+    else:
+        raise ValueError(f"Unknown reaching backend: {cfg.backend}")
     return env, raw_cfg
 
 

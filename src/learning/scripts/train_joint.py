@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -16,12 +17,16 @@ def main() -> None:
     parser.add_argument("--smoke-steps", type=int, default=8)
     args = parser.parse_args()
 
-    env, raw_cfg = make_env("joint", args.config, args.num_envs, args.device, args.seed)
+    env, raw_cfg = make_env("joint", args.config, args.num_envs, args.device, args.seed, args.backend)
     if args.iterations <= 0:
         rollout_random(env, args.smoke_steps)
         return
 
-    train_cfg = raw_cfg["rsl_rl"]
+    train_cfg = copy.deepcopy(raw_cfg["rsl_rl"])
+    if args.rl_device is not None:
+        train_cfg["device"] = args.rl_device
+    elif args.device is not None:
+        train_cfg["device"] = args.device
     runner = OnPolicyRunner(env, train_cfg, log_dir="logs/reach_joint", device=train_cfg.get("device", "cpu"))
     runner.learn(args.iterations)
 

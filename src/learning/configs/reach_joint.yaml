@@ -2,6 +2,12 @@ env:
   num_envs: 128
   episode_length: 160
   device: cpu
+  backend: newton
+  warp_cache_dir: /tmp/warp_cache
+  sim_fps: 50
+  sim_substeps: 4
+  joint_stiffness: 500.0
+  joint_damping: 50.0
   seed: 7
   action_scale: 0.04
   max_joint_delta: 0.08
@@ -12,7 +18,7 @@ env:
 
 rsl_rl:
   device: cpu
-  num_steps_per_env: 24
+  num_steps_per_env: 32
   save_interval: 50
   multi_gpu:
   obs_groups:

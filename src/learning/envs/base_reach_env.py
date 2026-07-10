@@ -28,6 +28,12 @@ class ReachEnvConfig:
     num_envs: int = 128
     episode_length: int = 160
     device: str = "cpu"
+    backend: str = "newton"
+    warp_cache_dir: str | None = None
+    sim_fps: int = 50
+    sim_substeps: int = 4
+    joint_stiffness: float = 500.0
+    joint_damping: float = 50.0
     seed: int = 7
     action_scale: float = 0.04
     max_joint_delta: float = 0.08
