@@ -1,0 +1,49 @@
+env:
+  num_envs: 128
+  episode_length: 160
+  device: cpu
+  seed: 11
+  action_scale: 0.035
+  max_joint_delta: 0.07
+  success_radius: 0.035
+  success_reward: 2.0
+  target_low: [0.28, -0.28, 0.10]
+  target_high: [0.68, 0.28, 0.55]
+
+rsl_rl:
+  device: cpu
+  num_steps_per_env: 24
+  save_interval: 50
+  multi_gpu:
+  obs_groups:
+    actor: [policy]
+    critic: [policy]
+  actor:
+    class_name: rsl_rl.models.MLPModel
+    hidden_dims: [128, 128]
+    activation: elu
+    obs_normalization: true
+    distribution_cfg:
+      class_name: rsl_rl.modules.distribution.GaussianDistribution
+      init_std: 1.0
+  critic:
+    class_name: rsl_rl.models.MLPModel
+    hidden_dims: [128, 128]
+    activation: elu
+    obs_normalization: true
+  algorithm:
+    class_name: rsl_rl.algorithms.PPO
+    num_learning_epochs: 4
+    num_mini_batches: 4
+    clip_param: 0.2
+    gamma: 0.99
+    lam: 0.95
+    value_loss_coef: 1.0
+    entropy_coef: 0.01
+    learning_rate: 0.001
+    max_grad_norm: 1.0
+    use_clipped_value_loss: true
+    schedule: adaptive
+    desired_kl: 0.01
+    rnd_cfg:
+    symmetry_cfg:
