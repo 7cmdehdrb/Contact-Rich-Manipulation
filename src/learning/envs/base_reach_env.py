@@ -26,23 +26,32 @@ class ReachEnvConfig:
     """Configuration shared by the joint and Cartesian reach envs."""
 
     num_envs: int = 128
-    episode_length: int = 160
+    episode_length: int = 360
     device: str = "cpu"
     backend: str = "newton"
     warp_cache_dir: str | None = None
-    sim_fps: int = 50
-    sim_substeps: int = 4
+    sim_fps: int = 30
+    sim_substeps: int = 2
     joint_stiffness: float = 500.0
     joint_damping: float = 50.0
+    viewer: str = "gl"
+    headless: bool = False
+    render_every: int = 1
+    render_fps: float | None = 30.0
     seed: int = 7
     action_scale: float = 0.04
     max_joint_delta: float = 0.08
+    position_tracking_weight: float = -0.2
+    fine_tracking_weight: float = 0.1
+    fine_tracking_std: float = 0.1
     success_radius: float = 0.035
-    success_reward: float = 2.0
-    action_penalty: float = 0.01
-    joint_velocity_penalty: float = 0.002
-    target_low: tuple[float, float, float] = (0.28, -0.28, 0.10)
-    target_high: tuple[float, float, float] = (0.68, 0.28, 0.55)
+    success_reward: float = 0.0
+    terminate_on_success: bool = False
+    action_penalty: float = 0.0
+    action_rate_penalty: float = 0.0001
+    joint_velocity_penalty: float = 0.0001
+    target_low: tuple[float, float, float] = (0.35, -0.20, 0.15)
+    target_high: tuple[float, float, float] = (0.65, 0.20, 0.50)
     home_joint_pos: tuple[float, float, float, float, float, float] = (
         0.0,
         -1.5708,
@@ -61,8 +70,11 @@ class ReachEnvConfig:
 @dataclass(frozen=True)
 class RewardTerms:
     distance: torch.Tensor
+    position_tracking: torch.Tensor
+    fine_tracking_reward: torch.Tensor
     success: torch.Tensor
     action_penalty: torch.Tensor
+    action_rate_penalty: torch.Tensor
     joint_velocity_penalty: torch.Tensor
 
 
@@ -76,6 +88,7 @@ class BaseReachEnv(VecEnv):
         self.num_envs = cfg.num_envs
         self.device = torch.device(cfg.device)
         self.max_episode_length = cfg.episode_length
+        self.frame_dt = 1.0 / cfg.sim_fps
         self.episode_length_buf = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         self.generator = torch.Generator(device=self.device).manual_seed(cfg.seed)
 
@@ -84,6 +97,7 @@ class BaseReachEnv(VecEnv):
         self.joint_vel = torch.zeros_like(self.joint_pos)
         self.target_pos = torch.zeros(self.num_envs, 3, dtype=torch.float32, device=self.device)
         self.eef_pos = self.forward_kinematics(self.joint_pos)
+        self.last_actions = torch.zeros((self.num_envs, self.num_actions), dtype=torch.float32, device=self.device)
         self.reset()
 
     def seed(self, seed: int = -1) -> int:
@@ -102,6 +116,7 @@ class BaseReachEnv(VecEnv):
         self.joint_pos[env_ids] = home + noise
         self.prev_joint_pos[env_ids] = self.joint_pos[env_ids]
         self.joint_vel[env_ids] = 0.0
+        self.last_actions[env_ids] = 0.0
         self.eef_pos[env_ids] = self.forward_kinematics(self.joint_pos[env_ids])
         self.target_pos[env_ids] = self._sample_targets(env_ids.numel())
         self.episode_length_buf[env_ids] = 0
@@ -128,14 +143,15 @@ class BaseReachEnv(VecEnv):
         self.prev_joint_pos.copy_(self.joint_pos)
         joint_delta = self._action_to_joint_delta(actions)
         self.joint_pos = self.joint_pos + joint_delta
-        self.joint_vel = self.joint_pos - self.prev_joint_pos
+        self.joint_vel = (self.joint_pos - self.prev_joint_pos) / self.frame_dt
         self.eef_pos = self.forward_kinematics(self.joint_pos)
         self.episode_length_buf += 1
 
         rewards, terms = self._compute_rewards(actions)
         reached = terms.success > 0.0
         timeout = self.episode_length_buf >= self.max_episode_length
-        dones = reached | timeout
+        dones = timeout | (reached if self.cfg.terminate_on_success else torch.zeros_like(reached))
+        self.last_actions.copy_(actions)
 
         if torch.any(dones):
             self.reset(torch.nonzero(dones, as_tuple=False).squeeze(-1))
@@ -144,8 +160,11 @@ class BaseReachEnv(VecEnv):
             "time_outs": timeout,
             "log": {
                 "/reach/mean_distance": terms.distance.mean(),
+                "/reach/position_tracking": terms.position_tracking.mean(),
+                "/reach/fine_tracking_reward": terms.fine_tracking_reward.mean(),
                 "/reach/success_rate": reached.float().mean(),
                 "/reach/action_penalty": terms.action_penalty.mean(),
+                "/reach/action_rate_penalty": terms.action_rate_penalty.mean(),
                 "/reach/joint_velocity_penalty": terms.joint_velocity_penalty.mean(),
             },
         }
@@ -172,11 +191,31 @@ class BaseReachEnv(VecEnv):
 
     def _compute_rewards(self, actions: torch.Tensor) -> tuple[torch.Tensor, RewardTerms]:
         distance = torch.linalg.norm(self.target_pos - self.eef_pos, dim=-1)
+        position_tracking = self.cfg.position_tracking_weight * distance
+        fine_tracking_reward = self.cfg.fine_tracking_weight * (
+            1.0 - torch.tanh(distance / self.cfg.fine_tracking_std)
+        )
         success = (distance < self.cfg.success_radius).float()
         action_penalty = torch.sum(actions.square(), dim=-1) * self.cfg.action_penalty
+        action_rate_penalty = torch.sum((actions - self.last_actions).square(), dim=-1) * self.cfg.action_rate_penalty
         joint_velocity_penalty = torch.sum(self.joint_vel.square(), dim=-1) * self.cfg.joint_velocity_penalty
-        rewards = -distance + success * self.cfg.success_reward - action_penalty - joint_velocity_penalty
-        return rewards, RewardTerms(distance, success, action_penalty, joint_velocity_penalty)
+        rewards = (
+            position_tracking
+            + fine_tracking_reward
+            + success * self.cfg.success_reward
+            - action_penalty
+            - action_rate_penalty
+            - joint_velocity_penalty
+        )
+        return rewards, RewardTerms(
+            distance,
+            position_tracking,
+            fine_tracking_reward,
+            success,
+            action_penalty,
+            action_rate_penalty,
+            joint_velocity_penalty,
+        )
 
     def _sample_targets(self, count: int) -> torch.Tensor:
         low = torch.tensor(self.cfg.target_low, dtype=torch.float32, device=self.device)

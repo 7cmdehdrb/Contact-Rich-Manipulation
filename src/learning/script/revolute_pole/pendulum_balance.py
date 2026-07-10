@@ -325,7 +325,7 @@ def main():
     train_cfg = make_train_cfg()
     train_cfg["actor"]["hidden_dims"] = [64, 64]
     train_cfg["critic"]["hidden_dims"] = [64, 64]
-    train_cfg["save_interval"] = 50
+    train_cfg["save_interval"] = 100
 
     env = GenericRslRlEnv(backend=backend, cfg=train_cfg)
 

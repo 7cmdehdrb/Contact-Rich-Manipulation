@@ -485,7 +485,7 @@ def main():
     # 🔥 obs 6→15로 확장되었으므로 네트워크 크기 증가
     train_cfg["actor"]["hidden_dims"] = [256, 256, 128]
     train_cfg["critic"]["hidden_dims"] = [256, 256, 128]
-    train_cfg["save_interval"] = 50
+    train_cfg["save_interval"] = 100
 
     env = GenericRslRlEnv(backend=backend, cfg=train_cfg)
 

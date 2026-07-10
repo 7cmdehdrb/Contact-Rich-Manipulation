@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import argparse
 
-from src.learning.scripts._common import add_common_args, make_env, rollout_random
+from src.learning.scripts._common import (
+    add_common_args,
+    apply_runtime_overrides,
+    make_env,
+    rollout_random,
+)
 
 
 def main() -> None:
@@ -12,6 +17,7 @@ def main() -> None:
     add_common_args(parser, "src/learning/configs/reach_joint.yaml")
     parser.add_argument("--steps", type=int, default=32)
     args = parser.parse_args()
+    apply_runtime_overrides(args)
     env, _ = make_env("joint", args.config, args.num_envs, args.device, args.seed, args.backend)
     rollout_random(env, args.steps)
 

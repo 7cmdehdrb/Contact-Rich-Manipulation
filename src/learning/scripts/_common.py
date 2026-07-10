@@ -24,6 +24,11 @@ def add_common_args(parser: argparse.ArgumentParser, default_config: str) -> Non
     parser.add_argument("--rl-device", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--backend", choices=["newton", "kinematic"], default=None)
+    parser.add_argument("--viewer", choices=["gl", "null", "usd", "viser"], default=None)
+    parser.add_argument("--headless", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--render-every", type=int, default=None)
+    parser.add_argument("--render-fps", type=float, default=None)
+    parser.add_argument("--progress-log-every", type=int, default=None, help=argparse.SUPPRESS)
 
 
 def make_env(
@@ -44,6 +49,14 @@ def make_env(
         cfg.seed = seed
     if backend is not None:
         cfg.backend = backend
+    if getattr(make_env, "_viewer_override", None) is not None:
+        cfg.viewer = make_env._viewer_override
+    if getattr(make_env, "_headless_override", None) is not None:
+        cfg.headless = make_env._headless_override
+    if getattr(make_env, "_render_every_override", None) is not None:
+        cfg.render_every = make_env._render_every_override
+    if getattr(make_env, "_render_fps_override", None) is not None:
+        cfg.render_fps = make_env._render_fps_override
 
     if cfg.backend == "newton":
         env = NewtonReachJointEnv(cfg) if kind == "joint" else NewtonReachCartesianEnv(cfg)
@@ -52,6 +65,13 @@ def make_env(
     else:
         raise ValueError(f"Unknown reaching backend: {cfg.backend}")
     return env, raw_cfg
+
+
+def apply_runtime_overrides(args: argparse.Namespace) -> None:
+    make_env._viewer_override = args.viewer
+    make_env._headless_override = args.headless
+    make_env._render_every_override = args.render_every
+    make_env._render_fps_override = args.render_fps
 
 
 def rollout_random(env, steps: int) -> None:

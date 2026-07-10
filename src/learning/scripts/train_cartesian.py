@@ -7,7 +7,12 @@ import copy
 
 from rsl_rl.runners import OnPolicyRunner
 
-from src.learning.scripts._common import add_common_args, make_env, rollout_random
+from src.learning.scripts._common import (
+    add_common_args,
+    apply_runtime_overrides,
+    make_env,
+    rollout_random,
+)
 
 
 def main() -> None:
@@ -16,6 +21,7 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=0, help="0 runs only a smoke rollout.")
     parser.add_argument("--smoke-steps", type=int, default=8)
     args = parser.parse_args()
+    apply_runtime_overrides(args)
 
     env, raw_cfg = make_env("cartesian", args.config, args.num_envs, args.device, args.seed, args.backend)
     if args.iterations <= 0:

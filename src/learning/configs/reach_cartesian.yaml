@@ -1,25 +1,36 @@
 env:
   num_envs: 128
-  episode_length: 160
+  episode_length: 360
   device: cpu
   backend: newton
   warp_cache_dir: /tmp/warp_cache
-  sim_fps: 50
-  sim_substeps: 4
+  sim_fps: 30
+  sim_substeps: 2
   joint_stiffness: 500.0
   joint_damping: 50.0
+  viewer: gl
+  headless: false
+  render_every: 1
+  render_fps: 30.0
   seed: 11
   action_scale: 0.035
   max_joint_delta: 0.07
+  position_tracking_weight: -0.2
+  fine_tracking_weight: 0.1
+  fine_tracking_std: 0.1
   success_radius: 0.035
-  success_reward: 2.0
-  target_low: [0.28, -0.28, 0.10]
-  target_high: [0.68, 0.28, 0.55]
+  success_reward: 0.0
+  terminate_on_success: false
+  action_penalty: 0.0
+  action_rate_penalty: 0.0001
+  joint_velocity_penalty: 0.0001
+  target_low: [0.35, -0.20, 0.15]
+  target_high: [0.65, 0.20, 0.50]
 
 rsl_rl:
   device: cpu
   num_steps_per_env: 32
-  save_interval: 50
+  save_interval: 100
   multi_gpu:
   obs_groups:
     actor: [policy]
