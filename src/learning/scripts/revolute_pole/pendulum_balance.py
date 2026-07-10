@@ -6,7 +6,7 @@ import newton.examples  # 뷰어 및 파서 사용을 위해 임포트
 from newton import JointTargetMode
 
 # rl_template.py에서 제공해주신 기본 구조들 임포트
-from rl_template import PhysicsBackend, GenericRslRlEnv, make_train_cfg
+from src.learning.scripts.revolute_pole.rl_template import PhysicsBackend, GenericRslRlEnv, make_train_cfg
 from rsl_rl.runners import OnPolicyRunner
 from typing import Any
 from dataclasses import dataclass

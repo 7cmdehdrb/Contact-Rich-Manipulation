@@ -5,11 +5,11 @@ import newton
 import newton.examples
 import time  # 상단에 추가!
 
-from double_pendulum_ver_claude import (
+from src.learning.scripts.claude_pole.double_pendulum_ver_claude import (
     CartDoublePoleCfg,
     CartDoublePoleBackend,
 )  # 기존 훈련 스크립트에서 환경 설정과 백엔드 클래스를 임포트
-from rl_template import GenericRslRlEnv, make_train_cfg
+from src.learning.scripts.claude_pole.rl_template import GenericRslRlEnv, make_train_cfg
 from rsl_rl.runners import OnPolicyRunner
 
 
