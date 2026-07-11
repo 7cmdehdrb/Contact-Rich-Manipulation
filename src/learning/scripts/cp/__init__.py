@@ -56,3 +56,23 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{__name__}.cartesian_reach_env_cfg:UR10CartesianReachPPORunnerCfg",
     },
 )
+
+gym.register(
+    id="Isaac-Reach-UR10-OSC-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.ur10_osc_reach_env_cfg:UR10OSCReachEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_osc_cfg:UR10OSCReachPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Reach-UR10-OSC-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.ur10_osc_reach_env_cfg:UR10OSCReachEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_osc_cfg:UR10OSCReachPPORunnerCfg",
+    },
+)
