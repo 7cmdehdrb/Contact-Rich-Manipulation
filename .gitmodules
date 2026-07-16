@@ -2,8 +2,8 @@
 	path = newton
 	url = https://github.com/newton-physics/newton.git
 [submodule "IsaacLab"]
-	path = IsaacLab
-	url = https://github.com/isaac-sim/IsaacLab.git
+    path = IsaacLab
+    url = https://github.com/7cmdehdrb/IsaacLab.git
 [submodule "Genesis"]
 	path = Genesis
 	url = https://github.com/Genesis-Embodied-AI/genesis-world.git
