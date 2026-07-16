@@ -10,3 +10,6 @@
 [submodule "src/Universal_Robots_ROS2_Description"]
 	path = src/Universal_Robots_ROS2_Description
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git
+[submodule "example/Sweep-Policy"]
+	path = example/Sweep-Policy
+	url = https://github.com/IROL-SSU/Sweeping-Policy-DRL-Sim-Train.git

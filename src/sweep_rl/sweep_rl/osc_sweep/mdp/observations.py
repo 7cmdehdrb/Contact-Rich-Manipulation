@@ -1,0 +1,78 @@
+"""Policy observations for the OSC sweep task."""
+
+from __future__ import annotations
+
+import torch
+
+import isaaclab.utils.math as math_utils
+from isaaclab.assets import Articulation, RigidObject
+from isaaclab.managers import SceneEntityCfg
+
+from .common import pose_w_to_root_rpy, target_contact_data_w
+
+
+def end_effector_pose_b(
+    env,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Six-dimensional EEF pose in the robot base frame."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    body_id = asset_cfg.body_ids[0]
+    return pose_w_to_root_rpy(
+        robot,
+        robot.data.body_pos_w[:, body_id],
+        robot.data.body_quat_w[:, body_id],
+    )
+
+
+def virtual_ft_wrench_b(
+    env,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Virtual F/T wrench ``[Fx,Fy,Fz,Tx,Ty,Tz]`` in sensor coordinates."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    body_id = asset_cfg.body_ids[0]
+    return -robot.data.body_incoming_joint_wrench_b[:, body_id, :]
+
+
+def target_contact_point_b(
+    env,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    sensor_names: tuple[str, ...] = (
+        "left_contact",
+        "right_contact",
+    ),
+    force_threshold: float = 0.25,
+) -> torch.Tensor:
+    """Force-weighted gripper/cube contact point in the robot base frame."""
+    robot: Articulation = env.scene[robot_cfg.name]
+    point_w, _, contact_mask = target_contact_data_w(
+        env, sensor_names, force_threshold
+    )
+    point_b, _ = math_utils.subtract_frame_transforms(
+        robot.data.root_pos_w,
+        robot.data.root_quat_w,
+        point_w,
+    )
+    return torch.where(
+        contact_mask.unsqueeze(-1), point_b, torch.zeros_like(point_b)
+    )
+
+
+def initial_target_pose_b(env, command_name: str) -> torch.Tensor:
+    """Initial target pose captured after reset, as ``xyz + RPY``."""
+    command = env.command_manager.get_term(command_name)
+    return command.initial_pose_b
+
+
+def current_target_pose_b(
+    env,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Live target pose in the robot base frame, as ``xyz + RPY``."""
+    robot: Articulation = env.scene[robot_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    return pose_w_to_root_rpy(
+        robot, target.data.root_pos_w, target.data.root_quat_w
+    )
