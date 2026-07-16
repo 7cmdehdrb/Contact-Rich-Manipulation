@@ -22,8 +22,11 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from . import mdp
 from .assets import (
     ARM_JOINT_NAMES,
+    CONTACT_PAD_SIZE,
     EEF_CENTER_BODY_NAME,
     FT_SENSOR_BODY_NAME,
+    GRIPPER_SIDE_AXIS_LOCAL,
+    GRIPPER_SIDE_FACE_NORMAL_AXIS,
     LEFT_CONTACT_BODY_NAME,
     RIGHT_CONTACT_BODY_NAME,
     make_ur5e_robotiq_ft_cfg,
@@ -296,15 +299,41 @@ class RewardsCfg:
     )
     target_contact = RewTerm(
         func=mdp.target_contact_bonus,
-        weight=0.5,
+        weight=0.1,
         params={"sensor_names": ("left_contact", "right_contact")},
     )
+    side_direction = RewTerm(
+        func=mdp.gripper_side_direction_alignment,
+        weight=1.5,
+        params={
+            "command_name": "desired_motion",
+            "side_axis_local": GRIPPER_SIDE_AXIS_LOCAL,
+            "proximity_std": 0.35,
+            "eef_cfg": EEF_ENTITY_CFG,
+            "object_cfg": SceneEntityCfg("target_object"),
+        },
+    )
+    side_center_contact = RewTerm(
+        func=mdp.side_pad_center_contact,
+        weight=2.5,
+        params={
+            "sensor_names": ("left_contact", "right_contact"),
+            "pad_size": CONTACT_PAD_SIZE,
+            "face_normal_axis": GRIPPER_SIDE_FACE_NORMAL_AXIS,
+            "center_sigma": 0.50,
+            "face_sigma": 0.20,
+        },
+    )
     force_tracking = RewTerm(
-        func=mdp.target_force_tracking,
+        func=mdp.side_target_force_tracking,
         weight=4.0,
         params={
             "command_name": "desired_motion",
             "sensor_names": ("left_contact", "right_contact"),
+            "pad_size": CONTACT_PAD_SIZE,
+            "face_normal_axis": GRIPPER_SIDE_FACE_NORMAL_AXIS,
+            "center_sigma": 0.50,
+            "face_sigma": 0.20,
         },
     )
     velocity_progress = RewTerm(
@@ -354,6 +383,17 @@ class RewardsCfg:
         func=mdp.overshoot_penalty,
         weight=-4.0,
         params={"command_name": "desired_motion"},
+    )
+    off_center_contact = RewTerm(
+        func=mdp.off_center_target_contact,
+        weight=-1.5,
+        params={
+            "sensor_names": ("left_contact", "right_contact"),
+            "pad_size": CONTACT_PAD_SIZE,
+            "face_normal_axis": GRIPPER_SIDE_FACE_NORMAL_AXIS,
+            "center_sigma": 0.50,
+            "face_sigma": 0.20,
+        },
     )
     ft_torque = RewTerm(
         func=mdp.ft_torque_excess,

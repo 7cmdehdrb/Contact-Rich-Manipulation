@@ -9,8 +9,10 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 
 from .common import (
+    active_gripper_side_direction_b,
     desired_direction_b,
     object_displacement_b,
+    side_pad_contact_quality,
     target_contact_data_w,
 )
 
@@ -141,6 +143,109 @@ def target_force_tracking(
     )
     # Force is meaningful only while the gripper is touching the target.
     return tracking * contact_mask.float()
+
+
+def gripper_side_direction_alignment(
+    env,
+    command_name: str,
+    side_axis_local: tuple[float, float, float],
+    proximity_std: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Align the active broad-side normal with the requested sweep direction."""
+    if proximity_std <= 0.0:
+        raise ValueError("proximity_std must be positive.")
+
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_body_id = eef_cfg.body_ids[0]
+    active_side_b = active_gripper_side_direction_b(
+        env,
+        eef_cfg=eef_cfg,
+        object_cfg=object_cfg,
+        side_axis_local=side_axis_local,
+    )
+    desired_b = desired_direction_b(env, command_name)
+    side_xy = active_side_b[:, :2]
+    side_xy = side_xy / torch.clamp(
+        torch.linalg.norm(side_xy, dim=-1, keepdim=True), min=1.0e-6
+    )
+    alignment = torch.sum(side_xy * desired_b[:, :2], dim=-1)
+
+    eef_pos_w = robot.data.body_pos_w[:, eef_body_id]
+    distance = torch.linalg.norm(target.data.root_pos_w - eef_pos_w, dim=-1)
+    proximity = torch.exp(-torch.square(distance / proximity_std))
+    return torch.clamp(alignment, -1.0, 1.0) * proximity
+
+
+def side_pad_center_contact(
+    env,
+    sensor_names: tuple[str, ...],
+    pad_size: tuple[float, float, float],
+    face_normal_axis: int,
+    center_sigma: float,
+    face_sigma: float,
+) -> torch.Tensor:
+    """Reward target contact at the center of either broad gripper side pad."""
+    quality, _ = side_pad_contact_quality(
+        env,
+        sensor_names=sensor_names,
+        pad_size=pad_size,
+        face_normal_axis=face_normal_axis,
+        center_sigma=center_sigma,
+        face_sigma=face_sigma,
+    )
+    return quality
+
+
+def off_center_target_contact(
+    env,
+    sensor_names: tuple[str, ...],
+    pad_size: tuple[float, float, float],
+    face_normal_axis: int,
+    center_sigma: float,
+    face_sigma: float,
+) -> torch.Tensor:
+    """Penalize target contact on pad edges, narrow faces, or inner faces."""
+    quality, contact_mask = side_pad_contact_quality(
+        env,
+        sensor_names=sensor_names,
+        pad_size=pad_size,
+        face_normal_axis=face_normal_axis,
+        center_sigma=center_sigma,
+        face_sigma=face_sigma,
+    )
+    return contact_mask.float() * (1.0 - quality)
+
+
+def side_target_force_tracking(
+    env,
+    command_name: str,
+    sensor_names: tuple[str, ...],
+    pad_size: tuple[float, float, float],
+    face_normal_axis: int,
+    center_sigma: float,
+    face_sigma: float,
+) -> torch.Tensor:
+    """Track desired force only through broad-side central pad contact."""
+    _, force_w, _ = target_contact_data_w(env, sensor_names)
+    measured_force = torch.linalg.norm(force_w, dim=-1)
+    command = env.command_manager.get_command(command_name)
+    desired_force = command[:, 3]
+    tolerance = torch.clamp(command[:, 4], min=1.0e-3)
+    tracking = torch.exp(
+        -torch.square((measured_force - desired_force) / tolerance)
+    )
+    quality, _ = side_pad_contact_quality(
+        env,
+        sensor_names=sensor_names,
+        pad_size=pad_size,
+        face_normal_axis=face_normal_axis,
+        center_sigma=center_sigma,
+        face_sigma=face_sigma,
+    )
+    return tracking * quality
 
 
 def target_contact_bonus(

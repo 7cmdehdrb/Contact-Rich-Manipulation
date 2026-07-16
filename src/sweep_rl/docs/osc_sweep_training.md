@@ -32,6 +32,22 @@ Robotiq는 별도 정책 action 없이 open joint target을 유지한다.
 접촉면보다 조금 돌출된 얇은 충돌 body로, TargetCube와의 filtered contact
 point와 force만 수집한다.
 
+### Gripper broad-side definition
+
+각 PAD 크기는 local frame 기준 `(0.020, 0.030, 0.055) m`이다. 따라서 가장
+넓은 면은 local `YZ` 평면이며, 이 면의 법선인 local `±X`를 그리퍼
+옆면 방향으로 정의한다.
+
+```text
+gripper_side_axis_local = (1, 0, 0)
+broad_face_normal_axis = X
+```
+
+한 평면에는 `+X/-X` 두 법선이 있으므로, 매 step마다 EEF 중앙에서 target
+object를 향하는 쪽의 부호를 선택하여 `active_gripper_side_direction`을
+계산한다. 정책 observation 차원은 변경하지 않으며, 정책은 기존 EEF RPY와
+target pose로 동일한 정보를 복원할 수 있다.
+
 ## 2. 에셋 경로
 
 기본값은 `ur5e_2f85_ft_test.py`에서 검증한 Nucleus URL이다. 다른 서버나
@@ -107,20 +123,36 @@ Contact가 없으면 contact point는 `(0, 0, 0)`이다. 두 pad가 동시에
 총 reward는 다음 목표를 우선하도록 구성했다.
 
 1. cube 뒤쪽의 pre-contact pose 접근
-2. TargetCube와 접촉
-3. 요청 force magnitude와 tolerance 준수
-4. 요청 방향으로의 object velocity와 누적 progress
-5. 실제 displacement 방향 정렬
-6. 요청 길이의 endpoint 도달
-7. lateral motion과 overshoot 억제
-8. F/T torque, joint velocity, OSC effort, action 변화, torque saturation 억제
+2. 활성 그리퍼 옆면 방향과 desired sweep 방향 정렬
+3. PAD 넓은 면 중앙부로 TargetCube와 접촉
+4. 옆면 중앙 접촉을 통한 force magnitude와 tolerance 준수
+5. 요청 방향으로의 object velocity와 누적 progress
+6. 실제 displacement 방향 정렬
+7. 요청 길이의 endpoint 도달
+8. PAD 모서리·좁은 면·안쪽 면 접촉 억제
+9. lateral motion과 overshoot 억제
+10. F/T torque, joint velocity, OSC effort, action 변화, torque saturation 억제
 
 주요 항목은 다음과 같다.
 
 ```text
 force_tracking =
     exp(-((measured_target_contact_force - desired_force) / tolerance)^2)
-    * is_target_contact
+    * side_pad_contact_quality
+
+side_direction_alignment =
+    dot(active_gripper_side_direction_xy, desired_direction_xy)
+    * exp(-(eef_to_object_distance / proximity_std)^2)
+
+side_pad_contact_quality =
+    broad_face_score * pad_center_score
+
+broad_face_score =
+    exp(-0.5 * ((abs(local_contact_x) / pad_half_x - 1) / face_sigma)^2)
+
+pad_center_score =
+    exp(-0.5 * ((local_contact_y / pad_half_y)^2
+              + (local_contact_z / pad_half_z)^2) / center_sigma^2)
 
 normalized_progress =
     dot(current_position - initial_position, desired_direction) / desired_distance
@@ -128,6 +160,11 @@ normalized_progress =
 endpoint_tracking =
     exp(-(distance(current_position, desired_goal) / 0.035)^2)
 ```
+
+일반적인 target contact 보상은 작게 유지하고, `side_pad_contact_quality`가
+높은 접촉에 더 큰 보상을 부여한다. 접촉은 존재하지만 품질이 낮으면
+`1 - side_pad_contact_quality`에 비례하는 penalty가 적용되므로, 물체를
+열린 그리퍼 내부에 끼우거나 PAD 모서리로 미는 전략의 이득이 감소한다.
 
 기존 sweep reward와 달리 object width/type/ID 같은 물체별 정보는 사용하지
 않는다. 대상은 하나의 cube로 고정하며, 요청된 initial/current pose와

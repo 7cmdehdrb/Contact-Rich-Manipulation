@@ -38,6 +38,12 @@ EEF_CENTER_BODY_NAME = "SweepToolCenter"
 LEFT_CONTACT_BODY_NAME = "LeftSweepContactPad"
 RIGHT_CONTACT_BODY_NAME = "RightSweepContactPad"
 
+# The contact pad is longest in local Z and second-longest in local Y.
+# Therefore its broad YZ side faces have local +/-X normals.
+CONTACT_PAD_SIZE = (0.020, 0.030, 0.055)
+GRIPPER_SIDE_AXIS_LOCAL = (1.0, 0.0, 0.0)
+GRIPPER_SIDE_FACE_NORMAL_AXIS = 0
+
 DEFAULT_UR5E_USD_PATH = (
     "omniverse://192.168.0.13/NVIDIA/Assets/Isaac/5.0/"
     "Isaac/Robots/UniversalRobots/ur5e/ur5e.usd"
@@ -445,7 +451,7 @@ class Ur5eRobotiqFtSpawnerCfg(RigidObjectSpawnerCfg):
     virtual_link_mass: float = 1.0e-3
     eef_center_offset: tuple[float, float, float] = (0.0, 0.0, 0.16)
     contact_pad_lateral_offset: float = 0.055
-    contact_pad_size: tuple[float, float, float] = (0.020, 0.030, 0.055)
+    contact_pad_size: tuple[float, float, float] = CONTACT_PAD_SIZE
     contact_pad_mass: float = 0.01
 
 

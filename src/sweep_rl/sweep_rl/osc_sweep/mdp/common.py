@@ -97,3 +97,134 @@ def desired_direction_b(env, command_name: str) -> torch.Tensor:
         ),
         dim=-1,
     )
+
+
+def active_gripper_side_direction_b(
+    env,
+    eef_cfg,
+    object_cfg,
+    side_axis_local: tuple[float, float, float],
+) -> torch.Tensor:
+    """Return the broad-side normal that points from the gripper to the object.
+
+    A pad plane has two possible normals. The sign is selected per environment
+    using the current vector from ``SweepToolCenter`` to the target object.
+    """
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_body_id = eef_cfg.body_ids[0]
+    eef_pos_b, eef_quat_b = math_utils.subtract_frame_transforms(
+        robot.data.root_pos_w,
+        robot.data.root_quat_w,
+        robot.data.body_pos_w[:, eef_body_id],
+        robot.data.body_quat_w[:, eef_body_id],
+    )
+    object_pos_b, _ = math_utils.subtract_frame_transforms(
+        robot.data.root_pos_w,
+        robot.data.root_quat_w,
+        target.data.root_pos_w,
+    )
+    local_axis = torch.tensor(
+        side_axis_local, dtype=eef_pos_b.dtype, device=env.device
+    ).repeat(env.num_envs, 1)
+    unsigned_side_b = math_utils.quat_apply(eef_quat_b, local_axis)
+    to_object_b = object_pos_b - eef_pos_b
+    sign = torch.where(
+        torch.sum(unsigned_side_b * to_object_b, dim=-1, keepdim=True) >= 0.0,
+        1.0,
+        -1.0,
+    )
+    return unsigned_side_b * sign
+
+
+def side_pad_contact_quality(
+    env,
+    sensor_names: tuple[str, ...],
+    pad_size: tuple[float, float, float],
+    face_normal_axis: int,
+    center_sigma: float,
+    face_sigma: float,
+    force_threshold: float = 0.25,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Measure whether target contact lies near the center of a broad pad face.
+
+    The contact point is transformed into each pad's local frame. The score is
+    high only when:
+
+    1. the point lies near ``+/- half_extent`` on ``face_normal_axis``; and
+    2. the two in-plane coordinates are near the pad center.
+
+    Scores from both pads are averaged using target-contact normal force.
+    """
+    if face_normal_axis not in (0, 1, 2):
+        raise ValueError("face_normal_axis must be 0, 1, or 2.")
+    if center_sigma <= 0.0 or face_sigma <= 0.0:
+        raise ValueError("Contact-quality sigmas must be positive.")
+
+    pad_half_size = 0.5 * torch.tensor(
+        pad_size, dtype=torch.float32, device=env.device
+    )
+    quality_numerator = torch.zeros(env.num_envs, device=env.device)
+    force_weight_sum = torch.zeros(env.num_envs, device=env.device)
+
+    for sensor_name in sensor_names:
+        sensor: ContactSensor = env.scene[sensor_name]
+        force_matrix_w = sensor.data.force_matrix_w
+        contact_pos_w = sensor.data.contact_pos_w
+        pad_pos_w = sensor.data.pos_w
+        pad_quat_w = sensor.data.quat_w
+        if (
+            force_matrix_w is None
+            or contact_pos_w is None
+            or pad_pos_w is None
+            or pad_quat_w is None
+        ):
+            raise RuntimeError(
+                f"Contact sensor '{sensor_name}' must track pose, filtered "
+                "forces, and contact points."
+            )
+
+        valid = torch.isfinite(contact_pos_w).all(dim=-1)
+        force_weights = torch.linalg.norm(force_matrix_w, dim=-1)
+        force_weights = torch.where(valid, force_weights, 0.0)
+        safe_points_w = torch.nan_to_num(contact_pos_w, nan=0.0)
+
+        pad_pos_w = pad_pos_w.unsqueeze(2).expand_as(safe_points_w)
+        pad_quat_w = pad_quat_w.unsqueeze(2).expand(
+            *safe_points_w.shape[:-1], 4
+        )
+        point_delta_w = safe_points_w - pad_pos_w
+        point_delta_local = math_utils.quat_apply_inverse(
+            pad_quat_w.reshape(-1, 4),
+            point_delta_w.reshape(-1, 3),
+        ).view_as(point_delta_w)
+
+        normalized_point = point_delta_local / torch.clamp(
+            pad_half_size, min=1.0e-6
+        )
+        normal_ratio = torch.abs(normalized_point[..., face_normal_axis])
+        face_score = torch.exp(
+            -0.5 * torch.square((normal_ratio - 1.0) / face_sigma)
+        )
+
+        tangent_mask = torch.ones(3, device=env.device)
+        tangent_mask[face_normal_axis] = 0.0
+        tangent_radius_sq = torch.sum(
+            torch.square(normalized_point * tangent_mask), dim=-1
+        )
+        center_score = torch.exp(
+            -0.5 * tangent_radius_sq / (center_sigma**2)
+        )
+        contact_quality = face_score * center_score
+
+        quality_numerator += torch.sum(
+            contact_quality * force_weights, dim=(1, 2)
+        )
+        force_weight_sum += torch.sum(force_weights, dim=(1, 2))
+
+    contact_mask = force_weight_sum > force_threshold
+    quality = quality_numerator / torch.clamp(
+        force_weight_sum, min=1.0e-6
+    )
+    quality = torch.where(contact_mask, quality, torch.zeros_like(quality))
+    return torch.clamp(quality, 0.0, 1.0), contact_mask
