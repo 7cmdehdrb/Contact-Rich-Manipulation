@@ -61,3 +61,11 @@ class UR5eOscSweepWideRandomizationEnvCfg(UR5eOscSweepEnvCfg):
     commands: WideRandomizationCommandsCfg = WideRandomizationCommandsCfg()
     events: WideRandomizationEventCfg = WideRandomizationEventCfg()
 
+    def __post_init__(self):
+        super().__post_init__()
+
+        # Make every arm and gripper joint passive at the actuator PD level.
+        # The OSC action continues to command arm torque explicitly.
+        for actuator_cfg in self.scene.robot.actuators.values():
+            actuator_cfg.stiffness = 0.0
+            actuator_cfg.damping = 0.0
