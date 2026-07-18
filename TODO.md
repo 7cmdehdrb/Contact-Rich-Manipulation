@@ -15,7 +15,7 @@
   src/sweep_rl/scripts/play_sweep.py \
   --device cuda:0 \
   --num_envs 1 \
-  --checkpoint logs/rsl_rl/ur5e_osc_sweep/2026-07-16_20-17-38/model_11999.pt
+  --checkpoint logs/rsl_rl/ur5e_osc_sweep_tactile_localization/2026-07-17_19-18-02/model_4700.pt
 ```
 
 ---
@@ -65,10 +65,11 @@ current_target_pose 를 관측에서 제외
 Reward에서는 그대로 사용.
 
 ```bash
-./IsaacLab/isaaclab.sh -p \
-  src/sweep_rl/scripts/train_tactile_localization.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0 \
-  --device cuda:0 \
-  --num_envs 2048 \
-  --headless
+./IsaacLab/isaaclab.sh -p  src/sweep_rl/scripts/train_tactile_localization.py  --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0  --device cuda:0  --num_envs 2048  --headless
 ```
+
+
+./IsaacLab/isaaclab.sh -p   src/sweep_rl/scripts/play_sweep.py   --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0   --device cuda:0   --num_envs 1   --checkpoint logs/rsl_rl/ur5e_osc_sweep_tactile_localization/2026-07-17_19-18-02/model_5000.pt
+
+
+.\IsaacLab\isaaclab.bat -p src/sweep_rl/scripts/play_sweep.py --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0 --device cuda:0 --num_envs 1 --checkpoint logs\rsl_rl\ur5e_osc_sweep_tactile_localization\2026-07-18_15-36-29\model_4900.pt

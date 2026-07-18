@@ -30,25 +30,17 @@ class SweepMotionCommand(CommandTerm):
 
     cfg: "SweepMotionCommandCfg"
 
-    def __init__(
-        self, cfg: "SweepMotionCommandCfg", env: ManagerBasedRLEnv
-    ):
+    def __init__(self, cfg: "SweepMotionCommandCfg", env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
         self._robot: Articulation = env.scene[cfg.robot_name]
         self._object: RigidObject = env.scene[cfg.object_name]
         self._command = torch.zeros(self.num_envs, 5, device=self.device)
-        self.initial_pose_b = torch.zeros(
-            self.num_envs, 6, device=self.device
-        )
+        self.initial_pose_b = torch.zeros(self.num_envs, 6, device=self.device)
         self.goal_pos_b = torch.zeros(self.num_envs, 3, device=self.device)
         self.goal_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
         self.direction_w = torch.zeros(self.num_envs, 3, device=self.device)
-        self.metrics["endpoint_error"] = torch.zeros(
-            self.num_envs, device=self.device
-        )
-        self.metrics["force_error"] = torch.zeros(
-            self.num_envs, device=self.device
-        )
+        self.metrics["endpoint_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["force_error"] = torch.zeros(self.num_envs, device=self.device)
 
     @property
     def command(self) -> torch.Tensor:
@@ -62,15 +54,11 @@ class SweepMotionCommand(CommandTerm):
         angle = torch.empty(count, device=self.device).uniform_(
             *self.cfg.direction_angle_range
         )
-        direction_b = torch.stack(
-            (torch.cos(angle), torch.sin(angle)), dim=-1
-        )
+        direction_b = torch.stack((torch.cos(angle), torch.sin(angle)), dim=-1)
         distance = torch.empty(count, device=self.device).uniform_(
             *self.cfg.distance_range
         )
-        force = torch.empty(count, device=self.device).uniform_(
-            *self.cfg.force_range
-        )
+        force = torch.empty(count, device=self.device).uniform_(*self.cfg.force_range)
         force_tolerance = torch.empty(count, device=self.device).uniform_(
             *self.cfg.force_tolerance_range
         )
@@ -112,24 +100,18 @@ class SweepMotionCommand(CommandTerm):
         )
         direction_w = math_utils.quat_apply(root_quat_w, direction_b_3d)
         self.direction_w[env_ids] = direction_w
-        self.goal_pos_b[env_ids] = (
-            object_pos_b + direction_b_3d * distance.unsqueeze(-1)
+        self.goal_pos_b[env_ids] = object_pos_b + direction_b_3d * distance.unsqueeze(
+            -1
         )
-        self.goal_pos_w[env_ids] = (
-            object_pos_w + direction_w * distance.unsqueeze(-1)
-        )
+        self.goal_pos_w[env_ids] = object_pos_w + direction_w * distance.unsqueeze(-1)
 
     def _update_metrics(self):
         self.metrics["endpoint_error"][:] = torch.linalg.norm(
             self._object.data.root_pos_w - self.goal_pos_w, dim=-1
         )
-        _, force_w, _ = target_contact_data_w(
-            self._env, self.cfg.contact_sensor_names
-        )
+        _, force_w, _ = target_contact_data_w(self._env, self.cfg.contact_sensor_names)
         measured_force = torch.linalg.norm(force_w, dim=-1)
-        self.metrics["force_error"][:] = torch.abs(
-            measured_force - self._command[:, 3]
-        )
+        self.metrics["force_error"][:] = torch.abs(measured_force - self._command[:, 3])
 
     def _update_command(self):
         pass
@@ -151,3 +133,105 @@ class SweepMotionCommandCfg(CommandTermCfg):
         "left_contact",
         "right_contact",
     )
+
+
+class ConstantVelocitySweepCommand(CommandTerm):
+    """Sample a force-free planar sweep command once per episode.
+
+    The command is ``[direction_x, direction_y, distance_m, speed_mps]``.
+    Unlike :class:`SweepMotionCommand`, it contains no desired contact force or
+    force tolerance.
+    """
+
+    cfg: "ConstantVelocitySweepCommandCfg"
+
+    def __init__(self, cfg: "ConstantVelocitySweepCommandCfg", env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+        self._robot: Articulation = env.scene[cfg.robot_name]
+        self._object: RigidObject = env.scene[cfg.object_name]
+        self._command = torch.zeros(self.num_envs, 4, device=self.device)
+        self.initial_pose_b = torch.zeros(self.num_envs, 6, device=self.device)
+        self.goal_pos_b = torch.zeros(self.num_envs, 3, device=self.device)
+        self.goal_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self.direction_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self.metrics["endpoint_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["speed_error"] = torch.zeros(self.num_envs, device=self.device)
+
+    @property
+    def command(self) -> torch.Tensor:
+        return self._command
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        count = len(env_ids)
+        if count == 0:
+            return
+
+        angle = torch.empty(count, device=self.device).uniform_(
+            *self.cfg.direction_angle_range
+        )
+        direction_b = torch.stack((torch.cos(angle), torch.sin(angle)), dim=-1)
+        distance = torch.empty(count, device=self.device).uniform_(
+            *self.cfg.distance_range
+        )
+        target_speed = torch.empty(count, device=self.device).uniform_(
+            *self.cfg.target_speed_range
+        )
+        self._command[env_ids] = torch.cat(
+            (
+                direction_b,
+                distance.unsqueeze(-1),
+                target_speed.unsqueeze(-1),
+            ),
+            dim=-1,
+        )
+
+        object_pos_w = self._object.data.root_pos_w[env_ids]
+        object_quat_w = self._object.data.root_quat_w[env_ids]
+        root_pos_w = self._robot.data.root_pos_w[env_ids]
+        root_quat_w = self._robot.data.root_quat_w[env_ids]
+        object_pos_b, object_quat_b = math_utils.subtract_frame_transforms(
+            root_pos_w,
+            root_quat_w,
+            object_pos_w,
+            object_quat_w,
+        )
+        roll, pitch, yaw = math_utils.euler_xyz_from_quat(object_quat_b)
+        self.initial_pose_b[env_ids] = torch.cat(
+            (object_pos_b, torch.stack((roll, pitch, yaw), dim=-1)),
+            dim=-1,
+        )
+
+        direction_b_3d = torch.cat(
+            (direction_b, torch.zeros(count, 1, device=self.device)), dim=-1
+        )
+        direction_w = math_utils.quat_apply(root_quat_w, direction_b_3d)
+        self.direction_w[env_ids] = direction_w
+        self.goal_pos_b[env_ids] = object_pos_b + direction_b_3d * distance.unsqueeze(
+            -1
+        )
+        self.goal_pos_w[env_ids] = object_pos_w + direction_w * distance.unsqueeze(-1)
+
+    def _update_metrics(self):
+        self.metrics["endpoint_error"][:] = torch.linalg.norm(
+            self._object.data.root_pos_w - self.goal_pos_w, dim=-1
+        )
+        forward_speed = torch.sum(
+            self._object.data.root_lin_vel_w * self.direction_w, dim=-1
+        )
+        self.metrics["speed_error"][:] = torch.abs(forward_speed - self._command[:, 3])
+
+    def _update_command(self):
+        pass
+
+
+@configclass
+class ConstantVelocitySweepCommandCfg(CommandTermCfg):
+    """Configuration for the force-free constant-velocity sweep command."""
+
+    class_type: type = ConstantVelocitySweepCommand
+    resampling_time_range: tuple[float, float] = (1.0e9, 1.0e9)
+    robot_name: str = MISSING
+    object_name: str = MISSING
+    direction_angle_range: tuple[float, float] = (-math.pi, math.pi)
+    distance_range: tuple[float, float] = (0.10, 0.22)
+    target_speed_range: tuple[float, float] = (0.08, 0.08)

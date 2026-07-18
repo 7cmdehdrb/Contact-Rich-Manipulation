@@ -31,9 +31,7 @@ class SweepOperationalSpaceAction(OperationalSpaceControllerAction):
 
     cfg: "SweepOperationalSpaceActionCfg"
 
-    def __init__(
-        self, cfg: "SweepOperationalSpaceActionCfg", env: ManagerBasedEnv
-    ):
+    def __init__(self, cfg: "SweepOperationalSpaceActionCfg", env: ManagerBasedEnv):
         super().__init__(cfg, env)
         if self.action_dim != 12:
             raise ValueError(
@@ -42,9 +40,7 @@ class SweepOperationalSpaceAction(OperationalSpaceControllerAction):
         self._torque_saturated = torch.zeros(
             self.num_envs, dtype=torch.bool, device=self.device
         )
-        self._stiffness_command = torch.zeros(
-            self.num_envs, 6, device=self.device
-        )
+        self._stiffness_command = torch.zeros(self.num_envs, 6, device=self.device)
         self._pose_command = torch.zeros(self.num_envs, 6, device=self.device)
 
     @property
@@ -91,8 +87,7 @@ class SweepOperationalSpaceAction(OperationalSpaceControllerAction):
             self.cfg.controller_cfg.motion_stiffness_limits_task
         )
         stiffness = (
-            0.5 * (stiffness_normalized + 1.0)
-            * (stiffness_max - stiffness_min)
+            0.5 * (stiffness_normalized + 1.0) * (stiffness_max - stiffness_min)
             + stiffness_min
         )
 
@@ -146,15 +141,12 @@ class SweepOperationalSpaceAction(OperationalSpaceControllerAction):
             self._asset.data.joint_effort_limits[:, self._joint_ids]
             * self.cfg.effort_limit_scale
         )
-        effort_limits = torch.clamp(
-            effort_limits, min=self.cfg.minimum_effort_limit
-        )
+        effort_limits = torch.clamp(effort_limits, min=self.cfg.minimum_effort_limit)
         clamped_efforts = torch.clamp(
             safe_efforts, min=-effort_limits, max=effort_limits
         )
         effort_clipped = torch.any(
-            torch.abs(clamped_efforts - safe_efforts)
-            > self.cfg.saturation_tolerance,
+            torch.abs(clamped_efforts - safe_efforts) > self.cfg.saturation_tolerance,
             dim=1,
         )
         self._torque_saturated |= (~finite_efforts) | effort_clipped
@@ -172,3 +164,54 @@ class SweepOperationalSpaceActionCfg(OperationalSpaceControllerActionCfg):
     effort_limit_scale: float = 0.9
     minimum_effort_limit: float = 1.0e-6
     saturation_tolerance: float = 1.0e-6
+
+
+class OpenGripperSweepOperationalSpaceAction(SweepOperationalSpaceAction):
+    """OSC arm action that continuously holds the gripper fully open."""
+
+    cfg: "OpenGripperSweepOperationalSpaceActionCfg"
+
+    def __init__(
+        self,
+        cfg: "OpenGripperSweepOperationalSpaceActionCfg",
+        env: ManagerBasedEnv,
+    ):
+        super().__init__(cfg, env)
+        self._gripper_joint_ids, self._gripper_joint_names = self._asset.find_joints(
+            cfg.gripper_joint_names, preserve_order=True
+        )
+        if len(self._gripper_joint_ids) == 0:
+            raise ValueError("No gripper joints matched gripper_joint_names.")
+        self._gripper_open_targets = torch.full(
+            (self.num_envs, len(self._gripper_joint_ids)),
+            cfg.gripper_open_position,
+            device=self.device,
+        )
+
+    def reset(self, env_ids: Sequence[int] | None = None) -> None:
+        if env_ids is None:
+            env_ids = slice(None)
+        super().reset(env_ids)
+        self._asset.set_joint_position_target(
+            self._gripper_open_targets[env_ids],
+            joint_ids=self._gripper_joint_ids,
+            env_ids=env_ids,
+        )
+
+    def apply_actions(self):
+        super().apply_actions()
+        # Re-assert the target at every physics step so no reset, contact
+        # impulse, or stale articulation buffer can close the fingers.
+        self._asset.set_joint_position_target(
+            self._gripper_open_targets,
+            joint_ids=self._gripper_joint_ids,
+        )
+
+
+@configclass
+class OpenGripperSweepOperationalSpaceActionCfg(SweepOperationalSpaceActionCfg):
+    """Configuration for OSC control with a fixed open gripper target."""
+
+    class_type: type = OpenGripperSweepOperationalSpaceAction
+    gripper_joint_names: list[str] = [".*(finger|knuckle).*"]
+    gripper_open_position: float = 0.0

@@ -46,17 +46,13 @@ def target_contact_point_b(
 ) -> torch.Tensor:
     """Force-weighted gripper/cube contact point in the robot base frame."""
     robot: Articulation = env.scene[robot_cfg.name]
-    point_w, _, contact_mask = target_contact_data_w(
-        env, sensor_names, force_threshold
-    )
+    point_w, _, contact_mask = target_contact_data_w(env, sensor_names, force_threshold)
     point_b, _ = math_utils.subtract_frame_transforms(
         robot.data.root_pos_w,
         robot.data.root_quat_w,
         point_w,
     )
-    return torch.where(
-        contact_mask.unsqueeze(-1), point_b, torch.zeros_like(point_b)
-    )
+    return torch.where(contact_mask.unsqueeze(-1), point_b, torch.zeros_like(point_b))
 
 
 def initial_target_pose_b(env, command_name: str) -> torch.Tensor:
@@ -73,6 +69,17 @@ def current_target_pose_b(
     """Live target pose in the robot base frame, as ``xyz + RPY``."""
     robot: Articulation = env.scene[robot_cfg.name]
     target: RigidObject = env.scene[object_cfg.name]
-    return pose_w_to_root_rpy(
-        robot, target.data.root_pos_w, target.data.root_quat_w
+    return pose_w_to_root_rpy(robot, target.data.root_pos_w, target.data.root_quat_w)
+
+
+def object_linear_velocity_b(
+    env,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Target-object linear velocity expressed in the robot base frame."""
+    robot: Articulation = env.scene[robot_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    return math_utils.quat_apply_inverse(
+        robot.data.root_quat_w, target.data.root_lin_vel_w
     )
