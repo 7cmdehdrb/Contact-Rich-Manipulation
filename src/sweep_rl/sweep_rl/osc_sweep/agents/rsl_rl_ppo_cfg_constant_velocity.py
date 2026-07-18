@@ -25,7 +25,9 @@ class UR5eOscSweepConstantVelocityPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         hidden_dims=[512, 256, 128],
         activation="elu",
         obs_normalization=True,
-        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.8),
+        # Lower initial exploration reduces immediate wrench-limit failures so
+        # rollouts contain enough contact and pushing transitions to learn from.
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.5),
     )
     critic = RslRlMLPModelCfg(
         hidden_dims=[512, 256, 128],

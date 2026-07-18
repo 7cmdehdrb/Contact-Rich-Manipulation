@@ -14,7 +14,12 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 from . import mdp
-from .assets import ARM_JOINT_NAMES, EEF_CENTER_BODY_NAME
+from .assets import (
+    ARM_JOINT_NAMES,
+    CONTACT_PAD_SIZE,
+    EEF_CENTER_BODY_NAME,
+    GRIPPER_SIDE_FACE_NORMAL_AXIS,
+)
 from .env_cfg import (
     ARM_ENTITY_CFG,
     EEF_ENTITY_CFG,
@@ -137,24 +142,55 @@ class ConstantVelocityObservationsCfg:
 class ConstantVelocityRewardsCfg:
     """Reward accel/cruise/stop velocity tracking and final placement."""
 
-    reaching = RewTerm(
-        func=mdp.reaching_precontact_pose,
-        weight=1.0,
+    push_pose_error = RewTerm(
+        func=mdp.current_precontact_pose_error,
+        weight=-0.35,
         params={
             "command_name": "desired_motion",
-            "std": 0.25,
+            "distance_scale": 0.10,
             "stand_off": 0.065,
             "eef_cfg": EEF_ENTITY_CFG,
+            "object_cfg": SceneEntityCfg("target_object"),
         },
     )
-    side_direction = RewTerm(
-        func=mdp.gripper_side_direction_alignment,
-        weight=1.0,
+    side_direction_error = RewTerm(
+        func=mdp.gripper_side_direction_error,
+        weight=-0.25,
         params={
             "command_name": "desired_motion",
             "side_axis_local": (1.0, 0.0, 0.0),
-            "proximity_std": 0.35,
+            "proximity_std": 0.20,
             "eef_cfg": EEF_ENTITY_CFG,
+            "object_cfg": SceneEntityCfg("target_object"),
+        },
+    )
+    target_contact = RewTerm(
+        func=mdp.target_contact_bonus,
+        weight=0.50,
+        params={"sensor_names": ("left_contact", "right_contact")},
+    )
+    side_center_contact = RewTerm(
+        func=mdp.side_pad_center_contact,
+        weight=0.75,
+        params={
+            "sensor_names": ("left_contact", "right_contact"),
+            "pad_size": CONTACT_PAD_SIZE,
+            "face_normal_axis": GRIPPER_SIDE_FACE_NORMAL_AXIS,
+            "center_sigma": 0.45,
+            "face_sigma": 0.25,
+        },
+    )
+    contact_forward_progress = RewTerm(
+        func=mdp.contact_forward_progress,
+        weight=3.0,
+        params={
+            "command_name": "desired_motion",
+            "acceleration_distance": 0.025,
+            "stopping_distance": 0.04,
+            "initial_speed_fraction": 0.25,
+            "endpoint_threshold": 0.020,
+            "maximum_normalized_speed": 1.25,
+            "sensor_names": ("left_contact", "right_contact"),
             "object_cfg": SceneEntityCfg("target_object"),
         },
     )
@@ -167,23 +203,22 @@ class ConstantVelocityRewardsCfg:
             "acceleration_distance": 0.025,
             "stopping_distance": 0.04,
             "initial_speed_fraction": 0.25,
+            "endpoint_threshold": 0.020,
             "object_cfg": SceneEntityCfg("target_object"),
         },
     )
-    endpoint_tracking = RewTerm(
-        func=mdp.endpoint_tracking,
-        weight=6.0,
+    endpoint_error = RewTerm(
+        func=mdp.normalized_endpoint_error,
+        weight=-5.0,
         params={
             "command_name": "desired_motion",
-            "std": 0.025,
-            "coarse_std": 0.10,
-            "coarse_weight": 0.50,
+            "maximum_error": 2.0,
             "object_cfg": SceneEntityCfg("target_object"),
         },
     )
     stopped_at_goal = RewTerm(
         func=mdp.stopped_at_goal_reward,
-        weight=15.0,
+        weight=20.0,
         params={
             "command_name": "desired_motion",
             "position_std": 0.025,
@@ -193,13 +228,25 @@ class ConstantVelocityRewardsCfg:
     )
     success = RewTerm(
         func=mdp.stopped_sweep_success_bonus,
-        weight=30.0,
+        weight=40.0,
         params={
             "command_name": "desired_motion",
             "endpoint_threshold": 0.020,
             "lateral_threshold": 0.10,
             "speed_threshold": 0.020,
             "object_cfg": SceneEntityCfg("target_object"),
+        },
+    )
+    failure_termination = RewTerm(
+        func=mdp.remaining_horizon_failure_penalty,
+        weight=-8.0,
+        params={
+            "term_names": (
+                "target_invalid_pose",
+                "excessive_wrench",
+                "arm_speed",
+            ),
+            "minimum_penalty_time": 1.0,
         },
     )
 
@@ -210,12 +257,12 @@ class ConstantVelocityRewardsCfg:
     )
     overshoot = RewTerm(
         func=mdp.overshoot_penalty,
-        weight=-6.0,
+        weight=-8.0,
         params={"command_name": "desired_motion"},
     )
     stall = RewTerm(
         func=mdp.object_stall_penalty,
-        weight=-4.0,
+        weight=-6.0,
         params={
             "command_name": "desired_motion",
             "startup_grace_time": 0.40,

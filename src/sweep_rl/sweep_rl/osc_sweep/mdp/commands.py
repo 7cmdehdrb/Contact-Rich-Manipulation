@@ -156,6 +156,8 @@ class ConstantVelocitySweepCommand(CommandTerm):
         self.direction_w = torch.zeros(self.num_envs, 3, device=self.device)
         self.metrics["endpoint_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["speed_error"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["forward_speed"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["progress_ratio"] = torch.zeros(self.num_envs, device=self.device)
 
     @property
     def command(self) -> torch.Tensor:
@@ -218,7 +220,20 @@ class ConstantVelocitySweepCommand(CommandTerm):
         forward_speed = torch.sum(
             self._object.data.root_lin_vel_w * self.direction_w, dim=-1
         )
+        current_pos_b, _ = math_utils.subtract_frame_transforms(
+            self._robot.data.root_pos_w,
+            self._robot.data.root_quat_w,
+            self._object.data.root_pos_w,
+        )
+        displacement_b = current_pos_b - self.initial_pose_b[:, :3]
+        progress = torch.sum(
+            displacement_b[:, :2] * self._command[:, :2], dim=-1
+        )
         self.metrics["speed_error"][:] = torch.abs(forward_speed - self._command[:, 3])
+        self.metrics["forward_speed"][:] = forward_speed
+        self.metrics["progress_ratio"][:] = progress / torch.clamp(
+            self._command[:, 2], min=1.0e-6
+        )
 
     def _update_command(self):
         pass

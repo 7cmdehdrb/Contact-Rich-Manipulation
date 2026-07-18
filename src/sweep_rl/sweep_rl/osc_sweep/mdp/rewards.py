@@ -40,6 +40,31 @@ def reaching_precontact_pose(
     return torch.exp(-torch.square(distance / std))
 
 
+def current_precontact_pose_error(
+    env,
+    command_name: str,
+    distance_scale: float,
+    stand_off: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Normalized EEF error from the moving object's desired push pose.
+
+    This is intended as a penalty.  Unlike ``reaching_precontact_pose``, the
+    reference follows the object, so pushing it away from its initial pose does
+    not sacrifice an accumulated positive reward.
+    """
+    if distance_scale <= 0.0:
+        raise ValueError("distance_scale must be positive.")
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_pos_w = robot.data.body_pos_w[:, eef_cfg.body_ids[0]]
+    precontact_w = target.data.root_pos_w - stand_off * command.direction_w
+    error = torch.linalg.norm(eef_pos_w - precontact_w, dim=-1)
+    return torch.clamp(error / distance_scale, max=3.0)
+
+
 def object_velocity_along_direction(
     env,
     command_name: str,
@@ -124,6 +149,29 @@ def endpoint_tracking(
     return (1.0 - coarse_weight) * fine_tracking + coarse_weight * coarse_tracking
 
 
+def normalized_endpoint_error(
+    env,
+    command_name: str,
+    maximum_error: float = 2.0,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Endpoint distance normalized by commanded travel length.
+
+    Used with a negative weight, this makes every stationary step costly and
+    continuously reduces that cost as the object approaches the goal.
+    """
+    if maximum_error <= 0.0:
+        raise ValueError("maximum_error must be positive.")
+    command_term = env.command_manager.get_term(command_name)
+    command = env.command_manager.get_command(command_name)
+    target: RigidObject = env.scene[object_cfg.name]
+    error = torch.linalg.norm(
+        target.data.root_pos_w - command_term.goal_pos_w, dim=-1
+    )
+    normalized = error / torch.clamp(command[:, 2], min=1.0e-6)
+    return torch.clamp(normalized, max=maximum_error)
+
+
 def overshoot_penalty(env, command_name: str) -> torch.Tensor:
     """Penalty for longitudinal motion beyond the desired length."""
     displacement_b = object_displacement_b(env, command_name)
@@ -184,6 +232,41 @@ def gripper_side_direction_alignment(
     distance = torch.linalg.norm(target.data.root_pos_w - eef_pos_w, dim=-1)
     proximity = torch.exp(-torch.square(distance / proximity_std))
     return torch.clamp(alignment, -1.0, 1.0) * proximity
+
+
+def gripper_side_direction_error(
+    env,
+    command_name: str,
+    side_axis_local: tuple[float, float, float],
+    proximity_std: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Penalize pad-direction error only while the EEF is near the object."""
+    if proximity_std <= 0.0:
+        raise ValueError("proximity_std must be positive.")
+
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    active_side_b = active_gripper_side_direction_b(
+        env,
+        eef_cfg=eef_cfg,
+        object_cfg=object_cfg,
+        side_axis_local=side_axis_local,
+    )
+    desired_b = desired_direction_b(env, command_name)
+    side_xy = active_side_b[:, :2]
+    side_xy = side_xy / torch.clamp(
+        torch.linalg.norm(side_xy, dim=-1, keepdim=True), min=1.0e-6
+    )
+    alignment = torch.clamp(
+        torch.sum(side_xy * desired_b[:, :2], dim=-1), 0.0, 1.0
+    )
+
+    eef_pos_w = robot.data.body_pos_w[:, eef_cfg.body_ids[0]]
+    distance = torch.linalg.norm(target.data.root_pos_w - eef_pos_w, dim=-1)
+    proximity = torch.exp(-torch.square(distance / proximity_std))
+    return proximity * (1.0 - alignment)
 
 
 def side_pad_center_contact(
@@ -263,6 +346,90 @@ def target_contact_bonus(
     """Binary reward for making target-specific contact."""
     _, _, contact_mask = target_contact_data_w(env, sensor_names)
     return contact_mask.float()
+
+
+def contact_forward_progress(
+    env,
+    command_name: str,
+    acceleration_distance: float,
+    stopping_distance: float,
+    initial_speed_fraction: float,
+    endpoint_threshold: float,
+    maximum_normalized_speed: float = 1.25,
+    sensor_names: tuple[str, ...] = (
+        "left_contact",
+        "right_contact",
+    ),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Reward forward object motion caused while target contact is present.
+
+    Contact alone receives only a small bridge reward elsewhere.  This term is
+    larger only when contact produces motion in the commanded direction, and
+    it fades with the velocity profile as the object approaches the endpoint.
+    """
+    if endpoint_threshold <= 0.0:
+        raise ValueError("endpoint_threshold must be positive.")
+    if maximum_normalized_speed <= 0.0:
+        raise ValueError("maximum_normalized_speed must be positive.")
+
+    _, _, contact_mask = target_contact_data_w(env, sensor_names)
+    command = env.command_manager.get_command(command_name)
+    command_term = env.command_manager.get_term(command_name)
+    target: RigidObject = env.scene[object_cfg.name]
+    desired_velocity_w, remaining, _ = desired_velocity_profile_w(
+        env,
+        command_name,
+        acceleration_distance=acceleration_distance,
+        stopping_distance=stopping_distance,
+        initial_speed_fraction=initial_speed_fraction,
+    )
+    target_speed = torch.clamp(command[:, 3], min=1.0e-3)
+    forward_speed = torch.sum(
+        target.data.root_lin_vel_w * command_term.direction_w, dim=-1
+    )
+    normalized_forward_speed = torch.clamp(
+        forward_speed / target_speed, 0.0, maximum_normalized_speed
+    )
+    desired_speed_fraction = torch.clamp(
+        torch.linalg.norm(desired_velocity_w, dim=-1) / target_speed, 0.0, 1.0
+    )
+    transit_mask = remaining > endpoint_threshold
+    return (
+        contact_mask.float()
+        * normalized_forward_speed
+        * desired_speed_fraction
+        * transit_mask.float()
+    )
+
+
+def remaining_horizon_failure_penalty(
+    env,
+    term_names: tuple[str, ...],
+    minimum_penalty_time: float = 1.0,
+) -> torch.Tensor:
+    """Charge early safety failures for the remaining episode horizon.
+
+    Isaac Lab scales reward terms by ``step_dt``.  Returning a number of steps
+    here makes the configured weight act as a cost per avoided second.  This
+    prevents the agent from deliberately ending an episode to escape running
+    endpoint and stall penalties.
+    """
+    if minimum_penalty_time < 0.0:
+        raise ValueError("minimum_penalty_time must be non-negative.")
+    if not term_names:
+        raise ValueError("term_names must contain at least one failure term.")
+
+    failure = torch.zeros_like(env.episode_length_buf, dtype=torch.bool)
+    for term_name in term_names:
+        failure |= env.termination_manager.get_term(term_name).bool()
+
+    remaining_steps = torch.clamp(
+        env.max_episode_length - env.episode_length_buf, min=0
+    ).float()
+    minimum_steps = minimum_penalty_time / env.step_dt
+    charged_steps = torch.clamp(remaining_steps, min=minimum_steps)
+    return failure.float() * charged_steps
 
 
 def ft_torque_excess(
@@ -364,13 +531,17 @@ def object_velocity_profile_tracking(
     acceleration_distance: float,
     stopping_distance: float,
     initial_speed_fraction: float,
+    endpoint_threshold: float,
     object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
 ) -> torch.Tensor:
-    """Track the full desired object velocity across accel/cruise/stop phases."""
+    """Track desired velocity, with zero reward for stationary transit states."""
     if std <= 0.0:
         raise ValueError("std must be positive.")
+    if endpoint_threshold <= 0.0:
+        raise ValueError("endpoint_threshold must be positive.")
+    command_term = env.command_manager.get_term(command_name)
     target: RigidObject = env.scene[object_cfg.name]
-    desired_velocity_w, _, _ = desired_velocity_profile_w(
+    desired_velocity_w, remaining, _ = desired_velocity_profile_w(
         env,
         command_name,
         acceleration_distance=acceleration_distance,
@@ -380,7 +551,17 @@ def object_velocity_profile_tracking(
     velocity_error = torch.linalg.norm(
         target.data.root_lin_vel_w - desired_velocity_w, dim=-1
     )
-    return torch.exp(-torch.square(velocity_error / std))
+    tracking = torch.exp(-torch.square(velocity_error / std))
+
+    desired_speed = torch.linalg.norm(desired_velocity_w, dim=-1)
+    forward_speed = torch.sum(
+        target.data.root_lin_vel_w * command_term.direction_w, dim=-1
+    )
+    movement_gate = torch.clamp(
+        forward_speed / torch.clamp(desired_speed, min=1.0e-3), 0.0, 1.0
+    )
+    transit_mask = remaining > endpoint_threshold
+    return tracking * movement_gate * transit_mask.float()
 
 
 def object_stall_penalty(

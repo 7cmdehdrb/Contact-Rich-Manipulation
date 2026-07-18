@@ -19,6 +19,21 @@ action. F/T wrench, contact point, desired contact force, and force tolerance
 are not exposed to the policy. The gripper target is held at the fully-open
 joint position on every physics step.
 
+Positive transit velocity reward is gated by actual forward object motion, so
+a stationary object receives zero velocity reward. Endpoint distance is a
+normalized negative running cost, and the pre-contact pose term is also a
+penalty relative to the moving object. Early safety termination is charged for
+the remaining episode horizon, so deliberately triggering the wrench limit
+cannot avoid these running costs. Small target/central-contact bridge rewards
+help discover contact, while the larger contact reward requires actual forward
+object motion. Consequently, alignment or stationary contact without object
+progress cannot form a positive-reward local optimum. TensorBoard reports
+`endpoint_error`, `forward_speed`, and `progress_ratio` under
+`Metrics/desired_motion`.
+
+The complete Action, Observation, and Reward specification is in
+[`constant_velocity_action_reward_observation.md`](constant_velocity_action_reward_observation.md).
+
 Train with:
 
 ```bash
