@@ -72,4 +72,6 @@ Reward에서는 그대로 사용.
 ./IsaacLab/isaaclab.sh -p   src/sweep_rl/scripts/play_sweep.py   --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0   --device cuda:0   --num_envs 1   --checkpoint logs/rsl_rl/ur5e_osc_sweep_tactile_localization/2026-07-17_19-18-02/model_5000.pt
 
 
-.\IsaacLab\isaaclab.bat -p src/sweep_rl/scripts/play_sweep.py --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0 --device cuda:0 --num_envs 1 --checkpoint logs\rsl_rl\ur5e_osc_sweep_tactile_localization\2026-07-18_15-36-29\model_4900.pt
+.\IsaacLab\isaaclab.bat -p src/sweep_rl/scripts/play_sweep.py --task Isaac-Sweep-Object-UR5e-OSC-WideRandomization-v0 --device cuda:0 --num_envs 1 --checkpoint wide_model_11999.pt
+
+.\IsaacLab\isaaclab.bat -p IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0 --device cuda:0 --num_envs 1 --checkpoint wide_model_11999.pt
