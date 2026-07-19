@@ -96,3 +96,24 @@ gym.register(
         ),
     },
 )
+
+gym.register(
+    id=(
+        "Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-"
+        "UprightRandomSize-HomeReturn-v0"
+    ),
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            "sweep_rl.osc_sweep."
+            "env_cfg_constant_velocity_upright_random_size_home:"
+            "UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}."
+            "rsl_rl_ppo_cfg_constant_velocity_upright_random_size_home:"
+            "UR5eOscSweepConstantVelocityUprightRandomSizeHomePPORunnerCfg"
+        ),
+    },
+)

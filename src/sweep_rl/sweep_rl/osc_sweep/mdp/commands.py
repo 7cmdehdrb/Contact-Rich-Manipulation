@@ -250,3 +250,71 @@ class ConstantVelocitySweepCommandCfg(CommandTermCfg):
     direction_angle_range: tuple[float, float] = (-math.pi, math.pi)
     distance_range: tuple[float, float] = (0.10, 0.22)
     target_speed_range: tuple[float, float] = (0.08, 0.08)
+
+
+class SweepHomeConstantVelocityCommand(ConstantVelocitySweepCommand):
+    """Latch from object sweeping to collision-free Home return.
+
+    The public motion command stays four-dimensional.  ``task_phase`` is a
+    separate observable state: 0 means sweep and 1 means return Home.
+    """
+
+    cfg: "SweepHomeConstantVelocityCommandCfg"
+
+    def __init__(self, cfg: "SweepHomeConstantVelocityCommandCfg", env):
+        super().__init__(cfg, env)
+        self.task_phase = torch.zeros(
+            self.num_envs, dtype=torch.long, device=self.device
+        )
+        self._goal_dwell_elapsed = torch.zeros(
+            self.num_envs, dtype=torch.float32, device=self.device
+        )
+        self.metrics["home_phase"] = torch.zeros(
+            self.num_envs, dtype=torch.float32, device=self.device
+        )
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        super()._resample_command(env_ids)
+        self.task_phase[env_ids] = 0
+        self._goal_dwell_elapsed[env_ids] = 0.0
+
+    def _update_metrics(self):
+        super()._update_metrics()
+        self.metrics["home_phase"][:] = self.task_phase.float()
+
+    def _update_command(self):
+        endpoint_error = torch.linalg.norm(
+            self._object.data.root_pos_w - self.goal_pos_w, dim=-1
+        )
+        object_speed = torch.linalg.norm(
+            self._object.data.root_lin_vel_w, dim=-1
+        )
+        stopped_at_goal = (
+            (endpoint_error < self.cfg.endpoint_threshold)
+            & (object_speed < self.cfg.speed_threshold)
+            & (self.task_phase == 0)
+        )
+        self._goal_dwell_elapsed[:] = torch.where(
+            stopped_at_goal,
+            self._goal_dwell_elapsed + self._env.step_dt,
+            torch.where(
+                self.task_phase == 0,
+                torch.zeros_like(self._goal_dwell_elapsed),
+                self._goal_dwell_elapsed,
+            ),
+        )
+        self.task_phase[:] = torch.where(
+            self._goal_dwell_elapsed >= self.cfg.goal_dwell_time,
+            torch.ones_like(self.task_phase),
+            self.task_phase,
+        )
+
+
+@configclass
+class SweepHomeConstantVelocityCommandCfg(ConstantVelocitySweepCommandCfg):
+    """Configuration for the sweep-then-Home task phase latch."""
+
+    class_type: type = SweepHomeConstantVelocityCommand
+    endpoint_threshold: float = 0.020
+    speed_threshold: float = 0.020
+    goal_dwell_time: float = 0.30

@@ -1,6 +1,6 @@
 # 등록된 UR5e OSC Sweep 환경
 
-이 문서는 `sweep_rl/osc_sweep/__init__.py`에 등록된 6개 Gym 환경의 상속 관계,
+이 문서는 `sweep_rl/osc_sweep/__init__.py`에 등록된 Gym 환경의 상속 관계,
 학습·플레이 방법, Action, Observation, Reward 차이를 현재 코드 기준으로 정리한다.
 
 ## 1. 사전 준비와 공통 실행 규칙
@@ -42,6 +42,7 @@ UR5eOscSweepEnvCfg
 │   └── UR5eOscSweepTactileLocalizationEnvCfg
 └── UR5eOscSweepConstantVelocityEnvCfg
     └── UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg
+        └── UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg
 ```
 
 | 환경 ID | 기반 환경 | Observation | Command | experiment_name |
@@ -52,6 +53,7 @@ UR5eOscSweepEnvCfg
 | `Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0` | Wide | 56-D | 5-D force | `ur5e_osc_sweep_tactile_localization` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` | 기본 | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` | ConstantVelocity | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
+| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | UprightRandomSize | 56-D | 4-D speed + phase | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
 
 ## 3. 기본 환경: `Isaac-Sweep-Object-UR5e-OSC-v0`
 
@@ -398,12 +400,20 @@ Reward 변경:
 
 | Reward term | 변경 내용 |
 |---|---|
-| `push_pose_error` | weight `-0.35` 유지. 고정 stand-off 대신 `cube_size/2 + 0.035 m` 사용 |
-| `gripper_upright` | 새 weight `+0.75`. EEF local `+Y`와 world `+Z`의 cosine을 `[0,1]`로 mapping |
+| `push_pose_error` | weight `-0.35` 유지. 수평 stand-off는 `cube_size/2 + 0.035 m`, EEF 중심은 물체보다 `0.055 m` 높게 두어 table-side pad를 물체 중심에 정렬 |
+| `gripper_upright` | weight `+0.35`. EEF local `+Y`와 world `+Z`의 편차가 15도 이내면 동일한 최대 보상, 이후 완만히 감소하여 60도에서 0 |
+| `target_contact` | weight `+0.35`. table-side인 `right_contact`만 인정 |
+| `side_center_contact` | weight `+1.0`. `right_contact`의 넓은 면 중앙 접촉만 보상 |
+| `off_center_contact` | 새 weight `-0.75`. table-side pad의 모서리·좁은 면 접촉 penalize |
+| `dual_pad_contact` | 새 weight `-2.0`. 양쪽 pad가 target에 동시에 접촉하면 penalize |
+| `object_in_gap` | 새 weight `-2.0`. 가까운 물체 중심이 local Y gripper gap 안에 있으면 penalize |
+| `contact_forward_progress` | weight `+3.0` 유지. `right_contact`가 있을 때만 활성화 |
+| `velocity_tracking` | weight `+10.0` 유지. `right_contact`의 넓은 면 중앙 접촉 품질로 gate |
 
-`gripper_upright`는 수평 자세에 raw reward 0.5, 완전 upright에 1.0, 뒤집힌 자세에
-0을 준다. hard constraint나 termination이 아니라 ㄷ자 형상의 아래쪽은 테이블,
-위쪽은 천장을 향하도록 하는 완만한 선호다.
+`gripper_upright`는 hard constraint나 termination이 아니다. 정확히 수직인 자세와
+15도 이내의 자연스러운 기울기를 구분하지 않으며, 그 밖의 자세도 60도까지 연속적인
+보상 gradient를 갖는다. 핵심 제약은 orientation 자체보다 물체를 열린 간극 중앙에
+놓지 않고 table-side 단일 pad의 외측에서 미는 것이다.
 
 Scene/reset 변경:
 
@@ -440,7 +450,44 @@ Scene/reset 변경:
 `replicate_physics=False`이므로 같은 environment 수에서 다른 variant보다 simulation
 초기화와 physics 비용이 커질 수 있다.
 
-## 9. 빠른 선택 가이드
+## 9. Home Return: `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0`
+
+`UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg`는 UprightRandomSize 환경을
+상속한다. 기존 sweep 이후 `task_phase=1`로 전환해 UR5e의 6개 arm joint를 default
+Home pose로 복귀시킨다.
+
+변경점:
+
+- Observation: 부모 55-D + `task_phase` 1-D = 56-D
+- episode: `8 s → 12 s`
+- HOME phase에서 기존 sweep/contact/success reward 비활성화
+- Home joint pose와 EEF-object clearance 보상 추가
+- 전체 robot-target 접촉, 물체 endpoint 이탈·속도, HOME 지연 penalty 추가
+- 성공: Home joint 오차 `<0.12 rad`, joint speed `<0.15 rad/s`, target endpoint/speed
+  유지, 전체 robot-target 비접촉을 0.25초 유지
+
+학습:
+
+```bash
+./IsaacLab/isaaclab.sh -p \
+  src/sweep_rl/scripts/train_constant_velocity_upright_random_size_home.py \
+  --num_envs 2048 --device cuda:0 --headless
+```
+
+플레이:
+
+```bash
+./IsaacLab/isaaclab.sh -p \
+  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
+  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0 \
+  --checkpoint /absolute/path/to/home_return_model.pt \
+  --num_envs 1 --device cuda:0
+```
+
+세부 phase와 reward는
+[`constant_velocity_upright_random_size_home_return.md`](constant_velocity_upright_random_size_home_return.md)를 참고한다.
+
+## 10. 빠른 선택 가이드
 
 | 목적 | 권장 환경 |
 |---|---|
@@ -450,3 +497,4 @@ Scene/reset 변경:
 | 현재 target pose 없이 촉각·로봇 상태로 위치 추론 | `Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0` |
 | 접촉력 목표 없이 일정 속도와 endpoint 정지 학습 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` |
 | 일정 속도 + 세로 ㄷ자 자세 + 크기 강건성 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` |
+| 물체 배치 후 비접촉 Home joint 복귀까지 학습 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` |

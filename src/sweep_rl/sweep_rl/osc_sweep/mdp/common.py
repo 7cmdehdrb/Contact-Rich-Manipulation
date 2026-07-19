@@ -74,6 +74,26 @@ def target_contact_data_w(
     return contact_point_w, force_sum_w, contact_mask
 
 
+def filtered_contact_mask(
+    env,
+    sensor_name: str,
+    force_threshold: float = 0.25,
+) -> torch.Tensor:
+    """Return whether a filtered contact sensor detects meaningful contact."""
+    if force_threshold < 0.0:
+        raise ValueError("force_threshold must be non-negative.")
+    sensor: ContactSensor = env.scene[sensor_name]
+    force_matrix_w = sensor.data.force_matrix_w
+    if force_matrix_w is None:
+        raise RuntimeError(
+            f"Contact sensor '{sensor_name}' must use filter_prim_paths_expr."
+        )
+    force_magnitudes = torch.linalg.norm(force_matrix_w, dim=-1)
+    reduce_dims = tuple(range(1, force_magnitudes.ndim))
+    total_filtered_force = force_magnitudes.sum(dim=reduce_dims)
+    return total_filtered_force > force_threshold
+
+
 def object_displacement_b(env, command_name: str) -> torch.Tensor:
     """Current target-object displacement from the command's initial pose."""
     command = env.command_manager.get_term(command_name)

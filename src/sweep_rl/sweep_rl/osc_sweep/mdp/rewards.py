@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import math
+from collections.abc import Callable
+
 import torch
 
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
 
 from .common import (
     active_gripper_side_direction_b,
     desired_direction_b,
+    filtered_contact_mask,
     object_displacement_b,
     side_pad_contact_quality,
     target_contact_data_w,
@@ -70,15 +74,23 @@ def variable_size_precontact_pose_error(
     command_name: str,
     distance_scale: float,
     surface_clearance: float,
+    table_side_pad_offset: float,
     size_buffer_name: str,
     eef_cfg: SceneEntityCfg,
     object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
 ) -> torch.Tensor:
-    """Pre-contact error whose stand-off follows the randomized cube size."""
+    """Pre-contact error for pushing with the table-side pad.
+
+    The EEF center is raised above the cube by ``table_side_pad_offset`` so
+    that the lower pad, rather than the open gripper gap, is centered on the
+    object.  The horizontal stand-off still follows the randomized cube size.
+    """
     if distance_scale <= 0.0:
         raise ValueError("distance_scale must be positive.")
     if surface_clearance < 0.0:
         raise ValueError("surface_clearance must be non-negative.")
+    if table_side_pad_offset < 0.0:
+        raise ValueError("table_side_pad_offset must be non-negative.")
     if not hasattr(env, size_buffer_name):
         raise RuntimeError(f"Environment has no cube-size buffer '{size_buffer_name}'.")
 
@@ -89,6 +101,7 @@ def variable_size_precontact_pose_error(
     side_lengths = getattr(env, size_buffer_name)
     stand_off = 0.5 * side_lengths + surface_clearance
     precontact_w = target.data.root_pos_w - stand_off.unsqueeze(-1) * command.direction_w
+    precontact_w[:, 2] += table_side_pad_offset
     error = torch.linalg.norm(eef_pos_w - precontact_w, dim=-1)
     return torch.clamp(error / distance_scale, max=3.0)
 
@@ -300,14 +313,22 @@ def gripper_side_direction_error(
 def eef_axis_upright_alignment(
     env,
     local_up_axis: tuple[float, float, float],
+    allowed_deviation_deg: float,
+    zero_reward_deviation_deg: float,
     eef_cfg: SceneEntityCfg,
 ) -> torch.Tensor:
-    """Softly reward a selected EEF-local axis pointing upward in world.
+    """Reward an upright EEF axis with an angular tolerance cone.
 
-    The linear cosine mapping deliberately provides a broad orientation
-    preference instead of a hard pose constraint: horizontal is worth 0.5,
-    perfectly upright is worth 1.0, and upside-down is worth 0.0.
+    Orientations inside ``allowed_deviation_deg`` receive the same full
+    reward.  Outside that cone the reward decreases smoothly and reaches zero
+    at ``zero_reward_deviation_deg``.  This makes upright a preference rather
+    than an exact orientation constraint.
     """
+    if not 0.0 <= allowed_deviation_deg < zero_reward_deviation_deg <= 180.0:
+        raise ValueError(
+            "Expected 0 <= allowed_deviation_deg < "
+            "zero_reward_deviation_deg <= 180."
+        )
     axis = torch.tensor(local_up_axis, dtype=torch.float32, device=env.device)
     axis_norm = torch.linalg.norm(axis)
     if axis_norm < 1.0e-6:
@@ -318,7 +339,70 @@ def eef_axis_upright_alignment(
     eef_quat_w = robot.data.body_quat_w[:, eef_cfg.body_ids[0]]
     axis_w = math_utils.quat_apply(eef_quat_w, axis.expand(env.num_envs, -1))
     cosine = torch.clamp(axis_w[:, 2], -1.0, 1.0)
-    return 0.5 * (cosine + 1.0)
+    full_reward_cosine = math.cos(math.radians(allowed_deviation_deg))
+    zero_reward_cosine = math.cos(math.radians(zero_reward_deviation_deg))
+    score = torch.clamp(
+        (cosine - zero_reward_cosine)
+        / max(full_reward_cosine - zero_reward_cosine, 1.0e-6),
+        0.0,
+        1.0,
+    )
+    return score * score * (3.0 - 2.0 * score)
+
+
+def object_in_gripper_gap(
+    env,
+    gap_axis: int,
+    gap_half_width: float,
+    transition_width: float,
+    proximity_scale: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Penalize placing the object center inside the open gripper gap.
+
+    The gap score is active only while the object is near the EEF in the two
+    axes perpendicular to the opening axis.  This avoids charging the policy
+    merely for approaching from a distant, aligned pose.
+    """
+    if gap_axis not in (0, 1, 2):
+        raise ValueError("gap_axis must be 0, 1, or 2.")
+    if gap_half_width <= 0.0 or transition_width <= 0.0 or proximity_scale <= 0.0:
+        raise ValueError("Gap dimensions and proximity_scale must be positive.")
+
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_body_id = eef_cfg.body_ids[0]
+    object_pos_eef, _ = math_utils.subtract_frame_transforms(
+        robot.data.body_pos_w[:, eef_body_id],
+        robot.data.body_quat_w[:, eef_body_id],
+        target.data.root_pos_w,
+    )
+    gap_distance = torch.abs(object_pos_eef[:, gap_axis])
+    inside_score = torch.clamp(
+        (gap_half_width - gap_distance) / transition_width, 0.0, 1.0
+    )
+
+    perpendicular_mask = torch.ones(3, dtype=object_pos_eef.dtype, device=env.device)
+    perpendicular_mask[gap_axis] = 0.0
+    perpendicular_distance = torch.linalg.norm(
+        object_pos_eef * perpendicular_mask, dim=-1
+    )
+    proximity = torch.exp(-torch.square(perpendicular_distance / proximity_scale))
+    return inside_score * proximity
+
+
+def dual_pad_target_contact(
+    env,
+    sensor_names: tuple[str, str] = ("left_contact", "right_contact"),
+    force_threshold: float = 0.25,
+) -> torch.Tensor:
+    """Return one when both pads contact the target at the same time."""
+    if len(sensor_names) != 2:
+        raise ValueError("dual_pad_target_contact requires exactly two sensors.")
+    first = filtered_contact_mask(env, sensor_names[0], force_threshold)
+    second = filtered_contact_mask(env, sensor_names[1], force_threshold)
+    return (first & second).float()
 
 
 def side_pad_center_contact(
@@ -484,6 +568,181 @@ def remaining_horizon_failure_penalty(
     return failure.float() * charged_steps
 
 
+class PhaseGatedReward(ManagerTermBase):
+    """Evaluate another reward only during one task phase.
+
+    Scene entity configurations inside ``reward_params`` are nested one level
+    deeper than Isaac Lab's manager normally scans.  Resolve them explicitly
+    once here rather than carrying unresolved body/joint IDs into the wrapped
+    reward.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        for value in cfg.params["reward_params"].values():
+            if isinstance(value, SceneEntityCfg):
+                value.resolve(env.scene)
+
+    def __call__(
+        self,
+        env,
+        phase_command_name: str,
+        active_phase: int,
+        reward_func: Callable,
+        reward_params: dict,
+    ) -> torch.Tensor:
+        command = env.command_manager.get_term(phase_command_name)
+        if not hasattr(command, "task_phase"):
+            raise RuntimeError(
+                f"Command '{phase_command_name}' does not expose task_phase."
+            )
+        value = reward_func(env, **reward_params)
+        return value * (command.task_phase == active_phase).float()
+
+
+def filtered_contact_indicator(
+    env,
+    sensor_name: str,
+    force_threshold: float = 0.25,
+) -> torch.Tensor:
+    """Binary reward value for any contact reported by a filtered sensor."""
+    return filtered_contact_mask(env, sensor_name, force_threshold).float()
+
+
+def home_joint_pose_reward(
+    env,
+    command_name: str,
+    joint_std: float,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Reward arm joints approaching their default Home positions."""
+    if joint_std <= 0.0:
+        raise ValueError("joint_std must be positive.")
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[asset_cfg.name]
+    current = robot.data.joint_pos[:, asset_cfg.joint_ids]
+    home = robot.data.default_joint_pos[:, asset_cfg.joint_ids]
+    error = math_utils.wrap_to_pi(current - home)
+    tracking = torch.exp(-torch.mean(torch.square(error / joint_std), dim=-1))
+    return tracking * (command.task_phase == 1).float()
+
+
+def home_joint_error(
+    env,
+    command_name: str,
+    error_scale: float,
+    maximum_normalized_error: float,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Dense normalized Home-joint error during the return phase."""
+    if error_scale <= 0.0 or maximum_normalized_error <= 0.0:
+        raise ValueError("Home joint-error scales must be positive.")
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[asset_cfg.name]
+    current = robot.data.joint_pos[:, asset_cfg.joint_ids]
+    home = robot.data.default_joint_pos[:, asset_cfg.joint_ids]
+    error = torch.mean(torch.abs(math_utils.wrap_to_pi(current - home)), dim=-1)
+    normalized = torch.clamp(
+        error / error_scale, max=maximum_normalized_error
+    )
+    return normalized * (command.task_phase == 1).float()
+
+
+def home_eef_object_clearance(
+    env,
+    command_name: str,
+    safe_distance: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Reward opening clearance between the EEF and object after sweeping."""
+    if safe_distance <= 0.0:
+        raise ValueError("safe_distance must be positive.")
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_pos_w = robot.data.body_pos_w[:, eef_cfg.body_ids[0]]
+    distance = torch.linalg.norm(eef_pos_w - target.data.root_pos_w, dim=-1)
+    normalized = torch.clamp(distance / safe_distance, 0.0, 1.0)
+    clearance = normalized * normalized * (3.0 - 2.0 * normalized)
+    return clearance * (command.task_phase == 1).float()
+
+
+def home_object_speed_penalty(
+    env,
+    command_name: str,
+    speed_scale: float,
+    maximum_normalized_speed: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Penalize disturbing the parked object during Home return."""
+    if speed_scale <= 0.0 or maximum_normalized_speed <= 0.0:
+        raise ValueError("Object speed-penalty scales must be positive.")
+    command = env.command_manager.get_term(command_name)
+    target: RigidObject = env.scene[object_cfg.name]
+    speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+    normalized = torch.clamp(
+        speed / speed_scale, max=maximum_normalized_speed
+    )
+    return normalized * (command.task_phase == 1).float()
+
+
+def home_phase_time(
+    env,
+    command_name: str,
+) -> torch.Tensor:
+    """Unit running cost used to discourage lingering after the sweep."""
+    command = env.command_manager.get_term(command_name)
+    return (command.task_phase == 1).float()
+
+
+def home_success_bonus(
+    env,
+    command_name: str,
+    joint_position_threshold: float,
+    joint_speed_threshold: float,
+    endpoint_threshold: float,
+    object_speed_threshold: float,
+    contact_sensor_name: str,
+    contact_force_threshold: float,
+    asset_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Sparse pre-dwell signal for a parked object and contact-free Home pose."""
+    if min(
+        joint_position_threshold,
+        joint_speed_threshold,
+        endpoint_threshold,
+        object_speed_threshold,
+    ) <= 0.0:
+        raise ValueError("Home success thresholds must be positive.")
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[asset_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    joint_error = torch.abs(
+        math_utils.wrap_to_pi(
+            robot.data.joint_pos[:, asset_cfg.joint_ids]
+            - robot.data.default_joint_pos[:, asset_cfg.joint_ids]
+        )
+    )
+    joint_speed = torch.abs(robot.data.joint_vel[:, asset_cfg.joint_ids])
+    endpoint_error = torch.linalg.norm(
+        target.data.root_pos_w - command.goal_pos_w, dim=-1
+    )
+    object_speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+    contact_mask = filtered_contact_mask(
+        env, contact_sensor_name, contact_force_threshold
+    )
+    return (
+        (command.task_phase == 1)
+        & torch.all(joint_error < joint_position_threshold, dim=-1)
+        & torch.all(joint_speed < joint_speed_threshold, dim=-1)
+        & (endpoint_error < endpoint_threshold)
+        & (object_speed < object_speed_threshold)
+        & (~contact_mask)
+    ).float()
+
+
 def ft_torque_excess(
     env,
     threshold: float,
@@ -614,6 +873,43 @@ def object_velocity_profile_tracking(
     )
     transit_mask = remaining > endpoint_threshold
     return tracking * movement_gate * transit_mask.float()
+
+
+def side_contact_velocity_profile_tracking(
+    env,
+    command_name: str,
+    std: float,
+    acceleration_distance: float,
+    stopping_distance: float,
+    initial_speed_fraction: float,
+    endpoint_threshold: float,
+    sensor_names: tuple[str, ...],
+    pad_size: tuple[float, float, float],
+    face_normal_axis: int,
+    center_sigma: float,
+    face_sigma: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Track object velocity only through a central broad-side pad contact."""
+    tracking = object_velocity_profile_tracking(
+        env,
+        command_name=command_name,
+        std=std,
+        acceleration_distance=acceleration_distance,
+        stopping_distance=stopping_distance,
+        initial_speed_fraction=initial_speed_fraction,
+        endpoint_threshold=endpoint_threshold,
+        object_cfg=object_cfg,
+    )
+    quality, _ = side_pad_contact_quality(
+        env,
+        sensor_names=sensor_names,
+        pad_size=pad_size,
+        face_normal_axis=face_normal_axis,
+        center_sigma=center_sigma,
+        face_sigma=face_sigma,
+    )
+    return tracking * quality
 
 
 def object_stall_penalty(

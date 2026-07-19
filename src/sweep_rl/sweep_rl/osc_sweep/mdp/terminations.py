@@ -10,6 +10,7 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import ManagerTermBase, SceneEntityCfg
 
+from .common import filtered_contact_mask
 from .rewards import lateral_displacement
 
 
@@ -114,6 +115,69 @@ class TargetStoppedAtGoal(ManagerTermBase):
         )
         self._dwell_elapsed[:] = torch.where(
             stopped_at_goal,
+            self._dwell_elapsed + env.step_dt,
+            torch.zeros_like(self._dwell_elapsed),
+        )
+        return self._dwell_elapsed >= dwell_time
+
+
+class HomeAfterSweepSuccess(ManagerTermBase):
+    """Succeed after stable Home return without touching the parked object."""
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._dwell_elapsed = torch.zeros(
+            self.num_envs, dtype=torch.float32, device=self.device
+        )
+
+    def reset(self, env_ids: Sequence[int] | None = None) -> None:
+        if env_ids is None:
+            env_ids = slice(None)
+        self._dwell_elapsed[env_ids] = 0.0
+
+    def __call__(
+        self,
+        env,
+        command_name: str,
+        joint_position_threshold: float,
+        joint_speed_threshold: float,
+        endpoint_threshold: float,
+        object_speed_threshold: float,
+        dwell_time: float,
+        contact_sensor_name: str,
+        contact_force_threshold: float,
+        asset_cfg: SceneEntityCfg,
+        object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+    ) -> torch.Tensor:
+        if dwell_time <= 0.0:
+            raise ValueError("dwell_time must be positive.")
+        command = env.command_manager.get_term(command_name)
+        robot: Articulation = env.scene[asset_cfg.name]
+        target: RigidObject = env.scene[object_cfg.name]
+        joint_error = torch.abs(
+            math_utils.wrap_to_pi(
+                robot.data.joint_pos[:, asset_cfg.joint_ids]
+                - robot.data.default_joint_pos[:, asset_cfg.joint_ids]
+            )
+        )
+        joint_speed = torch.abs(robot.data.joint_vel[:, asset_cfg.joint_ids])
+        endpoint_error = torch.linalg.norm(
+            target.data.root_pos_w - command.goal_pos_w, dim=-1
+        )
+        object_speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+        contact_mask = filtered_contact_mask(
+            env, contact_sensor_name, contact_force_threshold
+        )
+        stable_home = (
+            (command.task_phase == 1)
+            & torch.all(joint_error < joint_position_threshold, dim=-1)
+            & torch.all(joint_speed < joint_speed_threshold, dim=-1)
+            & (endpoint_error < endpoint_threshold)
+            & (object_speed < object_speed_threshold)
+            & (~contact_mask)
+        )
+        self._dwell_elapsed[:] = torch.where(
+            stable_home,
             self._dwell_elapsed + env.step_dt,
             torch.zeros_like(self._dwell_elapsed),
         )

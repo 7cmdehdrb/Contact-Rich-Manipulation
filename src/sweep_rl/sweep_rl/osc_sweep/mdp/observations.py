@@ -83,3 +83,11 @@ def object_linear_velocity_b(
     return math_utils.quat_apply_inverse(
         robot.data.root_quat_w, target.data.root_lin_vel_w
     )
+
+
+def task_phase(env, command_name: str) -> torch.Tensor:
+    """Return 0 for sweeping and 1 for the Home-return phase."""
+    command = env.command_manager.get_term(command_name)
+    if not hasattr(command, "task_phase"):
+        raise RuntimeError(f"Command '{command_name}' does not expose task_phase.")
+    return command.task_phase.float().unsqueeze(-1)
