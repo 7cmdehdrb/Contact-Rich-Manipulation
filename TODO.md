@@ -14,9 +14,9 @@
 ./IsaacLab/isaaclab.sh -p \
   src/sweep_rl/scripts/play_sweep.py \
   --device cuda:0 \
-  --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0 \
+  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0 \
   --num_envs 1 \
-  --checkpoint logs/rsl_rl/ur5e_osc_sweep_tactile_localization/2026-07-17_19-18-02/model_4700.pt
+  --checkpoint logs\rsl_rl\ur5e_osc_sweep_constant_velocity\2026-07-18_23-23-20\model_11999.pt
 ```
 
 ---
@@ -69,8 +69,19 @@ Reward에서는 그대로 사용.
 ./IsaacLab/isaaclab.sh -p  src/sweep_rl/scripts/train_tactile_localization.py  --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0  --device cuda:0  --num_envs 2048  --headless
 ```
 
+```bash
+./IsaacLab/isaaclab.sh -p \
+  src/sweep_rl/scripts/train_constant_velocity.py \
+  --device cuda:0 \
+  --num_envs 2048 \
+  --headless
+```
+
 
 ```bash
 ./IsaacLab/isaaclab.sh -p  src/sweep_rl/scripts/train_constant_velocity.py  --device cuda:0  --num_envs 2048  --headless
 ./IsaacLab/isaaclab.bat -p  src/sweep_rl/scripts/train_constant_velocity.py  --device cuda:0  --num_envs 2048  --headless
 ```
+
+
+./IsaacLab/isaaclab.bat -p   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py   --device cuda:0   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0   --num_envs 1   --checkpoint logs\rsl_rl\ur5e_osc_sweep_constant_velocity\2026-07-18_23-23-20\model_11999.pt

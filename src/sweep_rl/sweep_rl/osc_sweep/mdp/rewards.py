@@ -65,6 +65,34 @@ def current_precontact_pose_error(
     return torch.clamp(error / distance_scale, max=3.0)
 
 
+def variable_size_precontact_pose_error(
+    env,
+    command_name: str,
+    distance_scale: float,
+    surface_clearance: float,
+    size_buffer_name: str,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Pre-contact error whose stand-off follows the randomized cube size."""
+    if distance_scale <= 0.0:
+        raise ValueError("distance_scale must be positive.")
+    if surface_clearance < 0.0:
+        raise ValueError("surface_clearance must be non-negative.")
+    if not hasattr(env, size_buffer_name):
+        raise RuntimeError(f"Environment has no cube-size buffer '{size_buffer_name}'.")
+
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_pos_w = robot.data.body_pos_w[:, eef_cfg.body_ids[0]]
+    side_lengths = getattr(env, size_buffer_name)
+    stand_off = 0.5 * side_lengths + surface_clearance
+    precontact_w = target.data.root_pos_w - stand_off.unsqueeze(-1) * command.direction_w
+    error = torch.linalg.norm(eef_pos_w - precontact_w, dim=-1)
+    return torch.clamp(error / distance_scale, max=3.0)
+
+
 def object_velocity_along_direction(
     env,
     command_name: str,
@@ -267,6 +295,30 @@ def gripper_side_direction_error(
     distance = torch.linalg.norm(target.data.root_pos_w - eef_pos_w, dim=-1)
     proximity = torch.exp(-torch.square(distance / proximity_std))
     return proximity * (1.0 - alignment)
+
+
+def eef_axis_upright_alignment(
+    env,
+    local_up_axis: tuple[float, float, float],
+    eef_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Softly reward a selected EEF-local axis pointing upward in world.
+
+    The linear cosine mapping deliberately provides a broad orientation
+    preference instead of a hard pose constraint: horizontal is worth 0.5,
+    perfectly upright is worth 1.0, and upside-down is worth 0.0.
+    """
+    axis = torch.tensor(local_up_axis, dtype=torch.float32, device=env.device)
+    axis_norm = torch.linalg.norm(axis)
+    if axis_norm < 1.0e-6:
+        raise ValueError("local_up_axis must be non-zero.")
+    axis = axis / axis_norm
+
+    robot: Articulation = env.scene[eef_cfg.name]
+    eef_quat_w = robot.data.body_quat_w[:, eef_cfg.body_ids[0]]
+    axis_w = math_utils.quat_apply(eef_quat_w, axis.expand(env.num_envs, -1))
+    cosine = torch.clamp(axis_w[:, 2], -1.0, 1.0)
+    return 0.5 * (cosine + 1.0)
 
 
 def side_pad_center_contact(
