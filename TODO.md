@@ -85,3 +85,5 @@ Reward에서는 그대로 사용.
 
 
 ./IsaacLab/isaaclab.bat -p   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py   --device cuda:0   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0   --num_envs 1   --checkpoint logs\rsl_rl\ur5e_osc_sweep_constant_velocity\2026-07-18_23-23-20\model_11999.pt
+
+./IsaacLab/isaaclab.bat -p  src/sweep_rl/scripts/train_constant_velocity_upright_random_size.py  --num_envs 2048  --device cuda:0  --headless

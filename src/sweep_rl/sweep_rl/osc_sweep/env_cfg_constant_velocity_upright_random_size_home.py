@@ -13,13 +13,11 @@ from isaaclab.utils import configclass
 
 from . import mdp
 from .env_cfg import ARM_ENTITY_CFG, EEF_ENTITY_CFG, OscSweepSceneCfg
-from .env_cfg_constant_velocity import (
-    ConstantVelocityObservationsCfg,
-    ConstantVelocityTerminationsCfg,
-)
+from .env_cfg_constant_velocity import ConstantVelocityObservationsCfg
 from .env_cfg_constant_velocity_upright_random_size import (
+    GripperExclusionRewardsCfg,
+    GripperExclusionTerminationsCfg,
     UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg,
-    UprightRandomSizeRewardsCfg,
 )
 
 
@@ -72,8 +70,8 @@ class SweepHomeObservationsCfg(ConstantVelocityObservationsCfg):
 
 
 @configclass
-class SweepHomeRewardsCfg(UprightRandomSizeRewardsCfg):
-    """Home-return shaping added to the upright random-size sweep rewards."""
+class SweepHomeRewardsCfg(GripperExclusionRewardsCfg):
+    """Home-return shaping added to the constant-velocity sweep rewards."""
 
     home_joint_pose = RewTerm(
         func=mdp.home_joint_pose_reward,
@@ -164,7 +162,7 @@ class SweepHomeRewardsCfg(UprightRandomSizeRewardsCfg):
 
 
 @configclass
-class SweepHomeTerminationsCfg(ConstantVelocityTerminationsCfg):
+class SweepHomeTerminationsCfg(GripperExclusionTerminationsCfg):
     """End successfully only after a stable, collision-free Home return."""
 
     success = DoneTerm(
@@ -217,9 +215,6 @@ class UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg(
             "side_direction_error",
             "target_contact",
             "side_center_contact",
-            "off_center_contact",
-            "dual_pad_contact",
-            "object_in_gap",
             "contact_forward_progress",
             "velocity_tracking",
             "endpoint_error",
@@ -228,7 +223,6 @@ class UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg(
             "lateral_error",
             "overshoot",
             "stall",
-            "gripper_upright",
         )
         for term_name in sweep_only_terms:
             term_cfg = getattr(self.rewards, term_name)

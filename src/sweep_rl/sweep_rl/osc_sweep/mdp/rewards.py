@@ -69,6 +69,53 @@ def current_precontact_pose_error(
     return torch.clamp(error / distance_scale, max=3.0)
 
 
+def external_pad_precontact_pose_error(
+    env,
+    command_name: str,
+    distance_scale: float,
+    stand_off: float,
+    pad_center_offset: float,
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Guide the object toward either pad center, outside the gripper gap.
+
+    In the EEF frame, local X is the pad-face normal and the two pads are
+    centered at local Y = +/- ``pad_center_offset``.  The nearer pad is used as
+    the target, with positive Y breaking an exact tie.  This leaves the world
+    orientation free while making the dense approach target consistent with
+    the gripper-interior termination.
+    """
+    if distance_scale <= 0.0 or stand_off <= 0.0 or pad_center_offset <= 0.0:
+        raise ValueError("Pre-contact distances must be positive.")
+
+    command = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_body_id = eef_cfg.body_ids[0]
+    eef_pos_w = robot.data.body_pos_w[:, eef_body_id]
+    eef_quat_w = robot.data.body_quat_w[:, eef_body_id]
+    object_pos_eef, _ = math_utils.subtract_frame_transforms(
+        eef_pos_w,
+        eef_quat_w,
+        target.data.root_pos_w,
+    )
+    direction_eef = math_utils.quat_apply_inverse(
+        eef_quat_w, command.direction_w
+    )
+
+    face_sign = torch.where(direction_eef[:, 0] >= 0.0, 1.0, -1.0)
+    pad_sign = torch.where(object_pos_eef[:, 1] >= 0.0, 1.0, -1.0)
+    desired_object_pos_eef = torch.zeros_like(object_pos_eef)
+    desired_object_pos_eef[:, 0] = face_sign * stand_off
+    desired_object_pos_eef[:, 1] = pad_sign * pad_center_offset
+
+    error = torch.linalg.norm(
+        object_pos_eef - desired_object_pos_eef, dim=-1
+    )
+    return torch.clamp(error / distance_scale, max=3.0)
+
+
 def variable_size_precontact_pose_error(
     env,
     command_name: str,

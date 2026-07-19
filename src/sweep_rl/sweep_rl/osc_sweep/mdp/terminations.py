@@ -75,6 +75,40 @@ def arm_joint_speed_limit(
     )
 
 
+def object_inside_gripper(
+    env,
+    center_half_extents: tuple[float, float, float],
+    eef_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Terminate when the object center enters the open gripper volume.
+
+    The target position is expressed in the EEF frame, so the exclusion box
+    rotates freely with the gripper.  Consequently this condition constrains
+    only object placement between the fingers and does not prescribe a world
+    orientation for the gripper itself.
+    """
+    if len(center_half_extents) != 3 or any(
+        half_extent <= 0.0 for half_extent in center_half_extents
+    ):
+        raise ValueError("center_half_extents must contain three positive values.")
+
+    robot: Articulation = env.scene[eef_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    eef_body_id = eef_cfg.body_ids[0]
+    object_pos_eef, _ = math_utils.subtract_frame_transforms(
+        robot.data.body_pos_w[:, eef_body_id],
+        robot.data.body_quat_w[:, eef_body_id],
+        target.data.root_pos_w,
+    )
+    half_extents = torch.tensor(
+        center_half_extents,
+        dtype=object_pos_eef.dtype,
+        device=env.device,
+    )
+    return torch.all(torch.abs(object_pos_eef) <= half_extents, dim=-1)
+
+
 class TargetStoppedAtGoal(ManagerTermBase):
     """Terminate after the object remains stopped at the goal for a dwell time."""
 

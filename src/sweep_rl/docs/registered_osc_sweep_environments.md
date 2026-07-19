@@ -52,8 +52,8 @@ UR5eOscSweepEnvCfg
 | `Isaac-Sweep-Object-UR5e-OSC-WideRandomization-v0` | 기본 | 62-D | 5-D force | `ur5e_osc_sweep_wide_randomization` |
 | `Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0` | Wide | 56-D | 5-D force | `ur5e_osc_sweep_tactile_localization` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` | 기본 | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity` |
-| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` | ConstantVelocity | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
-| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | UprightRandomSize | 56-D | 4-D speed + phase | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
+| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` | ConstantVelocity + external-pad approach + gripper-interior termination | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
+| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | Gripper Exclusion + HomeReturn | 56-D | 4-D speed + phase | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
 
 ## 3. 기본 환경: `Isaac-Sweep-Object-UR5e-OSC-v0`
 
@@ -387,42 +387,51 @@ randomization은 기본 환경을 상속한다.
 성공 termination은 endpoint/lateral/speed 조건을 `0.30 s` 연속 유지해야 한다. PPO의
 초기 Gaussian 표준편차는 기본 환경의 `0.8` 대신 `0.5`다.
 
-## 8. Upright Random Size: `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0`
+## 8. Gripper Exclusion: `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0`
 
 `UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg`는
 `UR5eOscSweepConstantVelocityEnvCfg`를 상속한다.
 
+환경 ID와 Python 클래스 이름은 기존 실행 스크립트 및 checkpoint 경로 호환성을 위해
+유지한다. 현재 동작에는 upright 자세 보상이나 물체 크기 randomization이 없다.
+
 ### ConstantVelocity에서 바뀐 부분
 
-Action과 55-D Observation, 4-D speed command, termination은 동일하다.
+Action, 55-D Observation, 4-D speed command와 scene/reset은
+`ConstantVelocity-v0`와 동일하다. Reward는 기존 `push_pose_error` 하나만 다음처럼
+교체한다.
 
-Reward 변경:
+| Reward term | Weight | 변경 내용 |
+|---|---:|---|
+| `push_pose_error` | `-1.0` | EEF-local에서 물체가 pad 정면 `X=+/-0.065 m`, 좌우 pad 중심 `Y=+/-0.055 m`, `Z=0`에 오도록 하는 단순 거리 오차. 가까운 pad를 대칭적으로 선택 |
 
-| Reward term | 변경 내용 |
+이는 특정 world orientation을 요구하지 않으면서 dense 접근 목표가 gripper gap
+중앙을 가리키던 문제를 제거한다. raw value는 선택된 목표 상대 위치와 현재 물체
+상대 위치의 Euclidean distance를 `0.10 m`로 나눈 뒤 최대 `3.0`으로 제한한 값이다.
+허용된 양쪽 pad 중심에서는 0이며 gap 중앙의 pre-contact 위치에서는 약 0.55다.
+
+기존 `side_direction_error`가 밀기 방향에 맞는 pad 면을 유도하고, 새
+`push_pose_error`는 그 면의 좌우 pad 중 하나를 물체에 정렬한다. 두 항 모두 특정
+world-frame gripper orientation을 지정하지 않는다. 추가 termination은 다음과 같다.
+
+| Termination term | 조건 |
 |---|---|
-| `push_pose_error` | weight `-0.35` 유지. 수평 stand-off는 `cube_size/2 + 0.035 m`, EEF 중심은 물체보다 `0.055 m` 높게 두어 table-side pad를 물체 중심에 정렬 |
-| `gripper_upright` | weight `+0.35`. EEF local `+Y`와 world `+Z`의 편차가 15도 이내면 동일한 최대 보상, 이후 완만히 감소하여 60도에서 0 |
-| `target_contact` | weight `+0.35`. table-side인 `right_contact`만 인정 |
-| `side_center_contact` | weight `+1.0`. `right_contact`의 넓은 면 중앙 접촉만 보상 |
-| `off_center_contact` | 새 weight `-0.75`. table-side pad의 모서리·좁은 면 접촉 penalize |
-| `dual_pad_contact` | 새 weight `-2.0`. 양쪽 pad가 target에 동시에 접촉하면 penalize |
-| `object_in_gap` | 새 weight `-2.0`. 가까운 물체 중심이 local Y gripper gap 안에 있으면 penalize |
-| `contact_forward_progress` | weight `+3.0` 유지. `right_contact`가 있을 때만 활성화 |
-| `velocity_tracking` | weight `+10.0` 유지. `right_contact`의 넓은 면 중앙 접촉 품질로 gate |
+| `object_inside_gripper` | 물체 중심이 EEF-local gripper 내부 exclusion box (`XYZ half extents = 0.040, 0.040, 0.058 m`)에 진입하면 실패 종료 |
 
-`gripper_upright`는 hard constraint나 termination이 아니다. 정확히 수직인 자세와
-15도 이내의 자연스러운 기울기를 구분하지 않으며, 그 밖의 자세도 60도까지 연속적인
-보상 gradient를 갖는다. 핵심 제약은 orientation 자체보다 물체를 열린 간극 중앙에
-놓지 않고 table-side 단일 pad의 외측에서 미는 것이다.
+exclusion box는 EEF와 함께 회전하므로 world-frame orientation을 강제하지 않는다.
+종료를 고의로 이용하지 못하도록 이 항은 기존 `failure_termination`과 동일한 남은
+episode 시간 비용을 받는다.
 
-Scene/reset 변경:
+그 밖의 설정은 `ConstantVelocity-v0`에서 그대로 상속한다.
 
-- 정육면체 한 변: environment별 uniform `0.06~0.12 m`
-- 기준 0.06 m cube에 isotropic scale `1.0~2.0` 적용
-- reset 중심 높이: `table_top + cube_size/2`
-- environment별 독립 scale을 위해 `replicate_physics=False`
-- PhysX 제약 때문에 크기는 episode마다가 아니라 simulation prestartup에서 environment별
-  한 번 샘플링된다.
+- Action: 동일한 12-D variable-stiffness OSC
+- Observation: 동일한 55-D policy observation
+- Command: 동일한 4-D direction/distance/speed command
+- 물체: 고정 `0.06 m` 정육면체, 질량 `0.35 kg`
+- scene: `replicate_physics=True`
+- upright orientation reward와 물체 크기 randomization: 사용하지 않음
+- PPO hyperparameter: `ConstantVelocity-v0`와 동일하며 `experiment_name`만 기존 호환
+  이름 `ur5e_osc_sweep_constant_velocity_upright_random_size` 사용
 
 ### 실행
 
@@ -439,32 +448,48 @@ Scene/reset 변경:
 플레이:
 
 ```bash
-./IsaacLab/isaaclab.sh -p \
-  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0 \
-  --checkpoint /absolute/path/to/upright_random_size_model.pt \
-  --num_envs 1 \
-  --device cuda:0
+./IsaacLab/isaaclab.sh -p   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0   --checkpoint logs/rsl_rl/ur5e_osc_sweep_constant_velocity_upright_random_size/2026-07-19_15-32-48/model_3800.pt   --num_envs 1   --device cuda:0
 ```
 
-`replicate_physics=False`이므로 같은 environment 수에서 다른 variant보다 simulation
-초기화와 physics 비용이 커질 수 있다.
+reward 의미가 이전 UprightRandomSize 구현과 달라졌으므로 과거 checkpoint를 resume하지
+않고 새 run으로 학습한다.
 
 ## 9. Home Return: `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0`
 
-`UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg`는 UprightRandomSize 환경을
-상속한다. 기존 sweep 이후 `task_phase=1`로 전환해 UR5e의 6개 arm joint를 default
-Home pose로 복귀시킨다.
+`UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg`는 위 Gripper Exclusion
+환경을 상속한다. 클래스와 환경 ID의 `UprightRandomSize`는 호환성을 위한 과거 이름일
+뿐이며, 이 환경에도 upright reward나 size randomization은 없다. 기존 sweep 이후
+`task_phase=1`로 전환해 UR5e의 6개 arm joint를 default Home pose로 복귀시킨다.
 
 변경점:
 
 - Observation: 부모 55-D + `task_phase` 1-D = 56-D
 - episode: `8 s → 12 s`
-- HOME phase에서 기존 sweep/contact/success reward 비활성화
-- Home joint pose와 EEF-object clearance 보상 추가
-- 전체 robot-target 접촉, 물체 endpoint 이탈·속도, HOME 지연 penalty 추가
+- scene: target 전체와 robot 전체의 접촉을 감지하는 sensor 추가,
+  `replicate_physics=False`
+- SWEEP phase: 부모 환경의 external-pad `push_pose_error`와
+  `object_inside_gripper` termination 사용
+- HOME phase: sweep/contact/endpoint/success shaping을 비활성화하고 아래 Home reward 사용
+- `object_inside_gripper`와 기존 safety termination은 두 phase 모두 계속 활성화
 - 성공: Home joint 오차 `<0.12 rad`, joint speed `<0.15 rad/s`, target endpoint/speed
   유지, 전체 robot-target 비접촉을 0.25초 유지
+
+부모 환경에서 추가로 바뀌는 Reward는 다음과 같다.
+
+| Reward term | Weight | 활성 phase | 내용 |
+|---|---:|---:|---|
+| `home_joint_pose` | `+15.0` | HOME | default Home joint pose의 Gaussian 보상 |
+| `home_joint_error` | `-3.0` | HOME | normalized Home joint 오차 |
+| `home_clearance` | `+3.0` | HOME | EEF와 물체 사이 `0.22 m` 안전거리 확보 |
+| `post_goal_contact` | `-12.0` | HOME | 전체 robot-target 접촉 |
+| `goal_hold_error` | `-10.0` | HOME | 배치한 물체의 endpoint 이탈 |
+| `post_goal_object_speed` | `-3.0` | HOME | 배치 후 물체 속도 |
+| `home_time` | `-0.5` | HOME | Home 복귀 지연 시간 |
+| `home_success` | `+50.0` | HOME | Home pose, 정지 물체, 비접촉 조건 동시 만족 |
+
+`failure_termination`, `object_acceleration`, `ft_torque`, `action_rate`,
+`joint_velocity`, `commanded_effort`, `torque_saturation`은 공통 안전·정규화 항으로 두
+phase 모두 유지된다.
 
 학습:
 
@@ -484,9 +509,6 @@ Home pose로 복귀시킨다.
   --num_envs 1 --device cuda:0
 ```
 
-세부 phase와 reward는
-[`constant_velocity_upright_random_size_home_return.md`](constant_velocity_upright_random_size_home_return.md)를 참고한다.
-
 ## 10. 빠른 선택 가이드
 
 | 목적 | 권장 환경 |
@@ -496,5 +518,5 @@ Home pose로 복귀시킨다.
 | 넓은 force·mass 범위에서 강건성 학습 | `Isaac-Sweep-Object-UR5e-OSC-WideRandomization-v0` |
 | 현재 target pose 없이 촉각·로봇 상태로 위치 추론 | `Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0` |
 | 접촉력 목표 없이 일정 속도와 endpoint 정지 학습 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` |
-| 일정 속도 + 세로 ㄷ자 자세 + 크기 강건성 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` |
-| 물체 배치 후 비접촉 Home joint 복귀까지 학습 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` |
+| 일정 속도 + 외측 pad 접근 + gripper 내부 삽입 금지 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` |
+| 외측 pad sweep과 물체 배치 후 비접촉 Home joint 복귀까지 학습 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` |
