@@ -139,6 +139,16 @@ class SweepHomeRewardsCfg(GripperExclusionRewardsCfg):
             "object_cfg": SceneEntityCfg("target_object"),
         },
     )
+    post_goal_object_displacement = RewTerm(
+        func=mdp.home_object_displacement_penalty,
+        weight=-8.0,
+        params={
+            "command_name": "desired_motion",
+            "displacement_scale": 0.010,
+            "maximum_normalized_displacement": 4.0,
+            "object_cfg": SceneEntityCfg("target_object"),
+        },
+    )
     home_time = RewTerm(
         func=mdp.home_phase_time,
         weight=-0.5,
@@ -153,6 +163,7 @@ class SweepHomeRewardsCfg(GripperExclusionRewardsCfg):
             "joint_speed_threshold": 0.15,
             "endpoint_threshold": 0.025,
             "object_speed_threshold": 0.025,
+            "object_displacement_threshold": 0.010,
             "contact_sensor_name": "target_robot_contact",
             "contact_force_threshold": 0.25,
             "asset_cfg": ARM_ENTITY_CFG,
@@ -174,10 +185,21 @@ class SweepHomeTerminationsCfg(GripperExclusionTerminationsCfg):
             "joint_speed_threshold": 0.15,
             "endpoint_threshold": 0.025,
             "object_speed_threshold": 0.025,
+            "object_displacement_threshold": 0.010,
             "dwell_time": 0.25,
             "contact_sensor_name": "target_robot_contact",
             "contact_force_threshold": 0.25,
             "asset_cfg": ARM_ENTITY_CFG,
+            "object_cfg": SceneEntityCfg("target_object"),
+        },
+    )
+    post_goal_object_moved = DoneTerm(
+        func=mdp.object_disturbed_after_sweep,
+        time_out=False,
+        params={
+            "command_name": "desired_motion",
+            "displacement_threshold": 0.015,
+            "speed_threshold": 0.10,
             "object_cfg": SceneEntityCfg("target_object"),
         },
     )
@@ -235,3 +257,9 @@ class UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg(
                 "reward_func": original_func,
                 "reward_params": original_params,
             }
+        failure_names = self.rewards.failure_termination.params["term_names"]
+        if "post_goal_object_moved" not in failure_names:
+            self.rewards.failure_termination.params["term_names"] = (
+                *failure_names,
+                "post_goal_object_moved",
+            )

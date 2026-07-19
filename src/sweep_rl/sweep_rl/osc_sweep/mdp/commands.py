@@ -269,7 +269,16 @@ class SweepHomeConstantVelocityCommand(ConstantVelocitySweepCommand):
         self._goal_dwell_elapsed = torch.zeros(
             self.num_envs, dtype=torch.float32, device=self.device
         )
+        # Snapshot the object pose at the SWEEP -> HOME transition.  The goal
+        # pose alone is not enough to detect a second push because the object
+        # could move inside the endpoint tolerance and still count as parked.
+        self.parked_object_pos_w = torch.zeros(
+            self.num_envs, 3, dtype=torch.float32, device=self.device
+        )
         self.metrics["home_phase"] = torch.zeros(
+            self.num_envs, dtype=torch.float32, device=self.device
+        )
+        self.metrics["parked_displacement"] = torch.zeros(
             self.num_envs, dtype=torch.float32, device=self.device
         )
 
@@ -277,10 +286,19 @@ class SweepHomeConstantVelocityCommand(ConstantVelocitySweepCommand):
         super()._resample_command(env_ids)
         self.task_phase[env_ids] = 0
         self._goal_dwell_elapsed[env_ids] = 0.0
+        self.parked_object_pos_w[env_ids] = self._object.data.root_pos_w[env_ids]
 
     def _update_metrics(self):
         super()._update_metrics()
         self.metrics["home_phase"][:] = self.task_phase.float()
+        displacement = torch.linalg.norm(
+            self._object.data.root_pos_w - self.parked_object_pos_w, dim=-1
+        )
+        self.metrics["parked_displacement"][:] = torch.where(
+            self.task_phase == 1,
+            displacement,
+            torch.zeros_like(displacement),
+        )
 
     def _update_command(self):
         endpoint_error = torch.linalg.norm(
@@ -303,8 +321,15 @@ class SweepHomeConstantVelocityCommand(ConstantVelocitySweepCommand):
                 self._goal_dwell_elapsed,
             ),
         )
+        entering_home = (
+            (self.task_phase == 0)
+            & (self._goal_dwell_elapsed >= self.cfg.goal_dwell_time)
+        )
+        self.parked_object_pos_w[entering_home] = (
+            self._object.data.root_pos_w[entering_home]
+        )
         self.task_phase[:] = torch.where(
-            self._goal_dwell_elapsed >= self.cfg.goal_dwell_time,
+            entering_home,
             torch.ones_like(self.task_phase),
             self.task_phase,
         )

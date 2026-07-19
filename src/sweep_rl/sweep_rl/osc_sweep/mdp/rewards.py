@@ -734,6 +734,30 @@ def home_object_speed_penalty(
     return normalized * (command.task_phase == 1).float()
 
 
+def home_object_displacement_penalty(
+    env,
+    command_name: str,
+    displacement_scale: float,
+    maximum_normalized_displacement: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Penalize moving the object away from its phase-transition pose."""
+    if displacement_scale <= 0.0 or maximum_normalized_displacement <= 0.0:
+        raise ValueError("Object displacement-penalty scales must be positive.")
+    command = env.command_manager.get_term(command_name)
+    if not hasattr(command, "parked_object_pos_w"):
+        raise RuntimeError(f"Command '{command_name}' has no parked object pose.")
+    target: RigidObject = env.scene[object_cfg.name]
+    displacement = torch.linalg.norm(
+        target.data.root_pos_w - command.parked_object_pos_w, dim=-1
+    )
+    normalized = torch.clamp(
+        displacement / displacement_scale,
+        max=maximum_normalized_displacement,
+    )
+    return normalized * (command.task_phase == 1).float()
+
+
 def home_phase_time(
     env,
     command_name: str,
@@ -750,6 +774,7 @@ def home_success_bonus(
     joint_speed_threshold: float,
     endpoint_threshold: float,
     object_speed_threshold: float,
+    object_displacement_threshold: float,
     contact_sensor_name: str,
     contact_force_threshold: float,
     asset_cfg: SceneEntityCfg,
@@ -761,6 +786,7 @@ def home_success_bonus(
         joint_speed_threshold,
         endpoint_threshold,
         object_speed_threshold,
+        object_displacement_threshold,
     ) <= 0.0:
         raise ValueError("Home success thresholds must be positive.")
     command = env.command_manager.get_term(command_name)
@@ -777,6 +803,9 @@ def home_success_bonus(
         target.data.root_pos_w - command.goal_pos_w, dim=-1
     )
     object_speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+    object_displacement = torch.linalg.norm(
+        target.data.root_pos_w - command.parked_object_pos_w, dim=-1
+    )
     contact_mask = filtered_contact_mask(
         env, contact_sensor_name, contact_force_threshold
     )
@@ -786,6 +815,7 @@ def home_success_bonus(
         & torch.all(joint_speed < joint_speed_threshold, dim=-1)
         & (endpoint_error < endpoint_threshold)
         & (object_speed < object_speed_threshold)
+        & (object_displacement < object_displacement_threshold)
         & (~contact_mask)
     ).float()
 

@@ -177,6 +177,7 @@ class HomeAfterSweepSuccess(ManagerTermBase):
         joint_speed_threshold: float,
         endpoint_threshold: float,
         object_speed_threshold: float,
+        object_displacement_threshold: float,
         dwell_time: float,
         contact_sensor_name: str,
         contact_force_threshold: float,
@@ -199,6 +200,9 @@ class HomeAfterSweepSuccess(ManagerTermBase):
             target.data.root_pos_w - command.goal_pos_w, dim=-1
         )
         object_speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+        object_displacement = torch.linalg.norm(
+            target.data.root_pos_w - command.parked_object_pos_w, dim=-1
+        )
         contact_mask = filtered_contact_mask(
             env, contact_sensor_name, contact_force_threshold
         )
@@ -208,6 +212,7 @@ class HomeAfterSweepSuccess(ManagerTermBase):
             & torch.all(joint_speed < joint_speed_threshold, dim=-1)
             & (endpoint_error < endpoint_threshold)
             & (object_speed < object_speed_threshold)
+            & (object_displacement < object_displacement_threshold)
             & (~contact_mask)
         )
         self._dwell_elapsed[:] = torch.where(
@@ -216,3 +221,26 @@ class HomeAfterSweepSuccess(ManagerTermBase):
             torch.zeros_like(self._dwell_elapsed),
         )
         return self._dwell_elapsed >= dwell_time
+
+
+def object_disturbed_after_sweep(
+    env,
+    command_name: str,
+    displacement_threshold: float,
+    speed_threshold: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Fail if the parked object is struck or displaced during Home return."""
+    if displacement_threshold <= 0.0 or speed_threshold <= 0.0:
+        raise ValueError("Post-sweep disturbance thresholds must be positive.")
+    command = env.command_manager.get_term(command_name)
+    if not hasattr(command, "parked_object_pos_w"):
+        raise RuntimeError(f"Command '{command_name}' has no parked object pose.")
+    target: RigidObject = env.scene[object_cfg.name]
+    displacement = torch.linalg.norm(
+        target.data.root_pos_w - command.parked_object_pos_w, dim=-1
+    )
+    speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
+    return (command.task_phase == 1) & (
+        (displacement > displacement_threshold) | (speed > speed_threshold)
+    )

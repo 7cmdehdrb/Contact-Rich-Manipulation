@@ -68,6 +68,7 @@ Isaac Lab은 각 항을 `raw × weight × step_dt`로 합산한다.
 | `post_goal_contact` | `-12.0` | HOME phase에서 robot 어느 부분이든 target과 접촉 |
 | `goal_hold_error` | `-10.0` | 복귀 중 물체의 normalized endpoint 오차 |
 | `post_goal_object_speed` | `-3.0` | 복귀 중 물체를 다시 움직이는 속도 |
+| `post_goal_object_displacement` | `-8.0` | HOME 진입 순간의 물체 위치에서 벗어난 거리 |
 | `home_time` | `-0.5` | HOME phase 매초 지연 비용 |
 | `home_success` | `+50.0` | 최종 성공 조건을 만족하는 동안의 sparse 보상 |
 
@@ -90,7 +91,13 @@ task_phase == HOME
 endpoint_error < 0.025 m
 object_speed < 0.025 m/s
 robot-target filtered contact 없음
+HOME 진입 위치 대비 물체 변위 < 0.010 m
 ```
+
+HOME 진입 순간의 물체 위치는 command term에 별도로 저장된다. 복귀 중 이 위치에서
+`0.015 m` 이상 벗어나거나 물체 속도가 `0.10 m/s`를 넘으면
+`post_goal_object_moved` 실패로 즉시 종료한다. 따라서 목표 허용 반경 안에서 물체를
+다시 밀고도 성공하는 우회 동작을 허용하지 않는다.
 
 부모 환경의 안전 종료 조건은 그대로 유지한다. 두 단계 수행 시간을 위해 episode
 timeout은 `8 s`에서 `12 s`로 늘렸다.
@@ -125,5 +132,6 @@ RSL-RL player를 사용한다.
 ```
 
 TensorBoard에서는 `Metrics/desired_motion/home_phase`가 0에서 1로 전환되는지,
+`Metrics/desired_motion/parked_displacement`가 `0.015 m` 아래로 유지되는지,
 `Episode_Reward/post_goal_contact`가 감소하는지, `Episode_Termination/success`가
 증가하는지를 함께 확인한다.
