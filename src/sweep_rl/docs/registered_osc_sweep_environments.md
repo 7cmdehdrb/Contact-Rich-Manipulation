@@ -2,6 +2,7 @@
 
 이 문서는 `sweep_rl/osc_sweep/__init__.py`에 등록된 Gym 환경의 상속 관계,
 학습·플레이 방법, Action, Observation, Reward 차이를 현재 코드 기준으로 정리한다.
+문서 내용은 2026-07-19 현재 `sweep_rl/osc_sweep` 코드 기준이다.
 
 ## 1. 사전 준비와 공통 실행 규칙
 
@@ -53,7 +54,7 @@ UR5eOscSweepEnvCfg
 | `Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0` | Wide | 56-D | 5-D force | `ur5e_osc_sweep_tactile_localization` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` | 기본 | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` | ConstantVelocity + external-pad approach + gripper-interior termination | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
-| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | Gripper Exclusion + HomeReturn | 56-D | 4-D speed + phase | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
+| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | Gripper Exclusion + HomeReturn | 56-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
 
 ## 3. 기본 환경: `Isaac-Sweep-Object-UR5e-OSC-v0`
 
@@ -448,7 +449,10 @@ episode 시간 비용을 받는다.
 플레이:
 
 ```bash
-./IsaacLab/isaaclab.sh -p   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0   --checkpoint logs/rsl_rl/ur5e_osc_sweep_constant_velocity_upright_random_size/2026-07-19_15-32-48/model_3800.pt   --num_envs 1   --device cuda:0
+./IsaacLab/isaaclab.sh -p \
+  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
+  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0 \
+  --checkpoint /absolute/path/to/model.pt --num_envs 1 --device cuda:0
 ```
 
 reward 의미가 이전 UprightRandomSize 구현과 달라졌으므로 과거 checkpoint를 resume하지
@@ -472,7 +476,9 @@ reward 의미가 이전 UprightRandomSize 구현과 달라졌으므로 과거 ch
 - HOME phase: sweep/contact/endpoint/success shaping을 비활성화하고 아래 Home reward 사용
 - `object_inside_gripper`와 기존 safety termination은 두 phase 모두 계속 활성화
 - 성공: Home joint 오차 `<0.12 rad`, joint speed `<0.15 rad/s`, target endpoint/speed
-  유지, 전체 robot-target 비접촉을 0.25초 유지
+  유지, 전체 robot-target 비접촉, HOME 진입 위치 대비 변위 `<0.010 m`를 0.25초 유지
+- 실패: HOME 진입 위치에서 target이 `0.015 m` 넘게 벗어나거나 속도가
+  `0.10 m/s`를 넘으면 `post_goal_object_moved`로 즉시 종료
 
 부모 환경에서 추가로 바뀌는 Reward는 다음과 같다.
 
@@ -484,12 +490,17 @@ reward 의미가 이전 UprightRandomSize 구현과 달라졌으므로 과거 ch
 | `post_goal_contact` | `-12.0` | HOME | 전체 robot-target 접촉 |
 | `goal_hold_error` | `-10.0` | HOME | 배치한 물체의 endpoint 이탈 |
 | `post_goal_object_speed` | `-3.0` | HOME | 배치 후 물체 속도 |
+| `post_goal_object_displacement` | `-8.0` | HOME | HOME 진입 시 저장한 물체 위치에서의 변위 |
 | `home_time` | `-0.5` | HOME | Home 복귀 지연 시간 |
 | `home_success` | `+50.0` | HOME | Home pose, 정지 물체, 비접촉 조건 동시 만족 |
 
 `failure_termination`, `object_acceleration`, `ft_torque`, `action_rate`,
 `joint_velocity`, `commanded_effort`, `torque_saturation`은 공통 안전·정규화 항으로 두
 phase 모두 유지된다.
+
+TensorBoard command metric에는 `home_phase`와 `parked_displacement`가 추가된다.
+`parked_displacement`는 SWEEP phase에서 0이며 HOME phase에서 저장 위치 대비 현재
+물체 중심의 거리 `[m]`를 기록한다.
 
 학습:
 

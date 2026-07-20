@@ -2,6 +2,9 @@
 
 대상 환경은 `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0`이다. 이 문서는
 현재 `env_cfg_constant_velocity.py`와 연결된 MDP 구현을 기준으로 작성되었다.
+파생 Gripper Exclusion 환경은 `push_pose_error`와 termination 하나를 바꾸고,
+HomeReturn 환경은 phase observation과 HOME 전용 항을 추가한다. 파생 환경 차이는
+[등록 환경 문서](registered_osc_sweep_environments.md)의 8–9절을 따른다.
 
 ## Task command
 
@@ -138,3 +141,5 @@ TensorBoard command metric은 다음 네 항이다.
 수렴 판단에서는 mean reward만 보지 말고 `endpoint_error` 감소,
 `progress_ratio -> 1`, success 비율 증가, `excessive_wrench` 종료 비율 감소를 함께
 확인해야 한다.
+
+문서 내용은 2026-07-19 현재 코드 기준이다.

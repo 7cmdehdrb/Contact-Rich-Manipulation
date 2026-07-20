@@ -1,63 +1,81 @@
-# ConstantVelocity UprightRandomSize
+# ConstantVelocity Gripper Exclusion
 
-새 환경 ID:
+환경 ID:
 
 ```text
 Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0
 ```
 
-기존 `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0`의 Action, Observation,
-속도/목표점 reward는 그대로 상속하며 기존 환경의 설정은 변경하지 않는다.
+> `UprightRandomSize`는 기존 스크립트와 checkpoint 디렉터리 호환성을 위한 이름이다.
+> 현재 환경에는 upright 자세 보상이나 물체 크기 랜덤화가 없다.
 
-## 변경점
+구현 클래스 `UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg`는
+`UR5eOscSweepConstantVelocityEnvCfg`를 상속한다. 부모의 12-D Action, 55-D
+Observation, 4-D 속도 command, reward와 안전 종료를 유지하면서 외측 pad 접근과
+gripper 내부 삽입 방지를 추가한다.
 
-### 완만한 그리퍼 orientation 보상
+## 부모 환경과의 차이
 
-두 contact pad는 EEF local `+Y/-Y` 위치에 있다. 새 `gripper_upright` reward는
-EEF local `+Y`가 world `+Z`를 향하도록 유도한다. 따라서 ㄷ자의 한쪽 변은 테이블
-쪽, 반대쪽은 천장 쪽을 향한다.
+### 외측 pad 접근
 
-```text
-raw_reward = (dot(local_+Y_in_world, world_+Z) + 1) / 2
-weight = 0.75
-```
+`push_pose_error`만 교체된다.
 
-완전 upright는 raw reward 1, 수평은 0.5, 뒤집힌 자세는 0이다. hard constraint나
-termination으로 사용하지 않으며, endpoint cost보다 훨씬 작은 보조 보상이다.
+| 항목 | 값 |
+|---|---:|
+| Weight | `-1.0` |
+| 거리 scale | `0.10 m` |
+| pad 정면 stand-off | EEF-local `X = ±0.065 m` |
+| 좌·우 pad 중심 | EEF-local `Y = ±0.055 m` |
+| 목표 높이 | EEF-local `Z = 0` |
+| raw penalty 최대값 | `3.0` |
 
-### Cube 크기 랜덤화
+현재 물체가 EEF-local 좌·우 어느 pad에 가까운지에 따라 pad 중심을 선택한다. 밀기
+방향을 EEF frame으로 변환해 사용할 pad 면의 `±X` 부호를 정하므로 특정 world-frame
+orientation을 강제하지 않는다.
 
-- 형상: 정육면체 유지
-- 한 변 길이: environment마다 uniform `0.06~0.12 m`
-- 기준 `0.06 m` cube에 isotropic scale `1.0~2.0` 적용
-- 서로 다른 environment가 독립적인 물리 크기를 갖도록 `replicate_physics=False`
-- reset 시 `z = table_top + side_length / 2`로 계산해 바닥면을 테이블에 맞춤
+### Gripper 내부 삽입 실패
 
-Isaac Lab/PhysX는 실행 중 rigid-body scale 변경을 안전하게 지원하지 않으므로,
-크기는 simulation prestartup에서 각 parallel environment마다 한 번 샘플링된다.
-예를 들어 2048 environments를 사용하면 한 rollout batch가 전체 크기 구간을 계속
-포함한다.
-
-물체 크기가 달라져도 접근 reward가 물체 내부나 지나치게 먼 지점을 가리키지 않도록
-pre-contact stand-off도 다음처럼 크기에 따라 바뀐다.
+`object_inside_gripper` termination을 추가한다. 물체 중심이 EEF-local exclusion box에
+들어가면 실패한다.
 
 ```text
-stand_off = side_length / 2 + 0.035 m
+XYZ half extents = (0.040, 0.040, 0.058) m
 ```
 
-물체의 초기/현재 pose에 포함된 중심 높이가 크기에 따라 달라지므로 기존 55-D
-Observation만으로도 정책은 물체 크기를 식별할 수 있다. Action 차원은 기존과 같은
-12-D다.
+box는 EEF와 함께 회전한다. 이 종료는 `failure_termination`의 남은 horizon 비용에도
+포함되므로 정책이 고의 종료로 running cost를 회피할 수 없다.
 
-## 학습
+## 유지되는 계약
+
+| 구분 | 값 |
+|---|---|
+| Action | 12-D variable-stiffness OSC |
+| Observation | 55-D |
+| Command | `[direction_x, direction_y, distance_m, target_speed_mps]` |
+| 물체 | 고정 `0.06 m` cube, `0.35 kg` |
+| Scene | 부모와 동일, `replicate_physics=True` |
+| Episode | 8초 |
+| PPO experiment | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
+
+세부 Action/Observation/Reward는
+[ConstantVelocity 계약](constant_velocity_action_reward_observation.md)을 참고한다.
+
+## 학습과 플레이
 
 ```bash
 ./IsaacLab/isaaclab.sh -p \
   src/sweep_rl/scripts/train_constant_velocity_upright_random_size.py \
-  --device cuda:0 \
-  --num_envs 2048 \
-  --headless
+  --num_envs 2048 --device cuda:0 --headless
 ```
 
-크기별 물리 scene 복제가 비활성화되므로 기존 환경보다 simulation 초기화와 physics
-step 비용이 증가할 수 있다.
+```bash
+./IsaacLab/isaaclab.sh -p \
+  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
+  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0 \
+  --checkpoint /absolute/path/to/model.pt --num_envs 1 --device cuda:0
+```
+
+과거 upright/size-randomization 의미로 학습한 checkpoint와 reward 의미가 다르므로 새
+run으로 학습한다.
+
+문서 내용은 2026-07-19 현재 코드 기준이다.

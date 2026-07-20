@@ -1,89 +1,48 @@
+# Sweep RL 상태와 후속 작업
 
-## 학습 및 실행 방법
+이 파일은 2026-07-19 현재 구현 상태만 요약한다. 환경별 정확한 계약과 실행 명령은
+[`src/sweep_rl/docs/registered_osc_sweep_environments.md`](src/sweep_rl/docs/registered_osc_sweep_environments.md)를 따른다.
 
-```bash
-./IsaacLab/isaaclab.sh -p -m pip install -e src/sweep_rl
+## 구현 완료
 
-./IsaacLab/isaaclab.sh -p \
-  IsaacLab/scripts/reinforcement_learning/rsl_rl/train.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-v0 \
-  --headless --device cuda:0
-```
+- 12-D variable-stiffness OSC: stiffness 6-D + relative pose 6-D
+- 5-D force-command 기본, Play, WideRandomization, TactileLocalization 환경
+- 4-D speed-command ConstantVelocity 환경
+- 외측 pad 접근과 gripper 내부 삽입 실패 환경
+  (`...UprightRandomSize-v0`, 이름은 호환성 때문에 유지)
+- 목표 정지 후 SWEEP에서 HOME으로 전환하는 HomeReturn 환경
+- Home 복귀 중 전체 robot-target 접촉 페널티
+- HOME 진입 위치 기준 물체 변위 보상과 강제 실패 조건
+- 환경별 전용 RSL-RL PPO 설정과 학습 스크립트
 
-```bash
-./IsaacLab/isaaclab.sh -p \
-  src/sweep_rl/scripts/play_sweep.py \
-  --device cuda:0 \
-  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0 \
-  --num_envs 1 \
-  --checkpoint logs\rsl_rl\ur5e_osc_sweep_constant_velocity\2026-07-18_23-23-20\model_11999.pt
-```
+## 현재 검증 포인트
 
----
+- ConstantVelocity: `endpoint_error`, `progress_ratio`, success 비율
+- Gripper Exclusion: `object_inside_gripper` 종료 비율
+- HomeReturn: `home_phase`, `parked_displacement`, `post_goal_object_moved`, success 비율
+- 공통 안전성: `excessive_wrench`, `arm_speed`, torque saturation 종료/보상
 
-## 현재 진행 상황
+## 후속 작업
 
-- joint_pos
-- joint_vel
-- joint_effort  
-- eef_pose 
-- ft_sensor  
-- contact_point  
-- initial_target_pose  
-- current_target_pose  
-- desired_motion  
-- last_action  
+1. Isaac Sim이 설치된 환경에서 HomeReturn 4개 환경·1 iteration smoke test
+2. HomeReturn 학습에서 물체 재접촉 및 `parked_displacement >= 0.015 m` 실패율 확인
+3. 성공률과 안전 종료율을 기준으로 Home reward weight 및 12초 timeout 조정
+4. 필요 시 55-D 기존 정책의 첫 layer를 56-D phase observation에 맞게 변환하는 도구 추가
 
-위 관측을 기반으로 정확하게 미는 정책을 학습함
+## HomeReturn 학습
 
----
-
-## 다음 수정 사항 (진행 필요)
-
-1. current_target_pose 를 사용하지 않은 정책 학습
-2. 센서 데이터에 노이즈를 추가한 정책 학습
-
----
-
-## 진행된 수정 사항
-
-1. 미는 방위를 무제한으로 설정. 360도 전부 화전이 가능함
-2. 미는 물체의 질량 범위를 상당히 넓은 범위로 랜덤화 시도할 것. 0.3kg~3.0kg
+Linux:
 
 ```bash
 ./IsaacLab/isaaclab.sh -p \
-  src/sweep_rl/scripts/train_wide_randomization.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-WideRandomization-v0 \
-  --device cuda:0 \
-  --num_envs 2048 \
-  --headless
+  src/sweep_rl/scripts/train_constant_velocity_upright_random_size_home.py \
+  --num_envs 2048 --device cuda:0 --headless
 ```
 
-## 진행된 수정 사항 2
+Windows PowerShell:
 
-current_target_pose 를 관측에서 제외
-이를 통해, 미는 물체의 현재 위치는 관측되지 않고, 촉각 데이터 만으로 위치를 추정하는 구조를 구현
-Reward에서는 그대로 사용.
-
-```bash
-./IsaacLab/isaaclab.sh -p  src/sweep_rl/scripts/train_tactile_localization.py  --task Isaac-Sweep-Object-UR5e-OSC-TactileLocalization-v0  --device cuda:0  --num_envs 2048  --headless
+```powershell
+.\IsaacLab\isaaclab.bat -p `
+  src\sweep_rl\scripts\train_constant_velocity_upright_random_size_home.py `
+  --num_envs 2048 --device cuda:0 --headless
 ```
-
-```bash
-./IsaacLab/isaaclab.sh -p \
-  src/sweep_rl/scripts/train_constant_velocity.py \
-  --device cuda:0 \
-  --num_envs 2048 \
-  --headless
-```
-
-
-```bash
-./IsaacLab/isaaclab.sh -p  src/sweep_rl/scripts/train_constant_velocity.py  --device cuda:0  --num_envs 2048  --headless
-./IsaacLab/isaaclab.bat -p  src/sweep_rl/scripts/train_constant_velocity.py  --device cuda:0  --num_envs 2048  --headless
-```
-
-
-./IsaacLab/isaaclab.bat -p   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py   --device cuda:0   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0   --num_envs 1   --checkpoint logs\rsl_rl\ur5e_osc_sweep_constant_velocity\2026-07-18_23-23-20\model_11999.pt
-
-./IsaacLab/isaaclab.bat -p  src/sweep_rl/scripts/train_constant_velocity_upright_random_size.py  --num_envs 2048  --device cuda:0  --headless
