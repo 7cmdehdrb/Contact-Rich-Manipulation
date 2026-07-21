@@ -90,6 +90,24 @@ def masked_uniform_noise(data: torch.Tensor, cfg: "MaskedUniformNoiseCfg") -> to
     return torch.where(no_measurement, data, data + noise)
 
 
+def componentwise_uniform_noise(
+    data: torch.Tensor, cfg: "ComponentwiseUniformNoiseCfg"
+) -> torch.Tensor:
+    """Add uniform noise with Hydra-compatible per-component bounds."""
+    n_min = torch.as_tensor(cfg.n_min, device=data.device, dtype=data.dtype)
+    n_max = torch.as_tensor(cfg.n_max, device=data.device, dtype=data.dtype)
+    return data + torch.rand_like(data) * (n_max - n_min) + n_min
+
+
+@configclass
+class ComponentwiseUniformNoiseCfg(NoiseCfg):
+    """Uniform additive noise whose bounds remain serializable by Hydra."""
+
+    func = componentwise_uniform_noise
+    n_min: tuple[float, ...] = (-1.0,)
+    n_max: tuple[float, ...] = (1.0,)
+
+
 @configclass
 class MaskedUniformNoiseCfg(NoiseCfg):
     """Uniform additive noise that preserves the contact-point sentinel."""

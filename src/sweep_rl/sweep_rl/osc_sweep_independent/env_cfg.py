@@ -314,9 +314,9 @@ class ObservationsCfg:
         ft_sensor = ObsTerm(
             func=mdp.virtual_ft_wrench_b,
             params={"asset_cfg": FT_CFG},
-            noise=mdp.VectorUniformNoiseCfg(
-                n_min=[-0.5, -0.5, -0.5, -0.02, -0.02, -0.02],
-                n_max=[0.5, 0.5, 0.5, 0.02, 0.02, 0.02],
+            noise=mdp.ComponentwiseUniformNoiseCfg(
+                n_min=(-0.5, -0.5, -0.5, -0.02, -0.02, -0.02),
+                n_max=(0.5, 0.5, 0.5, 0.02, 0.02, 0.02),
             ),
         )
         contact_point = ObsTerm(
@@ -331,9 +331,9 @@ class ObservationsCfg:
         initial_target_pose = ObsTerm(
             func=mdp.initial_target_pose_b,
             params={"command_name": "desired_motion"},
-            noise=mdp.VectorUniformNoiseCfg(
-                n_min=[-0.003, -0.003, -0.003, -0.02, -0.02, -0.02],
-                n_max=[0.003, 0.003, 0.003, 0.02, 0.02, 0.02],
+            noise=mdp.ComponentwiseUniformNoiseCfg(
+                n_min=(-0.003, -0.003, -0.003, -0.02, -0.02, -0.02),
+                n_max=(0.003, 0.003, 0.003, 0.02, 0.02, 0.02),
             ),
         )
         desired_motion = ObsTerm(

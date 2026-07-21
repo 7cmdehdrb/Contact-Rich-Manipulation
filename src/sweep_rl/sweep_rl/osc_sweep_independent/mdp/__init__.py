@@ -27,6 +27,7 @@ from .events import (
 # Start/goal visualization is intentionally disabled.
 # from .events import create_sweep_position_visualizers
 from .observations import (
+    ComponentwiseUniformNoiseCfg,
     MaskedUniformNoiseCfg,
     VectorUniformNoiseCfg,
     end_effector_pose_b,
@@ -74,6 +75,7 @@ from .terminations import (
 )
 
 __all__ = [
+    "ComponentwiseUniformNoiseCfg",
     "ContactLostTooLong",
     "FeasibleSweepHomeCommand",
     "FeasibleSweepHomeCommandCfg",
