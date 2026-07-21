@@ -125,7 +125,7 @@ RSL-RL player를 사용한다.
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
   --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0 \
-  --checkpoint /absolute/path/to/home_return_model.pt \
+  --checkpoint logs/rsl_rl/ur5e_osc_sweep_constant_velocity_upright_random_size_home/2026-07-19_19-55-35/model_11999.pt \
   --num_envs 1 \
   --device cuda:0
 ```
