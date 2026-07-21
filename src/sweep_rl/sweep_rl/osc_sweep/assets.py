@@ -206,6 +206,7 @@ def _spawn_fixed_body(
 
     body_cfg = sim_utils.CuboidCfg(
         size=size,
+        activate_contact_sensors=collision_enabled,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=0.5,
@@ -290,7 +291,7 @@ def spawn_ur5e_robotiq_ft(
         usd_path=cfg.ur5e_usd_path,
         rigid_props=cfg.rigid_props,
         articulation_props=cfg.articulation_props,
-        activate_contact_sensors=False,
+        activate_contact_sensors=cfg.activate_contact_sensors,
     )
     ur_cfg.func(
         prim_path,
@@ -300,7 +301,10 @@ def spawn_ur5e_robotiq_ft(
     )
 
     gripper_path = f"{prim_path}/Robotiq2F85"
-    gripper_cfg = sim_utils.UsdFileCfg(usd_path=cfg.robotiq_usd_path)
+    gripper_cfg = sim_utils.UsdFileCfg(
+        usd_path=cfg.robotiq_usd_path,
+        activate_contact_sensors=cfg.activate_contact_sensors,
+    )
     gripper_cfg.func(gripper_path, gripper_cfg)
 
     robot_root = stage.GetPrimAtPath(prim_path)
@@ -311,7 +315,12 @@ def spawn_ur5e_robotiq_ft(
             "Check SWEEP_UR5E_USD_PATH and SWEEP_ROBOTIQ_USD_PATH."
         )
 
-    _deinstance_geometry(stage, gripper_path)
+    # The UR5e source USD stores link visuals below instanceable ``visuals``
+    # prims.  With heterogeneous environment cloning, Fabric can observe an
+    # instance proxy before its prototype is synchronized and report a
+    # non-existent wrist visual.  Expand the visual instances while assembling
+    # the source robot so every clone has concrete visual prims.
+    _deinstance_geometry(stage, prim_path)
     tool_frame = _find_named_prim(stage, prim_path, cfg.tool_frame_candidates)
     tool_body = _nearest_rigid_body_ancestor(tool_frame)
     gripper_base = _find_named_prim(

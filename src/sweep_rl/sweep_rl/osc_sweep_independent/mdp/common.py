@@ -6,6 +6,10 @@ import torch
 
 import isaaclab.utils.math as math_utils
 
+PHASE_REACH = 0
+PHASE_SWEEP = 1
+PHASE_HOME = 2
+
 
 def pose_w_to_root_rpy(robot, position_w: torch.Tensor, quaternion_w: torch.Tensor) -> torch.Tensor:
     """Convert a world pose to robot-root ``xyz + roll/pitch/yaw``."""
@@ -37,11 +41,13 @@ def target_contact_data_w(
             raise RuntimeError(
                 f"Contact sensor '{sensor_name}' must track filtered forces and contact points."
             )
-        valid = torch.isfinite(contact_pos_w).all(dim=-1)
-        safe_points = torch.nan_to_num(contact_pos_w, nan=0.0)
-        weights = torch.linalg.norm(force_matrix_w, dim=-1) * valid.float()
+        target_force_w = force_matrix_w[:, :, :1, :]
+        target_contact_pos_w = contact_pos_w[:, :, :1, :]
+        valid = torch.isfinite(target_contact_pos_w).all(dim=-1)
+        safe_points = torch.nan_to_num(target_contact_pos_w, nan=0.0)
+        weights = torch.linalg.norm(target_force_w, dim=-1) * valid.float()
         point_numerator += torch.sum(safe_points * weights.unsqueeze(-1), dim=(1, 2))
-        force_sum_w += torch.sum(force_matrix_w * valid.unsqueeze(-1), dim=(1, 2))
+        force_sum_w += torch.sum(target_force_w * valid.unsqueeze(-1), dim=(1, 2))
         weight_sum += torch.sum(weights, dim=(1, 2)).unsqueeze(-1)
 
     contact_mask = weight_sum.squeeze(-1) > force_threshold
@@ -52,14 +58,27 @@ def target_contact_data_w(
     return contact_point_w, force_sum_w, contact_mask
 
 
-def filtered_contact_mask(env, sensor_name: str, force_threshold: float) -> torch.Tensor:
+def filtered_contact_mask(
+    env,
+    sensor_name: str | tuple[str, ...],
+    force_threshold: float,
+    filter_index: int = 0,
+) -> torch.Tensor:
     """Return whether a filtered contact sensor reports meaningful force."""
-    sensor = env.scene[sensor_name]
-    force_matrix_w = sensor.data.force_matrix_w
-    if force_matrix_w is None:
-        raise RuntimeError(f"Contact sensor '{sensor_name}' has no filtered force matrix.")
-    force = torch.linalg.norm(force_matrix_w, dim=-1)
-    return torch.any(force > force_threshold, dim=(1, 2))
+    sensor_names = (sensor_name,) if isinstance(sensor_name, str) else sensor_name
+    contact = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+    for name in sensor_names:
+        force_matrix_w = env.scene[name].data.force_matrix_w
+        if force_matrix_w is None:
+            raise RuntimeError(f"Contact sensor '{name}' has no filtered force matrix.")
+        if filter_index >= force_matrix_w.shape[2]:
+            raise IndexError(
+                f"Contact sensor '{name}' has {force_matrix_w.shape[2]} filters; "
+                f"index {filter_index} was requested."
+            )
+        force = torch.linalg.norm(force_matrix_w[:, :, filter_index, :], dim=-1)
+        contact |= torch.any(force > force_threshold, dim=1)
+    return contact
 
 
 def desired_direction_b(env, command_name: str) -> torch.Tensor:

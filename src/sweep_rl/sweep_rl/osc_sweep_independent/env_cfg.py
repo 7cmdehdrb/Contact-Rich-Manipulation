@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import math
 
-import torch
-
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.controllers import OperationalSpaceControllerCfg
@@ -31,11 +29,117 @@ from ..osc_sweep.assets import (
 )
 from . import mdp
 
-ARM_CFG = SceneEntityCfg("robot", joint_names=list(ARM_JOINT_NAMES), preserve_order=True)
+ARM_CFG = SceneEntityCfg(
+    "robot", joint_names=list(ARM_JOINT_NAMES), preserve_order=True
+)
 EEF_CFG = SceneEntityCfg("robot", body_names=[EEF_CENTER_BODY_NAME])
 FT_CFG = SceneEntityCfg("robot", body_names=[FT_SENSOR_BODY_NAME])
 TARGET_CFG = SceneEntityCfg("target_object")
 PAD_SENSORS = ("left_contact", "right_contact")
+ROBOT_CONTACT_BODY_PATHS = (
+    "base_link",
+    "shoulder_link",
+    "upper_arm_link",
+    "forearm_link",
+    "wrist_1_link",
+    "wrist_2_link",
+    "wrist_3_link",
+    "Robotiq2F85/Robotiq_2F_85/base_link",
+    "Robotiq2F85/Robotiq_2F_85/left_outer_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/left_outer_finger",
+    "Robotiq2F85/Robotiq_2F_85/left_inner_finger",
+    "Robotiq2F85/Robotiq_2F_85/left_inner_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/right_outer_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/right_outer_finger",
+    "Robotiq2F85/Robotiq_2F_85/right_inner_finger",
+    "Robotiq2F85/Robotiq_2F_85/right_inner_knuckle",
+    LEFT_CONTACT_BODY_NAME,
+    RIGHT_CONTACT_BODY_NAME,
+)
+ROBOT_CONTACT_SENSORS = (
+    "base_contact",
+    "shoulder_contact",
+    "upper_arm_contact",
+    "forearm_contact",
+    "wrist_1_contact",
+    "wrist_2_contact",
+    "wrist_3_contact",
+    "gripper_base_contact",
+    "left_outer_knuckle_contact",
+    "left_outer_finger_contact",
+    "left_inner_finger_contact",
+    "left_inner_knuckle_contact",
+    "right_outer_knuckle_contact",
+    "right_outer_finger_contact",
+    "right_inner_finger_contact",
+    "right_inner_knuckle_contact",
+    *PAD_SENSORS,
+)
+ROBOT_CONTACT_FILTERS = (
+    "{ENV_REGEX_NS}/TargetCube",
+    "{ENV_REGEX_NS}/Shelf/rack",
+    *(f"{{ENV_REGEX_NS}}/Robot/{body_path}" for body_path in ROBOT_CONTACT_BODY_PATHS),
+)
+TARGET_CONTACT_FILTER_INDEX = 0
+SHELF_CONTACT_FILTER_INDEX = 1
+SELF_CONTACT_FILTER_START_INDEX = 2
+# These pairs overlap by construction at the shelf-policy neutral gripper pose or
+# are directly connected by a fixed/revolute joint.  All other UR/gripper pairs,
+# including non-adjacent UR-to-gripper contacts, remain termination candidates.
+SELF_COLLISION_EXCLUDED_PAIRS = (
+    ("wrist_3_contact", "gripper_base_contact"),
+    ("gripper_base_contact", "left_inner_knuckle_contact"),
+    ("gripper_base_contact", "right_inner_knuckle_contact"),
+    ("left_inner_finger_contact", "right_contact"),
+    ("right_inner_finger_contact", "left_contact"),
+)
+
+# Bounds measured from the middle shelf board in the composed USD.  The command
+# operates in the 180-degree-rotated robot-root frame, so the board's world X
+# interval [-0.90, -0.50] becomes root-frame X [0.50, 0.90].
+SHELF_USD_PATH = "omniverse://192.168.0.13/Library/Shelf/Arena/Collected_speedrack_shape/speedrack_shape.usd"
+SHELF_POSITION = (-0.7, 0.0, 0.0)
+SHELF_SURFACE_HEIGHT = 1.05
+SHELF_WORKSPACE_X_RANGE = (0.50, 0.90)
+SHELF_WORKSPACE_Y_RANGE = (-0.50, 0.50)
+
+
+def make_shelf_ur5e_robotiq_ft_cfg():
+    """Place the sensor-equipped sweep robot as in the shelf environment."""
+    robot_cfg = make_ur5e_robotiq_ft_cfg()
+    robot_cfg.init_state.pos = (0.0, 0.0, 0.79505)
+    robot_cfg.init_state.rot = (0.0, 0.0, 0.0, 1.0)
+    robot_cfg.init_state.joint_pos = {
+        "shoulder_pan_joint": 0.0,
+        "shoulder_lift_joint": -2.2,
+        "elbow_joint": 2.2,
+        "wrist_1_joint": 0.0,
+        "wrist_2_joint": 1.57,
+        "wrist_3_joint": 0.785,
+        ".*(finger|knuckle).*": 0.0,
+    }
+    robot_cfg.init_state.joint_vel = {".*": 0.0}
+    robot_cfg.spawn.articulation_props.enabled_self_collisions = True
+    return robot_cfg
+
+
+def make_robot_body_contact_sensor(
+    body_path: str,
+    *,
+    track_pose: bool = False,
+    track_contact_points: bool = False,
+) -> ContactSensorCfg:
+    """Create a one-body sensor with TargetCube and Shelf contact filters."""
+    return ContactSensorCfg(
+        prim_path=f"{{ENV_REGEX_NS}}/Robot/{body_path}",
+        update_period=0.0,
+        history_length=0,
+        track_pose=track_pose,
+        track_contact_points=track_contact_points,
+        max_contact_data_count_per_prim=8,
+        filter_prim_paths_expr=list(ROBOT_CONTACT_FILTERS),
+        debug_vis=False,
+    )
 
 
 @configclass
@@ -45,23 +149,15 @@ class IndependentSweepSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.GroundPlaneCfg(),
         init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
     )
-    table = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/OpenTable",
-        spawn=sim_utils.CuboidCfg(
-            size=(1.20, 0.90, 0.05),
-            collision_props=sim_utils.CollisionPropertiesCfg(
-                collision_enabled=True, contact_offset=0.003, rest_offset=0.0
-            ),
-            physics_material=sim_utils.RigidBodyMaterialCfg(
-                static_friction=0.8, dynamic_friction=0.6, restitution=0.0
-            ),
-            visual_material=sim_utils.PreviewSurfaceCfg(
-                diffuse_color=(0.48, 0.36, 0.24)
-            ),
+    shelf = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/Shelf",
+        spawn=sim_utils.UsdFileCfg(usd_path=SHELF_USD_PATH),
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=SHELF_POSITION, rot=(1.0, 0.0, 0.0, 0.0)
         ),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.45, 0.0, 0.75)),
+        debug_vis=False,
     )
-    robot = make_ur5e_robotiq_ft_cfg()
+    robot = make_shelf_ur5e_robotiq_ft_cfg()
     target_object = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/TargetCube",
         spawn=sim_utils.CuboidCfg(
@@ -85,38 +181,52 @@ class IndependentSweepSceneCfg(InteractiveSceneCfg):
             activate_contact_sensors=True,
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=(0.50, 0.0, 0.805), rot=(1.0, 0.0, 0.0, 0.0)
+            pos=(-0.60, 0.0, 1.05), rot=(1.0, 0.0, 0.0, 0.0)
         ),
     )
-    left_contact = ContactSensorCfg(
-        prim_path=f"{{ENV_REGEX_NS}}/Robot/{LEFT_CONTACT_BODY_NAME}",
-        update_period=0.0,
-        history_length=0,
+    base_contact = make_robot_body_contact_sensor("base_link")
+    shoulder_contact = make_robot_body_contact_sensor("shoulder_link")
+    upper_arm_contact = make_robot_body_contact_sensor("upper_arm_link")
+    forearm_contact = make_robot_body_contact_sensor("forearm_link")
+    wrist_1_contact = make_robot_body_contact_sensor("wrist_1_link")
+    wrist_2_contact = make_robot_body_contact_sensor("wrist_2_link")
+    wrist_3_contact = make_robot_body_contact_sensor("wrist_3_link")
+    gripper_base_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/base_link"
+    )
+    left_outer_knuckle_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/left_outer_knuckle"
+    )
+    left_outer_finger_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/left_outer_finger"
+    )
+    left_inner_finger_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/left_inner_finger"
+    )
+    left_inner_knuckle_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/left_inner_knuckle"
+    )
+    right_outer_knuckle_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/right_outer_knuckle"
+    )
+    right_outer_finger_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/right_outer_finger"
+    )
+    right_inner_finger_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/right_inner_finger"
+    )
+    right_inner_knuckle_contact = make_robot_body_contact_sensor(
+        "Robotiq2F85/Robotiq_2F_85/right_inner_knuckle"
+    )
+    left_contact = make_robot_body_contact_sensor(
+        LEFT_CONTACT_BODY_NAME,
         track_pose=True,
         track_contact_points=True,
-        max_contact_data_count_per_prim=8,
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/TargetCube"],
-        debug_vis=False,
     )
-    right_contact = ContactSensorCfg(
-        prim_path=f"{{ENV_REGEX_NS}}/Robot/{RIGHT_CONTACT_BODY_NAME}",
-        update_period=0.0,
-        history_length=0,
+    right_contact = make_robot_body_contact_sensor(
+        RIGHT_CONTACT_BODY_NAME,
         track_pose=True,
         track_contact_points=True,
-        max_contact_data_count_per_prim=8,
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/TargetCube"],
-        debug_vis=False,
-    )
-    target_robot_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/TargetCube",
-        update_period=0.0,
-        history_length=0,
-        track_pose=False,
-        track_contact_points=False,
-        max_contact_data_count_per_prim=32,
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Robot/.*"],
-        debug_vis=False,
     )
     light = AssetBaseCfg(
         prim_path="/World/Light",
@@ -133,13 +243,15 @@ class CommandsCfg:
         direction_angle_range=(-math.pi, math.pi),
         distance_range=(0.12, 0.35),
         target_speed_range=(0.04, 0.12),
-        workspace_x_range=(0.18, 0.82),
-        workspace_y_range=(-0.36, 0.36),
+        workspace_x_range=SHELF_WORKSPACE_X_RANGE,
+        workspace_y_range=SHELF_WORKSPACE_Y_RANGE,
         workspace_boundary_margin=0.015,
         endpoint_threshold=0.025,
         speed_threshold=0.020,
         goal_dwell_time=0.30,
-        debug_vis=False,
+        contact_sensor_names=PAD_SENSORS,
+        contact_force_threshold=0.25,
+        debug_vis=True,
     )
 
 
@@ -201,9 +313,9 @@ class ObservationsCfg:
         ft_sensor = ObsTerm(
             func=mdp.virtual_ft_wrench_b,
             params={"asset_cfg": FT_CFG},
-            noise=Unoise(
-                n_min=torch.tensor([-0.5, -0.5, -0.5, -0.02, -0.02, -0.02]),
-                n_max=torch.tensor([0.5, 0.5, 0.5, 0.02, 0.02, 0.02]),
+            noise=mdp.VectorUniformNoiseCfg(
+                n_min=[-0.5, -0.5, -0.5, -0.02, -0.02, -0.02],
+                n_max=[0.5, 0.5, 0.5, 0.02, 0.02, 0.02],
             ),
         )
         contact_point = ObsTerm(
@@ -218,9 +330,9 @@ class ObservationsCfg:
         initial_target_pose = ObsTerm(
             func=mdp.initial_target_pose_b,
             params={"command_name": "desired_motion"},
-            noise=Unoise(
-                n_min=torch.tensor([-0.003, -0.003, -0.003, -0.02, -0.02, -0.02]),
-                n_max=torch.tensor([0.003, 0.003, 0.003, 0.02, 0.02, 0.02]),
+            noise=mdp.VectorUniformNoiseCfg(
+                n_min=[-0.003, -0.003, -0.003, -0.02, -0.02, -0.02],
+                n_max=[0.003, 0.003, 0.003, 0.02, 0.02, 0.02],
             ),
         )
         desired_motion = ObsTerm(
@@ -240,6 +352,10 @@ class ObservationsCfg:
 
 @configclass
 class EventsCfg:
+    create_position_visualizers = EventTerm(
+        func=mdp.create_sweep_position_visualizers,
+        mode="prestartup",
+    )
     randomize_target_size = EventTerm(
         func=mdp.randomize_target_cube_size,
         mode="prestartup",
@@ -274,6 +390,30 @@ class EventsCfg:
             "recompute_inertia": True,
         },
     )
+    randomize_target_friction = EventTerm(
+        func=mdp.randomize_rigid_body_material,
+        mode="startup",
+        params={
+            "asset_cfg": TARGET_CFG,
+            "static_friction_range": (0.40, 1.10),
+            "dynamic_friction_range": (0.25, 0.90),
+            "restitution_range": (0.0, 0.0),
+            "num_buckets": 64,
+            "make_consistent": True,
+        },
+    )
+    randomize_shelf_friction = EventTerm(
+        func=mdp.randomize_rigid_body_material,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("shelf"),
+            "static_friction_range": (0.40, 1.10),
+            "dynamic_friction_range": (0.25, 0.90),
+            "restitution_range": (0.0, 0.0),
+            "num_buckets": 64,
+            "make_consistent": True,
+        },
+    )
     reset_target = EventTerm(
         func=mdp.reset_variable_size_target,
         mode="reset",
@@ -283,7 +423,7 @@ class EventsCfg:
                 "y": (-0.14, 0.14),
                 "yaw": (-math.pi, math.pi),
             },
-            "table_top_height": 0.775,
+            "table_top_height": SHELF_SURFACE_HEIGHT,
             "asset_cfg": TARGET_CFG,
         },
     )
@@ -337,7 +477,7 @@ class RewardsCfg:
             "command_name": "desired_motion",
             "joint_std": 0.35,
             "joint_error_scale": 0.75,
-            "contact_sensor_name": "target_robot_contact",
+            "contact_sensor_name": ROBOT_CONTACT_SENSORS,
             "contact_force_threshold": 0.25,
             "displacement_scale": 0.010,
             "asset_cfg": ARM_CFG,
@@ -360,7 +500,7 @@ class TerminationsCfg:
             "object_speed_threshold": 0.025,
             "object_displacement_threshold": 0.010,
             "dwell_time": 0.25,
-            "contact_sensor_name": "target_robot_contact",
+            "contact_sensor_name": ROBOT_CONTACT_SENSORS,
             "contact_force_threshold": 0.25,
             "asset_cfg": ARM_CFG,
             "object_cfg": TARGET_CFG,
@@ -390,7 +530,7 @@ class TerminationsCfg:
         time_out=False,
         params={
             "command_name": "desired_motion",
-            "sensor_name": "target_robot_contact",
+            "sensor_name": ROBOT_CONTACT_SENSORS,
             "force_threshold": 0.25,
             "release_grace_time": 0.30,
         },
@@ -409,7 +549,7 @@ class TerminationsCfg:
         func=mdp.target_invalid_pose,
         time_out=False,
         params={
-            "minimum_height": 0.76,
+            "minimum_height": 1.04,
             "maximum_tilt": 0.80,
             "object_cfg": TARGET_CFG,
         },
@@ -423,6 +563,25 @@ class TerminationsCfg:
         func=mdp.arm_joint_speed_limit,
         time_out=False,
         params={"maximum_speed": 6.5, "asset_cfg": ARM_CFG},
+    )
+    shelf_collision = DoneTerm(
+        func=mdp.robot_shelf_collision,
+        time_out=False,
+        params={
+            "sensor_names": ROBOT_CONTACT_SENSORS,
+            "shelf_filter_index": SHELF_CONTACT_FILTER_INDEX,
+            "force_threshold": 0.1,
+        },
+    )
+    self_collision = DoneTerm(
+        func=mdp.robot_self_collision,
+        time_out=False,
+        params={
+            "sensor_names": ROBOT_CONTACT_SENSORS,
+            "self_filter_start_index": SELF_CONTACT_FILTER_START_INDEX,
+            "excluded_pairs": SELF_COLLISION_EXCLUDED_PAIRS,
+            "force_threshold": 0.1,
+        },
     )
 
 
@@ -457,5 +616,5 @@ class UR5eOscSweepIndependentEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_max_rigid_patch_count = 5 * 2**17
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 2**25
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 2**23
-        self.viewer.eye = (2.2, 2.2, 1.8)
-        self.viewer.lookat = (0.45, 0.0, 0.80)
+        self.viewer.eye = (1.6, 2.2, 1.8)
+        self.viewer.lookat = (-0.65, 0.0, 1.02)

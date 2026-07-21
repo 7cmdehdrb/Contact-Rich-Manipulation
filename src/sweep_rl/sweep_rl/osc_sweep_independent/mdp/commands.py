@@ -7,13 +7,14 @@ from collections.abc import Sequence
 from dataclasses import MISSING
 
 import torch
-
+import isaaclab.sim as sim_utils
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import CommandTerm, CommandTermCfg
 from isaaclab.utils import configclass
 
-from .events import TARGET_SIZE_BUFFER
+from .common import PHASE_HOME, PHASE_REACH, PHASE_SWEEP, target_contact_data_w
+from .events import GOAL_VISUALIZER, INITIAL_VISUALIZER, TARGET_SIZE_BUFFER
 
 
 class FeasibleSweepHomeCommand(CommandTerm):
@@ -27,6 +28,7 @@ class FeasibleSweepHomeCommand(CommandTerm):
         self.target: RigidObject = env.scene[cfg.object_name]
         self._command = torch.zeros(self.num_envs, 4, device=self.device)
         self.initial_pose_b = torch.zeros(self.num_envs, 6, device=self.device)
+        self.initial_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
         self.goal_pos_b = torch.zeros(self.num_envs, 3, device=self.device)
         self.goal_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
         self.direction_w = torch.zeros(self.num_envs, 3, device=self.device)
@@ -38,6 +40,8 @@ class FeasibleSweepHomeCommand(CommandTerm):
         self.metrics["endpoint_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["speed_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["progress_ratio"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["reach_phase"] = torch.zeros(self.num_envs, device=self.device)
+        self.metrics["sweep_phase"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["home_phase"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["parked_displacement"] = torch.zeros(self.num_envs, device=self.device)
 
@@ -132,6 +136,7 @@ class FeasibleSweepHomeCommand(CommandTerm):
         self.initial_pose_b[ids] = torch.cat(
             (object_pos_b, torch.stack((roll, pitch, yaw), dim=-1)), dim=-1
         )
+        self.initial_pos_w[ids] = self.target.data.root_pos_w[ids]
         if not hasattr(self._env, TARGET_SIZE_BUFFER):
             raise RuntimeError("Target-size randomization must run before command sampling.")
         half_size = 0.5 * getattr(self._env, TARGET_SIZE_BUFFER)[ids]
@@ -161,7 +166,7 @@ class FeasibleSweepHomeCommand(CommandTerm):
         self.goal_pos_w[ids] = (
             self.target.data.root_pos_w[ids] + direction_w * distance.unsqueeze(-1)
         )
-        self.task_phase[ids] = 0
+        self.task_phase[ids] = PHASE_REACH
         self._goal_dwell_elapsed[ids] = 0.0
         self.parked_object_pos_w[ids] = self.target.data.root_pos_w[ids]
 
@@ -186,21 +191,37 @@ class FeasibleSweepHomeCommand(CommandTerm):
         self.metrics["progress_ratio"][:] = progress / torch.clamp(
             self._command[:, 2], min=1.0e-6
         )
-        self.metrics["home_phase"][:] = self.task_phase.float()
+        self.metrics["reach_phase"][:] = (self.task_phase == PHASE_REACH).float()
+        self.metrics["sweep_phase"][:] = (self.task_phase == PHASE_SWEEP).float()
+        self.metrics["home_phase"][:] = (self.task_phase == PHASE_HOME).float()
         parked_displacement = torch.linalg.norm(
             self.target.data.root_pos_w - self.parked_object_pos_w, dim=-1
         )
         self.metrics["parked_displacement"][:] = torch.where(
-            self.task_phase == 1, parked_displacement, torch.zeros_like(parked_displacement)
+            self.task_phase == PHASE_HOME,
+            parked_displacement,
+            torch.zeros_like(parked_displacement),
         )
 
     def _update_command(self) -> None:
+        _, _, target_contact = target_contact_data_w(
+            self._env,
+            sensor_names=self.cfg.contact_sensor_names,
+            force_threshold=self.cfg.contact_force_threshold,
+        )
+        entering_sweep = (self.task_phase == PHASE_REACH) & target_contact
+        self.task_phase[:] = torch.where(
+            entering_sweep,
+            torch.full_like(self.task_phase, PHASE_SWEEP),
+            self.task_phase,
+        )
+
         endpoint_error = torch.linalg.norm(
             self.target.data.root_pos_w - self.goal_pos_w, dim=-1
         )
         object_speed = torch.linalg.norm(self.target.data.root_lin_vel_w, dim=-1)
         parked = (
-            (self.task_phase == 0)
+            (self.task_phase == PHASE_SWEEP)
             & (endpoint_error < self.cfg.endpoint_threshold)
             & (object_speed < self.cfg.speed_threshold)
         )
@@ -208,19 +229,57 @@ class FeasibleSweepHomeCommand(CommandTerm):
             parked,
             self._goal_dwell_elapsed + self._env.step_dt,
             torch.where(
-                self.task_phase == 0,
+                self.task_phase == PHASE_SWEEP,
                 torch.zeros_like(self._goal_dwell_elapsed),
                 self._goal_dwell_elapsed,
             ),
         )
         entering_home = (
-            (self.task_phase == 0)
+            (self.task_phase == PHASE_SWEEP)
             & (self._goal_dwell_elapsed >= self.cfg.goal_dwell_time)
         )
         self.parked_object_pos_w[entering_home] = self.target.data.root_pos_w[entering_home]
         self.task_phase[:] = torch.where(
-            entering_home, torch.ones_like(self.task_phase), self.task_phase
+            entering_home,
+            torch.full_like(self.task_phase, PHASE_HOME),
+            self.task_phase,
         )
+
+    def _set_debug_vis_impl(self, debug_vis: bool) -> None:
+        if debug_vis:
+            if not hasattr(self, "initial_position_visualizer"):
+                if not hasattr(self._env, INITIAL_VISUALIZER) or not hasattr(
+                    self._env, GOAL_VISUALIZER
+                ):
+                    # Markers are intentionally omitted for headless training and
+                    # vectorized environments.  They are a GUI inspection aid,
+                    # not part of the command or observation state.
+                    return
+                self.initial_position_visualizer = getattr(
+                    self._env, INITIAL_VISUALIZER
+                )
+                self.goal_position_visualizer = getattr(self._env, GOAL_VISUALIZER)
+            self.initial_position_visualizer.set_visibility(True)
+            self.goal_position_visualizer.set_visibility(True)
+        elif hasattr(self, "initial_position_visualizer"):
+            self.initial_position_visualizer.set_visibility(False)
+            self.goal_position_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event) -> None:
+        del event
+        if not self.target.is_initialized or not hasattr(
+            self, "initial_position_visualizer"
+        ):
+            return
+        env_index = min(self.cfg.debug_vis_env_index, self.num_envs - 1)
+        marker_positions = torch.stack(
+            (self.initial_pos_w[env_index], self.goal_pos_w[env_index]), dim=0
+        ).clone()
+        marker_positions[:, 2] += self.cfg.visualization_height_offset
+        self.initial_position_visualizer.visualize(
+            translations=marker_positions[0:1]
+        )
+        self.goal_position_visualizer.visualize(translations=marker_positions[1:2])
 
 
 @configclass
@@ -239,3 +298,7 @@ class FeasibleSweepHomeCommandCfg(CommandTermCfg):
     endpoint_threshold: float = 0.025
     speed_threshold: float = 0.020
     goal_dwell_time: float = 0.30
+    contact_sensor_names: tuple[str, ...] = ("left_contact", "right_contact")
+    contact_force_threshold: float = 0.25
+    debug_vis_env_index: int = 0
+    visualization_height_offset: float = 0.10

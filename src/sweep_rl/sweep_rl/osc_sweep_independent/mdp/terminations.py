@@ -10,7 +10,12 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import ManagerTermBase, SceneEntityCfg
 
-from .common import filtered_contact_mask, target_contact_data_w
+from .common import (
+    PHASE_HOME,
+    PHASE_SWEEP,
+    filtered_contact_mask,
+    target_contact_data_w,
+)
 
 
 def target_invalid_pose(
@@ -50,6 +55,60 @@ def arm_joint_speed_limit(
     )
 
 
+def robot_shelf_collision(
+    env,
+    sensor_names: tuple[str, ...],
+    shelf_filter_index: int,
+    force_threshold: float,
+) -> torch.Tensor:
+    """Fail when any UR5e or gripper rigid body contacts the shelf."""
+    return filtered_contact_mask(
+        env,
+        sensor_names,
+        force_threshold,
+        filter_index=shelf_filter_index,
+    )
+
+
+def robot_self_collision(
+    env,
+    sensor_names: tuple[str, ...],
+    self_filter_start_index: int,
+    excluded_pairs: tuple[tuple[str, str], ...],
+    force_threshold: float,
+) -> torch.Tensor:
+    """Fail on non-adjacent UR5e/gripper contact, including UR-to-gripper contact."""
+    sensor_index = {name: index for index, name in enumerate(sensor_names)}
+    excluded_indices: dict[str, set[int]] = {name: set() for name in sensor_names}
+    for first_name, second_name in excluded_pairs:
+        if first_name not in sensor_index or second_name not in sensor_index:
+            raise ValueError(
+                f"Unknown self-collision exclusion pair: {first_name}, {second_name}."
+            )
+        excluded_indices[first_name].add(sensor_index[second_name])
+        excluded_indices[second_name].add(sensor_index[first_name])
+
+    collision = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+    for sensor_name in sensor_names:
+        force_matrix_w = env.scene[sensor_name].data.force_matrix_w
+        if force_matrix_w is None:
+            raise RuntimeError(
+                f"Contact sensor '{sensor_name}' has no filtered force matrix."
+            )
+        if force_matrix_w.shape[2] <= self_filter_start_index:
+            raise IndexError(
+                f"Contact sensor '{sensor_name}' has no robot self-contact filters."
+            )
+        self_forces = torch.linalg.norm(
+            force_matrix_w[:, :, self_filter_start_index:, :], dim=-1
+        )
+        ignored_filter_indices = excluded_indices[sensor_name]
+        if ignored_filter_indices:
+            self_forces[:, :, list(ignored_filter_indices)] = 0.0
+        collision |= torch.any(self_forces > force_threshold, dim=(1, 2))
+    return collision
+
+
 def object_inside_gripper(
     env,
     center_half_extents: tuple[float, float, float],
@@ -81,7 +140,7 @@ def object_disturbed_during_home(
         target.data.root_pos_w - command.parked_object_pos_w, dim=-1
     )
     speed = torch.linalg.norm(target.data.root_lin_vel_w, dim=-1)
-    return (command.task_phase == 1) & (
+    return (command.task_phase == PHASE_HOME) & (
         (displacement > displacement_threshold) | (speed > speed_threshold)
     )
 
@@ -114,7 +173,7 @@ class ContactLostTooLong(ManagerTermBase):
         _, _, contact = target_contact_data_w(
             env, sensor_names=sensor_names, force_threshold=force_threshold
         )
-        sweeping = command.task_phase == 0
+        sweeping = command.task_phase == PHASE_SWEEP
         self._ever_contacted |= contact & sweeping
         actively_lost = sweeping & self._ever_contacted & (~contact)
         self._lost_elapsed[:] = torch.where(
@@ -143,12 +202,12 @@ class HomeContactAfterRelease(ManagerTermBase):
         self,
         env,
         command_name: str,
-        sensor_name: str,
+        sensor_name: str | tuple[str, ...],
         force_threshold: float,
         release_grace_time: float,
     ) -> torch.Tensor:
         command = env.command_manager.get_term(command_name)
-        home = command.task_phase == 1
+        home = command.task_phase == PHASE_HOME
         contact = filtered_contact_mask(env, sensor_name, force_threshold)
         self._home_elapsed[:] = torch.where(
             home, self._home_elapsed + env.step_dt, torch.zeros_like(self._home_elapsed)
@@ -181,7 +240,7 @@ class HomeAfterSweepSuccess(ManagerTermBase):
         object_speed_threshold: float,
         object_displacement_threshold: float,
         dwell_time: float,
-        contact_sensor_name: str,
+        contact_sensor_name: str | tuple[str, ...],
         contact_force_threshold: float,
         asset_cfg: SceneEntityCfg,
         object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
@@ -203,7 +262,7 @@ class HomeAfterSweepSuccess(ManagerTermBase):
             env, contact_sensor_name, contact_force_threshold
         )
         stable = (
-            (command.task_phase == 1)
+            (command.task_phase == PHASE_HOME)
             & torch.all(joint_error < joint_position_threshold, dim=-1)
             & torch.all(
                 torch.abs(robot.data.joint_vel[:, asset_cfg.joint_ids])

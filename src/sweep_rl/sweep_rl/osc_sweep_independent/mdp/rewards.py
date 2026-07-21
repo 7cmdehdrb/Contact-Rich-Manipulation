@@ -8,7 +8,14 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 
-from .common import filtered_contact_mask, object_displacement_b, target_contact_data_w
+from .common import (
+    PHASE_HOME,
+    PHASE_REACH,
+    PHASE_SWEEP,
+    filtered_contact_mask,
+    object_displacement_b,
+    target_contact_data_w,
+)
 from .events import TARGET_SIZE_BUFFER
 
 
@@ -36,7 +43,7 @@ def reaching(
     _, _, contact = target_contact_data_w(env, sensor_names=sensor_names)
     normalized = torch.clamp(distance / distance_std, max=3.0)
     value = torch.exp(-torch.square(normalized)) - 0.20 * normalized
-    return value * (command.task_phase == 0).float() * (~contact).float()
+    return value * (command.task_phase == PHASE_REACH).float() * (~contact).float()
 
 
 def contact(
@@ -50,7 +57,7 @@ def contact(
     _, _, contact_mask = target_contact_data_w(
         env, sensor_names=sensor_names, force_threshold=force_threshold
     )
-    return contact_mask.float() * (command.task_phase == 0).float()
+    return contact_mask.float() * (command.task_phase == PHASE_SWEEP).float()
 
 
 def push(
@@ -114,7 +121,7 @@ def push(
         - 2.0 * normalized_lateral
         - 3.0 * overshoot
     )
-    return value * (term.task_phase == 0).float()
+    return value * (term.task_phase == PHASE_SWEEP).float()
 
 
 def home_return(
@@ -122,7 +129,7 @@ def home_return(
     command_name: str,
     joint_std: float,
     joint_error_scale: float,
-    contact_sensor_name: str,
+    contact_sensor_name: str | tuple[str, ...],
     contact_force_threshold: float,
     displacement_scale: float,
     asset_cfg: SceneEntityCfg,
@@ -152,4 +159,4 @@ def home_return(
         - 4.0 * contact_mask.float()
         - 3.0 * disturbance
     )
-    return value * (command.task_phase == 1).float()
+    return value * (command.task_phase == PHASE_HOME).float()

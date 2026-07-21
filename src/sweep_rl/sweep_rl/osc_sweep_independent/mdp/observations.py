@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import MISSING
+
 import torch
 
 import isaaclab.utils.math as math_utils
@@ -51,6 +53,30 @@ def initial_target_pose_b(env, command_name: str) -> torch.Tensor:
 def task_phase(env, command_name: str) -> torch.Tensor:
     phase = env.command_manager.get_term(command_name).task_phase
     return phase.float().unsqueeze(-1)
+
+
+def vector_uniform_noise(
+    data: torch.Tensor, cfg: "VectorUniformNoiseCfg"
+) -> torch.Tensor:
+    """Add per-component noise from Hydra-serializable list bounds."""
+    n_min = torch.as_tensor(cfg.n_min, device=data.device, dtype=data.dtype)
+    n_max = torch.as_tensor(cfg.n_max, device=data.device, dtype=data.dtype)
+    if n_min.shape != data.shape[1:] or n_max.shape != data.shape[1:]:
+        raise ValueError(
+            "Vector noise bounds must match one observation row: "
+            f"data={tuple(data.shape[1:])}, n_min={tuple(n_min.shape)}, "
+            f"n_max={tuple(n_max.shape)}."
+        )
+    return data + torch.rand_like(data) * (n_max - n_min) + n_min
+
+
+@configclass
+class VectorUniformNoiseCfg(NoiseCfg):
+    """Per-component additive noise with Hydra-safe configuration values."""
+
+    func = vector_uniform_noise
+    n_min: list[float] = MISSING
+    n_max: list[float] = MISSING
 
 
 def masked_uniform_noise(data: torch.Tensor, cfg: "MaskedUniformNoiseCfg") -> torch.Tensor:

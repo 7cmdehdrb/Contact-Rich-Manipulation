@@ -9,9 +9,54 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import RigidObject
 from isaaclab.envs.mdp.events import randomize_rigid_body_scale
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.sim.utils.stage import get_current_stage
 
 TARGET_SIZE_BUFFER = "_independent_sweep_target_sizes"
+INITIAL_VISUALIZER = "_independent_sweep_initial_position_visualizer"
+GOAL_VISUALIZER = "_independent_sweep_goal_position_visualizer"
+
+
+def create_sweep_position_visualizers(env, env_ids: torch.Tensor | None) -> None:
+    """Create single-environment GUI markers before simulation startup.
+
+    Training does not need these markers.  Avoiding PointInstancers in headless or
+    vectorized runs also keeps Fabric from trying to reconcile debug prototypes
+    across cloned environments.
+    """
+    del env_ids
+    if not env.sim.has_gui() or env.scene.num_envs != 1:
+        return
+    if hasattr(env, INITIAL_VISUALIZER):
+        return
+    initial_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/Command/sweep_target_positions/initial",
+        markers={
+            "initial": sim_utils.SphereCfg(
+                radius=0.045,
+                visual_material=sim_utils.PreviewSurfaceCfg(
+                    diffuse_color=(0.10, 0.35, 1.00),
+                    emissive_color=(0.02, 0.08, 0.30),
+                    opacity=0.35,
+                ),
+            )
+        },
+    )
+    goal_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/Command/sweep_target_positions/goal",
+        markers={
+            "goal": sim_utils.SphereCfg(
+                radius=0.050,
+                visual_material=sim_utils.PreviewSurfaceCfg(
+                    diffuse_color=(1.00, 0.05, 0.75),
+                    emissive_color=(0.40, 0.01, 0.15),
+                    opacity=0.90,
+                ),
+            )
+        },
+    )
+    setattr(env, INITIAL_VISUALIZER, VisualizationMarkers(initial_cfg))
+    setattr(env, GOAL_VISUALIZER, VisualizationMarkers(goal_cfg))
 
 
 def randomize_target_cube_size(
