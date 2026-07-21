@@ -7,14 +7,15 @@ from collections.abc import Sequence
 from dataclasses import MISSING
 
 import torch
-import isaaclab.sim as sim_utils
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import CommandTerm, CommandTermCfg
 from isaaclab.utils import configclass
 
 from .common import PHASE_HOME, PHASE_REACH, PHASE_SWEEP, target_contact_data_w
-from .events import GOAL_VISUALIZER, INITIAL_VISUALIZER, TARGET_SIZE_BUFFER
+from .events import TARGET_SIZE_BUFFER
+# Start/goal marker support is intentionally disabled.
+# from .events import GOAL_VISUALIZER, INITIAL_VISUALIZER
 
 
 class FeasibleSweepHomeCommand(CommandTerm):
@@ -245,41 +246,43 @@ class FeasibleSweepHomeCommand(CommandTerm):
             self.task_phase,
         )
 
-    def _set_debug_vis_impl(self, debug_vis: bool) -> None:
-        if debug_vis:
-            if not hasattr(self, "initial_position_visualizer"):
-                if not hasattr(self._env, INITIAL_VISUALIZER) or not hasattr(
-                    self._env, GOAL_VISUALIZER
-                ):
-                    # Markers are intentionally omitted for headless training and
-                    # vectorized environments.  They are a GUI inspection aid,
-                    # not part of the command or observation state.
-                    return
-                self.initial_position_visualizer = getattr(
-                    self._env, INITIAL_VISUALIZER
-                )
-                self.goal_position_visualizer = getattr(self._env, GOAL_VISUALIZER)
-            self.initial_position_visualizer.set_visibility(True)
-            self.goal_position_visualizer.set_visibility(True)
-        elif hasattr(self, "initial_position_visualizer"):
-            self.initial_position_visualizer.set_visibility(False)
-            self.goal_position_visualizer.set_visibility(False)
-
-    def _debug_vis_callback(self, event) -> None:
-        del event
-        if not self.target.is_initialized or not hasattr(
-            self, "initial_position_visualizer"
-        ):
-            return
-        env_index = min(self.cfg.debug_vis_env_index, self.num_envs - 1)
-        marker_positions = torch.stack(
-            (self.initial_pos_w[env_index], self.goal_pos_w[env_index]), dim=0
-        ).clone()
-        marker_positions[:, 2] += self.cfg.visualization_height_offset
-        self.initial_position_visualizer.visualize(
-            translations=marker_positions[0:1]
-        )
-        self.goal_position_visualizer.visualize(translations=marker_positions[1:2])
+    # Start/goal visualization is intentionally disabled.
+    # def _set_debug_vis_impl(self, debug_vis: bool) -> None:
+    #     if debug_vis:
+    #         if not hasattr(self, "initial_position_visualizer"):
+    #             if not hasattr(self._env, INITIAL_VISUALIZER) or not hasattr(
+    #                 self._env, GOAL_VISUALIZER
+    #             ):
+    #                 return
+    #             self.initial_position_visualizer = getattr(
+    #                 self._env, INITIAL_VISUALIZER
+    #             )
+    #             self.goal_position_visualizer = getattr(
+    #                 self._env, GOAL_VISUALIZER
+    #             )
+    #         self.initial_position_visualizer.set_visibility(True)
+    #         self.goal_position_visualizer.set_visibility(True)
+    #     elif hasattr(self, "initial_position_visualizer"):
+    #         self.initial_position_visualizer.set_visibility(False)
+    #         self.goal_position_visualizer.set_visibility(False)
+    #
+    # def _debug_vis_callback(self, event) -> None:
+    #     del event
+    #     if not self.target.is_initialized or not hasattr(
+    #         self, "initial_position_visualizer"
+    #     ):
+    #         return
+    #     env_index = min(self.cfg.debug_vis_env_index, self.num_envs - 1)
+    #     marker_positions = torch.stack(
+    #         (self.initial_pos_w[env_index], self.goal_pos_w[env_index]), dim=0
+    #     ).clone()
+    #     marker_positions[:, 2] += self.cfg.visualization_height_offset
+    #     self.initial_position_visualizer.visualize(
+    #         translations=marker_positions[0:1]
+    #     )
+    #     self.goal_position_visualizer.visualize(
+    #         translations=marker_positions[1:2]
+    #     )
 
 
 @configclass
@@ -300,5 +303,6 @@ class FeasibleSweepHomeCommandCfg(CommandTermCfg):
     goal_dwell_time: float = 0.30
     contact_sensor_names: tuple[str, ...] = ("left_contact", "right_contact")
     contact_force_threshold: float = 0.25
-    debug_vis_env_index: int = 0
-    visualization_height_offset: float = 0.10
+    # Start/goal visualization is intentionally disabled.
+    # debug_vis_env_index: int = 0
+    # visualization_height_offset: float = 0.10

@@ -168,7 +168,7 @@ def test_observation_noise_configuration_is_hydra_serializable() -> None:
     assert "torch.as_tensor(cfg.n_max" in observation_source
 
 
-def test_friction_randomization_and_goal_visualization_are_enabled() -> None:
+def test_friction_randomization_reset_logging_and_visualization_state() -> None:
     environment_source = (PACKAGE / "env_cfg.py").read_text(encoding="utf-8")
     command_source = (PACKAGE / "mdp" / "commands.py").read_text(
         encoding="utf-8"
@@ -179,16 +179,21 @@ def test_friction_randomization_and_goal_visualization_are_enabled() -> None:
     assert environment_source.count('"static_friction_range": (0.40, 1.10)') == 2
     assert environment_source.count('"dynamic_friction_range": (0.25, 0.90)') == 2
     assert environment_source.count('"make_consistent": True') == 2
-    assert "debug_vis=True" in environment_source
+    assert "debug_vis=False" in environment_source
     event_source = (PACKAGE / "mdp" / "events.py").read_text(encoding="utf-8")
-    assert "create_position_visualizers = EventTerm(" in environment_source
-    assert "func=mdp.create_sweep_position_visualizers" in environment_source
+    assert "# create_position_visualizers = EventTerm(" in environment_source
+    assert "#     func=mdp.create_sweep_position_visualizers" in environment_source
+    assert "# def create_sweep_position_visualizers" in event_source
     assert event_source.count("VisualizationMarkers(") == 2
     assert event_source.count("markers={") == 2
-    assert "mode=\"prestartup\"" in environment_source
     assert "marker_indices=" not in command_source
     assert command_source.count(".visualize(") == 2
-    assert "visualization_height_offset: float = 0.10" in command_source
+    assert "# visualization_height_offset: float = 0.10" in command_source
+    assert "print_reset_physics_info = EventTerm(" in environment_source
+    assert "func=mdp.print_reset_physics_info" in environment_source
+    assert "target.root_physx_view.get_masses()" in event_source
+    assert event_source.count("root_physx_view.get_material_properties()") == 2
+    assert "[TEST][RESET_PHYSICS]" in event_source
 
 
 def test_package_readme_documents_observation_action_reward_and_randomization() -> None:

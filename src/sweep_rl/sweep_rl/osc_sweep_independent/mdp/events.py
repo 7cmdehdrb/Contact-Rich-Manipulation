@@ -9,54 +9,105 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import RigidObject
 from isaaclab.envs.mdp.events import randomize_rigid_body_scale
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+# Start/goal visualization is intentionally disabled.
+# from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.sim.utils.stage import get_current_stage
 
 TARGET_SIZE_BUFFER = "_independent_sweep_target_sizes"
-INITIAL_VISUALIZER = "_independent_sweep_initial_position_visualizer"
-GOAL_VISUALIZER = "_independent_sweep_goal_position_visualizer"
+# INITIAL_VISUALIZER = "_independent_sweep_initial_position_visualizer"
+# GOAL_VISUALIZER = "_independent_sweep_goal_position_visualizer"
+#
+#
+# def create_sweep_position_visualizers(env, env_ids: torch.Tensor | None) -> None:
+#     """Create single-environment GUI markers before simulation startup."""
+#     del env_ids
+#     if not env.sim.has_gui() or env.scene.num_envs != 1:
+#         return
+#     if hasattr(env, INITIAL_VISUALIZER):
+#         return
+#     initial_cfg = VisualizationMarkersCfg(
+#         prim_path="/Visuals/Command/sweep_target_positions/initial",
+#         markers={
+#             "initial": sim_utils.SphereCfg(
+#                 radius=0.045,
+#                 visual_material=sim_utils.PreviewSurfaceCfg(
+#                     diffuse_color=(0.10, 0.35, 1.00),
+#                     emissive_color=(0.02, 0.08, 0.30),
+#                     opacity=0.35,
+#                 ),
+#             )
+#         },
+#     )
+#     goal_cfg = VisualizationMarkersCfg(
+#         prim_path="/Visuals/Command/sweep_target_positions/goal",
+#         markers={
+#             "goal": sim_utils.SphereCfg(
+#                 radius=0.050,
+#                 visual_material=sim_utils.PreviewSurfaceCfg(
+#                     diffuse_color=(1.00, 0.05, 0.75),
+#                     emissive_color=(0.40, 0.01, 0.15),
+#                     opacity=0.90,
+#                 ),
+#             )
+#         },
+#     )
+#     setattr(env, INITIAL_VISUALIZER, VisualizationMarkers(initial_cfg))
+#     setattr(env, GOAL_VISUALIZER, VisualizationMarkers(goal_cfg))
 
 
-def create_sweep_position_visualizers(env, env_ids: torch.Tensor | None) -> None:
-    """Create single-environment GUI markers before simulation startup.
+def print_reset_physics_info(
+    env,
+    env_ids: torch.Tensor | None,
+    target_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+    shelf_cfg: SceneEntityCfg = SceneEntityCfg("shelf"),
+    max_envs_to_print: int = 8,
+) -> None:
+    """Print randomized mass and friction after reset for temporary inspection.
 
-    Training does not need these markers.  Avoiding PointInstancers in headless or
-    vectorized runs also keeps Fabric from trying to reconcile debug prototypes
-    across cloned environments.
+    This is intentionally read-only test instrumentation.  Disable it by
+    commenting out ``print_reset_physics_info`` in ``EventsCfg``.
     """
-    del env_ids
-    if not env.sim.has_gui() or env.scene.num_envs != 1:
-        return
-    if hasattr(env, INITIAL_VISUALIZER):
-        return
-    initial_cfg = VisualizationMarkersCfg(
-        prim_path="/Visuals/Command/sweep_target_positions/initial",
-        markers={
-            "initial": sim_utils.SphereCfg(
-                radius=0.045,
-                visual_material=sim_utils.PreviewSurfaceCfg(
-                    diffuse_color=(0.10, 0.35, 1.00),
-                    emissive_color=(0.02, 0.08, 0.30),
-                    opacity=0.35,
-                ),
-            )
-        },
+    if max_envs_to_print <= 0:
+        raise ValueError("max_envs_to_print must be positive.")
+
+    selected_ids = (
+        torch.arange(env.scene.num_envs, device="cpu", dtype=torch.long)
+        if env_ids is None
+        else env_ids.to(device="cpu", dtype=torch.long)
     )
-    goal_cfg = VisualizationMarkersCfg(
-        prim_path="/Visuals/Command/sweep_target_positions/goal",
-        markers={
-            "goal": sim_utils.SphereCfg(
-                radius=0.050,
-                visual_material=sim_utils.PreviewSurfaceCfg(
-                    diffuse_color=(1.00, 0.05, 0.75),
-                    emissive_color=(0.40, 0.01, 0.15),
-                    opacity=0.90,
-                ),
-            )
-        },
-    )
-    setattr(env, INITIAL_VISUALIZER, VisualizationMarkers(initial_cfg))
-    setattr(env, GOAL_VISUALIZER, VisualizationMarkers(goal_cfg))
+    target: RigidObject = env.scene[target_cfg.name]
+    shelf: RigidObject = env.scene[shelf_cfg.name]
+
+    # PhysX returns CPU tensors with layouts (environment, body) for mass and
+    # (environment, collision shape, [static, dynamic, restitution]) for material.
+    target_masses = target.root_physx_view.get_masses()
+    target_materials = target.root_physx_view.get_material_properties()
+    shelf_materials = shelf.root_physx_view.get_material_properties()
+
+    printed_ids = selected_ids[:max_envs_to_print].tolist()
+    for env_id in printed_ids:
+        target_mass = float(target_masses[env_id].reshape(-1)[0].item())
+        target_friction = torch.unique(
+            target_materials[env_id, :, :2], dim=0
+        ).tolist()
+        shelf_friction = torch.unique(
+            shelf_materials[env_id, :, :2], dim=0
+        ).tolist()
+        print(
+            "[TEST][RESET_PHYSICS] "
+            f"env={env_id} target_mass_kg={target_mass:.6f} "
+            f"target_friction_static_dynamic={target_friction} "
+            f"shelf_friction_static_dynamic={shelf_friction}",
+            flush=True,
+        )
+
+    omitted = selected_ids.numel() - len(printed_ids)
+    if omitted > 0:
+        print(
+            "[TEST][RESET_PHYSICS] "
+            f"omitted_envs={omitted} (max_envs_to_print={max_envs_to_print})",
+            flush=True,
+        )
 
 
 def randomize_target_cube_size(

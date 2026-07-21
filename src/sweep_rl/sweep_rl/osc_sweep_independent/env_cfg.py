@@ -251,7 +251,8 @@ class CommandsCfg:
         goal_dwell_time=0.30,
         contact_sensor_names=PAD_SENSORS,
         contact_force_threshold=0.25,
-        debug_vis=True,
+        # Start/goal visualization is intentionally disabled for this task.
+        debug_vis=False,
     )
 
 
@@ -352,10 +353,12 @@ class ObservationsCfg:
 
 @configclass
 class EventsCfg:
-    create_position_visualizers = EventTerm(
-        func=mdp.create_sweep_position_visualizers,
-        mode="prestartup",
-    )
+    # Start/goal visualization disabled.  Keep this block commented so it can be
+    # restored explicitly if markers are needed again.
+    # create_position_visualizers = EventTerm(
+    #     func=mdp.create_sweep_position_visualizers,
+    #     mode="prestartup",
+    # )
     randomize_target_size = EventTerm(
         func=mdp.randomize_target_cube_size,
         mode="prestartup",
@@ -427,6 +430,19 @@ class EventsCfg:
             "asset_cfg": TARGET_CFG,
         },
     )
+
+    # TEST-ONLY RESET LOGGER
+    # To disable it after checking the randomization, comment out only this
+    # EventTerm block.  It does not modify any physics property.
+    # print_reset_physics_info = EventTerm(
+    #     func=mdp.print_reset_physics_info,
+    #     mode="reset",
+    #     params={
+    #         "target_cfg": TARGET_CFG,
+    #         "shelf_cfg": SceneEntityCfg("shelf"),
+    #         "max_envs_to_print": 8,
+    #     },
+    # )
 
 
 @configclass

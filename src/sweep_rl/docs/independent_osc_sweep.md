@@ -529,24 +529,10 @@ Linux 학습 예시는 다음과 같다.
 ur5e_osc_sweep_independent
 ```
 
-초기 물체 위치와 목표 위치를 GUI에서 확인하려면 `--headless`를 제외하고 한 개 환경으로
-실행한다.
-
-```bash
-./IsaacLab/isaaclab.sh -p src/sweep_rl/scripts/train_independent_sweep.py \
-  --num_envs 1 --device cuda:0
-```
-
-- 반투명 파란 구: `env_0` episode 시작 시 TargetCube 중심
-- 선명한 자홍색 구: `env_0`의 sampled sweep 목표 중심
-
-두 marker는 GUI 단일 환경(`--num_envs 1`, `--headless` 미사용)에서만 생성된다. 각각
-1 prototype/1 instance만 갖는 독립 PointInstancer visual Sphere이며
-`/Visuals/Command/sweep_target_positions` 아래에서 reset 시 command와 함께 갱신된다.
-물체와 선반에 가리지 않도록 실제 중심보다 Z축으로 `0.10 m` 위에 표시하며, XY는 실제
-command 위치와 같다. Headless 또는 병렬 환경에서는 학습에 불필요한 마커를 생략하여
-Fabric prototype 경고를 방지하며 command, observation, reward에는 영향이 없다. 자홍색
-목표 구의 반지름은 `0.050 m`다.
+초기 물체 위치와 목표 위치의 marker 구현은 현재 전부 주석 처리되어 있으며
+`debug_vis=False`다. Reset 마지막에는 테스트용 물성 logger가 현재 TargetCube 질량과
+TargetCube/Shelf의 static·dynamic friction 고유값을 최대 8개 환경까지 출력한다.
+확인이 끝나면 `EventsCfg.print_reset_physics_info` 블록 하나만 주석 처리하면 된다.
 
 재생에는 Isaac Lab 기본 RSL-RL player를 사용한다.
 

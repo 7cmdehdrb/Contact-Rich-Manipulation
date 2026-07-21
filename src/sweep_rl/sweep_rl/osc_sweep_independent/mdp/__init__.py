@@ -20,10 +20,12 @@ from .common import PHASE_HOME, PHASE_REACH, PHASE_SWEEP
 from .commands import FeasibleSweepHomeCommand, FeasibleSweepHomeCommandCfg
 from .events import (
     TARGET_SIZE_BUFFER,
-    create_sweep_position_visualizers,
+    print_reset_physics_info,
     randomize_target_cube_size,
     reset_variable_size_target,
 )
+# Start/goal visualization is intentionally disabled.
+# from .events import create_sweep_position_visualizers
 from .observations import (
     MaskedUniformNoiseCfg,
     VectorUniformNoiseCfg,
@@ -89,7 +91,7 @@ __all__ = [
     "arm_joint_speed_limit",
     "contact",
     "commanded_joint_effort_l2",
-    "create_sweep_position_visualizers",
+    # "create_sweep_position_visualizers",
     "end_effector_pose_b",
     "excessive_ft_wrench",
     "failure_termination_penalty",
@@ -114,6 +116,7 @@ __all__ = [
     "object_disturbed_during_home",
     "object_inside_gripper",
     "push",
+    "print_reset_physics_info",
     "randomize_rigid_body_mass",
     "randomize_rigid_body_material",
     "randomize_target_cube_size",
