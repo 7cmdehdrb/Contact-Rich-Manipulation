@@ -1,66 +1,43 @@
-# ConstantVelocity Gripper Exclusion
+# Constant Velocity UprightRandomSize
 
-환경 ID:
+환경 ID: `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0`
 
-```text
-Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0
-```
+## 목적
 
-> `UprightRandomSize`는 기존 스크립트와 checkpoint 디렉터리 호환성을 위한 이름이다.
-> 현재 환경에는 upright 자세 보상이나 물체 크기 랜덤화가 없다.
+[Constant Velocity](constant_velocity.md)를 상속해 gripper 내부로 물체를 끼우는 shortcut을
+막고, 열린 gripper의 외측 pad로 접근하도록 유도한다. 환경 ID의 `UprightRandomSize`는
+호환성용 이름이며 현재 upright 보상이나 물체 크기 randomization은 없다.
 
-구현 클래스 `UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg`는
-`UR5eOscSweepConstantVelocityEnvCfg`를 상속한다. 부모의 12-D Action, 55-D
-Observation, 4-D 속도 command, reward와 안전 종료를 유지하면서 외측 pad 접근과
-gripper 내부 삽입 방지를 추가한다.
+## 관측과 Action
 
-## 부모 환경과의 차이
+부모 환경과 같은 55-D 관측을 사용한다: arm 상태 18-D, EEF pose 6-D, 초기/현재 물체
+pose 12-D, 물체 속도 3-D, 4-D 명령, 이전 Action 12-D. noise와 관측 순서도 같다.
 
-### 외측 pad 접근
+Action은 열린 gripper를 유지하는 12-D variable-stiffness OSC이며 stiffness `[20, 300]`,
+위치 `0.025 m`, 회전 `0.12 rad`, effort scale 0.9다.
 
-`push_pose_error`만 교체된다.
+## Reward와 패널티
 
-| 항목 | 값 |
-|---|---:|
-| Weight | `-1.0` |
-| 거리 scale | `0.10 m` |
-| pad 정면 stand-off | EEF-local `X = ±0.065 m` |
-| 좌·우 pad 중심 | EEF-local `Y = ±0.055 m` |
-| 목표 높이 | EEF-local `Z = 0` |
-| raw penalty 최대값 | `3.0` |
+[부모 환경의 reward 표](constant_velocity.md#reward와-패널티)를 그대로 사용하되
+`push_pose_error`만 교체한다.
 
-현재 물체가 EEF-local 좌·우 어느 pad에 가까운지에 따라 pad 중심을 선택한다. 밀기
-방향을 EEF frame으로 변환해 사용할 pad 면의 `±X` 부호를 정하므로 특정 world-frame
-orientation을 강제하지 않는다.
+| 항목 | Weight | 역할 |
+|---|---:|---|
+| `push_pose_error` | -1.0 | 물체와 가까운 좌/우 외측 pad의 pre-contact pose 오차; stand-off `0.065 m`, pad center offset `0.055 m`, scale `0.10 m` |
 
-### Gripper 내부 삽입 실패
+나머지 contact, 속도, endpoint, success 보상과 lateral, overshoot, stall, 가속도 및 제어
+패널티는 Constant Velocity와 동일하다. `failure_termination`에는 아래 삽입 실패도 포함해
+남은 horizon 비용을 부과한다.
 
-`object_inside_gripper` termination을 추가한다. 물체 중심이 EEF-local exclusion box에
-들어가면 실패한다.
+## Termination
 
-```text
-XYZ half extents = (0.040, 0.040, 0.058) m
-```
+부모의 성공·timeout·물체 pose·F/T·arm 속도 조건에 `object_inside_gripper` 실패를
+추가한다. 물체 중심이 EEF-local half extents `(0.040, 0.040, 0.058) m`인 box 안에
+들어오면 종료한다.
 
-box는 EEF와 함께 회전한다. 이 종료는 `failure_termination`의 남은 horizon 비용에도
-포함되므로 정책이 고의 종료로 running cost를 회피할 수 없다.
+## 학습 실행
 
-## 유지되는 계약
-
-| 구분 | 값 |
-|---|---|
-| Action | 12-D variable-stiffness OSC |
-| Observation | 55-D |
-| Command | `[direction_x, direction_y, distance_m, target_speed_mps]` |
-| 물체 | 고정 `0.06 m` cube, `0.35 kg` |
-| Scene | 부모와 동일, `replicate_physics=True` |
-| Episode | 8초 |
-| PPO experiment | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
-
-세부 Action/Observation/Reward는
-[ConstantVelocity 계약](constant_velocity_action_reward_observation.md)을 참고한다.
-
-## 학습과 플레이
+Ubuntu:
 
 ```bash
 ./IsaacLab/isaaclab.sh -p \
@@ -68,14 +45,14 @@ box는 EEF와 함께 회전한다. 이 종료는 `failure_termination`의 남은
   --num_envs 2048 --device cuda:0 --headless
 ```
 
-```bash
-./IsaacLab/isaaclab.sh -p \
-  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0 \
-  --checkpoint /absolute/path/to/model.pt --num_envs 1 --device cuda:0
+Windows PowerShell:
+
+```powershell
+.\IsaacLab\isaaclab.bat -p `
+  src\sweep_rl\scripts\train_constant_velocity_upright_random_size.py `
+  --num_envs 2048 --device cuda:0 --headless
 ```
 
-과거 upright/size-randomization 의미로 학습한 checkpoint와 reward 의미가 다르므로 새
-run으로 학습한다.
+experiment 이름은 `ur5e_osc_sweep_constant_velocity_upright_random_size`다.
 
-문서 내용은 2026-07-19 현재 코드 기준이다.
+[환경 목록으로 돌아가기](README.md)
