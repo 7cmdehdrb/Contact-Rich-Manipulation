@@ -107,6 +107,7 @@ dkms.conf
 
 # Portable Network Graphics
 *.png
+!docs/img/*.png
 
 # Animated Portable Network Graphics
 *.apng
