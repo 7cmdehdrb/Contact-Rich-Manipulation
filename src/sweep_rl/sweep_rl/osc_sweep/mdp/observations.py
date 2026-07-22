@@ -61,6 +61,17 @@ def initial_target_pose_b(env, command_name: str) -> torch.Tensor:
     return command.initial_pose_b
 
 
+def initial_target_pose_b_with_z_offset(
+    env, command_name: str, z_offset: float
+) -> torch.Tensor:
+    """Initial target pose with a base-frame Z correction for bottom-origin assets."""
+    if z_offset < 0.0:
+        raise ValueError("Target observation z_offset must be non-negative.")
+    pose = initial_target_pose_b(env, command_name).clone()
+    pose[:, 2] += z_offset
+    return pose
+
+
 def current_target_pose_b(
     env,
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
@@ -70,6 +81,20 @@ def current_target_pose_b(
     robot: Articulation = env.scene[robot_cfg.name]
     target: RigidObject = env.scene[object_cfg.name]
     return pose_w_to_root_rpy(robot, target.data.root_pos_w, target.data.root_quat_w)
+
+
+def current_target_pose_b_with_z_offset(
+    env,
+    z_offset: float,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> torch.Tensor:
+    """Live target pose with a base-frame Z correction for bottom-origin assets."""
+    if z_offset < 0.0:
+        raise ValueError("Target observation z_offset must be non-negative.")
+    pose = current_target_pose_b(env, robot_cfg, object_cfg).clone()
+    pose[:, 2] += z_offset
+    return pose
 
 
 def object_linear_velocity_b(

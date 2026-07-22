@@ -118,17 +118,44 @@ checkpoint를 그대로 resume할 수 없으며, phase 입력을 수용하도록
 
 ## 플레이
 
-ConstantVelocity 계열은 force-command 전용 `play_sweep.py` 대신 Isaac Lab 표준
-RSL-RL player를 사용한다.
+기존 `HomeReturn-v0` 환경과 Isaac Lab 표준 `play.py`는 cube 환경으로 유지한다. Can
+재생은 다음 별도 환경 ID와 전용 script를 사용한다.
+
+```text
+Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-Can-v0
+src/sweep_rl/scripts/play_constant_velocity_home_can.py
+```
+
+Can variant의 pushing target은 다음 USD다.
+
+```text
+omniverse://192.168.0.13/Library/Shelf/Objects/Can_6/Can_6.usd
+```
+
+Can USD의 rigid-body root에는 `RigidBodyAPI`만 있고 `MassAPI`가 없으므로
+`UsdFileCfg.mass_props`를 사용하지 않는다. 대신 `prestartup`의 `set_target_mass` event가
+실제 `{ENV_REGEX_NS}/TargetCube` root에 `MassAPI`를 먼저 생성하고 질량을 설정한다. 기본
+질량은 `0.35 kg`이다. Can의 local Z 원점은 바닥면이므로 초기 root Z는 table top인
+`0.775 m`다. Target–robot contact filter는 `/Robot/.*` wildcard 한 개가 아니라 18개
+rigid-body 경로를 명시적으로 사용하여 PhysX filter-count 불일치를 방지한다.
+
+Cube는 rigid root가 중심이지만 Can_6는 바닥에 있다. 전용 variant는 Can 높이
+`0.1191307 m`의 절반인 `0.0595654 m`를 `initial_target_pose`와
+`current_target_pose` 관측의 Z에 더한다. 따라서 policy에는 Can 중심이 전달되고 전체
+관측 shape는 기존 checkpoint와 같은 56-D로 유지된다.
+
+질량을 `1.25 kg`으로 재생하려면 다음처럼 전용 script를 실행한다. Task, checkpoint와
+`num_envs=1`은 script의 기본값이다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p \
-  IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
-  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0 \
-  --checkpoint logs/rsl_rl/ur5e_osc_sweep_constant_velocity_upright_random_size_home/2026-07-19_19-55-35/model_11999.pt \
-  --num_envs 1 \
+  src/sweep_rl/scripts/play_constant_velocity_home_can.py \
+  --object_mass 1.25 \
   --device cuda:0
 ```
+
+필요할 때 `--target_z_offset`으로 관측 보정값을 바꿀 수 있다. Can 환경에서는
+`env.scene.target_object.spawn.mass_props.mass=...`를 사용하지 않는다.
 
 TensorBoard에서는 `Metrics/desired_motion/home_phase`가 0에서 1로 전환되는지,
 `Metrics/desired_motion/parked_displacement`가 `0.015 m` 아래로 유지되는지,

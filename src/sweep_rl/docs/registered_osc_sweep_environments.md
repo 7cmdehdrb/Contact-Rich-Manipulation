@@ -32,7 +32,8 @@ logs/rsl_rl/<experiment_name>/<run>/model_<iteration>.pt
   수 있다.
 - ConstantVelocity 계열은 4-D speed command를 사용한다. `play_sweep.py`는 5-D force
   command를 전제로 작성되어 있으므로 이 계열에는 Isaac Lab 표준
-  `rsl_rl/play.py`를 사용한다.
+  `rsl_rl/play.py`를 사용한다. 단, Can variant는 설정을 분리한 전용
+  `play_constant_velocity_home_can.py`를 사용한다.
 
 ## 2. 상속 구조
 
@@ -44,6 +45,7 @@ UR5eOscSweepEnvCfg
 └── UR5eOscSweepConstantVelocityEnvCfg
     └── UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg
         └── UR5eOscSweepConstantVelocityUprightRandomSizeHomeEnvCfg
+            └── UR5eOscSweepConstantVelocityUprightRandomSizeHomeCanEnvCfg
 ```
 
 | 환경 ID | 기반 환경 | Observation | Command | experiment_name |
@@ -55,6 +57,7 @@ UR5eOscSweepEnvCfg
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-v0` | 기본 | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0` | ConstantVelocity + external-pad approach + gripper-interior termination | 55-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size` |
 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-v0` | Gripper Exclusion + HomeReturn | 56-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
+| `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-Can-v0` | HomeReturn + Can_6 center-Z observation | 56-D | 4-D speed | `ur5e_osc_sweep_constant_velocity_upright_random_size_home` |
 
 ## 3. 기본 환경: `Isaac-Sweep-Object-UR5e-OSC-v0`
 

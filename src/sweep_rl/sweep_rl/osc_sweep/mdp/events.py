@@ -15,6 +15,36 @@ from isaaclab.sim.utils.stage import get_current_stage
 VARIABLE_CUBE_SIZE_BUFFER = "_sweep_target_cube_side_lengths"
 
 
+def define_rigid_object_mass(
+    env,
+    env_ids: torch.Tensor | None,
+    mass: float,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+) -> None:
+    """Author MassAPI on every spawned rigid-object root before simulation starts.
+
+    File-based assets may provide RigidBodyAPI without MassAPI.  In that case,
+    ``UsdFileCfg.mass_props`` only tries to modify an existing MassAPI and emits
+    a warning.  This prestartup event deliberately defines the missing schema on
+    the actual rigid-body root instead.
+    """
+    if mass <= 0.0:
+        raise ValueError("Rigid-object mass must be positive.")
+    if env_ids is not None:
+        raise ValueError("Fixed mass must be authored globally during prestartup.")
+
+    prim_paths = sim_utils.find_matching_prim_paths(
+        env.scene[asset_cfg.name].cfg.prim_path
+    )
+    if len(prim_paths) != env.scene.num_envs:
+        raise RuntimeError(
+            f"Expected {env.scene.num_envs} rigid-object roots, found {len(prim_paths)}."
+        )
+    mass_cfg = sim_utils.MassPropertiesCfg(mass=mass)
+    for prim_path in prim_paths:
+        sim_utils.define_mass_properties(prim_path, mass_cfg)
+
+
 def randomize_target_cube_size(
     env,
     env_ids: torch.Tensor | None,

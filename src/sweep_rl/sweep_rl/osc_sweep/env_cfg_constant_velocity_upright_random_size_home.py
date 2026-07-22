@@ -12,12 +12,34 @@ from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from . import mdp
+from .assets import LEFT_CONTACT_BODY_NAME, RIGHT_CONTACT_BODY_NAME
 from .env_cfg import ARM_ENTITY_CFG, EEF_ENTITY_CFG, OscSweepSceneCfg
 from .env_cfg_constant_velocity import ConstantVelocityObservationsCfg
 from .env_cfg_constant_velocity_upright_random_size import (
     GripperExclusionRewardsCfg,
     GripperExclusionTerminationsCfg,
     UR5eOscSweepConstantVelocityUprightRandomSizeEnvCfg,
+)
+
+ROBOT_CONTACT_BODY_PATHS = (
+    "base_link",
+    "shoulder_link",
+    "upper_arm_link",
+    "forearm_link",
+    "wrist_1_link",
+    "wrist_2_link",
+    "wrist_3_link",
+    "Robotiq2F85/Robotiq_2F_85/base_link",
+    "Robotiq2F85/Robotiq_2F_85/left_outer_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/left_outer_finger",
+    "Robotiq2F85/Robotiq_2F_85/left_inner_finger",
+    "Robotiq2F85/Robotiq_2F_85/left_inner_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/right_outer_knuckle",
+    "Robotiq2F85/Robotiq_2F_85/right_outer_finger",
+    "Robotiq2F85/Robotiq_2F_85/right_inner_finger",
+    "Robotiq2F85/Robotiq_2F_85/right_inner_knuckle",
+    LEFT_CONTACT_BODY_NAME,
+    RIGHT_CONTACT_BODY_NAME,
 )
 
 
@@ -32,7 +54,10 @@ class SweepHomeSceneCfg(OscSweepSceneCfg):
         track_pose=False,
         track_contact_points=False,
         max_contact_data_count_per_prim=32,
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Robot/.*"],
+        filter_prim_paths_expr=[
+            f"{{ENV_REGEX_NS}}/Robot/{body_path}"
+            for body_path in ROBOT_CONTACT_BODY_PATHS
+        ],
         debug_vis=False,
     )
 
