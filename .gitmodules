@@ -1,12 +1,6 @@
-[submodule "newton"]
-	path = newton
-	url = https://github.com/newton-physics/newton.git
 [submodule "IsaacLab"]
     path = IsaacLab
     url = https://github.com/7cmdehdrb/IsaacLab.git
-[submodule "Genesis"]
-	path = Genesis
-	url = https://github.com/Genesis-Embodied-AI/genesis-world.git
 [submodule "src/Universal_Robots_ROS2_Description"]
 	path = src/Universal_Robots_ROS2_Description
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git

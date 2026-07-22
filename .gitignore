@@ -409,7 +409,9 @@ AMENT_IGNORE
 
 # Learning generated assets
 src/learning/generated/
+
 output/
+outputs/
 
 *.pt
 *.pth
