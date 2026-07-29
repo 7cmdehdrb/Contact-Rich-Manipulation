@@ -419,3 +419,5 @@ outputs/
 *.checkpoint
 *.safetensors
 *.safetensor
+
+!/docs2/img/*.png
