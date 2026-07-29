@@ -8,6 +8,8 @@
 | --- | --- |
 | [`docs/README.md`](docs/README.md) | 프로젝트 문서의 주제별 목차 |
 | [`docs/file_directory.md`](docs/file_directory.md) | 원본 프로젝트의 전체 디렉터리와 핵심 파일 안내 |
+| [`docs/FT_Sensor.md`](docs/FT_Sensor.md) | Wrist 가상 6축 F/T 센서의 구현 원리와 데이터 해석 |
+| [`docs/OSC.md`](docs/OSC.md) | UR5e variable-stiffness OSC의 구현 원리와 torque 계산 |
 | [`docs/domain_randomization/`](docs/domain_randomization/README.md) | Domain Randomization 관련 문서 |
 | [`docs/environment_setup/`](docs/environment_setup/README.md) | 로봇, 센서, Scene, Asset 구성 문서 |
 | [`docs/lab-meeting/`](docs/lab-meeting/0728.md) | 연구 방향과 제어 설계에 관한 연구실 회의 자료 |
@@ -43,6 +45,8 @@
 | 문서 | 내용 |
 | --- | --- |
 | [`docs/file_directory.md`](docs/file_directory.md) | 원본 프로젝트의 디렉터리 구조 |
+| [`docs/FT_Sensor.md`](docs/FT_Sensor.md) | Wrist 가상 F/T 센서의 구조, 측정 원리와 데이터 해석 |
+| [`docs/OSC.md`](docs/OSC.md) | OSC action, EEF 제어, 동역학 계산과 joint torque 적용 방식 |
 | [`docs/lab-meeting/0728.md`](docs/lab-meeting/0728.md) | Task definition, force-feedback control, OSC 설계 및 TODO |
 
 ## Sweep RL 환경 문서

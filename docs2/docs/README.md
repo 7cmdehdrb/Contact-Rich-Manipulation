@@ -6,6 +6,8 @@
 
 | 대표 문서 | 설명 |
 |---|---|
+| [Wrist 가상 F/T 센서](FT_Sensor.md) | Fixed joint reaction wrench 기반 6축 센서의 구조, 측정 원리와 데이터 해석 |
+| [Operational Space Control](OSC.md) | Variable-stiffness OSC의 action 변환, 동역학 계산과 torque 적용 방식 |
 | [Domain Randomization](domain_randomization/README.md) | 물체 위치·크기·마찰·질량과 로봇·명령·관측 randomization, OBJ 기반 USD 적용법 |
 | [Environment 구축](environment_setup/README.md) | UR5e/Robotiq assembly, 가상 F/T, ContactSensor, open table과 shelf USD scene |
 
