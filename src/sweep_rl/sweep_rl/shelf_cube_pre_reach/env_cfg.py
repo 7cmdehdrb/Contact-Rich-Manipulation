@@ -241,7 +241,7 @@ class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg):
 
     # Weight 변경 -> Max 1.0 -> 3.14
     end_effector_orientation_tracking = RewTerm(
-        func=mdp.tcp_orientation_command_error,
+        func=tcp_orientation_command_error,
         weight=-0.7,
         params={
             "command_name": "ee_pose",
