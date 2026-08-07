@@ -185,7 +185,7 @@ def test_physical_finger_tcp_and_training_balance_contract():
     ).read_text()
     reward_math_source = (PACKAGE / "mdp" / "reward_math.py").read_text()
     assert "hand_target[:, 0]" not in reward_math_source
-    assert "hand_target[:, 2] += 0.02" in reward_math_source
+    assert "hand_target[:, 2] += 0.03" in reward_math_source
     assert "ee_frame.data.target_pos_w[:, 0]" in REWARD_SOURCE
     assert "wrist_y_error < 0.04" in (PACKAGE / "mdp" / "reward_math.py").read_text()
     assert "wrist_behind_distance" not in REWARD_SOURCE
@@ -193,6 +193,7 @@ def test_physical_finger_tcp_and_training_balance_contract():
 
 
 def test_ppo_stability_contract():
+    assert "clip_actions" not in AGENT_SOURCE
     assert "init_std=0.25" in AGENT_SOURCE
     assert "entropy_coef=0.001" in AGENT_SOURCE
     assert "gamma=0.99" in AGENT_SOURCE

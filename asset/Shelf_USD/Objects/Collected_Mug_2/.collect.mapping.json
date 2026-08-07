@@ -1,0 +1,23 @@
+{
+    "version": "1.0",
+    "file_records": [
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_Albedo.png",
+            "source_hash": "6b391abf3207f500a631fee30f653008370f4df7",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_Albedo.png",
+            "target_hash": "a94dbcae6b84f66029e198041c48ab71a650f0b1"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_Normal.png",
+            "source_hash": "59e348c7c4db01247e196462dd0dea6a97f83baf",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_Normal.png",
+            "target_hash": "b2c8c5ce4dd8cdc86bfdefe0910bd3148a077638"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_ORM.png",
+            "source_hash": "93e4f40bf99e9b68e84e25993d683b8e6aabff0a",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_2/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Props/Mugs/texture/T_Mug_B1_ORM.png",
+            "target_hash": "ca37885f939b90a5aab48827b5fd2df0eb22b8a0"
+        }
+    ]
+}

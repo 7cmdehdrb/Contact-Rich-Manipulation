@@ -84,7 +84,7 @@ def test_fixed_policy_hand_target_matches_reaching_bench_offsets():
     torch.testing.assert_close(
         result,
         torch.tensor(
-            [[1.00, 1.94, 3.02], [1.00, 2.06, 3.02], [1.00, 2.00, 3.02]]
+            [[1.00, 1.94, 3.03], [1.00, 2.06, 3.03], [1.00, 2.00, 3.03]]
         ),
     )
     torch.testing.assert_close(

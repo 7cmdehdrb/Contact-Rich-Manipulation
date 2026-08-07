@@ -1,0 +1,59 @@
+{
+    "version": "1.0",
+    "file_records": [
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_ao_r_m.png",
+            "source_hash": "ce7a4dbe3ebb637cd5f6cdf34a56b130b125e377",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_ao_r_m.png",
+            "target_hash": "df0e975fc695aa5b886b92fcbb2824d2814fe2fe"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_bc.png",
+            "source_hash": "e9f38f7e5dd0d83ae51eda00bb9cde118f7cd5e9",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_bc.png",
+            "target_hash": "d119089b0d6a3b7c1addfccc56b3a3ac15401f17"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_n.png",
+            "source_hash": "4b7932309448fcc1c5b16ead3a2fe2c182f2b0ba",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_PropsGlasses_n.png",
+            "target_hash": "27ab6759e073cee6f29d0c0561afd0308ad93dc7"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/MI_Props.mdl",
+            "source_hash": "eb68d2f532b0105c72550acb21dd603b332d058c",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/MI_Props.mdl",
+            "target_hash": "fc612852534e21a63b93b3115d34cd832f2e2f72"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_n.png",
+            "source_hash": "74c60d02cdde8d739c8d6dc3eced05c480937aa2",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_n.png",
+            "target_hash": "999ac8ef8d4c5282be9780b87ebf5a8e8dc8cccd"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_bc.png",
+            "source_hash": "ee8f0b636fb8c0149f075755aedf8d816f95d8e5",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_bc.png",
+            "target_hash": "76b430684f0031c393fc6fcaa962a7643f357ae4"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_ao_r_m.png",
+            "source_hash": "49b340d23d1ddc17c37518bb3897a63fd605e6e0",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/Textures/T_Bookcase_ao_r_m.png",
+            "target_hash": "f21b4d97e28d1a697f71f6acc3fdbb8100eea88b"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/OmniUe4Function.mdl",
+            "source_hash": "177d7126d71f6444c6c5f5d2eb64caead9c8b3e7",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/OmniUe4Function.mdl",
+            "target_hash": "3fac0cc63a8e8aab841687d6fceb7949166d02e1"
+        },
+        {
+            "source_url": "/home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/OmniUe4Base.mdl",
+            "source_hash": "b727b574659733238bd589c90db80483eb5b53cc",
+            "target_url": "./home/irol/Downloads/shelf_usd/object/Collected_Mug_3/omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Environments/Office/Materials/OmniUe4Base.mdl",
+            "target_hash": "01863f371d44d10a1bc10dbb3996c5ce8f554e04"
+        }
+    ]
+}

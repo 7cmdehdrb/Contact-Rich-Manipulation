@@ -15,7 +15,6 @@ class SweepPolicyCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 36
     max_iterations = 30_000
     obs_groups = {"actor": ["policy"], "critic": ["policy"]}
-    clip_actions = 1.0
     save_interval = 50
     experiment_name = "ur5e_sweep_policy_cube"
     run_name = ""

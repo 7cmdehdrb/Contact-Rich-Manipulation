@@ -14,7 +14,7 @@ def fixed_policy_hand_target(
 
     hand_target = target_position_w.clone()
     hand_target[:, 1] -= target_width * torch.sign(sweep_direction_y)
-    hand_target[:, 2] += 0.02
+    hand_target[:, 2] += 0.03
     return hand_target
 
 

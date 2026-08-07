@@ -4,11 +4,15 @@
 실행할 수 있게 이식한 단일 Cube 환경이다. 기존 `sweep_basic`과 OSC 환경은 변경하지
 않는다.
 
+환경 변경 시 유지해야 하는 필수 설계 원칙은 [`PRINCIPLES.md`](./PRINCIPLES.md)에
+기록한다.
+
 ## Task
 
 - Robot: UR5e + Robotiq 2F-85
 - Robot asset: 원본 Fixed Sweep-Policy의 일체형 `Collected_UR5e_v4/UR5e_v4.usd`
-- Arm action: 6축 default-relative joint position command, scale `0.5`
+- Arm action: 6축 default-relative joint position command, scale `0.5`. PPO action
+  clipping은 적용하지 않음
 - Gripper: action에서 제외하고 open position `0`으로 고정. Implicit actuator의
   stiffness `2000`, damping `1000`으로 열린 자세를 유지
 - 전체 action 차원: `6`
@@ -26,7 +30,7 @@ z = 1.11
 
 Z 높이를 기존 `0.06 m`의 `2배`인 `0.12 m`로 높였으며, 바닥면은 계속 선반
 표면 `z=1.05 m`에 놓인다. 이에 따라 Cube/goal 중심 Z는 `1.11 m`, reaching
-offset의 world Z는 `1.13 m`가 된다. Y 폭과 `target_obj_width`는 `0.06 m`로
+offset의 world Z는 `1.14 m`가 된다. Y 폭과 `target_obj_width`는 `0.06 m`로
 유지한다.
 
 Manipulator와의 도달 여유를 늘리기 위해 Shelf와 모든 spawn slot을 world `+X`로
@@ -66,7 +70,7 @@ USD의 collision hull을 그대로 사용한다.
 ```text
 offset_x = target_x
 offset_y = target_y - target_width * sign(sweep_dir_y)
-offset_z = target_z + 0.02
+offset_z = target_z + 0.03
 ```
 
 `sweep_dir_y`는 goal Y와 현재 target Y의 차이에서 얻는다. 현재 설정은 이 offset에
@@ -90,7 +94,8 @@ object/drop, push-fast, shelf-collision, hand-velocity termination은 삭제하�
 
 Action과 관측 차원이 각각 `6-D`, `32-D`로 바뀌었으므로 기존 checkpoint는 로드할
 수 없으며 새 run을 시작해야 한다. PPO는 초기 action std `0.25`, entropy coefficient
-`0.001`, discount factor `0.99`를 사용한다.
+`0.001`, discount factor `0.99`를 사용한다. PPO 출력에는 별도의 action clipping을
+적용하지 않으며, 급격한 실제 관절 운동은 `joint_vel` reward로 억제한다.
 
 | Reward | Weight |
 |---|---:|
