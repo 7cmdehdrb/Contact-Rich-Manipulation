@@ -9,9 +9,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": (
-            "sweep_rl.osc_sweep.env_cfg:UR5eOscSweepEnvCfg"
-        ),
+        "env_cfg_entry_point": ("sweep_rl.osc_sweep.env_cfg:UR5eOscSweepEnvCfg"),
         "rsl_rl_cfg_entry_point": (
             f"{agents.__name__}.rsl_rl_ppo_cfg:UR5eOscSweepPPORunnerCfg"
         ),
@@ -23,9 +21,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": (
-            "sweep_rl.osc_sweep.env_cfg:UR5eOscSweepEnvCfg_PLAY"
-        ),
+        "env_cfg_entry_point": ("sweep_rl.osc_sweep.env_cfg:UR5eOscSweepEnvCfg_PLAY"),
         "rsl_rl_cfg_entry_point": (
             f"{agents.__name__}.rsl_rl_ppo_cfg:UR5eOscSweepPPORunnerCfg"
         ),
