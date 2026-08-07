@@ -32,9 +32,7 @@ from . import mdp
 TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-v0"
 PLAY_TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-Play-v0"
 
-DEFAULT_ROBOT_USD_PATH = (
-    "./asset/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/.collect.mapping.json"
-)
+DEFAULT_ROBOT_USD_PATH = "./asset/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/UR5e_v4.usd"
 DEFAULT_SHELF_USD_PATH = (
     "omniverse://192.168.0.13/Library/Shelf/Arena/"
     "Collected_speedrack_shape/speedrack_shape.usd"
