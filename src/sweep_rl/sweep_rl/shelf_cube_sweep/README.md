@@ -8,6 +8,8 @@
 |---|---|
 | 학습 | `Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v0` |
 | 재생 | `Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v0` |
+| v1 학습 | `Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v1` |
+| v1 재생 | `Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v1` |
 
 ## 상속 구조
 
@@ -52,12 +54,34 @@ else:
 R_push = 6.0 * R_push_raw
 ```
 
+## v1
+
+`Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v1`은
+`Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v1`을 상속한다. 따라서 사용자가
+조정한 exponential Reach, orientation, action-rate, joint-velocity weight를 그대로
+유지하고 동일한 moving offset Sweep reward만 추가한다.
+
+v1의 Sweep weight는 v0의 2배다.
+
+```text
+R_push_v1 = 12.0 * R_push_raw
+```
+
 ## 실행
 
 ```bash
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/train.py \
   --task Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v0 \
+  --num_envs 4096 --headless
+```
+
+v1 학습:
+
+```bash
+./IsaacLab/isaaclab.sh -p \
+  IsaacLab/scripts/reinforcement_learning/rsl_rl/train.py \
+  --task Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v1 \
   --num_envs 4096 --headless
 ```
 

@@ -108,7 +108,7 @@ def test_29d_observation_contract():
 def test_shelf_collision_penalty_contract():
     assert "class CubePreReachRewardsCfg(RewardsCfg)" in ENV_SOURCE
     assert "SHELF_CONTACT_FORCE_THRESHOLD = 1.0" in ENV_SOURCE
-    assert "SHELF_COLLISION_WEIGHT = -0.02" in ENV_SOURCE
+    assert "SHELF_COLLISION_WEIGHT = -0.05" in ENV_SOURCE
     assert "self.shelf.spawn.activate_contact_sensors = True" in ENV_SOURCE
     assert "shelf_floor_contact = ContactSensorCfg(" in ENV_SOURCE
     assert (
@@ -141,12 +141,17 @@ def test_v1_exponential_position_reward_contract():
     assert "class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg)" in ENV_SOURCE
     assert _class_assignments("CubePreReachRewardsCfg") == {"shelf_collision"}
     assert _class_assignments("CubePreReachRewardsCfgV1") == {
+        "action_rate",
         "end_effector_position_tracking",
         "end_effector_position_tracking_fine_grained",
+        "end_effector_orientation_tracking",
+        "joint_vel",
     }
     assert "func=mdp.tcp_position_command_reward_exp" in ENV_SOURCE
-    assert "weight=PRE_REACH_EXP_REWARD_WEIGHT" in ENV_SOURCE
+    assert "weight=3.0" in ENV_SOURCE
     assert "end_effector_position_tracking_fine_grained = None" in ENV_SOURCE
+    assert "weight=-0.7" in ENV_SOURCE
+    assert "weight=-0.03" in ENV_SOURCE
     assert "def tcp_position_command_reward_exp(" in REWARD_SOURCE
     assert "distance = tcp_position_command_error(" in REWARD_SOURCE
     assert "return torch.exp(-10.0 * distance)" in REWARD_SOURCE

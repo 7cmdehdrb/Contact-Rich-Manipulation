@@ -23,8 +23,10 @@ from sweep_rl.shelf_cube_pre_reach.env_cfg import (
     TARGET_YAW,
     CubePreReachCommandsCfg,
     CubePreReachRewardsCfg,
+    CubePreReachRewardsCfgV1,
     ShelfCubePreReachSceneCfg,
     UR5eGripperShelfCubePreReachEnvCfg,
+    UR5eGripperShelfCubePreReachEnvCfgV1,
 )
 from sweep_rl.shelf_reach.env_cfg import ROBOT_BASE_BODY_PATH
 
@@ -32,10 +34,13 @@ from . import mdp
 
 TASK_ID = "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v0"
 PLAY_TASK_ID = "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v0"
+TASK_ID_V1 = "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v1"
+PLAY_TASK_ID_V1 = "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v1"
 
 PRE_REACH_X_OFFSET = 0.0
 PUSH_GOAL_OFFSET = (0.0, 0.18, 0.0)
 PUSH_REWARD_WEIGHT = 6.0
+PUSH_REWARD_WEIGHT_V1 = 2.0 * PUSH_REWARD_WEIGHT
 WRIST_BACK_OFFSET = -0.14
 
 
@@ -108,6 +113,26 @@ class CubeSweepRewardsCfg(CubePreReachRewardsCfg):
 
 
 @configclass
+class CubeSweepRewardsCfgV1(CubePreReachRewardsCfgV1):
+    """Keep all PreReach-v1 weights and add double-weight Sweep shaping."""
+
+    pushing_target = RewTerm(
+        func=mdp.pushing_target,
+        weight=PUSH_REWARD_WEIGHT_V1,
+        params={
+            "command_name": "ee_pose",
+            "cube_width": CUBE_WIDTH,
+            "x_offset": PRE_REACH_X_OFFSET,
+            "behind_width_scale": BEHIND_WIDTH_SCALE,
+            "z_offset": PRE_REACH_Z_OFFSET,
+            "object_cfg": TARGET_OBJECT_CFG,
+            "ee_frame_cfg": SceneEntityCfg("ee_frame"),
+            "wrist_frame_cfg": SceneEntityCfg("wrist_frame"),
+        },
+    )
+
+
+@configclass
 class UR5eGripperShelfCubeSweepEnvCfg(UR5eGripperShelfCubePreReachEnvCfg):
     """PreReach task extended with implicit +Y Cube pushing."""
 
@@ -120,6 +145,31 @@ class UR5eGripperShelfCubeSweepEnvCfg(UR5eGripperShelfCubePreReachEnvCfg):
 
 @configclass
 class UR5eGripperShelfCubeSweepEnvCfg_PLAY(UR5eGripperShelfCubeSweepEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+        self.commands.ee_pose.debug_vis = True
+
+
+@configclass
+class UR5eGripperShelfCubeSweepEnvCfgV1(
+    UR5eGripperShelfCubePreReachEnvCfgV1
+):
+    """CubePreReach-v1 extended with the moving-offset Sweep reward."""
+
+    scene: ShelfCubeSweepSceneCfg = ShelfCubeSweepSceneCfg(
+        num_envs=4096, env_spacing=2.5
+    )
+    commands: CubeSweepCommandsCfg = CubeSweepCommandsCfg()
+    rewards: CubeSweepRewardsCfgV1 = CubeSweepRewardsCfgV1()
+
+
+@configclass
+class UR5eGripperShelfCubeSweepEnvCfgV1_PLAY(
+    UR5eGripperShelfCubeSweepEnvCfgV1
+):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 50

@@ -45,6 +45,8 @@ def _has_base(source: str, class_name: str, base_name: str) -> bool:
 def test_task_registration_and_environment_inheritance():
     assert "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v0" in INIT_SOURCE
     assert "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v0" in INIT_SOURCE
+    assert "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v1" in INIT_SOURCE
+    assert "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-Play-v1" in INIT_SOURCE
     assert "from . import shelf_cube_sweep" in ROOT_INIT_SOURCE
     assert _has_base(
         ENV_SOURCE,
@@ -65,6 +67,16 @@ def test_task_registration_and_environment_inheritance():
         ENV_SOURCE,
         "CubeSweepRewardsCfg",
         "CubePreReachRewardsCfg",
+    )
+    assert _has_base(
+        ENV_SOURCE,
+        "UR5eGripperShelfCubeSweepEnvCfgV1",
+        "UR5eGripperShelfCubePreReachEnvCfgV1",
+    )
+    assert _has_base(
+        ENV_SOURCE,
+        "CubeSweepRewardsCfgV1",
+        "CubePreReachRewardsCfgV1",
     )
 
 
@@ -122,7 +134,24 @@ def test_requested_push_reward_contract():
     assert "reach_complete" not in REWARD_SOURCE
 
 
+def test_v1_reward_and_moving_offset_contract():
+    assert "PUSH_REWARD_WEIGHT_V1 = 2.0 * PUSH_REWARD_WEIGHT" in ENV_SOURCE
+    assert "weight=PUSH_REWARD_WEIGHT_V1" in ENV_SOURCE
+    assert "rewards: CubeSweepRewardsCfgV1" in ENV_SOURCE
+    assert "commands: CubeSweepCommandsCfg" in ENV_SOURCE
+    assert "self.target.data.root_pos_w[env_ids]" in PRE_REACH_COMMAND_SOURCE
+    assert "def _update_command(self)" in PRE_REACH_COMMAND_SOURCE
+    assert "class CubePreReachRewardsCfgV1(" in PRE_REACH_ENV_SOURCE
+    assert "func=mdp.tcp_position_command_reward_exp" in PRE_REACH_ENV_SOURCE
+    assert "weight=3.0" in PRE_REACH_ENV_SOURCE
+    assert "weight=-0.7" in PRE_REACH_ENV_SOURCE
+    assert "weight=-0.03" in PRE_REACH_ENV_SOURCE
+    assert "end_effector_position_tracking_fine_grained = None" in PRE_REACH_ENV_SOURCE
+
+
 def test_observation_and_agent_contract():
     assert "observations:" not in ENV_SOURCE
     assert "UR5eGripperShelfCubePreReachPPORunnerCfg" in AGENT_SOURCE
     assert 'experiment_name = "sweep_shelf_ur5e_gripper_cube"' in AGENT_SOURCE
+    assert "UR5eGripperShelfCubePreReachV1PPORunnerCfg" in AGENT_SOURCE
+    assert 'experiment_name = "sweep_shelf_ur5e_gripper_cube_v1"' in AGENT_SOURCE
