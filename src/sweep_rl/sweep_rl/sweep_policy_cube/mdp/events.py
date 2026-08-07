@@ -19,7 +19,7 @@ def reset_target_from_slots(
     position_jitter: float = 0.02,
     center_height: float = 1.08,
 ) -> None:
-    """Place each Cube in one of the original six Sweep-Policy slots."""
+    """Place each Cube in one of the direction-aware +Y sweep slots."""
     target: RigidObject = env.scene[asset_cfg.name]
     count = env_ids.numel()
     slot_tensor = torch.tensor(slots, dtype=torch.float32, device=env.device)

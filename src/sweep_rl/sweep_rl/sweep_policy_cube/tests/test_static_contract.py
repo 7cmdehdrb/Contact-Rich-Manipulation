@@ -68,15 +68,19 @@ def test_registration_and_root_import_contract():
 def test_single_cube_physics_contract():
     assert "size=(TARGET_SIDE, TARGET_SIDE, TARGET_HEIGHT)" in ENV_SOURCE
     assert "TARGET_SIDE = 0.06" in ENV_SOURCE
-    assert "TARGET_HEIGHT = 0.12" in ENV_SOURCE
+    assert "TARGET_HEIGHT = 0.15" in ENV_SOURCE
     assert (
         "TARGET_CENTER_HEIGHT = SHELF_SURFACE_HEIGHT + 0.5 * TARGET_HEIGHT"
         in ENV_SOURCE
     )
     assert "TARGET_MASS = 0.50" in ENV_SOURCE
-    assert "SHELF_POSITION = (-0.65, 0.0, 0.0)" in ENV_SOURCE
-    assert "(-0.70, -0.20, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
-    assert "(-0.55, 0.20, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
+    assert "SHELF_POSITION = (-0.70, 0.0, 0.0)" in ENV_SOURCE
+    assert "(-0.75, -0.20, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
+    assert "(-0.75, 0.00, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
+    assert "(-0.60, -0.20, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
+    assert "(-0.60, 0.00, TARGET_CENTER_HEIGHT)" in ENV_SOURCE
+    assert "(-0.75, 0.20, TARGET_CENTER_HEIGHT)" not in ENV_SOURCE
+    assert "(-0.60, 0.20, TARGET_CENTER_HEIGHT)" not in ENV_SOURCE
     assert "mass_props=sim_utils.MassPropertiesCfg(mass=TARGET_MASS)" in ENV_SOURCE
     assert _class_assignments("SweepPolicyCubeSceneCfg") >= {
         "ground",

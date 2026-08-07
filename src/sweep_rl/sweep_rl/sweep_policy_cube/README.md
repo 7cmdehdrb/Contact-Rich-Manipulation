@@ -17,25 +17,26 @@
   stiffness `2000`, damping `1000`으로 열린 자세를 유지
 - 전체 action 차원: `6`
 - Episode: `10 s`, simulation `100 Hz`, control `50 Hz`
-- Target: 진단용 `0.06 × 0.06 × 0.12 m`, `0.5 kg` Cuboid 하나
+- Target: 진단용 `0.06 × 0.06 × 0.15 m`, `0.5 kg` Cuboid 하나
 - Goal: reset된 Cube 중심에서 world `+Y`로 `0.18 m`
 
-Cube는 원본 환경의 6개 XY 위치 중 하나에서 시작한다.
+Cube는 world `+Y`로 미는 동안 shelf의 `+Y` 가장자리에 치우치지 않도록 구성한
+6개 XY 위치 중 하나에서 시작한다.
 
 ```text
-x ∈ {-0.70, -0.55}
-y ∈ {-0.20, 0.00, 0.20}
-z = 1.11
+x ∈ {-0.75, -0.60}
+y ∈ {-0.20, -0.10, 0.00}
+z = 1.125
 ```
 
-Z 높이를 기존 `0.06 m`의 `2배`인 `0.12 m`로 높였으며, 바닥면은 계속 선반
-표면 `z=1.05 m`에 놓인다. 이에 따라 Cube/goal 중심 Z는 `1.11 m`, reaching
-offset의 world Z는 `1.14 m`가 된다. Y 폭과 `target_obj_width`는 `0.06 m`로
-유지한다.
+Cube 높이는 `0.15 m`이며, 바닥면은 계속 선반 표면 `z=1.05 m`에 놓인다. 이에
+따라 Cube/goal 중심 Z는 `1.125 m`다. Reaching z offset은 기존 `+0.03 m`를
+변경하지 않으므로 reaching 목표의 world Z는 `1.155 m`가 된다. Y 폭과
+`target_obj_width`는 `0.06 m`로 유지한다.
 
-Manipulator와의 도달 여유를 늘리기 위해 Shelf와 모든 spawn slot을 world `+X`로
-`0.05 m` 이동했다. Shelf 중심 X는 `-0.65 m`이며, Shelf와 target 사이의 상대적인
-X/Y 배치는 기존과 동일하다.
+Shelf 중심 X는 원본 배치인 `-0.70 m`다. 이전의 manipulator 방향 `+X 0.05 m`
+이동을 되돌렸으며, spawn slot도 함께 `-X 0.05 m` 옮겨 Shelf와 target 사이의
+상대적인 깊이는 유지한다.
 
 각 환경에 독립적으로 XY `±0.02 m` jitter와 random yaw를 적용한다. Cube 이외의
 병·컵·캔·머그 등의 task object는 생성하지 않는다. Ground, Shelf, Robot, light는
@@ -126,7 +127,7 @@ Action과 관측 차원이 각각 `6-D`, `32-D`로 바뀌었으므로 기존 che
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
   --task Isaac-Sweep-Object-UR5e-SweepPolicyCube-v0 \
-  --checkpoint logs/rsl_rl/ur5e_sweep_policy_cube/2026-08-07_12-56-24/model_450.pt \
+  --checkpoint logs/rsl_rl/ur5e_sweep_policy_cube/2026-08-07_13-28-15/model_650.pt \
   --num_envs 4 
 ```
 

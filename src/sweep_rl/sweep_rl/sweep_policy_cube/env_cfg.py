@@ -25,9 +25,9 @@ from . import mdp
 TASK_ID = "Isaac-Sweep-Object-UR5e-SweepPolicyCube-v0"
 
 TARGET_SIDE = 0.06
-TARGET_HEIGHT = 0.12
+TARGET_HEIGHT = 0.15
 TARGET_MASS = 0.50
-SHELF_POSITION = (-0.65, 0.0, 0.0)
+SHELF_POSITION = (-0.70, 0.0, 0.0)
 SHELF_SURFACE_HEIGHT = 1.05
 TARGET_CENTER_HEIGHT = SHELF_SURFACE_HEIGHT + 0.5 * TARGET_HEIGHT
 GOAL_OFFSET = (0.0, 0.18, 0.0)
@@ -55,15 +55,16 @@ ARM_JOINT_NAMES = (
     "wrist_3_joint",
 )
 
-# Original six YAML positions shifted +0.05 m toward the manipulator, with z
-# converted from asset-base height to Cuboid center.
+# Keep every +Y sweep corridor away from the shelf's +Y edge.  The X positions
+# retain the original Sweep-Policy depth relative to the shelf, and Z is the
+# procedural Cuboid center rather than the asset-base height used by the YAML.
 TARGET_SLOTS = (
-    (-0.70, -0.20, TARGET_CENTER_HEIGHT),
-    (-0.70, 0.00, TARGET_CENTER_HEIGHT),
-    (-0.70, 0.20, TARGET_CENTER_HEIGHT),
-    (-0.55, -0.20, TARGET_CENTER_HEIGHT),
-    (-0.55, 0.00, TARGET_CENTER_HEIGHT),
-    (-0.55, 0.20, TARGET_CENTER_HEIGHT),
+    (-0.75, -0.20, TARGET_CENTER_HEIGHT),
+    (-0.75, -0.10, TARGET_CENTER_HEIGHT),
+    (-0.75, 0.00, TARGET_CENTER_HEIGHT),
+    (-0.60, -0.20, TARGET_CENTER_HEIGHT),
+    (-0.60, -0.10, TARGET_CENTER_HEIGHT),
+    (-0.60, 0.00, TARGET_CENTER_HEIGHT),
 )
 
 TARGET_CFG = SceneEntityCfg("target_object")
