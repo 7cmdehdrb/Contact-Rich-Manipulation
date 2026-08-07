@@ -1,8 +1,7 @@
 # UR5e Gripper Shelf Cube Pre-Reach
 
-`Isaac-Reach-Shelf-UR5e-Gripper-v0`를 상속하여, 선반 위의 Cube 뒤쪽으로 Reach한
-다음 Cube를 world `+Y` 방향으로 `0.18 m` 미는 환경이다. 기존 task ID와 29-D
-observation을 유지하므로 기존 CubePreReach checkpoint에서 이어서 학습할 수 있다.
+`Isaac-Reach-Shelf-UR5e-Gripper-v0`를 상속하여, 선반 위의 Cube를 `+Y`로 밀기
+직전 자세까지 도달하는 환경이다.
 
 ## 환경
 
@@ -34,37 +33,6 @@ goal = cube_position + (0, -0.06 * 1.2, +0.03)
 
 목표 orientation은 부모 환경과 동일한 `roll=pi/2, pitch=0, yaw=0`이다. 따라서
 TCP local X는 전방, local Y는 천장을 향한다.
-
-## Reach에서 pushing으로 전환
-
-Cube의 episode 초기 위치에서 world `+Y`로 `0.18 m` 떨어진 점을 object goal로
-고정한다. EE가 현재 Cube-relative offset에서 `0.10 m` 이내이고 orientation 오차가
-`0.50 rad` 이내이면 pushing reward를 활성화한다. 초기 학습에서 pushing 단계로
-쉽게 넘어가도록 실제 pushing contact gate인 `0.04 m`보다 느슨하게 설정했다.
-
-기존 Reach position/orientation reward는 pushing 중에도 계속 누적된다. 따라서 EE는
-이동하는 Cube 뒤쪽 offset을 따라가며 orientation을 유지하도록 학습된다.
-
-## Pushing reward
-
-```text
-distance = ||goal_pos_w - target_pos_w||_2
-zeta_m = 1 if ee_offset_error < 0.04 and wrist_y_error < 0.04 else 0
-
-if 0.05 < |target_y_velocity| < 0.10:
-    obj_vel_rew = +0.5
-elif |target_y_velocity| >= 0.10:
-    obj_vel_rew = -0.5
-else:
-    obj_vel_rew = 0.0
-
-if distance < 0.03:
-    R_push_raw = 2.0 * exp(-5.0 * distance)
-else:
-    R_push_raw = zeta_m * ((1.0 - distance / 0.18) + obj_vel_rew)
-
-R_push = 6.0 * R_push_raw
-```
 
 ## Shelf floor collision penalty
 

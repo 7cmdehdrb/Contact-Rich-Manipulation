@@ -1,4 +1,4 @@
-"""Isaac Lab smoke test for Cube-relative shelf pre-reaching."""
+"""Isaac Lab smoke test for the inherited shelf Cube Sweep task."""
 
 from __future__ import annotations
 
@@ -21,15 +21,16 @@ import isaaclab.utils.math as math_utils
 import sweep_rl  # noqa: F401, E402
 from sweep_rl.shelf_cube_pre_reach.env_cfg import (  # noqa: E402
     BEHIND_WIDTH_SCALE,
-    CUBE_HEIGHT,
-    CUBE_MASS,
     CUBE_WIDTH,
     PRE_REACH_Z_OFFSET,
-    ROBOT_CONTACT_BODY_PATHS,
+)
+from sweep_rl.shelf_cube_sweep.env_cfg import (  # noqa: E402
+    PRE_REACH_X_OFFSET,
+    PUSH_GOAL_OFFSET,
 )
 
 
-TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0"
+TASK_ID = "Isaac-Sweep-Shelf-UR5e-Gripper-Cube-v0"
 
 
 def main() -> None:
@@ -39,24 +40,8 @@ def main() -> None:
         unwrapped = env.unwrapped
         assert observations["policy"].shape == (args.num_envs, 29)
         assert unwrapped.action_manager.total_action_dim == 6
-        assert set(unwrapped.scene.rigid_objects) == {"shelf", "target_object"}
         assert "shelf_floor_contact" in unwrapped.scene.sensors
-
-        shelf_floor_contact = unwrapped.scene["shelf_floor_contact"]
-        assert shelf_floor_contact.data.force_matrix_w is not None
-        assert shelf_floor_contact.data.contact_pos_w is not None
-        assert shelf_floor_contact.data.force_matrix_w.shape == (
-            args.num_envs,
-            1,
-            len(ROBOT_CONTACT_BODY_PATHS),
-            3,
-        )
-        assert shelf_floor_contact.data.contact_pos_w.shape == (
-            args.num_envs,
-            1,
-            len(ROBOT_CONTACT_BODY_PATHS),
-            3,
-        )
+        assert "wrist_frame" in unwrapped.scene.sensors
 
         robot = unwrapped.scene["robot"]
         cube = unwrapped.scene["target_object"]
@@ -67,28 +52,39 @@ def main() -> None:
             command_b[:, :3],
             command_b[:, 3:7],
         )
-        delta = desired_pos_w - cube.data.root_pos_w
-        expected = torch.tensor(
-            [0.0, -CUBE_WIDTH * BEHIND_WIDTH_SCALE, PRE_REACH_Z_OFFSET],
-            dtype=delta.dtype,
-            device=delta.device,
+        reach_delta = desired_pos_w - cube.data.root_pos_w
+        expected_reach_delta = torch.tensor(
+            [
+                PRE_REACH_X_OFFSET,
+                -CUBE_WIDTH * BEHIND_WIDTH_SCALE,
+                PRE_REACH_Z_OFFSET,
+            ],
+            dtype=reach_delta.dtype,
+            device=reach_delta.device,
         )
-        torch.testing.assert_close(delta, expected.expand_as(delta))
+        torch.testing.assert_close(
+            reach_delta, expected_reach_delta.expand_as(reach_delta)
+        )
 
-        width_cfg = unwrapped.observation_manager.get_term_cfg(
-            "policy", "cube_width"
+        command_term = unwrapped.command_manager.get_term("ee_pose")
+        goal_delta = command_term.goal_pos_w - cube.data.root_pos_w
+        expected_goal_delta = torch.tensor(
+            PUSH_GOAL_OFFSET, dtype=goal_delta.dtype, device=goal_delta.device
         )
-        assert width_cfg.params["width"] == CUBE_WIDTH
-        assert CUBE_HEIGHT == 0.15
-        assert CUBE_MASS == 0.50
-        assert "shelf_collision" in unwrapped.reward_manager.active_terms
-        shelf_collision_cfg = unwrapped.reward_manager.get_term_cfg(
-            "shelf_collision"
+        torch.testing.assert_close(
+            goal_delta, expected_goal_delta.expand_as(goal_delta)
         )
-        assert shelf_collision_cfg.weight == -0.02
-        assert shelf_collision_cfg.params["sensor_name"] == "shelf_floor_contact"
-        assert shelf_collision_cfg.params["force_threshold"] == 1.0
-        assert shelf_collision_cfg.params["surface_height"] == 1.05
+
+        active_rewards = unwrapped.reward_manager.active_terms
+        assert "end_effector_position_tracking" in active_rewards
+        assert "end_effector_position_tracking_fine_grained" in active_rewards
+        assert "end_effector_orientation_tracking" in active_rewards
+        assert "shelf_collision" in active_rewards
+        assert "pushing_target" in active_rewards
+        assert "reaching" not in active_rewards
+        assert (
+            unwrapped.reward_manager.get_term_cfg("pushing_target").weight == 6.0
+        )
 
         actions = torch.zeros(
             args.num_envs,

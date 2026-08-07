@@ -66,7 +66,6 @@ def test_cube_physics_and_safe_spawn_contract():
     assert _class_assignments("ShelfCubePreReachSceneCfg") == {
         "shelf_floor_contact",
         "target_object",
-        "wrist_frame",
     }
 
 
@@ -81,31 +80,6 @@ def test_cube_relative_goal_contract():
     assert "target_roll=TARGET_ROLL[0]" in ENV_SOURCE
     assert "target_pitch=TARGET_PITCH[0]" in ENV_SOURCE
     assert "target_yaw=TARGET_YAW[0]" in ENV_SOURCE
-
-
-def test_reach_to_push_reward_contract():
-    assert "PUSH_GOAL_OFFSET = (0.0, 0.18, 0.0)" in ENV_SOURCE
-    assert "PUSH_REWARD_WEIGHT = 6.0" in ENV_SOURCE
-    assert "PUSH_TRANSITION_POSITION_THRESHOLD = 0.10" in ENV_SOURCE
-    assert "PUSH_TRANSITION_ORIENTATION_THRESHOLD = 0.50" in ENV_SOURCE
-    assert "wrist_frame = FrameTransformerCfg(" in ENV_SOURCE
-    assert "WRIST_BACK_OFFSET = -0.14" in ENV_SOURCE
-    assert "goal_offset=PUSH_GOAL_OFFSET" in ENV_SOURCE
-    assert "resampling_time_range=(1.0e9, 1.0e9)" in ENV_SOURCE
-    assert "self.goal_pos_w[ids] = self.target.data.root_pos_w[ids] + goal_offset" in COMMAND_SOURCE
-    assert "pushing_target = RewTerm(" in ENV_SOURCE
-    assert "func=mdp.pushing_target" in ENV_SOURCE
-    assert "weight=PUSH_REWARD_WEIGHT" in ENV_SOURCE
-    assert "def pushing_target_raw_reward(" in REWARD_SOURCE
-    assert "target_y_speed = torch.abs(target_y_velocity)" in REWARD_SOURCE
-    assert "target_y_speed > 0.05" in REWARD_SOURCE
-    assert "target_y_speed < 0.10" in REWARD_SOURCE
-    assert "2.0 * torch.exp(-5.0 * distance)" in REWARD_SOURCE
-    assert "1.0 - distance / 0.18" in REWARD_SOURCE
-    assert "contact_distance < 0.04" in REWARD_SOURCE
-    assert "wrist_y_error < 0.04" in REWARD_SOURCE
-    assert "reach_complete.float() * raw_reward" in REWARD_SOURCE
-    assert "math_utils.quat_error_magnitude" in REWARD_SOURCE
 
 
 def test_29d_observation_contract():
@@ -158,10 +132,6 @@ def test_parent_action_reward_and_ppo_contract():
     assert "class UR5eGripperShelfCubePreReachEnvCfg(" in ENV_SOURCE
     assert "actions:" not in ENV_SOURCE
     assert "rewards: CubePreReachRewardsCfg" in ENV_SOURCE
-    assert _class_assignments("CubePreReachRewardsCfg") == {
-        "pushing_target",
-        "shelf_collision",
-    }
     assert "terminations:" not in ENV_SOURCE
     assert "events:" not in ENV_SOURCE
     assert "curriculum:" not in ENV_SOURCE
