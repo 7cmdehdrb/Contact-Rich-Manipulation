@@ -33,7 +33,7 @@ TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-v0"
 PLAY_TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-Play-v0"
 
 DEFAULT_ROBOT_USD_PATH = (
-    "/home/min/Desktop/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/UR5e_v4.usd"
+    "./asset/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/.collect.mapping.json"
 )
 DEFAULT_SHELF_USD_PATH = (
     "omniverse://192.168.0.13/Library/Shelf/Arena/"
@@ -169,9 +169,7 @@ class ShelfReachSceneCfg(InteractiveSceneCfg):
     shelf = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Shelf",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=os.environ.get(
-                "SWEEP_SHELF_USD_PATH", DEFAULT_SHELF_USD_PATH
-            ),
+            usd_path=os.environ.get("SWEEP_SHELF_USD_PATH", DEFAULT_SHELF_USD_PATH),
             mass_props=sim_utils.MassPropertiesCfg(mass=100.0),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
@@ -195,9 +193,7 @@ class ShelfReachSceneCfg(InteractiveSceneCfg):
     )
     light = AssetBaseCfg(
         prim_path="/World/light",
-        spawn=sim_utils.DomeLightCfg(
-            color=(0.75, 0.75, 0.75), intensity=2500.0
-        ),
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=2500.0),
     )
 
 

@@ -41,7 +41,7 @@ robot-base `-Y`를 향한다. 목표가 갱신되어도 임의 yaw는 적용하�
 기본 robot USD는 원본 Sweep-Policy의 결합형 자산을 사용한다.
 
 ```text
-/home/min/Desktop/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/UR5e_v4.usd
+./asset/Shelf_USD/Robots/UR5e/Collected_UR5e_v4/.collect.mapping.json
 ```
 
 다른 머신에서는 다음 환경변수로 경로를 바꿀 수 있다.
