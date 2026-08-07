@@ -20,6 +20,8 @@ UR5e와 Robotiq 2F-85를 사용하는 Isaac Lab Manager-based 강화학습 패�
 | Independent 과제의 상세 reward 학습 | `Isaac-Sweep-Object-UR5e-OSC-Independent-Detailed-v0` | 56-D |
 | Shelf 내부 UR5e+Gripper TCP Reach | `Isaac-Reach-Shelf-UR5e-Gripper-v0` | 25-D |
 | Shelf Reach 소규모 재생 | `Isaac-Reach-Shelf-UR5e-Gripper-Play-v0` | 25-D |
+| Cube 밀기 전 -Y 사전접근 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0` | 29-D |
+| Cube 사전접근 소규모 재생 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0` | 29-D |
 
 `UprightRandomSize`라는 ID는 기존 실행 경로 호환성을 위해 유지한다. 현재 해당
 환경에는 upright 자세 보상이나 물체 크기 랜덤화가 없다.
@@ -66,5 +68,8 @@ Force-command 환경은 목표 pose와 목표/측정 접촉력을 표시하는
 환경별 목적, 관측, Action, reward·패널티·termination과 Ubuntu/Windows 실행법은
 [Sweep RL 환경 문서](docs/README.md)에 정리되어 있다. Shelf Reach의 세부 계약과
 실행법은 [`shelf_reach/README.md`](sweep_rl/shelf_reach/README.md)를 참고한다.
+Cube 사전접근 환경은
+[`shelf_cube_pre_reach/README.md`](sweep_rl/shelf_cube_pre_reach/README.md)에
+정리되어 있다.
 
 문서 내용은 2026-08-07 현재 구현 기준이다.
