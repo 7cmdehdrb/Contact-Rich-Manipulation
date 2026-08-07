@@ -88,8 +88,9 @@ def test_tcp_and_virtual_command_contract():
     assert "TARGET_POS_X = (0.55, 0.75)" in ENV_SOURCE
     assert "TARGET_POS_Y = (-0.20, 0.20)" in ENV_SOURCE
     assert "TARGET_POS_Z = (0.30, 0.50)" in ENV_SOURCE
-    assert "TARGET_PITCH = (math.pi / 2.0, math.pi / 2.0)" in ENV_SOURCE
-    assert "TARGET_YAW = (-math.pi, math.pi)" in ENV_SOURCE
+    assert "TARGET_ROLL = (math.pi / 2.0, math.pi / 2.0)" in ENV_SOURCE
+    assert "TARGET_PITCH = (0.0, 0.0)" in ENV_SOURCE
+    assert "TARGET_YAW = (0.0, 0.0)" in ENV_SOURCE
     assert "resampling_time_range=(4.0, 4.0)" in ENV_SOURCE
     assert "TcpUniformPoseCommand" in COMMAND_SOURCE
     assert "tcp_frame.data.target_pos_w" in COMMAND_SOURCE

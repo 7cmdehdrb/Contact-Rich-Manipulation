@@ -23,10 +23,15 @@
 x     = [ 0.55,  0.75] m
 y     = [-0.20,  0.20] m
 z     = [ 0.30,  0.50] m
-roll  = 0
-pitch = pi / 2
-yaw   = [-pi, pi]
+roll  = pi / 2
+pitch = 0
+yaw   = 0
 ```
+
+원본 Sweep-Policy 초기 TCP의 약 `pi/4` roll에서 45도를 더 회전한 고정
+orientation이다. TCP local X축은 robot-base `+X` 전방을 유지하고 local Y축은
+robot-base `+Z` 천장 방향에 정확히 정렬된다. 오른손 좌표계에 따라 local Z축은
+robot-base `-Y`를 향한다. 목표가 갱신되어도 임의 yaw는 적용하지 않는다.
 
 학습 환경은 marker를 만들지 않는다. Play 환경만 목표 pose와 현재 TCP를 나타내는
 비물리 frame marker를 표시한다.

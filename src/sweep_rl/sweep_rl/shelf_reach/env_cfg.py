@@ -48,9 +48,12 @@ TCP_FORWARD_OFFSET = 0.13
 TARGET_POS_X = (0.55, 0.75)
 TARGET_POS_Y = (-0.20, 0.20)
 TARGET_POS_Z = (0.30, 0.50)
-TARGET_ROLL = (0.0, 0.0)
-TARGET_PITCH = (math.pi / 2.0, math.pi / 2.0)
-TARGET_YAW = (-math.pi, math.pi)
+# The default Sweep-Policy posture puts the TCP x-axis along robot-base +X
+# with an approximately +45-degree roll.  Add another 45 degrees so that the
+# target TCP y-axis points exactly along robot-base +Z (toward the ceiling).
+TARGET_ROLL = (math.pi / 2.0, math.pi / 2.0)
+TARGET_PITCH = (0.0, 0.0)
+TARGET_YAW = (0.0, 0.0)
 
 ARM_JOINT_NAMES = (
     "shoulder_pan_joint",
