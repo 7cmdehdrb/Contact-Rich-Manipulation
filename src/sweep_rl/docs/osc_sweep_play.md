@@ -43,6 +43,11 @@ Ubuntu:
   --checkpoint /absolute/path/to/model.pt --num_envs 1 --device cuda:0
 ```
 
+
+```
+./IsaacLab/isaaclab.sh -p /home/min/7cmdehdrb/grad/IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py  --task Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-v0  --checkpoint /home/min/7cmdehdrb/grad/logs/rsl_rl/ur5e_osc_sweep_constant_velocity_upright_random_size_home/2026-07-19_19-55-35/model_11999.pt --num_envs 1 --device cuda:0 --video
+```
+
 Windows PowerShell:
 
 ```powershell
