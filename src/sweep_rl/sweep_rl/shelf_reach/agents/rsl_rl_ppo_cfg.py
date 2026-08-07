@@ -13,7 +13,7 @@ class UR5eGripperShelfReachPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     seed = 42
     device = "cuda:0"
     num_steps_per_env = 24
-    max_iterations = 1_000
+    max_iterations = 10_000
     obs_groups = {"actor": ["policy"], "critic": ["policy"]}
     save_interval = 50
     experiment_name = "reach_shelf_ur5e_gripper"
