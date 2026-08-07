@@ -1,4 +1,4 @@
-"""RSL-RL PPO configuration ported from the fixed Sweep-Policy task."""
+"""RSL-RL PPO configuration for UR5e gripper shelf reaching."""
 
 from isaaclab.utils import configclass
 from isaaclab_rl.rsl_rl import (
@@ -9,14 +9,14 @@ from isaaclab_rl.rsl_rl import (
 
 
 @configclass
-class SweepPolicyCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class UR5eGripperShelfReachPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     seed = 42
     device = "cuda:0"
     num_steps_per_env = 24
     max_iterations = 1_000
     obs_groups = {"actor": ["policy"], "critic": ["policy"]}
     save_interval = 50
-    experiment_name = "ur5e_sweep_policy_cube"
+    experiment_name = "reach_shelf_ur5e_gripper"
     run_name = ""
 
     actor = RslRlMLPModelCfg(

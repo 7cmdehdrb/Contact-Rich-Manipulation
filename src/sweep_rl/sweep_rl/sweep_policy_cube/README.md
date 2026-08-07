@@ -1,8 +1,7 @@
 # Isaac-Sweep-Object-UR5e-SweepPolicyCube-v0
 
-`example/Sweep-Policy`의 Fixed `+Y` 환경을 현재 `sweep_rl` 패키지에서 독립적으로
-실행할 수 있게 이식한 단일 Cube 환경이다. 기존 `sweep_basic`과 OSC 환경은 변경하지
-않는다.
+`example/Sweep-Policy`에서 이식한 UR5e·Shelf·Cube scene에 Isaac Lab의 표준 Reach
+학습 구성을 적용한 환경이다. 기존 `sweep_basic`과 OSC 환경은 변경하지 않는다.
 
 환경 변경 시 유지해야 하는 필수 설계 원칙은 [`PRINCIPLES.md`](./PRINCIPLES.md)에
 기록한다.
@@ -11,8 +10,8 @@
 
 - Robot: UR5e + Robotiq 2F-85
 - Robot asset: 원본 Fixed Sweep-Policy의 일체형 `Collected_UR5e_v4/UR5e_v4.usd`
-- Arm action: 6축 default-relative joint position command, scale `0.5`. PPO action
-  clipping은 적용하지 않음
+- Arm action: 공식 UR10 Reach와 같은 6축 default-relative joint position command,
+  scale `0.5`. PPO/action term의 별도 clipping은 사용하지 않음
 - Gripper: action에서 제외하고 open position `0`으로 고정. Implicit actuator의
   stiffness `2000`, damping `1000`으로 열린 자세를 유지
 - 전체 action 차원: `6`
@@ -41,6 +40,10 @@ Shelf 중심 X는 원본 배치인 `-0.70 m`다. 이전의 manipulator 방향 `+
 각 환경에 독립적으로 XY `±0.02 m` jitter와 random yaw를 적용한다. Cube 이외의
 병·컵·캔·머그 등의 task object는 생성하지 않는다. Ground, Shelf, Robot, light는
 환경 구성 요소이므로 유지한다.
+
+Episode reset은 먼저 모든 joint를 default로 되돌려 gripper open target을 복원한 뒤,
+UR5e arm 6축에만 공식 UR10 Reach의 default-position scale randomization
+`[0.75, 1.25]`를 적용한다. Gripper joint는 randomization 대상이 아니다.
 
 ## Observation
 
@@ -93,18 +96,23 @@ Orientation은 quaternion 전체 자세를 강제하지 않고 EE의 y축과 she
 object/drop, push-fast, shelf-collision, hand-velocity termination은 삭제하지 않고
 `env_cfg.py`에서 주석 처리했다. 활성 termination은 `time_out`뿐이다.
 
-Action과 관측 차원이 각각 `6-D`, `32-D`로 바뀌었으므로 기존 checkpoint는 로드할
-수 없으며 새 run을 시작해야 한다. PPO는 초기 action std `0.25`, entropy coefficient
-`0.001`, discount factor `0.99`를 사용한다. PPO 출력에는 별도의 action clipping을
-적용하지 않으며, 급격한 실제 관절 운동은 `joint_vel` reward로 억제한다.
+Observation과 offset 목표는 현재 환경의 `32-D` 구성을 유지하지만, action·reward·PPO는
+Isaac Lab UR10 Reach 기준을 따른다. PPO는 24-step rollout, 최대 1000 iteration,
+`[64, 64]` actor/critic, 초기 action std `1.0`, entropy coefficient `0.01`, discount
+factor `0.99`, desired KL `0.01`을 사용한다. 별도 action clipping은 없고 실제 관절
+위치는 로봇 USD의 물리 joint limit을 적용받는다. 네트워크 구조가 변경됐으므로 기존
+checkpoint 대신 새 run을 시작해야 한다.
 
 | Reward | Weight |
 |---|---:|
 | `end_effector_position_tracking` | `-0.2` |
 | `end_effector_position_tracking_fine_grained` | `+0.1` |
-| `orientation` | `-0.1` |
-| `action_rate` | `-0.001` |
+| `end_effector_orientation_tracking` | `-0.1` |
+| `action_rate` | `-0.0001` |
 | `joint_vel` | `-0.0001` |
+
+공식 Reach curriculum과 같이 4500 environment step 동안 `action_rate` weight는
+`-0.005`, `joint_vel` weight는 `-0.001`까지 선형 변경한다.
 
 이 구성에서 이전 `Episode_Reward/reaching`의 이론적 최대 `5.0`은 더 이상 비교
 지표가 아니다. 정확도는 `Episode_Reward/end_effector_position_tracking`이 `0`에
@@ -127,7 +135,7 @@ Action과 관측 차원이 각각 `6-D`, `32-D`로 바뀌었으므로 기존 che
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
   --task Isaac-Sweep-Object-UR5e-SweepPolicyCube-v0 \
-  --checkpoint logs/rsl_rl/ur5e_sweep_policy_cube/2026-08-07_13-28-15/model_650.pt \
+  --checkpoint logs/rsl_rl/ur5e_sweep_policy_cube/<new-run>/model_1000.pt \
   --num_envs 4 
 ```
 

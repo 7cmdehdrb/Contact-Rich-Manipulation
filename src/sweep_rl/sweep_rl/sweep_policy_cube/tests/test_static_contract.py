@@ -133,10 +133,11 @@ def test_no_multi_object_or_object_collision_reward_contract():
         "joint_vel",
         "end_effector_position_tracking",
         "end_effector_position_tracking_fine_grained",
-        "orientation",
+        "end_effector_orientation_tracking",
     }
     assert _class_assignments("TerminationsCfg") == {"time_out"}
-    assert "curriculum = None" in ENV_SOURCE
+    assert _class_assignments("CurriculumCfg") == {"action_rate", "joint_vel"}
+    assert "curriculum: CurriculumCfg = CurriculumCfg()" in ENV_SOURCE
 
 
 def test_arm_only_action_and_timing_contract():
@@ -144,6 +145,14 @@ def test_arm_only_action_and_timing_contract():
     assert "JointPositionActionCfg" in ENV_SOURCE
     assert "BinaryJointPositionActionCfg" not in ENV_SOURCE
     assert _class_assignments("ActionsCfg") == {"arm_action"}
+    assert _class_assignments("EventsCfg") == {
+        "reset_all",
+        "reset_robot_joints",
+        "object_spawn",
+    }
+    assert "func=base_mdp.reset_joints_by_scale" in ENV_SOURCE
+    assert '"position_range": (0.75, 1.25)' in ENV_SOURCE
+    assert '"robot", joint_names=list(ARM_JOINT_NAMES)' in ENV_SOURCE
     assert "stiffness=2000.0" in ENV_SOURCE
     assert "damping=1000.0" in ENV_SOURCE
     assert '".*(finger|knuckle).*": 0.0' in ENV_SOURCE
@@ -161,10 +170,14 @@ def test_physical_finger_tcp_and_training_balance_contract():
     assert "OffsetCfg(pos=(WRIST_BACK_OFFSET, 0.0, 0.0))" in ENV_SOURCE
     assert _reward_weight("end_effector_position_tracking") == -0.2
     assert _reward_weight("end_effector_position_tracking_fine_grained") == 0.1
-    assert _reward_weight("action_rate") == -0.001
+    assert _reward_weight("action_rate") == -0.0001
     assert _reward_weight("joint_vel") == -0.0001
-    assert _reward_weight("orientation") == -0.1
+    assert _reward_weight("end_effector_orientation_tracking") == -0.1
     assert "func=mdp.ee_y_shelf_z_orientation_error" in ENV_SOURCE
+    assert "func=base_mdp.joint_vel_l2" in ENV_SOURCE
+    assert '"weight": -0.005' in ENV_SOURCE
+    assert '"weight": -0.001' in ENV_SOURCE
+    assert ENV_SOURCE.count('"num_steps": 4500') == 2
     assert "axis_alignment_error_kernel" in REWARD_SOURCE
     assert "ee_y_shelf_z_alignment_kernel" in REWARD_SOURCE
     assert "align_ee_target" not in ENV_SOURCE + REWARD_SOURCE
@@ -198,9 +211,13 @@ def test_physical_finger_tcp_and_training_balance_contract():
 
 def test_ppo_stability_contract():
     assert "clip_actions" not in AGENT_SOURCE
-    assert "init_std=0.25" in AGENT_SOURCE
-    assert "entropy_coef=0.001" in AGENT_SOURCE
+    assert "num_steps_per_env = 24" in AGENT_SOURCE
+    assert "max_iterations = 1_000" in AGENT_SOURCE
+    assert AGENT_SOURCE.count("hidden_dims=[64, 64]") == 2
+    assert "init_std=1.0" in AGENT_SOURCE
+    assert "entropy_coef=0.01" in AGENT_SOURCE
     assert "gamma=0.99" in AGENT_SOURCE
+    assert "desired_kl=0.01" in AGENT_SOURCE
 
 
 def test_original_combined_robot_asset_and_joint_contract():

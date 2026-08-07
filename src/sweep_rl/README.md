@@ -1,8 +1,8 @@
 # Sweep RL
 
-UR5e, virtual F/T sensor, Robotiq 2F-85를 사용하는 Isaac Lab Manager-based
-variable-stiffness OSC 물체 밀기 학습 패키지다. 현재 등록된 환경은 force-command
-계열 4개, constant-velocity 계열 4개, independent shelf 계열 2개다.
+UR5e와 Robotiq 2F-85를 사용하는 Isaac Lab Manager-based 강화학습 패키지다.
+물체 밀기 환경과 함께 Shelf 내부의 가상 pose를 추종하는 joint-position Reach
+환경을 제공한다.
 
 ## 환경 선택
 
@@ -18,6 +18,8 @@ variable-stiffness OSC 물체 밀기 학습 패키지다. 현재 등록된 환�
 | 기존 HomeReturn checkpoint로 Can_6 재생 | `Isaac-Sweep-Object-UR5e-OSC-ConstantVelocity-UprightRandomSize-HomeReturn-Can-v0` | 56-D |
 | 선반에서 Reach → Sweep → Home 통합 학습 | `Isaac-Sweep-Object-UR5e-OSC-Independent-v0` | 56-D |
 | Independent 과제의 상세 reward 학습 | `Isaac-Sweep-Object-UR5e-OSC-Independent-Detailed-v0` | 56-D |
+| Shelf 내부 UR5e+Gripper TCP Reach | `Isaac-Reach-Shelf-UR5e-Gripper-v0` | 25-D |
+| Shelf Reach 소규모 재생 | `Isaac-Reach-Shelf-UR5e-Gripper-Play-v0` | 25-D |
 
 `UprightRandomSize`라는 ID는 기존 실행 경로 호환성을 위해 유지한다. 현재 해당
 환경에는 upright 자세 보상이나 물체 크기 랜덤화가 없다.
@@ -61,7 +63,8 @@ Force-command 환경은 목표 pose와 목표/측정 접촉력을 표시하는
 
 ## 문서
 
-등록된 10개 환경의 목적, 관측, Action, reward·패널티·termination과 Ubuntu/Windows
-실행법은 [Sweep RL 환경 문서](docs/README.md)에 정리되어 있다.
+환경별 목적, 관측, Action, reward·패널티·termination과 Ubuntu/Windows 실행법은
+[Sweep RL 환경 문서](docs/README.md)에 정리되어 있다. Shelf Reach의 세부 계약과
+실행법은 [`shelf_reach/README.md`](sweep_rl/shelf_reach/README.md)를 참고한다.
 
-문서 내용은 2026-07-22 현재 구현 기준이다.
+문서 내용은 2026-08-07 현재 구현 기준이다.

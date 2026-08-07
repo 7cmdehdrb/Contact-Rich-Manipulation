@@ -9,6 +9,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -323,6 +324,17 @@ class EventsCfg:
         mode="reset",
         params={"reset_joint_targets": True},
     )
+    reset_robot_joints = EventTerm(
+        func=base_mdp.reset_joints_by_scale,
+        mode="reset",
+        params={
+            "position_range": (0.75, 1.25),
+            "velocity_range": (0.0, 0.0),
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=list(ARM_JOINT_NAMES)
+            ),
+        },
+    )
     object_spawn = EventTerm(
         func=mdp.reset_target_from_slots,
         mode="reset",
@@ -357,17 +369,22 @@ class RewardsCfg:
         },
     )
 
-    # Penalize only the task-relevant axis error: EE y-axis should match the
-    # shelf z-axis. Rotation about that aligned axis remains unconstrained.
-    orientation = RewTerm(
+    # Preserve the task-specific orientation target while matching the Reach
+    # reward name and weight: EE y-axis should match the shelf z-axis.
+    end_effector_orientation_tracking = RewTerm(
         func=mdp.ee_y_shelf_z_orientation_error,
         weight=-0.1,
     )
 
-    action_rate = RewTerm(func=base_mdp.action_rate_l2, weight=-0.001)
+    action_rate = RewTerm(func=base_mdp.action_rate_l2, weight=-0.0001)
     joint_vel = RewTerm(
-        func=mdp.joint_vel_l2_arm,
+        func=base_mdp.joint_vel_l2,
         weight=-0.0001,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=list(ARM_JOINT_NAMES)
+            )
+        },
     )
 
     # Disabled for the Reaching-only test bench. Kept here for restoration.
@@ -425,6 +442,28 @@ class TerminationsCfg:
 
 
 @configclass
+class CurriculumCfg:
+    """Isaac Lab Reach reward-weight curriculum."""
+
+    action_rate = CurrTerm(
+        func=base_mdp.modify_reward_weight,
+        params={
+            "term_name": "action_rate",
+            "weight": -0.005,
+            "num_steps": 4500,
+        },
+    )
+    joint_vel = CurrTerm(
+        func=base_mdp.modify_reward_weight,
+        params={
+            "term_name": "joint_vel",
+            "weight": -0.001,
+            "num_steps": 4500,
+        },
+    )
+
+
+@configclass
 class SweepPolicyCubeEnvCfg(ManagerBasedRLEnvCfg):
     scene: SweepPolicyCubeSceneCfg = SweepPolicyCubeSceneCfg(
         num_envs=4096, env_spacing=2.5
@@ -435,7 +474,7 @@ class SweepPolicyCubeEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventsCfg = EventsCfg()
-    curriculum = None
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         self.decimation = 2
