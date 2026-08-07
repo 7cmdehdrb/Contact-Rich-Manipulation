@@ -27,7 +27,15 @@ from sweep_rl.shelf_reach.env_cfg import (
     UR5eGripperShelfReachEnvCfg,
 )
 
+EE_FRAME_CFG = SceneEntityCfg("ee_frame")
+
 from . import mdp
+
+from sweep_rl.shelf_reach.mdp.rewards import (
+    tcp_position_command_error,
+    _desired_pose_w,
+    tcp_orientation_command_error,
+)
 
 TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0"
 PLAY_TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0"
@@ -49,7 +57,7 @@ SHELF_FLOOR_Y_BOUNDS = (-0.50, 0.50)
 SHELF_FLOOR_SURFACE_HEIGHT = 1.05
 SHELF_FLOOR_SURFACE_TOLERANCE = 0.02
 SHELF_CONTACT_FORCE_THRESHOLD = 1.0
-SHELF_COLLISION_WEIGHT = -0.02
+SHELF_COLLISION_WEIGHT = -0.05
 PRE_REACH_EXP_REWARD_WEIGHT = 3.0
 
 # Every rigid body in the combined UR5e + Robotiq asset.  The shelf-side
@@ -113,9 +121,7 @@ class ShelfCubePreReachSceneCfg(ShelfReachSceneCfg):
                 disable_gravity=False,
             ),
             mass_props=sim_utils.MassPropertiesCfg(mass=CUBE_MASS),
-            collision_props=sim_utils.CollisionPropertiesCfg(
-                collision_enabled=True
-            ),
+            collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.20, 0.45, 0.90)
             ),
@@ -221,9 +227,10 @@ class CubePreReachRewardsCfg(RewardsCfg):
 class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg):
     """Replace both parent position terms with one exponential Reach reward."""
 
+    # Tracking 에러 기준 변경 -> Max 1.0, 태호 기준 3.0
     end_effector_position_tracking = RewTerm(
         func=mdp.tcp_position_command_reward_exp,
-        weight=PRE_REACH_EXP_REWARD_WEIGHT,
+        weight=3.0,
         params={
             "command_name": "ee_pose",
             "robot_cfg": ROBOT_CFG,
@@ -231,6 +238,25 @@ class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg):
         },
     )
     end_effector_position_tracking_fine_grained = None
+
+    # Weight 변경 -> Max 1.0 -> 3.14
+    end_effector_orientation_tracking = RewTerm(
+        func=mdp.tcp_orientation_command_error,
+        weight=-0.7,
+        params={
+            "command_name": "ee_pose",
+            "robot_cfg": ROBOT_CFG,
+            "frame_cfg": EE_FRAME_CFG,
+        },
+    )
+
+    # Weight 변경
+    action_rate = RewTerm(func=base_mdp.action_rate_l2, weight=-0.03)
+    joint_vel = RewTerm(
+        func=base_mdp.joint_vel_l2,
+        weight=-0.03,
+        params={"asset_cfg": ARM_CFG},
+    )
 
 
 @configclass
@@ -246,9 +272,7 @@ class UR5eGripperShelfCubePreReachEnvCfg(UR5eGripperShelfReachEnvCfg):
 
 
 @configclass
-class UR5eGripperShelfCubePreReachEnvCfg_PLAY(
-    UR5eGripperShelfCubePreReachEnvCfg
-):
+class UR5eGripperShelfCubePreReachEnvCfg_PLAY(UR5eGripperShelfCubePreReachEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 50
@@ -258,18 +282,14 @@ class UR5eGripperShelfCubePreReachEnvCfg_PLAY(
 
 
 @configclass
-class UR5eGripperShelfCubePreReachEnvCfgV1(
-    UR5eGripperShelfCubePreReachEnvCfg
-):
+class UR5eGripperShelfCubePreReachEnvCfgV1(UR5eGripperShelfCubePreReachEnvCfg):
     """PreReach v1 using ``3 * exp(-10 * EE offset distance)``."""
 
     rewards: CubePreReachRewardsCfgV1 = CubePreReachRewardsCfgV1()
 
 
 @configclass
-class UR5eGripperShelfCubePreReachEnvCfgV1_PLAY(
-    UR5eGripperShelfCubePreReachEnvCfgV1
-):
+class UR5eGripperShelfCubePreReachEnvCfgV1_PLAY(UR5eGripperShelfCubePreReachEnvCfgV1):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 50

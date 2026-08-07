@@ -5,11 +5,16 @@ from __future__ import annotations
 import torch
 
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import RigidObject
+from isaaclab.assets import RigidObject, Articulation
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import ContactSensor
+from isaaclab.sensors import ContactSensor, FrameTransformer
 
-from sweep_rl.shelf_reach.mdp.rewards import tcp_position_command_error
+
+from sweep_rl.shelf_reach.mdp.rewards import (
+    tcp_position_command_error,
+    _desired_pose_w,
+    tcp_orientation_command_error,
+)
 
 
 def tcp_position_command_reward_exp(
@@ -44,7 +49,9 @@ def shelf_floor_contact_mask(
 ) -> torch.Tensor:
     """Detect filtered robot contacts on the Cube-supporting shelf board."""
     if force_threshold <= 0.0 or surface_tolerance <= 0.0:
-        raise ValueError("Contact force threshold and surface tolerance must be positive.")
+        raise ValueError(
+            "Contact force threshold and surface tolerance must be positive."
+        )
     if x_bounds[0] >= x_bounds[1] or y_bounds[0] >= y_bounds[1]:
         raise ValueError("Shelf floor bounds must be strictly increasing.")
     if force_matrix_w.shape != contact_pos_w.shape or force_matrix_w.ndim != 4:
