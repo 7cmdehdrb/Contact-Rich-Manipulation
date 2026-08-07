@@ -63,7 +63,10 @@ def test_cube_physics_and_safe_spawn_contract():
     assert "size=(CUBE_WIDTH, CUBE_DEPTH, CUBE_HEIGHT)" in ENV_SOURCE
     assert "mass=sim_utils.MassPropertiesCfg" not in ENV_SOURCE
     assert "mass_props=sim_utils.MassPropertiesCfg(mass=CUBE_MASS)" in ENV_SOURCE
-    assert _class_assignments("ShelfCubePreReachSceneCfg") == {"target_object"}
+    assert _class_assignments("ShelfCubePreReachSceneCfg") == {
+        "shelf_floor_contact",
+        "target_object",
+    }
 
 
 def test_cube_relative_goal_contract():
@@ -96,14 +99,32 @@ def test_29d_observation_contract():
 
 def test_shelf_collision_penalty_contract():
     assert "class CubePreReachRewardsCfg(RewardsCfg)" in ENV_SOURCE
-    assert "SHELF_COLLISION_THRESHOLD = 0.005" in ENV_SOURCE
+    assert "SHELF_CONTACT_FORCE_THRESHOLD = 1.0" in ENV_SOURCE
     assert "SHELF_COLLISION_WEIGHT = -0.02" in ENV_SOURCE
+    assert "self.shelf.spawn.activate_contact_sensors = True" in ENV_SOURCE
+    assert "shelf_floor_contact = ContactSensorCfg(" in ENV_SOURCE
+    assert (
+        'prim_path=f"{{ENV_REGEX_NS}}/Shelf/{SHELF_FLOOR_BODY_PATH}"'
+        in ENV_SOURCE
+    )
+    assert "track_contact_points=True" in ENV_SOURCE
+    assert "for body_path in ROBOT_CONTACT_BODY_PATHS" in ENV_SOURCE
+    assert '"base_link"' in ENV_SOURCE
+    assert '"wrist_3_link"' in ENV_SOURCE
+    assert '"robotiq_base_link"' in ENV_SOURCE
+    assert '"left_inner_knuckle"' in ENV_SOURCE
+    assert '"right_inner_knuckle"' in ENV_SOURCE
+    assert '"TargetCube"' not in ENV_SOURCE.split(
+        "shelf_floor_contact = ContactSensorCfg(", 1
+    )[1].split("target_object = RigidObjectCfg(", 1)[0]
     assert "shelf_collision = RewTerm(" in ENV_SOURCE
     assert "func=mdp.shelf_collision" in ENV_SOURCE
-    assert "shelf.data.default_root_state[:, :3]" in REWARD_SOURCE
-    assert "shelf.data.root_pos_w - initial_pos_w" in REWARD_SOURCE
-    assert "shelf.data.root_vel_w" in REWARD_SOURCE
-    assert "motion > threshold" in REWARD_SOURCE
+    assert "sensor.data.force_matrix_w" in REWARD_SOURCE
+    assert "sensor.data.contact_pos_w" in REWARD_SOURCE
+    assert "math_utils.quat_apply_inverse" in REWARD_SOURCE
+    assert "valid & on_floor & (force > force_threshold)" in REWARD_SOURCE
+    assert "shelf.data.default_root_state" not in REWARD_SOURCE
+    assert "shelf.data.root_vel_w" not in REWARD_SOURCE
     assert "observations" not in REWARD_SOURCE
 
 

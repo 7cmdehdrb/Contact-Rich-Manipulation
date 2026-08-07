@@ -34,15 +34,20 @@ goal = cube_position + (0, -0.06 * 1.2, +0.03)
 목표 orientation은 부모 환경과 동일한 `roll=pi/2, pitch=0, yaw=0`이다. 따라서
 TCP local X는 전방, local Y는 천장을 향한다.
 
-## Shelf collision penalty
+## Shelf floor collision penalty
 
-Shelf 상태는 reward 계산에만 사용하며 policy observation에는 추가하지 않는다.
-현재 Shelf 위치와 초기 위치의 거리, 그리고 6-D root velocity norm의 합으로 충돌을
-판정한다.
+선반 USD의 Cube 지지판(`/Shelf/rack/Cube_02`, local top `z=1.05 m`)에 한정해
+접촉 패널티를 계산하며, 이 정보는 policy observation에 추가하지 않는다. 선반의
+`rack` rigid body에 Contact sensor를 활성화하고 UR5e 7개 link와 Robotiq 9개 link를
+각각 필터로 등록한다. 접촉점은 shelf frame으로 변환한 뒤 지지판의 XY 범위와
+상면 높이 `1.05 +/- 0.02 m` 안에 있는 경우만 충돌로 판정한다.
+
+Cube와 선반의 접촉 및 선반 구성요소 사이의 접촉은 필터 목록에 포함되지 않으므로
+패널티가 발생하지 않는다.
 
 ```text
-motion = ||shelf_position - initial_shelf_position||₂ + ||shelf_root_velocity||₂
-raw_shelf_collision = 1.0 if motion > 0.005 else 0.0
+robot_floor_contact = filtered_force > 1.0 N and contact_point_on_floor
+raw_shelf_collision = 1.0 if any(robot_floor_contact) else 0.0
 weight = -0.02
 ```
 
@@ -77,5 +82,5 @@ weight = -0.02
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/play.py \
   --task Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0 \
-  --checkpoint /absolute/path/to/model.pt --num_envs 1
+  --checkpoint logs/rsl_rl/reach_shelf_ur5e_gripper_cube_pre_reach/2026-08-07_15-58-15/model_400.pt --num_envs 1
 ```

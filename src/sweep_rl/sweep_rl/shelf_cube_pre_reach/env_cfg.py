@@ -9,6 +9,7 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
@@ -40,8 +41,35 @@ CUBE_CENTER_HEIGHT = SHELF_SURFACE_HEIGHT + 0.5 * CUBE_HEIGHT
 CUBE_INITIAL_POSITION = (-0.70, -0.10, CUBE_CENTER_HEIGHT)
 BEHIND_WIDTH_SCALE = 1.2
 PRE_REACH_Z_OFFSET = 0.03
-SHELF_COLLISION_THRESHOLD = 0.005
+SHELF_FLOOR_BODY_PATH = "rack"
+SHELF_FLOOR_X_BOUNDS = (-0.20, 0.20)
+SHELF_FLOOR_Y_BOUNDS = (-0.50, 0.50)
+SHELF_FLOOR_SURFACE_HEIGHT = 1.05
+SHELF_FLOOR_SURFACE_TOLERANCE = 0.02
+SHELF_CONTACT_FORCE_THRESHOLD = 1.0
 SHELF_COLLISION_WEIGHT = -0.02
+
+# Every rigid body in the combined UR5e + Robotiq asset.  The shelf-side
+# sensor uses one-to-many filtering so Cube--shelf and shelf self contacts are
+# never included in the collision reward.
+ROBOT_CONTACT_BODY_PATHS = (
+    "base_link",
+    "shoulder_link",
+    "upper_arm_link",
+    "forearm_link",
+    "wrist_1_link",
+    "wrist_2_link",
+    "wrist_3_link",
+    "robotiq_base_link",
+    "left_outer_knuckle",
+    "left_outer_finger",
+    "left_inner_finger",
+    "left_inner_knuckle",
+    "right_outer_knuckle",
+    "right_outer_finger",
+    "right_inner_finger",
+    "right_inner_knuckle",
+)
 
 ROBOT_CFG = SceneEntityCfg("robot")
 TARGET_OBJECT_CFG = SceneEntityCfg("target_object")
@@ -51,6 +79,23 @@ SHELF_CFG = SceneEntityCfg("shelf")
 @configclass
 class ShelfCubePreReachSceneCfg(ShelfReachSceneCfg):
     """Parent shelf scene with one physical Cube added."""
+
+    shelf_floor_contact = ContactSensorCfg(
+        # The shelf USD has one rigid body (rack) containing all its collision
+        # shapes.  The reward further masks contact points to Cube_02, the
+        # horizontal board whose top surface is at z=1.05 in shelf coordinates.
+        prim_path=f"{{ENV_REGEX_NS}}/Shelf/{SHELF_FLOOR_BODY_PATH}",
+        update_period=0.0,
+        history_length=0,
+        track_pose=False,
+        track_contact_points=True,
+        max_contact_data_count_per_prim=32,
+        filter_prim_paths_expr=[
+            f"{{ENV_REGEX_NS}}/Robot/{body_path}"
+            for body_path in ROBOT_CONTACT_BODY_PATHS
+        ],
+        debug_vis=False,
+    )
 
     target_object = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/TargetCube",
@@ -77,6 +122,10 @@ class ShelfCubePreReachSceneCfg(ShelfReachSceneCfg):
             rot=(1.0, 0.0, 0.0, 0.0),
         ),
     )
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.shelf.spawn.activate_contact_sensors = True
 
 
 @configclass
@@ -148,13 +197,18 @@ class CubePreReachObservationsCfg:
 
 @configclass
 class CubePreReachRewardsCfg(RewardsCfg):
-    """Parent Reach rewards plus a 20%-scale shelf-motion penalty."""
+    """Parent Reach rewards plus a 20%-scale robot/floor contact penalty."""
 
     shelf_collision = RewTerm(
         func=mdp.shelf_collision,
         weight=SHELF_COLLISION_WEIGHT,
         params={
-            "threshold": SHELF_COLLISION_THRESHOLD,
+            "sensor_name": "shelf_floor_contact",
+            "force_threshold": SHELF_CONTACT_FORCE_THRESHOLD,
+            "surface_height": SHELF_FLOOR_SURFACE_HEIGHT,
+            "surface_tolerance": SHELF_FLOOR_SURFACE_TOLERANCE,
+            "x_bounds": SHELF_FLOOR_X_BOUNDS,
+            "y_bounds": SHELF_FLOOR_Y_BOUNDS,
             "shelf_cfg": SHELF_CFG,
         },
     )

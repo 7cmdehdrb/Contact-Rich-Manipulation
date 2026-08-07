@@ -25,6 +25,7 @@ from sweep_rl.shelf_cube_pre_reach.env_cfg import (  # noqa: E402
     CUBE_MASS,
     CUBE_WIDTH,
     PRE_REACH_Z_OFFSET,
+    ROBOT_CONTACT_BODY_PATHS,
 )
 
 
@@ -39,6 +40,23 @@ def main() -> None:
         assert observations["policy"].shape == (args.num_envs, 29)
         assert unwrapped.action_manager.total_action_dim == 6
         assert set(unwrapped.scene.rigid_objects) == {"shelf", "target_object"}
+        assert "shelf_floor_contact" in unwrapped.scene.sensors
+
+        shelf_floor_contact = unwrapped.scene["shelf_floor_contact"]
+        assert shelf_floor_contact.data.force_matrix_w is not None
+        assert shelf_floor_contact.data.contact_pos_w is not None
+        assert shelf_floor_contact.data.force_matrix_w.shape == (
+            args.num_envs,
+            1,
+            len(ROBOT_CONTACT_BODY_PATHS),
+            3,
+        )
+        assert shelf_floor_contact.data.contact_pos_w.shape == (
+            args.num_envs,
+            1,
+            len(ROBOT_CONTACT_BODY_PATHS),
+            3,
+        )
 
         robot = unwrapped.scene["robot"]
         cube = unwrapped.scene["target_object"]
@@ -68,7 +86,9 @@ def main() -> None:
             "shelf_collision"
         )
         assert shelf_collision_cfg.weight == -0.02
-        assert shelf_collision_cfg.params["threshold"] == 0.005
+        assert shelf_collision_cfg.params["sensor_name"] == "shelf_floor_contact"
+        assert shelf_collision_cfg.params["force_threshold"] == 1.0
+        assert shelf_collision_cfg.params["surface_height"] == 1.05
 
         actions = torch.zeros(
             args.num_envs,
