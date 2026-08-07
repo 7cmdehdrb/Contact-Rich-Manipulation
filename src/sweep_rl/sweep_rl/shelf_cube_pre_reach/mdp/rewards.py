@@ -1,13 +1,94 @@
-"""Shelf-safety reward terms for Cube pre-reaching."""
+"""Pushing and shelf-safety reward terms for the Cube task."""
 
 from __future__ import annotations
 
 import torch
 
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import RigidObject
+from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import ContactSensor
+from isaaclab.sensors import ContactSensor, FrameTransformer
+
+
+def pushing_target_raw_reward(
+    distance: torch.Tensor,
+    contact_distance: torch.Tensor,
+    wrist_y_error: torch.Tensor,
+    target_y_velocity: torch.Tensor,
+) -> torch.Tensor:
+    """Compute the requested piecewise raw +Y pushing reward."""
+    zeta_m = (contact_distance < 0.04) & (wrist_y_error < 0.04)
+    target_y_speed = torch.abs(target_y_velocity)
+    object_velocity_reward = torch.where(
+        target_y_speed > 0.05,
+        torch.where(target_y_speed < 0.10, 0.5, -0.5),
+        0.0,
+    )
+    return torch.where(
+        distance < 0.03,
+        2.0 * torch.exp(-5.0 * distance),
+        zeta_m.float() * ((1.0 - distance / 0.18) + object_velocity_reward),
+    )
+
+
+def pushing_target(
+    env,
+    command_name: str,
+    cube_width: float,
+    behind_width_scale: float,
+    z_offset: float,
+    reach_position_threshold: float,
+    reach_orientation_threshold: float,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+    wrist_frame_cfg: SceneEntityCfg = SceneEntityCfg("wrist_frame"),
+) -> torch.Tensor:
+    """Reward pushing after the current Reach pose is approximately achieved."""
+    if reach_position_threshold <= 0.0 or reach_orientation_threshold <= 0.0:
+        raise ValueError("Reach-to-push thresholds must be positive.")
+
+    command_term = env.command_manager.get_term(command_name)
+    robot: Articulation = env.scene[robot_cfg.name]
+    target: RigidObject = env.scene[object_cfg.name]
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    wrist_frame: FrameTransformer = env.scene[wrist_frame_cfg.name]
+
+    target_offset_w = target.data.root_pos_w.clone()
+    target_offset_w[:, 1] -= cube_width * behind_width_scale
+    target_offset_w[:, 2] += z_offset
+    ee_pos_w = ee_frame.data.target_pos_w[:, 0]
+    ee_quat_w = ee_frame.data.target_quat_w[:, 0]
+
+    command = env.command_manager.get_command(command_name)
+    _, desired_quat_w = math_utils.combine_frame_transforms(
+        robot.data.root_pos_w,
+        robot.data.root_quat_w,
+        command[:, :3],
+        command[:, 3:7],
+    )
+    contact_distance = torch.linalg.norm(target_offset_w - ee_pos_w, dim=-1)
+    orientation_error = math_utils.quat_error_magnitude(
+        ee_quat_w, desired_quat_w
+    )
+    reach_complete = (
+        (contact_distance < reach_position_threshold)
+        & (orientation_error < reach_orientation_threshold)
+    )
+
+    distance = torch.linalg.norm(
+        command_term.goal_pos_w - target.data.root_pos_w, dim=-1
+    )
+    wrist_y_error = torch.abs(
+        target_offset_w[:, 1] - wrist_frame.data.target_pos_w[:, 0, 1]
+    )
+    raw_reward = pushing_target_raw_reward(
+        distance,
+        contact_distance,
+        wrist_y_error,
+        target.data.root_lin_vel_w[:, 1],
+    )
+    return reach_complete.float() * raw_reward
 
 
 def shelf_floor_contact_mask(

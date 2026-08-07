@@ -1,4 +1,4 @@
-"""Cube-relative pre-reaching task inherited from UR5e shelf reach."""
+"""Cube-relative reaching and +Y pushing task inherited from shelf reach."""
 
 from __future__ import annotations
 
@@ -9,13 +9,15 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import ContactSensorCfg
+from isaaclab.sensors import ContactSensorCfg, FrameTransformerCfg
+from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 from sweep_rl.shelf_reach.env_cfg import (
     ARM_CFG,
     GRIPPER_BASE_BODY_PATH,
+    ROBOT_BASE_BODY_PATH,
     TARGET_PITCH,
     TARGET_POS_X,
     TARGET_POS_Y,
@@ -41,6 +43,11 @@ CUBE_CENTER_HEIGHT = SHELF_SURFACE_HEIGHT + 0.5 * CUBE_HEIGHT
 CUBE_INITIAL_POSITION = (-0.70, -0.10, CUBE_CENTER_HEIGHT)
 BEHIND_WIDTH_SCALE = 1.2
 PRE_REACH_Z_OFFSET = 0.03
+PUSH_GOAL_OFFSET = (0.0, 0.18, 0.0)
+PUSH_REWARD_WEIGHT = 6.0
+PUSH_TRANSITION_POSITION_THRESHOLD = 0.10
+PUSH_TRANSITION_ORIENTATION_THRESHOLD = 0.50
+WRIST_BACK_OFFSET = -0.14
 SHELF_FLOOR_BODY_PATH = "rack"
 SHELF_FLOOR_X_BOUNDS = (-0.20, 0.20)
 SHELF_FLOOR_Y_BOUNDS = (-0.50, 0.50)
@@ -97,6 +104,19 @@ class ShelfCubePreReachSceneCfg(ShelfReachSceneCfg):
         debug_vis=False,
     )
 
+    wrist_frame = FrameTransformerCfg(
+        prim_path=f"{{ENV_REGEX_NS}}/Robot/{ROBOT_BASE_BODY_PATH}",
+        update_period=0.0,
+        debug_vis=False,
+        target_frames=[
+            FrameTransformerCfg.FrameCfg(
+                prim_path=f"{{ENV_REGEX_NS}}/Robot/{GRIPPER_BASE_BODY_PATH}",
+                name="wrist",
+                offset=OffsetCfg(pos=(WRIST_BACK_OFFSET, 0.0, 0.0)),
+            )
+        ],
+    )
+
     target_object = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/TargetCube",
         spawn=sim_utils.CuboidCfg(
@@ -142,7 +162,8 @@ class CubePreReachCommandsCfg:
         target_roll=TARGET_ROLL[0],
         target_pitch=TARGET_PITCH[0],
         target_yaw=TARGET_YAW[0],
-        resampling_time_range=(4.0, 4.0),
+        goal_offset=PUSH_GOAL_OFFSET,
+        resampling_time_range=(1.0e9, 1.0e9),
         debug_vis=False,
         # Required by the parent config but intentionally unused by the
         # Cube-relative command implementation.
@@ -197,7 +218,7 @@ class CubePreReachObservationsCfg:
 
 @configclass
 class CubePreReachRewardsCfg(RewardsCfg):
-    """Parent Reach rewards plus a 20%-scale robot/floor contact penalty."""
+    """Accumulate Reach, pushing, orientation, and shelf-safety rewards."""
 
     shelf_collision = RewTerm(
         func=mdp.shelf_collision,
@@ -210,6 +231,24 @@ class CubePreReachRewardsCfg(RewardsCfg):
             "x_bounds": SHELF_FLOOR_X_BOUNDS,
             "y_bounds": SHELF_FLOOR_Y_BOUNDS,
             "shelf_cfg": SHELF_CFG,
+        },
+    )
+    pushing_target = RewTerm(
+        func=mdp.pushing_target,
+        weight=PUSH_REWARD_WEIGHT,
+        params={
+            "command_name": "ee_pose",
+            "cube_width": CUBE_WIDTH,
+            "behind_width_scale": BEHIND_WIDTH_SCALE,
+            "z_offset": PRE_REACH_Z_OFFSET,
+            "reach_position_threshold": PUSH_TRANSITION_POSITION_THRESHOLD,
+            "reach_orientation_threshold": (
+                PUSH_TRANSITION_ORIENTATION_THRESHOLD
+            ),
+            "robot_cfg": ROBOT_CFG,
+            "object_cfg": TARGET_OBJECT_CFG,
+            "ee_frame_cfg": SceneEntityCfg("ee_frame"),
+            "wrist_frame_cfg": SceneEntityCfg("wrist_frame"),
         },
     )
 

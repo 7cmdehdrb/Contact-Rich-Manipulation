@@ -1,4 +1,4 @@
-"""Cube-relative pre-reach pose command."""
+"""Cube-relative pre-reach pose command with a fixed object push goal."""
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ class CubePreReachPoseCommand(TcpUniformPoseCommand):
     def __init__(self, cfg: "CubePreReachPoseCommandCfg", env: "ManagerBasedEnv"):
         super().__init__(cfg, env)
         self.target: RigidObject = env.scene[cfg.object_name]
+        self.goal_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
 
     def _env_ids_tensor(self, env_ids: Sequence[int] | slice) -> torch.Tensor:
         if isinstance(env_ids, slice):
@@ -72,6 +73,10 @@ class CubePreReachPoseCommand(TcpUniformPoseCommand):
         self.pose_command_b[ids, 3:7] = math_utils.quat_from_euler_xyz(
             roll, pitch, yaw
         )
+        goal_offset = torch.tensor(
+            self.cfg.goal_offset, dtype=torch.float32, device=self.device
+        )
+        self.goal_pos_w[ids] = self.target.data.root_pos_w[ids] + goal_offset
 
     def _update_command(self) -> None:
         env_ids = torch.arange(self.num_envs, device=self.device)
@@ -87,6 +92,7 @@ class CubePreReachPoseCommandCfg(TcpUniformPoseCommandCfg):
     cube_width: float = MISSING
     behind_width_scale: float = 1.2
     z_offset: float = 0.03
+    goal_offset: tuple[float, float, float] = (0.0, 0.18, 0.0)
     target_roll: float = MISSING
     target_pitch: float = 0.0
     target_yaw: float = 0.0

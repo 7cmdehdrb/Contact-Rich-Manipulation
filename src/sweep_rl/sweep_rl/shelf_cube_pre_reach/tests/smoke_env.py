@@ -25,6 +25,7 @@ from sweep_rl.shelf_cube_pre_reach.env_cfg import (  # noqa: E402
     CUBE_MASS,
     CUBE_WIDTH,
     PRE_REACH_Z_OFFSET,
+    PUSH_GOAL_OFFSET,
     ROBOT_CONTACT_BODY_PATHS,
 )
 
@@ -41,6 +42,7 @@ def main() -> None:
         assert unwrapped.action_manager.total_action_dim == 6
         assert set(unwrapped.scene.rigid_objects) == {"shelf", "target_object"}
         assert "shelf_floor_contact" in unwrapped.scene.sensors
+        assert "wrist_frame" in unwrapped.scene.sensors
 
         shelf_floor_contact = unwrapped.scene["shelf_floor_contact"]
         assert shelf_floor_contact.data.force_matrix_w is not None
@@ -75,6 +77,15 @@ def main() -> None:
         )
         torch.testing.assert_close(delta, expected.expand_as(delta))
 
+        command_term = unwrapped.command_manager.get_term("ee_pose")
+        goal_delta = command_term.goal_pos_w - cube.data.root_pos_w
+        expected_goal_delta = torch.tensor(
+            PUSH_GOAL_OFFSET, dtype=goal_delta.dtype, device=goal_delta.device
+        )
+        torch.testing.assert_close(
+            goal_delta, expected_goal_delta.expand_as(goal_delta)
+        )
+
         width_cfg = unwrapped.observation_manager.get_term_cfg(
             "policy", "cube_width"
         )
@@ -89,6 +100,11 @@ def main() -> None:
         assert shelf_collision_cfg.params["sensor_name"] == "shelf_floor_contact"
         assert shelf_collision_cfg.params["force_threshold"] == 1.0
         assert shelf_collision_cfg.params["surface_height"] == 1.05
+        assert "pushing_target" in unwrapped.reward_manager.active_terms
+        pushing_cfg = unwrapped.reward_manager.get_term_cfg("pushing_target")
+        assert pushing_cfg.weight == 6.0
+        assert pushing_cfg.params["reach_position_threshold"] == 0.10
+        assert pushing_cfg.params["reach_orientation_threshold"] == 0.50
 
         actions = torch.zeros(
             args.num_envs,
