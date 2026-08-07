@@ -40,6 +40,8 @@ def _class_assignments(class_name: str) -> set[str]:
 def test_registration_and_inheritance_contract():
     assert "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0" in INIT_SOURCE
     assert "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0" in INIT_SOURCE
+    assert "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v1" in INIT_SOURCE
+    assert "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v1" in INIT_SOURCE
     assert "from . import shelf_cube_pre_reach" in ROOT_INIT_SOURCE
     env_class = _class_node("UR5eGripperShelfCubePreReachEnvCfg")
     assert any(
@@ -50,6 +52,12 @@ def test_registration_and_inheritance_contract():
     assert any(
         isinstance(base, ast.Name) and base.id == "ShelfReachSceneCfg"
         for base in scene_class.bases
+    )
+    v1_env_class = _class_node("UR5eGripperShelfCubePreReachEnvCfgV1")
+    assert any(
+        isinstance(base, ast.Name)
+        and base.id == "UR5eGripperShelfCubePreReachEnvCfg"
+        for base in v1_env_class.bases
     )
 
 
@@ -126,6 +134,28 @@ def test_shelf_collision_penalty_contract():
     assert "shelf.data.default_root_state" not in REWARD_SOURCE
     assert "shelf.data.root_vel_w" not in REWARD_SOURCE
     assert "observations" not in REWARD_SOURCE
+
+
+def test_v1_exponential_position_reward_contract():
+    assert "PRE_REACH_EXP_REWARD_WEIGHT = 3.0" in ENV_SOURCE
+    assert "class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg)" in ENV_SOURCE
+    assert _class_assignments("CubePreReachRewardsCfg") == {"shelf_collision"}
+    assert _class_assignments("CubePreReachRewardsCfgV1") == {
+        "end_effector_position_tracking",
+        "end_effector_position_tracking_fine_grained",
+    }
+    assert "func=mdp.tcp_position_command_reward_exp" in ENV_SOURCE
+    assert "weight=PRE_REACH_EXP_REWARD_WEIGHT" in ENV_SOURCE
+    assert "end_effector_position_tracking_fine_grained = None" in ENV_SOURCE
+    assert "def tcp_position_command_reward_exp(" in REWARD_SOURCE
+    assert "distance = tcp_position_command_error(" in REWARD_SOURCE
+    assert "return torch.exp(-10.0 * distance)" in REWARD_SOURCE
+    assert "rewards: CubePreReachRewardsCfgV1" in ENV_SOURCE
+    assert "UR5eGripperShelfCubePreReachV1PPORunnerCfg" in AGENT_SOURCE
+    assert (
+        'experiment_name = "reach_shelf_ur5e_gripper_cube_pre_reach_v1"'
+        in AGENT_SOURCE
+    )
 
 
 def test_parent_action_reward_and_ppo_contract():

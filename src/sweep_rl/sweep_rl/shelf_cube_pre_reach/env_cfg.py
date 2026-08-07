@@ -31,6 +31,8 @@ from . import mdp
 
 TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0"
 PLAY_TASK_ID = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0"
+TASK_ID_V1 = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v1"
+PLAY_TASK_ID_V1 = "Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v1"
 
 CUBE_WIDTH = 0.06
 CUBE_DEPTH = 0.06
@@ -48,6 +50,7 @@ SHELF_FLOOR_SURFACE_HEIGHT = 1.05
 SHELF_FLOOR_SURFACE_TOLERANCE = 0.02
 SHELF_CONTACT_FORCE_THRESHOLD = 1.0
 SHELF_COLLISION_WEIGHT = -0.02
+PRE_REACH_EXP_REWARD_WEIGHT = 3.0
 
 # Every rigid body in the combined UR5e + Robotiq asset.  The shelf-side
 # sensor uses one-to-many filtering so Cube--shelf and shelf self contacts are
@@ -215,6 +218,22 @@ class CubePreReachRewardsCfg(RewardsCfg):
 
 
 @configclass
+class CubePreReachRewardsCfgV1(CubePreReachRewardsCfg):
+    """Replace both parent position terms with one exponential Reach reward."""
+
+    end_effector_position_tracking = RewTerm(
+        func=mdp.tcp_position_command_reward_exp,
+        weight=PRE_REACH_EXP_REWARD_WEIGHT,
+        params={
+            "command_name": "ee_pose",
+            "robot_cfg": ROBOT_CFG,
+            "frame_cfg": SceneEntityCfg("ee_frame"),
+        },
+    )
+    end_effector_position_tracking_fine_grained = None
+
+
+@configclass
 class UR5eGripperShelfCubePreReachEnvCfg(UR5eGripperShelfReachEnvCfg):
     """Inherited shelf reach with a physical Cube-relative pre-reach goal."""
 
@@ -229,6 +248,27 @@ class UR5eGripperShelfCubePreReachEnvCfg(UR5eGripperShelfReachEnvCfg):
 @configclass
 class UR5eGripperShelfCubePreReachEnvCfg_PLAY(
     UR5eGripperShelfCubePreReachEnvCfg
+):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+        self.commands.ee_pose.debug_vis = True
+
+
+@configclass
+class UR5eGripperShelfCubePreReachEnvCfgV1(
+    UR5eGripperShelfCubePreReachEnvCfg
+):
+    """PreReach v1 using ``3 * exp(-10 * EE offset distance)``."""
+
+    rewards: CubePreReachRewardsCfgV1 = CubePreReachRewardsCfgV1()
+
+
+@configclass
+class UR5eGripperShelfCubePreReachEnvCfgV1_PLAY(
+    UR5eGripperShelfCubePreReachEnvCfgV1
 ):
     def __post_init__(self):
         super().__post_init__()

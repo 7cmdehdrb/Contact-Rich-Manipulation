@@ -9,6 +9,8 @@
 |---|---|
 | 학습 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0` |
 | 재생 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v0` |
+| v1 학습 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v1` |
+| v1 재생 | `Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-Play-v1` |
 
 Scene, 6D arm action, 열린 Gripper, TCP 정의, reward, curriculum과 episode timing은
 부모 Shelf Reach 환경을 그대로 사용한다.
@@ -33,6 +35,19 @@ goal = cube_position + (0, -0.06 * 1.2, +0.03)
 
 목표 orientation은 부모 환경과 동일한 `roll=pi/2, pitch=0, yaw=0`이다. 따라서
 TCP local X는 전방, local Y는 천장을 향한다.
+
+## v1 positional reward
+
+v0는 부모 Shelf Reach의 coarse/fine position reward를 유지한다. v1은 두 position
+reward를 다음 단일 항목으로 교체한다.
+
+```text
+distance = ||current_ee_pos_w - moving_cube_offset_pos_w||_2
+R_position_v1 = 3.0 * exp(-10.0 * distance)
+```
+
+Moving offset, orientation reward, action/joint penalty와 shelf-floor collision penalty는
+v0와 동일하다.
 
 ## Shelf floor collision penalty
 
@@ -75,6 +90,15 @@ weight = -0.02
 ./IsaacLab/isaaclab.sh -p \
   IsaacLab/scripts/reinforcement_learning/rsl_rl/train.py \
   --task Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v0 \
+  --num_envs 4096 --headless
+```
+
+v1 학습은 task ID만 변경한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p \
+  IsaacLab/scripts/reinforcement_learning/rsl_rl/train.py \
+  --task Isaac-Reach-Shelf-UR5e-Gripper-CubePreReach-v1 \
   --num_envs 4096 --headless
 ```
 

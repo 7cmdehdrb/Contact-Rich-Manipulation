@@ -9,6 +9,26 @@ from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
+from sweep_rl.shelf_reach.mdp.rewards import tcp_position_command_error
+
+
+def tcp_position_command_reward_exp(
+    env,
+    command_name: str,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+    frame_index: int = 0,
+) -> torch.Tensor:
+    """Map TCP-to-moving-offset distance to ``exp(-10 * distance)``."""
+    distance = tcp_position_command_error(
+        env,
+        command_name,
+        robot_cfg=robot_cfg,
+        frame_cfg=frame_cfg,
+        frame_index=frame_index,
+    )
+    return torch.exp(-10.0 * distance)
+
 
 def shelf_floor_contact_mask(
     force_matrix_w: torch.Tensor,

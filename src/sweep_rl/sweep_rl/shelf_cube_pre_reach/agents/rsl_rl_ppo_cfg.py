@@ -12,3 +12,10 @@ class UR5eGripperShelfCubePreReachPPORunnerCfg(
     UR5eGripperShelfReachPPORunnerCfg
 ):
     experiment_name = "reach_shelf_ur5e_gripper_cube_pre_reach"
+
+
+@configclass
+class UR5eGripperShelfCubePreReachV1PPORunnerCfg(
+    UR5eGripperShelfCubePreReachPPORunnerCfg
+):
+    experiment_name = "reach_shelf_ur5e_gripper_cube_pre_reach_v1"
