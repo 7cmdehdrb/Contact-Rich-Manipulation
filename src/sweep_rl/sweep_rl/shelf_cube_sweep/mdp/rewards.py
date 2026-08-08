@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import torch
 
+import isaaclab.utils.math as math_utils
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
@@ -29,9 +30,14 @@ def pushing_target_raw_reward(
     contact_distance: torch.Tensor,
     wrist_y_error: torch.Tensor,
     target_y_velocity: torch.Tensor,
+    gate_distance: float,
 ) -> torch.Tensor:
     """Compute the requested piecewise raw +Y pushing reward."""
-    zeta_m = (contact_distance < 0.04) & (wrist_y_error < 0.04)
+    if gate_distance <= 0.0:
+        raise ValueError("Sweep gate distance must be positive.")
+    zeta_m = (contact_distance < gate_distance) & (
+        wrist_y_error < gate_distance
+    )
     target_y_speed = torch.abs(target_y_velocity)
     object_velocity_reward = torch.where(
         target_y_speed > 0.05,
@@ -45,6 +51,35 @@ def pushing_target_raw_reward(
     )
 
 
+def cube_upright_quality(
+    root_quat_w: torch.Tensor,
+    max_tilt_radians: float,
+) -> torch.Tensor:
+    """Return a smooth [0, 1] quality that reaches zero at max tilt."""
+    if not 0.0 < max_tilt_radians < 0.5 * torch.pi:
+        raise ValueError("Maximum Cube tilt must be between 0 and pi/2 radians.")
+    local_up = torch.zeros(
+        (root_quat_w.shape[0], 3),
+        dtype=root_quat_w.dtype,
+        device=root_quat_w.device,
+    )
+    local_up[:, 2] = 1.0
+    up_axis_w = math_utils.quat_apply(root_quat_w, local_up)
+    min_up_z = torch.cos(
+        torch.as_tensor(
+            max_tilt_radians,
+            dtype=root_quat_w.dtype,
+            device=root_quat_w.device,
+        )
+    )
+    quality = torch.clamp(
+        (up_axis_w[:, 2] - min_up_z) / (1.0 - min_up_z),
+        min=0.0,
+        max=1.0,
+    )
+    return torch.where(up_axis_w[:, 2] <= min_up_z + 1.0e-6, 0.0, quality)
+
+
 def pushing_target(
     env,
     command_name: str,
@@ -52,6 +87,8 @@ def pushing_target(
     x_offset: float,
     behind_width_scale: float,
     z_offset: float,
+    gate_distance: float,
+    max_tilt_radians: float | None = None,
     object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
     ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
     wrist_frame_cfg: SceneEntityCfg = SceneEntityCfg("wrist_frame"),
@@ -77,9 +114,16 @@ def pushing_target(
     wrist_y_error = torch.abs(
         target_offset_w[:, 1] - wrist_frame.data.target_pos_w[:, 0, 1]
     )
-    return pushing_target_raw_reward(
+    reward = pushing_target_raw_reward(
         distance,
         contact_distance,
         wrist_y_error,
         target.data.root_lin_vel_w[:, 1],
+        gate_distance,
     )
+    if max_tilt_radians is not None:
+        reward = reward * cube_upright_quality(
+            target.data.root_quat_w,
+            max_tilt_radians,
+        )
+    return reward

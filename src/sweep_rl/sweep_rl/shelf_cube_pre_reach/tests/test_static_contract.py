@@ -62,10 +62,10 @@ def test_registration_and_inheritance_contract():
 
 
 def test_cube_physics_and_safe_spawn_contract():
-    assert "CUBE_WIDTH = 0.06" in ENV_SOURCE
-    assert "CUBE_DEPTH = 0.06" in ENV_SOURCE
-    assert "CUBE_HEIGHT = 0.15" in ENV_SOURCE
-    assert "CUBE_MASS = 0.50" in ENV_SOURCE
+    assert "CUBE_WIDTH = 0.08" in ENV_SOURCE
+    assert "CUBE_DEPTH = 0.08" in ENV_SOURCE
+    assert "CUBE_HEIGHT = 0.20" in ENV_SOURCE
+    assert "CUBE_MASS = 1.5" in ENV_SOURCE
     assert "CUBE_CENTER_HEIGHT = SHELF_SURFACE_HEIGHT + 0.5 * CUBE_HEIGHT" in ENV_SOURCE
     assert "CUBE_INITIAL_POSITION = (-0.70, -0.10, CUBE_CENTER_HEIGHT)" in ENV_SOURCE
     assert "size=(CUBE_WIDTH, CUBE_DEPTH, CUBE_HEIGHT)" in ENV_SOURCE
@@ -78,7 +78,7 @@ def test_cube_physics_and_safe_spawn_contract():
 
 
 def test_cube_relative_goal_contract():
-    assert "BEHIND_WIDTH_SCALE = 1.2" in ENV_SOURCE
+    assert "BEHIND_WIDTH_SCALE = 1.1" in ENV_SOURCE
     assert "PRE_REACH_Z_OFFSET = 0.03" in ENV_SOURCE
     assert "CubePreReachPoseCommand(TcpUniformPoseCommand)" in COMMAND_SOURCE
     assert "-self.cfg.cube_width * self.cfg.behind_width_scale" in COMMAND_SOURCE
@@ -108,7 +108,7 @@ def test_29d_observation_contract():
 def test_shelf_collision_penalty_contract():
     assert "class CubePreReachRewardsCfg(RewardsCfg)" in ENV_SOURCE
     assert "SHELF_CONTACT_FORCE_THRESHOLD = 1.0" in ENV_SOURCE
-    assert "SHELF_COLLISION_WEIGHT = -0.05" in ENV_SOURCE
+    assert "SHELF_COLLISION_WEIGHT = -5.0" in ENV_SOURCE
     assert "self.shelf.spawn.activate_contact_sensors = True" in ENV_SOURCE
     assert "shelf_floor_contact = ContactSensorCfg(" in ENV_SOURCE
     assert (

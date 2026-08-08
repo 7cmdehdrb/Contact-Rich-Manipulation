@@ -85,7 +85,7 @@ class CubePreReachPoseCommandCfg(TcpUniformPoseCommandCfg):
     class_type: type = CubePreReachPoseCommand
     object_name: str = MISSING
     cube_width: float = MISSING
-    behind_width_scale: float = 1.2
+    behind_width_scale: float = 1.1
     z_offset: float = 0.03
     target_roll: float = MISSING
     target_pitch: float = 0.0

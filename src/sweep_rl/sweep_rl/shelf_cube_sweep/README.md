@@ -29,7 +29,7 @@ shelf_reach
 Reach point는 매 step 현재 Cube 중심에서 다음 offset으로 계산된다.
 
 ```text
-(0.0, -0.06 * 1.2, +0.03) = (0.0, -0.072, +0.03) m
+(0.0, -0.08 * 1.1, +0.03) = (0.0, -0.088, +0.03) m
 ```
 
 Object goal은 episode 초기 Cube 위치에서 `(0.0, +0.18, 0.0) m` 떨어진 곳에
@@ -37,7 +37,7 @@ Object goal은 episode 초기 Cube 위치에서 `(0.0, +0.18, 0.0) m` 떨어진 
 
 ```text
 distance = ||goal_pos_w - target_pos_w||_2
-zeta_m = 1 if ee_offset_error < 0.04 and wrist_y_error < 0.04 else 0
+zeta_m = 1 if ee_offset_error < 0.08 and wrist_y_error < 0.08 else 0
 
 if 0.05 < |target_y_velocity| < 0.10:
     obj_vel_rew = +0.5

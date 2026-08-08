@@ -79,13 +79,13 @@ def main() -> None:
             "policy", "cube_width"
         )
         assert width_cfg.params["width"] == CUBE_WIDTH
-        assert CUBE_HEIGHT == 0.15
-        assert CUBE_MASS == 0.50
+        assert CUBE_HEIGHT == 0.20
+        assert CUBE_MASS == 1.5
         assert "shelf_collision" in unwrapped.reward_manager.active_terms
         shelf_collision_cfg = unwrapped.reward_manager.get_term_cfg(
             "shelf_collision"
         )
-        assert shelf_collision_cfg.weight == -0.02
+        assert shelf_collision_cfg.weight == -5.0
         assert shelf_collision_cfg.params["sensor_name"] == "shelf_floor_contact"
         assert shelf_collision_cfg.params["force_threshold"] == 1.0
         assert shelf_collision_cfg.params["surface_height"] == 1.05

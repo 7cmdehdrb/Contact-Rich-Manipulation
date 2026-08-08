@@ -42,6 +42,10 @@ def main() -> None:
         )
         assert position_cfg.weight == 3.0
         assert position_cfg.func.__name__ == "tcp_position_command_reward_exp"
+        assert (
+            unwrapped.reward_manager.get_term_cfg("shelf_collision").weight
+            == -5.0
+        )
 
         actions = torch.zeros(
             args.num_envs,

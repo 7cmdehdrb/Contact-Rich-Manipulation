@@ -17,9 +17,9 @@ Scene, 6D arm action, 열린 Gripper, TCP 정의, reward, curriculum과 episode 
 
 ## Cube와 목표
 
-- 크기: `0.06 × 0.06 × 0.15 m`
-- 질량: `0.5 kg`
-- 초기 중심: world `(-0.70, -0.10, 1.125) m`
+- 크기: `0.08 × 0.08 × 0.20 m`
+- 질량: `1.5 kg`
+- 초기 중심: world `(-0.70, -0.10, 1.15) m`
 - 선반 표면: world `z=1.05 m`
 
 초기 Y 위치 `-0.10 m`는 `+Y` 선반 가장자리까지 약 `0.60 m`의 sweep 공간을
@@ -29,8 +29,8 @@ Scene, 6D arm action, 열린 Gripper, TCP 정의, reward, curriculum과 episode 
 가상 목표 position은 매 step 현재 Cube 중심에서 다음 world offset으로 계산된다.
 
 ```text
-goal = cube_position + (0, -0.06 * 1.2, +0.03)
-     = cube_position + (0, -0.072, +0.03) m
+goal = cube_position + (0, -0.08 * 1.1, +0.03)
+     = cube_position + (0, -0.088, +0.03) m
 ```
 
 목표 orientation은 부모 환경과 동일한 `roll=pi/2, pitch=0, yaw=0`이다. 따라서
@@ -63,11 +63,11 @@ Cube와 선반의 접촉 및 선반 구성요소 사이의 접촉은 필터 목�
 ```text
 robot_floor_contact = filtered_force > 1.0 N and contact_point_on_floor
 raw_shelf_collision = 1.0 if any(robot_floor_contact) else 0.0
-weight = -0.02
+weight = -5.0
 ```
 
-`-0.02`는 부모 Reach 환경의 최대 양의 position-tracking reward `0.1`의 20%에
-해당한다. 따라서 충돌 step의 최종 reward 기여는 `-0.02`다.
+충돌 weight는 v1 Reach 최대 reward rate `+3.0`보다 크게 설정하여, 검출된 선반
+접촉을 통해 얻을 수 있는 Reach 이득보다 안전 비용이 우선하도록 한다.
 
 ## Observation
 
