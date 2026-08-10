@@ -88,7 +88,7 @@ def main() -> None:
         assert shelf_collision_cfg.weight == -5.0
         assert shelf_collision_cfg.params["sensor_name"] == "shelf_floor_contact"
         assert shelf_collision_cfg.params["force_threshold"] == 1.0
-        assert shelf_collision_cfg.params["surface_height"] == 1.05
+        assert shelf_collision_cfg.params["surface_heights"] == (1.05,)
 
         actions = torch.zeros(
             args.num_envs,

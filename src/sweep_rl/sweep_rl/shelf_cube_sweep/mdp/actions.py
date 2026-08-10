@@ -1,4 +1,4 @@
-"""V1 joint actions with full-range targets and bounded target slew."""
+"""Stable joint actions for the shelf Cube Sweep task."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 import torch
 
 import isaaclab.utils.string as string_utils
-from isaaclab.envs.mdp.actions.actions_cfg import JointPositionToLimitsActionCfg
+from isaaclab.envs.mdp.actions.actions_cfg import (
+    JointPositionToLimitsActionCfg,
+)
 from isaaclab.envs.mdp.actions.joint_actions_to_limits import (
     JointPositionToLimitsAction,
 )

@@ -9,7 +9,6 @@ from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
 
-
 def cube_push_offset_position(
     target_position_w: torch.Tensor,
     cube_width: float,
@@ -29,19 +28,24 @@ def pushing_target_raw_reward(
     distance: torch.Tensor,
     contact_distance: torch.Tensor,
     wrist_y_error: torch.Tensor,
-    target_y_velocity: torch.Tensor,
+    target_velocity: torch.Tensor,
     gate_distance: float,
+    velocity_reward_min: float = 0.05,
+    velocity_penalty_min: float = 0.10,
 ) -> torch.Tensor:
-    """Compute the requested piecewise raw +Y pushing reward."""
+    """Compute the piecewise raw pushing reward from a velocity measurement."""
     if gate_distance <= 0.0:
         raise ValueError("Sweep gate distance must be positive.")
-    zeta_m = (contact_distance < gate_distance) & (
-        wrist_y_error < gate_distance
-    )
-    target_y_speed = torch.abs(target_y_velocity)
+    if not 0.0 <= velocity_reward_min < velocity_penalty_min:
+        raise ValueError(
+            "Velocity reward threshold must be non-negative and smaller than "
+            "the velocity penalty threshold."
+        )
+    zeta_m = (contact_distance < gate_distance) & (wrist_y_error < gate_distance)
+    target_speed = torch.abs(target_velocity)
     object_velocity_reward = torch.where(
-        target_y_speed > 0.05,
-        torch.where(target_y_speed < 0.10, 0.5, -0.5),
+        target_speed > velocity_reward_min,
+        torch.where(target_speed < velocity_penalty_min, 0.5, -0.5),
         0.0,
     )
     return torch.where(
@@ -89,6 +93,9 @@ def pushing_target(
     z_offset: float,
     gate_distance: float,
     max_tilt_radians: float | None = None,
+    velocity_reward_min: float = 0.05,
+    velocity_penalty_min: float = 0.10,
+    velocity_measurement: str = "com_y",
     object_cfg: SceneEntityCfg = SceneEntityCfg("target_object"),
     ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
     wrist_frame_cfg: SceneEntityCfg = SceneEntityCfg("wrist_frame"),
@@ -114,12 +121,28 @@ def pushing_target(
     wrist_y_error = torch.abs(
         target_offset_w[:, 1] - wrist_frame.data.target_pos_w[:, 0, 1]
     )
+    if velocity_measurement == "com_y":
+        target_velocity = target.data.root_lin_vel_w[:, 1]
+    elif velocity_measurement == "root_link_planar":
+        # Measure translation at the actor-frame origin.  With a bottom-heavy
+        # object, COM velocity also contains omega x r and can reward rotation.
+        target_velocity = torch.linalg.vector_norm(
+            target.data.root_link_lin_vel_w[:, :2], dim=-1
+        )
+    else:
+        raise ValueError(
+            "Unsupported push velocity measurement "
+            f"'{velocity_measurement}'. Expected 'com_y' or 'root_link_planar'."
+        )
+
     reward = pushing_target_raw_reward(
         distance,
         contact_distance,
         wrist_y_error,
-        target.data.root_lin_vel_w[:, 1],
+        target_velocity,
         gate_distance,
+        velocity_reward_min,
+        velocity_penalty_min,
     )
     if max_tilt_radians is not None:
         reward = reward * cube_upright_quality(

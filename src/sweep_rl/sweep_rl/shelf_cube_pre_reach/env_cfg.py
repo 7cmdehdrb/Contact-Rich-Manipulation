@@ -55,6 +55,7 @@ SHELF_FLOOR_BODY_PATH = "rack"
 SHELF_FLOOR_X_BOUNDS = (-0.20, 0.20)
 SHELF_FLOOR_Y_BOUNDS = (-0.50, 0.50)
 SHELF_FLOOR_SURFACE_HEIGHT = 1.05
+SHELF_FLOOR_SURFACE_HEIGHTS = (SHELF_FLOOR_SURFACE_HEIGHT,)
 SHELF_FLOOR_SURFACE_TOLERANCE = 0.02
 SHELF_CONTACT_FORCE_THRESHOLD = 1.0
 SHELF_COLLISION_WEIGHT = -5.0
@@ -214,7 +215,7 @@ class CubePreReachRewardsCfg(RewardsCfg):
         params={
             "sensor_name": "shelf_floor_contact",
             "force_threshold": SHELF_CONTACT_FORCE_THRESHOLD,
-            "surface_height": SHELF_FLOOR_SURFACE_HEIGHT,
+            "surface_heights": SHELF_FLOOR_SURFACE_HEIGHTS,
             "surface_tolerance": SHELF_FLOOR_SURFACE_TOLERANCE,
             "x_bounds": SHELF_FLOOR_X_BOUNDS,
             "y_bounds": SHELF_FLOOR_Y_BOUNDS,

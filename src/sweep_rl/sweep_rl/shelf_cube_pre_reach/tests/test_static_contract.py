@@ -109,6 +109,7 @@ def test_shelf_collision_penalty_contract():
     assert "class CubePreReachRewardsCfg(RewardsCfg)" in ENV_SOURCE
     assert "SHELF_CONTACT_FORCE_THRESHOLD = 1.0" in ENV_SOURCE
     assert "SHELF_COLLISION_WEIGHT = -5.0" in ENV_SOURCE
+    assert "SHELF_FLOOR_SURFACE_HEIGHTS = (SHELF_FLOOR_SURFACE_HEIGHT,)" in ENV_SOURCE
     assert "self.shelf.spawn.activate_contact_sensors = True" in ENV_SOURCE
     assert "shelf_floor_contact = ContactSensorCfg(" in ENV_SOURCE
     assert (
@@ -130,6 +131,8 @@ def test_shelf_collision_penalty_contract():
     assert "sensor.data.force_matrix_w" in REWARD_SOURCE
     assert "sensor.data.contact_pos_w" in REWARD_SOURCE
     assert "math_utils.quat_apply_inverse" in REWARD_SOURCE
+    assert "surface_heights_tensor = torch.as_tensor(" in REWARD_SOURCE
+    assert "on_surface_height = torch.any(" in REWARD_SOURCE
     assert "valid & on_floor & (force > force_threshold)" in REWARD_SOURCE
     assert "shelf.data.default_root_state" not in REWARD_SOURCE
     assert "shelf.data.root_vel_w" not in REWARD_SOURCE
