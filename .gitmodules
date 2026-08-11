@@ -7,3 +7,6 @@
 [submodule "example/Sweep-Policy"]
 	path = example/Sweep-Policy
 	url = https://github.com/IROL-SSU/Sweeping-Policy-DRL-Sim-Train.git
+[submodule "docs"]
+	path = docs
+	url = https://github.com/dhlee04/vla-drl_hybrid_manipulation.git
