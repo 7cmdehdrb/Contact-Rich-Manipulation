@@ -121,3 +121,15 @@ ip addr show ppp0
 sudo poff irol_up
 ```
 
+# 로그인 정보 기입
+
+```bash
+export OMNI_USER="Nucleus아이디"
+export OMNI_PASS="Nucleus비밀번호"
+```
+
+# Route 추가
+
+```bash
+sudo ip route add 192.168.0.0/24 dev ppp0
+```
