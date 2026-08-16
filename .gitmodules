@@ -12,3 +12,6 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/dhlee04/vla-drl_hybrid_manipulation.git
+[submodule "example/contact_rich_manipulation_task_learning"]
+	path = example/contact_rich_manipulation_task_learning
+	url = https://github.com/hoon001218/contact_rich_manipulation_task_learning.git
