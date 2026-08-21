@@ -108,7 +108,7 @@ sudo pptpsetup \
   --create irol_up \
   --server irol.iptime.org \
   --username irol1 \
-  --password 'irol1541' \
+  --password 'PWD' \
   --encrypt
 
 # 연결
@@ -125,7 +125,7 @@ sudo poff irol_up
 
 ```bash
 export OMNI_USER="omniverse"
-export OMNI_PASS="irol1541"
+export OMNI_PASS="PWD"
 ```
 
 # Route 추가
