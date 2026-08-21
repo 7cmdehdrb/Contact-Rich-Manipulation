@@ -107,8 +107,8 @@ sudo pppd call irol_up nodetach debug
 sudo pptpsetup \
   --create irol_up \
   --server irol.iptime.org \
-  --username irol \
-  --password '<PASSWORD>' \
+  --username irol1 \
+  --password 'irol1541' \
   --encrypt
 
 # 연결
@@ -124,8 +124,8 @@ sudo poff irol_up
 # 로그인 정보 기입
 
 ```bash
-export OMNI_USER="Nucleus아이디"
-export OMNI_PASS="Nucleus비밀번호"
+export OMNI_USER="omniverse"
+export OMNI_PASS="irol1541"
 ```
 
 # Route 추가
