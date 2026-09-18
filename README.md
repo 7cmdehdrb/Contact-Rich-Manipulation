@@ -210,3 +210,11 @@ OSC를 정책 학습에 포함하려면 실제 로봇과 Isaac Lab의 OSC가 유
 | [Domain Randomization](docs/domain_randomization/README.md) | Randomization 대상과 구현 방법 |
 | [Environment Setup](docs/environment_setup/README.md) | UR5e, 센서, Asset 및 Shelf 환경 구성 |
 
+
+
+---
+
+```bash
+git submodule update --init --remote example/Sweep-Policy
+git submodule update --init --remote docs
+```
