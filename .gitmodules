@@ -15,3 +15,6 @@
 [submodule "example/pixi_ur_ros2"]
 	path = example/pixi_ur_ros2
 	url = https://github.com/7cmdehdrb/pixi_ur_ros2.git
+[submodule "example/Contact-Rich-Manipulation-Context"]
+	path = example/Contact-Rich-Manipulation-Context
+	url = https://github.com/7cmdehdrb/Contact-Rich-Manipulation-Context.git
