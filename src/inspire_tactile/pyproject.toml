@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inspire-tactile"
+version = "0.1.0"
+description = "UR5e + Inspire Hand contact-sensor feasibility demo for Isaac Lab"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "xacro", "PyYAML"]
+
+[tool.setuptools.packages.find]
+include = ["inspire_tactile*"]
+
+[tool.ruff]
+line-length = 110
+
