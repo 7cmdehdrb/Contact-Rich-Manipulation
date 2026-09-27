@@ -1,0 +1,2 @@
+recursive-include hand_manipulation_rl/assets/data *.usd *.yaml .asset_hash
+
