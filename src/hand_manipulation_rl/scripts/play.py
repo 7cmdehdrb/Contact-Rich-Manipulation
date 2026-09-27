@@ -14,6 +14,9 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
+BASE_TASK_ID = "Isaac-Blind-Sweep-Inspire-v0"
+APPROACH_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v0"
+
 from isaaclab.app import AppLauncher
 
 
@@ -21,6 +24,12 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--checkpoint", type=Path, required=True)
 parser.add_argument("--num_envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=None)
+parser.add_argument(
+    "--task",
+    choices=(BASE_TASK_ID, APPROACH_TASK_ID),
+    default=BASE_TASK_ID,
+    help="Registered blind-sweep task variant used by the checkpoint.",
+)
 parser.add_argument(
     "--steps",
     type=int,
@@ -49,11 +58,24 @@ from isaaclab_rl.rsl_rl import (  # noqa: E402
     handle_deprecated_rsl_rl_checkpoint,
 )
 
-from hand_manipulation_rl import TASK_ID  # noqa: E402
+from hand_manipulation_rl import APPROACH_TASK_ID as REGISTERED_APPROACH_TASK_ID  # noqa: E402
+from hand_manipulation_rl import TASK_ID as REGISTERED_BASE_TASK_ID  # noqa: E402
+from hand_manipulation_rl.agents.rsl_rl_ppo_cfg_approach import (  # noqa: E402
+    BlindSweepApproachPPORunnerCfg,
+)
 from hand_manipulation_rl.agents.rsl_rl_ppo_cfg_02 import (  # noqa: E402
     BlindSweepReferencePPORunnerCfg,
 )
+from hand_manipulation_rl.env_approach_cfg import BlindSweepApproachEnvCfg  # noqa: E402
 from hand_manipulation_rl.env_cfg import BlindSweepEnvCfg  # noqa: E402
+
+
+def _make_task_configs():
+    if args.task == REGISTERED_APPROACH_TASK_ID:
+        return BlindSweepApproachEnvCfg(), BlindSweepApproachPPORunnerCfg()
+    if args.task == REGISTERED_BASE_TASK_ID:
+        return BlindSweepEnvCfg(), BlindSweepReferencePPORunnerCfg()
+    raise ValueError(f"Unsupported task: {args.task}")
 
 
 def main() -> None:
@@ -65,8 +87,7 @@ def main() -> None:
     if not checkpoint.is_file():
         raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
 
-    env_cfg = BlindSweepEnvCfg()
-    agent_cfg = BlindSweepReferencePPORunnerCfg()
+    env_cfg, agent_cfg = _make_task_configs()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.debug_vis = not args.disable_markers
     if args.seed is not None:
@@ -82,7 +103,7 @@ def main() -> None:
     if agent_cfg.class_name != "OnPolicyRunner":
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
 
-    env = gym.make(TASK_ID, cfg=env_cfg)
+    env = gym.make(args.task, cfg=env_cfg)
     try:
         wrapped_env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
         runner = OnPolicyRunner(

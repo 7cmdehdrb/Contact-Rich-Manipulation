@@ -1,7 +1,9 @@
 # Hand Manipulation RL — Blind Sweeping
 
 `Isaac-Blind-Sweep-Inspire-v0`는 UR5e–가상 Axia80–Inspire Hand로 고정 선반판 위의
-단일 Cube를 시각 갱신 없이 미는 Isaac Lab 2.3.2 학습 환경이다. 환경 코드는
+단일 Cube를 시각 갱신 없이 미는 Isaac Lab 2.3.2 학습 환경이다. 이를 그대로 보존하면서
+낮고 안전한 시작 자세와 dense 접근 보상을 추가한 상속 환경
+`Isaac-Blind-Sweep-Inspire-Approach-v0`도 제공한다. 환경 코드는
 `src/sweep_rl`, `example/Sweep-Policy`, `src/inspire_tactile`,
 `src/axia80_feasibility`를 import하지 않는다. 참고 자산은 이 패키지 안의 상대 경로 USD로
 복사했으며 Nucleus, ROS, 절대 경로에도 의존하지 않는다.
@@ -43,6 +45,15 @@
   분리하고 같은 step에서는 실패가 성공보다 우선한다.
 - 기존 PPO 설정은 보존하고, 기본 학습은 Sweep-Policy `rsl_rl_ppo_cfg_02`를 독립적으로 옮긴
   새 설정을 사용한다. reference와 달리 `max_iterations`만 요청대로 10,000을 유지한다.
+- Approach 환경은 손의 비대칭 collision envelope 때문에 단일 높이를 일괄 하강시키지 않는다.
+  Hand +X가 위/아래인 자세에 따라 Cube 중심 위 `0.065 m`/`0.100 m`를 사용한다. 기존
+  `0.100 m` 대비 여유가 있는 자세는 35 mm 낮추고, 비대칭 형상 때문에 하강 여유가 없는
+  반대 자세는 기존 높이를 유지한다. 두 경우 모두 기존 proxy clearance와 전체 collider OBB
+  인증을 통과해야 시작된다.
+- Approach 환경에는 선택된 palm/dorsal 면을 대칭화한 control-point proxy가 Cube의 upstream
+  face로 접근하는 bounded reward(`weight=0.10`)가 추가된다. 목표 높이는 위의 안전 높이로
+  고정되므로 손을 선반 쪽으로 내리는 동작은 이 보상을 늘리지 못한다. face 바깥쪽 capture
+  radius에서만 보상이 포화되고 Cube 안쪽으로 들어가면 감소하므로 관통 유인도 만들지 않는다.
 - 독립형 RSL-RL PPO train/play 진입점, vectorized palm/dorsal smoke probe, simulator 독립
   pure-torch tests.
 - `extras["episode_diagnostics"]`에 명령·초기/현재 pose, reset 표본/IK/보수적 live-FK 충돌 인증 결과,
@@ -86,12 +97,32 @@
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
   --headless --device cuda:0 --num_envs 4 --max_iterations 2
 
+# Approach 상속 환경 smoke (palm/dorsal 및 양 sweep 방향의 reset 안전성)
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/smoke_env.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
+  --headless --device cuda:0 --num-envs 8 --steps 4
+
+# Approach 상속 환경 작은 학습 확인
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
+  --headless --device cuda:0 --num_envs 4 --max_iterations 2
+
 # 본 학습
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
   --headless --device cuda:0 --num_envs 4096
 
+# Approach 환경 본 학습
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
+  --headless --device cuda:0 --num_envs 4096
+
 # checkpoint 재생
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
+  --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
+
+# Approach checkpoint 재생
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
   --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
 ```
 

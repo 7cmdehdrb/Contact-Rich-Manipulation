@@ -13,6 +13,9 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
+BASE_TASK_ID = "Isaac-Blind-Sweep-Inspire-v0"
+APPROACH_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v0"
+
 from isaaclab.app import AppLauncher
 
 
@@ -20,6 +23,12 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--steps", type=int, default=4)
 parser.add_argument("--num-envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=42)
+parser.add_argument(
+    "--task",
+    choices=(BASE_TASK_ID, APPROACH_TASK_ID),
+    default=BASE_TASK_ID,
+    help="Registered blind-sweep task variant to validate.",
+)
 parser.add_argument(
     "--trace",
     action="store_true",
@@ -46,12 +55,22 @@ import torch  # noqa: E402
 
 import isaaclab.utils.math as math_utils  # noqa: E402
 
-from hand_manipulation_rl import TASK_ID  # noqa: E402
+from hand_manipulation_rl import APPROACH_TASK_ID as REGISTERED_APPROACH_TASK_ID  # noqa: E402
+from hand_manipulation_rl import TASK_ID as REGISTERED_BASE_TASK_ID  # noqa: E402
 from hand_manipulation_rl.assets.robot import (  # noqa: E402
     FT_SENSOR_BODY_NAME,
     ROBOT_CONTACT_BODY_NAMES,
 )
+from hand_manipulation_rl.env_approach_cfg import BlindSweepApproachEnvCfg  # noqa: E402
 from hand_manipulation_rl.env_cfg import BlindSweepEnvCfg  # noqa: E402
+
+
+def _make_env_cfg():
+    if args.task == REGISTERED_APPROACH_TASK_ID:
+        return BlindSweepApproachEnvCfg()
+    if args.task == REGISTERED_BASE_TASK_ID:
+        return BlindSweepEnvCfg()
+    raise ValueError(f"Unsupported task: {args.task}")
 
 
 def main() -> None:
@@ -59,14 +78,14 @@ def main() -> None:
         raise ValueError("--num-envs must be positive")
     if args.steps <= 0:
         raise ValueError("--steps must be positive")
-    cfg = BlindSweepEnvCfg()
+    cfg = _make_env_cfg()
     cfg.scene.num_envs = args.num_envs
     cfg.sim.device = args.device
     cfg.seed = args.seed
     cfg.debug_vis = args.debug_vis
     if args.surface != "both":
         cfg.task.palm_mode_probability = 1.0 if args.surface == "palm" else 0.0
-    env = gym.make(TASK_ID, cfg=cfg).unwrapped
+    env = gym.make(args.task, cfg=cfg).unwrapped
     observation, _ = env.reset()
     if args.debug_vis:
         if env._task_point_markers is None or env._eef_frame_markers is None:
@@ -118,6 +137,26 @@ def main() -> None:
     initial_c_position_w, initial_c_quaternion_w = env.control_point_pose_w()
     initial_c_position_w = initial_c_position_w.clone()
     initial_c_quaternion_w = initial_c_quaternion_w.clone()
+    if args.task == REGISTERED_APPROACH_TASK_ID:
+        if "selected_surface_approach" not in env.reward_manager.active_terms:
+            raise RuntimeError("Approach task did not activate its dense reward")
+        actual_height = initial_c_position_w[:, 2] - env.object_initial_pos_w[:, 2]
+        expected_height = env.safe_approach_height_offset_m()
+        height_tolerance = (
+            cfg.task.stable_reset_position_jitter_task[2]
+            + cfg.task.ik_position_tolerance_m
+            + 1.0e-4
+        )
+        if bool((torch.abs(actual_height - expected_height) > height_tolerance).any()):
+            raise RuntimeError(
+                "Orientation-aware reset height mismatch: "
+                f"actual={actual_height.tolist()}, expected={expected_height.tolist()}"
+            )
+        print(
+            "orientation-aware C height [m] (actual/expected):",
+            actual_height.tolist(),
+            expected_height.tolist(),
+        )
     action = torch.zeros((args.num_envs, 8), device=env.device)
     jacobian_twist_error_peak = torch.zeros(args.num_envs, device=env.device)
     physical_contact_peak = torch.zeros(args.num_envs, device=env.device)
