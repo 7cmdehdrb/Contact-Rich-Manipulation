@@ -20,7 +20,7 @@ class BlindSweepApproachTaskCfg(BlindSweepTaskCfg):
     # OrientationAwareStableOffsetPoseReset replaces it per environment while
     # preserving the parent's +/-3 mm sampling jitter.
     stable_reset_position_offset_task: tuple[float, float, float] = (0.140, 0.0, 0.100)
-    stable_reset_hand_x_up_height_m: float = 0.065
+    stable_reset_hand_x_up_height_m: float = 0.075
     stable_reset_hand_x_down_height_m: float = 0.100
 
     # Selected-surface proxy to upstream Cube-face shaping.  The vertical

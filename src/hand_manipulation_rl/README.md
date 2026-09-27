@@ -46,8 +46,8 @@
 - 기존 PPO 설정은 보존하고, 기본 학습은 Sweep-Policy `rsl_rl_ppo_cfg_02`를 독립적으로 옮긴
   새 설정을 사용한다. reference와 달리 `max_iterations`만 요청대로 10,000을 유지한다.
 - Approach 환경은 손의 비대칭 collision envelope 때문에 단일 높이를 일괄 하강시키지 않는다.
-  Hand +X가 위/아래인 자세에 따라 Cube 중심 위 `0.065 m`/`0.100 m`를 사용한다. 기존
-  `0.100 m` 대비 여유가 있는 자세는 35 mm 낮추고, 비대칭 형상 때문에 하강 여유가 없는
+  Hand +X가 위/아래인 자세에 따라 Cube 중심 위 `0.075 m`/`0.100 m`를 사용한다. 기존
+  `0.100 m` 대비 여유가 있는 자세는 25 mm 낮추고, 비대칭 형상 때문에 하강 여유가 없는
   반대 자세는 기존 높이를 유지한다. 두 경우 모두 기존 proxy clearance와 전체 collider OBB
   인증을 통과해야 시작된다.
 - Approach 환경에는 선택된 palm/dorsal 면을 대칭화한 control-point proxy가 Cube의 upstream

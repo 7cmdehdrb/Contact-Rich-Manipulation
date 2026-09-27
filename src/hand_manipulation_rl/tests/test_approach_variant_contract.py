@@ -61,7 +61,7 @@ def test_variant_height_and_reward_defaults_are_explicit() -> None:
         and node.value is not None
     }
     assert values["stable_reset_position_offset_task"] == (0.140, 0.0, 0.100)
-    assert values["stable_reset_hand_x_up_height_m"] == 0.065
+    assert values["stable_reset_hand_x_up_height_m"] == 0.075
     assert values["stable_reset_hand_x_down_height_m"] == 0.100
     assert values["approach_planar_capture_radius_m"] == 0.015
     assert values["approach_planar_sigma_m"] == 0.080
