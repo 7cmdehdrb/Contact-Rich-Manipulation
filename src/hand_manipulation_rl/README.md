@@ -3,7 +3,9 @@
 `Isaac-Blind-Sweep-Inspire-v0`는 UR5e–가상 Axia80–Inspire Hand로 고정 선반판 위의
 단일 Cube를 시각 갱신 없이 미는 Isaac Lab 2.3.2 학습 환경이다. 이를 그대로 보존하면서
 낮고 안전한 시작 자세와 dense 접근 보상을 추가한 상속 환경
-`Isaac-Blind-Sweep-Inspire-Approach-v0`도 제공한다. 환경 코드는
+`Isaac-Blind-Sweep-Inspire-Approach-v0`도 제공한다. 해당 환경의 실제 학습에서 확인된
+중력 하강·선반 접촉 reward shortcut을 수정한 2차 상속 환경
+`Isaac-Blind-Sweep-Inspire-Approach-v1`도 함께 제공한다. 환경 코드는
 `src/sweep_rl`, `example/Sweep-Policy`, `src/inspire_tactile`,
 `src/axia80_feasibility`를 import하지 않는다. 참고 자산은 이 패키지 안의 상대 경로 USD로
 복사했으며 Nucleus, ROS, 절대 경로에도 의존하지 않는다.
@@ -54,6 +56,27 @@
   face로 접근하는 bounded reward(`weight=0.10`)가 추가된다. 목표 높이는 위의 안전 높이로
   고정되므로 손을 선반 쪽으로 내리는 동작은 이 보상을 늘리지 못한다. face 바깥쪽 capture
   radius에서만 보상이 포화되고 Cube 안쪽으로 들어가면 감소하므로 관통 유인도 만들지 않는다.
+- Approach-v1은 zero action에서도 발생하던 수직 하강을 막기 위해 OSC gravity compensation을
+  켠다. 병진 action은 mode와 명령 방향에 관계없이 `[world-up, toward-object, shelf-depth]`로
+  해석하며 각각 `4/12/4 mm`로 제한한다. reset backoff는 보수적 OBB 인증을 유지한 채
+  `0.140 -> 0.100 m`로 줄인다. 작은 relative target만으로는 1 kg Cube의 정지마찰을 안정적으로
+  넘지 못하므로, 실제 Hand--Cube 접촉 중 양의 접근 action에만 최대 `10 N`의 bounded push
+  preload를 더한다. free-space, 후퇴 action, Cube가 아닌 접촉에는 이 힘을 적용하지 않는다.
+- v1 접근 신호는 실제 접촉 probe로 구한 palm/dorsal × Hand-X up/down별 전진 거리
+  `105/55/105/165 mm`와 안전 하강량 `14/6/20/35 mm`를 따르는 signed progress
+  potential(`weight=2.0`)이다. 목표 높이는 전진량에 비례해 낮아지므로 수직 하강만으로는 보상을
+  얻지 못한다. 모든 분기의 접촉 전 potential 몫은 동일한 `0.35`이며, free frontier 이후에는
+  손 전진과 물체의 명령 방향 이동이 함께 발생해야 나머지 보상이 열린다. 따라서 손만 물체 옆을
+  통과하는 우회 행동은 전체 shaping return을 얻지 못한다. 현재 접촉 경로 아래에는 별도
+  one-sided 높이 penalty가 선반 충돌 전에 작동한다.
+- 소스 자산의 palm physical pad는 이 접근 경로에서 접촉하지 않고 base/thumb carrier link가 먼저
+  닿는 반면 dorsal 채널은 parent-link 근사이므로, 비대칭인 tactile reward는 v1에서 끈다. 17채널
+  tactile 관측은 원형 그대로 유지한다. 양 mode 공통 접촉 bonus는 `target_hand_contacts`에서 확인한
+  모든 Hand body–Cube 최초 접촉에 episode당 한 번만 주므로 정지 접촉으로 누적할 수 없고, 선반
+  단독 접촉 보상은 정확히 0이다.
+- v1 actor에는 episode-fixed 접촉 frontier 오차 3D를 action 축 순서로 추가해 관측은 60D다.
+  PPO는 초기 표준편차 `0.5`, fixed learning rate `3e-4`를 사용해 기존 adaptive LR이 첫
+  iteration부터 `0.01`로 상승하던 현상을 차단한다.
 - 독립형 RSL-RL PPO train/play 진입점, vectorized palm/dorsal smoke probe, simulator 독립
   pure-torch tests.
 - `extras["episode_diagnostics"]`에 명령·초기/현재 pose, reset 표본/IK/보수적 live-FK 충돌 인증 결과,
@@ -107,6 +130,14 @@
   --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
   --headless --device cuda:0 --num_envs 4 --max_iterations 2
 
+# 수정된 Approach-v1: 장시간 zero-action hold 및 작은 학습 확인
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/smoke_env.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
+  --headless --device cuda:0 --num-envs 8 --steps 50
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
+  --headless --device cuda:0 --num_envs 4 --max_iterations 2
+
 # 본 학습
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
   --headless --device cuda:0 --num_envs 4096
@@ -116,6 +147,11 @@
   --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
   --headless --device cuda:0 --num_envs 4096
 
+# 수정된 Approach-v1 본 학습
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
+  --headless --device cuda:0 --num_envs 4096
+
 # checkpoint 재생
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
   --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
@@ -123,6 +159,11 @@
 # Approach checkpoint 재생
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
   --task Isaac-Blind-Sweep-Inspire-Approach-v0 \
+  --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
+
+# Approach-v1 checkpoint 재생(v0 checkpoint와 관측/action 계약이 달라 호환되지 않음)
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
   --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
 ```
 

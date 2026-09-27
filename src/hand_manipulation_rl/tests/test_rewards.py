@@ -14,6 +14,7 @@ from hand_manipulation_rl.mdp.rewards import (
     resultant_contact_normal,
     risk_penalty,
     sum_link_normal_force,
+    target_gated_tactile_contact_reward,
     tactile_contact_reward,
     time_penalty_rate,
     upright_tilt_angle,
@@ -61,6 +62,19 @@ def test_boolean_tactile_preserves_nonuniform_region_weights() -> None:
     weights = torch.tensor([2.0] + [1.0] * 16)
     reward = tactile_contact_reward(tactile, beta=0.0, region_weights=weights)
     assert torch.allclose(reward, torch.tensor([2.0 / 18.0 - 1.0]))
+
+
+def test_v1_tactile_reward_rejects_shelf_only_contact() -> None:
+    active = torch.ones(3, 17)
+    target_contact = torch.tensor([False, True, False])
+    active[2] = 0.0
+    reward = target_gated_tactile_contact_reward(
+        active,
+        target_contact,
+        beta=0.5,
+    )
+    # Row zero represents active tactile caused only by the shelf.
+    torch.testing.assert_close(reward, torch.tensor([0.0, 1.0, 0.0]))
 
 
 def test_first_action_has_no_change_penalty() -> None:

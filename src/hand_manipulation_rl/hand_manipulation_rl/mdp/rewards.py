@@ -139,6 +139,27 @@ def tactile_contact_reward(
     return beta * contact_present + (1.0 - beta) * active_fraction - 1.0
 
 
+def target_gated_tactile_contact_reward(
+    selected_surface_tactile: Tensor,
+    target_contact: Tensor,
+    *,
+    beta: float = 0.5,
+) -> Tensor:
+    """Reward selected tactile activity only during verified object contact.
+
+    Unlike :func:`tactile_contact_reward`, no contact is neutral rather than a
+    penalty.  A shelf-only tactile event is also exactly zero, preventing the
+    board collision shortcut while leaving the actor's raw tactile observation
+    unchanged.
+    """
+
+    expected = selected_surface_tactile.shape[:-1]
+    if target_contact.shape != expected:
+        raise ValueError("target_contact must match the tactile batch shape")
+    shifted = tactile_contact_reward(selected_surface_tactile, beta=beta) + 1.0
+    return torch.where(target_contact.to(dtype=torch.bool), shifted, torch.zeros_like(shifted))
+
+
 def action_change_reward(
     normalized_action: Tensor,
     previous_normalized_action: Tensor,

@@ -216,6 +216,55 @@ def current_frame_delta_target(
     return target_position_b, _normalize_quaternion(target_quaternion_b)
 
 
+def task_frame_translation_delta_w(
+    normalized_translation: torch.Tensor,
+    command_direction_w: torch.Tensor,
+    translation_scale: torch.Tensor | tuple[float, float, float],
+) -> torch.Tensor:
+    """Map policy translation axes to stable task/world directions.
+
+    The policy axes are ``[world-up, toward-object, shelf-depth(+X)]``.  In
+    particular, a positive second coordinate always moves toward the object;
+    it does not change sign between palm/dorsal modes or left/right commands.
+    """
+
+    if normalized_translation.ndim != 2 or normalized_translation.shape[-1] != 3:
+        raise ValueError("normalized_translation must have shape (N, 3)")
+    if command_direction_w.shape != normalized_translation.shape:
+        raise ValueError("command_direction_w must have shape (N, 3)")
+    scale = torch.as_tensor(
+        translation_scale,
+        dtype=normalized_translation.dtype,
+        device=normalized_translation.device,
+    )
+    if scale.shape != (3,) or not torch.isfinite(scale).all() or torch.any(scale <= 0.0):
+        raise ValueError("translation_scale must contain three finite positive values")
+    direction_norm = torch.linalg.vector_norm(command_direction_w, dim=-1, keepdim=True)
+    if torch.any(direction_norm <= 1.0e-8):
+        raise ValueError("command_direction_w must be non-zero")
+    return _task_frame_translation_delta_w_impl(
+        normalized_translation,
+        command_direction_w,
+        scale,
+    )
+
+
+def _task_frame_translation_delta_w_impl(
+    normalized_translation: torch.Tensor,
+    command_direction_w: torch.Tensor,
+    translation_scale: torch.Tensor,
+) -> torch.Tensor:
+    """Hot-path implementation after episode/config validation."""
+
+    direction_norm = torch.linalg.vector_norm(command_direction_w, dim=-1, keepdim=True)
+    direction = command_direction_w / direction_norm
+
+    delta_w = normalized_translation[:, 1:2] * translation_scale[1] * direction
+    delta_w[:, 2] += normalized_translation[:, 0] * translation_scale[0]
+    delta_w[:, 0] += normalized_translation[:, 2] * translation_scale[2]
+    return delta_w
+
+
 def skew_symmetric(vector: torch.Tensor) -> torch.Tensor:
     """Return batched cross-product matrices such that ``skew(v) @ x = v x x``."""
 
@@ -575,6 +624,7 @@ class CurrentFrameOscAction(ActionTerm):
             mass_matrix=mass_matrix,
             gravity=gravity,
         )
+        computed_efforts += self._additional_joint_efforts()
         finite_efforts = torch.isfinite(computed_efforts).all(dim=-1)
         safe_efforts = torch.where(finite_efforts.unsqueeze(-1), computed_efforts, torch.zeros_like(computed_efforts))
 
@@ -593,6 +643,11 @@ class CurrentFrameOscAction(ActionTerm):
         self._torque_saturated |= (~finite_efforts) | clipped
         self._joint_efforts[:] = clamped_efforts
         self._asset.set_joint_effort_target(self._joint_efforts, joint_ids=self._joint_ids)
+
+    def _additional_joint_efforts(self) -> torch.Tensor:
+        """Return optional task-specific feed-forward efforts."""
+
+        return torch.zeros_like(self._joint_efforts)
 
     def reset(self, env_ids: Sequence[int] | torch.Tensor | slice | None = None) -> None:
         if env_ids is None or isinstance(env_ids, slice):
@@ -671,6 +726,126 @@ class CurrentFrameOscAction(ActionTerm):
         self._c_jacobian_b[:] = shift_jacobian_to_point(jacobian_com_b, r_comc_b)
 
 
+class TaskFrameOscAction(CurrentFrameOscAction):
+    """OSC action with mode-invariant task-aligned translation axes.
+
+    Translation inputs are interpreted as ``[world-up, toward-object,
+    shelf-depth(+X)]`` and then expressed in the measured current C frame for
+    the inherited relative-pose target.  Rotation inputs retain the parent's
+    current-C-frame convention.
+    """
+
+    cfg: "TaskFrameOscActionCfg"
+
+    def __init__(self, cfg: "TaskFrameOscActionCfg", env: "ManagerBasedEnv") -> None:
+        super().__init__(cfg, env)
+        if not math.isfinite(cfg.contact_push_force_n) or cfg.contact_push_force_n < 0.0:
+            raise ValueError("contact_push_force_n must be finite and non-negative")
+        if (
+            not math.isfinite(cfg.contact_push_force_guard_n)
+            or cfg.contact_push_force_guard_n <= 0.0
+        ):
+            raise ValueError("contact_push_force_guard_n must be finite and positive")
+        if (
+            not math.isfinite(cfg.contact_push_board_guard_n)
+            or cfg.contact_push_board_guard_n <= 0.0
+        ):
+            raise ValueError("contact_push_board_guard_n must be finite and positive")
+        self._task_env = env
+        self._task_translation_scale = self._translation_scale.clone()
+        self._contact_push_force_n = float(cfg.contact_push_force_n)
+        self._contact_push_force_guard_n = float(cfg.contact_push_force_guard_n)
+        self._contact_push_board_guard_n = float(cfg.contact_push_board_guard_n)
+
+    def process_actions_for_envs(
+        self, actions: torch.Tensor, env_ids: Sequence[int] | torch.Tensor
+    ) -> None:
+        index = torch.as_tensor(env_ids, dtype=torch.long, device=self.device)
+        if index.ndim != 1 or index.numel() == 0:
+            if index.ndim != 1:
+                raise ValueError("env_ids must be one-dimensional")
+            return
+        if (index < 0).any() or (index >= self.num_envs).any():
+            raise IndexError("env_ids contains an out-of-range environment index")
+        expected_shape = (len(index), self.action_dim)
+        if actions.shape != expected_shape:
+            raise ValueError(
+                f"Expected task-frame OSC actions with shape {expected_shape}, got {tuple(actions.shape)}."
+            )
+
+        finite = torch.isfinite(actions)
+        sanitized = torch.where(finite, actions, torch.zeros_like(actions))
+        normalized = sanitized.clamp(-1.0, 1.0)
+        self._raw_actions[index] = normalized
+        invalid_action = ~finite.all(dim=-1)
+        self._invalid_action[index] |= invalid_action
+        self._torque_saturated[index] |= invalid_action | torch.any(
+            sanitized != normalized, dim=-1
+        )
+
+        delta_w = _task_frame_translation_delta_w_impl(
+            normalized[:, :3],
+            self._task_env.command_direction_w[index],
+            self._task_translation_scale,
+        )
+        root_quaternion_w = _normalize_quaternion(
+            self._asset.data.root_link_quat_w[index]
+        )
+        delta_b = quaternion_rotate(quaternion_conjugate(root_quaternion_w), delta_w)
+        self._compute_c_pose_and_twist()
+        delta_c = quaternion_rotate(
+            quaternion_conjugate(self._c_pose_b[index, 3:]), delta_b
+        )
+        self._processed_actions[index, :3] = delta_c
+        self._processed_actions[index, 3:] = normalized[:, 3:] * self._rotation_scale
+
+        target_position_b, target_quaternion_b = current_frame_delta_target(
+            self._c_pose_b[index, :3],
+            self._c_pose_b[index, 3:],
+            self._processed_actions[index, :3],
+            self._processed_actions[index, 3:],
+        )
+        self._desired_c_pose_b[index, :3] = target_position_b
+        self._desired_c_pose_b[index, 3:] = target_quaternion_b
+        self._osc.set_command(self._desired_c_pose_b)
+
+    def _additional_joint_efforts(self) -> torch.Tensor:
+        """Apply a bounded forward preload only during live Hand--Cube contact.
+
+        The measured-pose relative OSC deliberately keeps free-space increments
+        small.  At contact that also bounds the pose error, and therefore the
+        transmitted force, below the Cube's breakaway friction.  This explicit
+        task-space preload preserves the safe approach dynamics while making a
+        continued positive approach action capable of initiating a push.
+        """
+
+        if self._contact_push_force_n == 0.0:
+            return torch.zeros_like(self._joint_efforts)
+        sensor_live = self._task_env.sensor_valid & self._task_env.sensor_data_fresh
+        contact = self._task_env.hand_object_contact() & sensor_live
+        below_force_guard = (
+            self._task_env.hand_object_contact_force_n()
+            < self._contact_push_force_guard_n
+        )
+        below_board_guard = (
+            self._task_env.board_force < self._contact_push_board_guard_n
+        )
+        contact &= below_force_guard & below_board_guard
+        forward_command = torch.clamp(self._raw_actions[:, 1], min=0.0, max=1.0)
+        force_magnitude = (
+            contact.to(dtype=torch.float32)
+            * forward_command
+            * self._contact_push_force_n
+        )
+        force_w = self._task_env.command_direction_w * force_magnitude.unsqueeze(-1)
+        root_quaternion_w = _normalize_quaternion(self._asset.data.root_link_quat_w)
+        force_b = quaternion_rotate(quaternion_conjugate(root_quaternion_w), force_w)
+        return torch.bmm(
+            self._c_jacobian_b[:, :3].mT,
+            force_b.unsqueeze(-1),
+        ).squeeze(-1)
+
+
 @configclass
 class CurrentFrameOscActionCfg(ActionTermCfg):
     """Configuration for :class:`CurrentFrameOscAction`."""
@@ -692,6 +867,10 @@ class CurrentFrameOscActionCfg(ActionTermCfg):
     )
     motion_damping_ratio: tuple[float, float, float, float, float, float] = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     gravity_compensation: bool = False
+    # Used only by TaskFrameOscAction. Zero preserves the base/v0 controller.
+    contact_push_force_n: float = 0.0
+    contact_push_force_guard_n: float = 12.0
+    contact_push_board_guard_n: float = 2.0
     # Full operational-space inertia is required for a stable fixed-gain
     # acceleration law on the low-inertia UR5e wrist/hand assembly.
     inertial_dynamics_decoupling: bool = True
@@ -699,6 +878,17 @@ class CurrentFrameOscActionCfg(ActionTermCfg):
     effort_limits: tuple[float, float, float, float, float, float] = UR5E_EFFORT_LIMITS_NM
     effort_limit_scale: float = 0.9
     saturation_tolerance: float = 1.0e-6
+
+
+@configclass
+class TaskFrameOscActionCfg(CurrentFrameOscActionCfg):
+    """Configuration for :class:`TaskFrameOscAction`.
+
+    ``translation_scale`` is ordered as world-up, toward-object, and world-X
+    shelf-depth rather than as current-C local XYZ.
+    """
+
+    class_type: type[ActionTerm] = TaskFrameOscAction
 
 
 class InspireHandSynergyAction(ActionTerm):

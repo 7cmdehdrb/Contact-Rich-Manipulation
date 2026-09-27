@@ -40,6 +40,30 @@ action_math = _load_action_helpers()
 
 
 class ControlFrameMathTest(unittest.TestCase):
+    def test_task_frame_translation_has_mode_invariant_approach_axis(self):
+        actions = torch.tensor(
+            [
+                [0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [-1.0, 0.0, 0.0],
+            ]
+        )
+        directions = torch.tensor(
+            [
+                [0.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ]
+        )
+        delta = action_math.task_frame_translation_delta_w(
+            actions,
+            directions,
+            (0.004, 0.012, 0.004),
+        )
+        torch.testing.assert_close(delta[0], torch.tensor([0.0, 0.012, 0.0]))
+        torch.testing.assert_close(delta[1], torch.tensor([0.0, -0.012, 0.0]))
+        torch.testing.assert_close(delta[2], torch.tensor([0.0, 0.0, -0.004]))
+
     def test_local_delta_is_rotated_and_right_multiplied(self):
         dtype = torch.float64
         half = torch.tensor(torch.pi / 4.0, dtype=dtype)
