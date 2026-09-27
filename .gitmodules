@@ -9,12 +9,6 @@
 	path = example/Sweep-Policy
 	url = https://github.com/IROL-SSU/Sweeping-Policy-DRL-Sim-Train.git
 	branch = min
-[submodule "docs"]
-	path = docs
-	url = https://github.com/dhlee04/vla-drl_hybrid_manipulation.git
-[submodule "example/pixi_ur_ros2"]
-	path = example/pixi_ur_ros2
-	url = https://github.com/7cmdehdrb/pixi_ur_ros2.git
 [submodule "example/Contact-Rich-Manipulation-Context"]
 	path = example/Contact-Rich-Manipulation-Context
 	url = https://github.com/7cmdehdrb/Contact-Rich-Manipulation-Context.git
