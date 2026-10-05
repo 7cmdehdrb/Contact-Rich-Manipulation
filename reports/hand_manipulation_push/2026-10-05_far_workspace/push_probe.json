@@ -1,0 +1,579 @@
+{
+  "task": "Isaac-Hand-Manipulation-Push-v0",
+  "center": [
+    -0.75,
+    0.0,
+    1.03
+  ],
+  "cube_low": [
+    -0.71,
+    -0.06
+  ],
+  "cube_high": [
+    -0.69,
+    0.06
+  ],
+  "cases": [
+    {
+      "case": "corners/-10.0",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        54,
+        64,
+        54,
+        64
+      ],
+      "position_error_m": [
+        0.0025016458239406347,
+        0.002669293899089098,
+        0.002042477484792471,
+        0.002083745552226901
+      ],
+      "orientation_error_rad": [
+        0.00014983676373958588,
+        0.0001247626933036372,
+        0.00012213268200866878,
+        9.615633462090045e-05
+      ],
+      "finger_outward_cos": [
+        0.9848121404647827,
+        0.9848092794418335,
+        0.9848107695579529,
+        0.9848083257675171
+      ],
+      "arm_q": [
+        [
+          -2.376830577850342,
+          -2.032855987548828,
+          -1.4427419900894165,
+          3.4758481979370117,
+          -0.6315261125564575,
+          1.57059645652771
+        ],
+        [
+          -2.5638442039489746,
+          -1.9234977960586548,
+          -1.6021071672439575,
+          3.5257761478424072,
+          -0.8185237050056458,
+          1.570677399635315
+        ],
+        [
+          -2.361318588256836,
+          -2.0037612915039062,
+          -1.482741355895996,
+          3.4867119789123535,
+          -0.6160060167312622,
+          1.5706287622451782
+        ],
+        [
+          -2.5382590293884277,
+          -1.8806631565093994,
+          -1.6624692678451538,
+          3.5432679653167725,
+          -0.7929319143295288,
+          1.5707008838653564
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0025016458239406347,
+            "orientation_error_rad": 0.00014983676373958588,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002669293899089098,
+            "orientation_error_rad": 0.0001247626933036372,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002042477484792471,
+            "orientation_error_rad": 0.00012213268200866878,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002083745552226901,
+            "orientation_error_rad": 9.615633462090045e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "corners/0.0",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        34,
+        44,
+        34,
+        46
+      ],
+      "position_error_m": [
+        0.002434507478028536,
+        0.0011285542277619243,
+        0.0014581973664462566,
+        0.002615307690575719
+      ],
+      "orientation_error_rad": [
+        6.625092646572739e-05,
+        5.304057776811533e-05,
+        4.678767072618939e-05,
+        9.316761133959517e-05
+      ],
+      "finger_outward_cos": [
+        0.9999999403953552,
+        1.0,
+        0.9999999403953552,
+        1.0
+      ],
+      "arm_q": [
+        [
+          0.22936250269412994,
+          0.3072092533111572,
+          -1.607109546661377,
+          -4.983255386352539,
+          1.8000997304916382,
+          1.5708026885986328
+        ],
+        [
+          -2.5955278873443604,
+          -1.8196709156036377,
+          -1.7492772340774536,
+          -2.7141757011413574,
+          -1.0247300863265991,
+          1.570760726928711
+        ],
+        [
+          0.24314141273498535,
+          0.3127601742744446,
+          -1.656686544418335,
+          -4.939235687255859,
+          1.8138974905014038,
+          1.5708026885986328
+        ],
+        [
+          -2.5711939334869385,
+          -1.7653709650039673,
+          -1.8117748498916626,
+          -2.7059309482574463,
+          -1.0003821849822998,
+          1.5707272291183472
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002434507478028536,
+            "orientation_error_rad": 6.625092646572739e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0011285542277619243,
+            "orientation_error_rad": 5.304057776811533e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0014581973664462566,
+            "orientation_error_rad": 4.678767072618939e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002615307690575719,
+            "orientation_error_rad": 9.316761133959517e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "corners/10.0",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "iterations": [
+        74,
+        99,
+        77,
+        99
+      ],
+      "position_error_m": [
+        0.0015582592459395528,
+        0.0026331471744924784,
+        0.0022316724061965942,
+        0.0015944628976285458
+      ],
+      "orientation_error_rad": [
+        7.273493247339502e-05,
+        4.621520565706305e-05,
+        9.20861930353567e-05,
+        3.433271194808185e-05
+      ],
+      "finger_outward_cos": [
+        0.9848089218139648,
+        0.98480224609375,
+        0.9848102927207947,
+        0.9848034977912903
+      ],
+      "arm_q": [
+        [
+          -2.42508864402771,
+          -1.8112399578094482,
+          -1.757394552230835,
+          -2.7144665718078613,
+          -1.028818964958191,
+          1.570746898651123
+        ],
+        [
+          -0.12015537172555923,
+          0.33738020062446594,
+          -1.85586416721344,
+          1.5185188055038452,
+          1.2760767936706543,
+          1.570784091949463
+        ],
+        [
+          -2.401250123977661,
+          -1.7773354053497314,
+          -1.8015496730804443,
+          -2.704192876815796,
+          -1.0049721002578735,
+          1.5707327127456665
+        ],
+        [
+          -0.11450215429067612,
+          0.33000218868255615,
+          -1.8982995748519897,
+          1.5683224201202393,
+          1.2817381620407104,
+          1.5707879066467285
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0015582592459395528,
+            "orientation_error_rad": 7.273493247339502e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.31121543049812317,
+            "orientation_error_rad": 0.0028271821793168783,
+            "pose_valid": false,
+            "collision_checked": false,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          },
+          {
+            "seed_index": 1,
+            "position_error_m": 0.0026331471744924784,
+            "orientation_error_rad": 4.621520565706305e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0022316724061965942,
+            "orientation_error_rad": 9.20861930353567e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.2924862802028656,
+            "orientation_error_rad": 0.0023362860083580017,
+            "pose_valid": false,
+            "collision_checked": false,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          },
+          {
+            "seed_index": 1,
+            "position_error_m": 0.0015944628976285458,
+            "orientation_error_rad": 3.433271194808185e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "corners/170.0",
+      "passed": false,
+      "error": "Palm-facing reset failed for 4/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0003960253670811653, 'orientation_error_rad': 0.027657240629196167, 'palm_alignment_cos': 0.9996178150177002, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6672971844673157, 0.07252943515777588, 1.1083401441574097], 'desired_c_quaternion_wxyz': [0.06162845343351364, -0.704416036605835, 0.06162845343351364, 0.704416036605835], 'hand_synergy': [0.9213075637817383, 0.9060423970222473], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0011975959641858935, 'orientation_error_rad': 2.4654355001985095e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0015915243420749903, 'orientation_error_rad': 6.972345727263018e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0003960253670811653, 'orientation_error_rad': 0.027657240629196167, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 1, 'attempts': 3, 'position_error_m': 0.0003805550222750753, 'orientation_error_rad': 0.027669446542859077, 'palm_alignment_cos': 0.999617338180542, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6688372492790222, 0.19363045692443848, 1.110702633857727], 'desired_c_quaternion_wxyz': [0.06162845343351364, -0.704416036605835, 0.06162845343351364, 0.704416036605835], 'hand_synergy': [0.9234743714332581, 0.9402002096176147], 'seeds': [{'seed_index': 0, 'position_error_m': 0.002233870094642043, 'orientation_error_rad': 4.256367537891492e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0024560363963246346, 'orientation_error_rad': 4.371093018562533e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0003805550222750753, 'orientation_error_rad': 0.027669446542859077, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.00039698361069895327, 'orientation_error_rad': 0.027656324207782745, 'palm_alignment_cos': 0.9996178150177002, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6425963640213013, 0.07225334644317627, 1.1088204383850098], 'desired_c_quaternion_wxyz': [0.06162845343351364, -0.704416036605835, 0.06162845343351364, 0.704416036605835], 'hand_synergy': [0.9427827596664429, 0.9400085806846619], 'seeds': [{'seed_index': 0, 'position_error_m': 0.00203846488147974, 'orientation_error_rad': 4.554622864816338e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0026158259715884924, 'orientation_error_rad': 0.00018965371418744326, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00039698361069895327, 'orientation_error_rad': 0.027656324207782745, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0003808644542004913, 'orientation_error_rad': 0.02767070010304451, 'palm_alignment_cos': 0.9996174573898315, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6429167985916138, 0.19289076328277588, 1.1094244718551636], 'desired_c_quaternion_wxyz': [0.06162845343351364, -0.704416036605835, 0.06162845343351364, 0.704416036605835], 'hand_synergy': [0.9094499349594116, 0.920619785785675], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0015532536199316382, 'orientation_error_rad': 3.5049546568188816e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.001996631035581231, 'orientation_error_rad': 4.053101656609215e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0003808644542004913, 'orientation_error_rad': 0.02767070010304451, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "corners/180.0",
+      "passed": false,
+      "error": "Palm-facing reset failed for 4/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0005130707286298275, 'orientation_error_rad': 0.028022537007927895, 'palm_alignment_cos': 0.9996098279953003, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6874743700027466, 0.07677948474884033, 1.112239122390747], 'desired_c_quaternion_wxyz': [3.0908619663705394e-08, 0.7071067690849304, 3.0908619663705394e-08, -0.7071067690849304], 'hand_synergy': [0.9261846542358398, 0.9451642036437988], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0026704485062509775, 'orientation_error_rad': 5.3996343922335654e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0015770556638017297, 'orientation_error_rad': 3.745045978575945e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005130707286298275, 'orientation_error_rad': 0.028022537007927895, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 1, 'attempts': 3, 'position_error_m': 0.0004793850821442902, 'orientation_error_rad': 0.027994345873594284, 'palm_alignment_cos': 0.9996105432510376, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6904007792472839, 0.2008359432220459, 1.1107903718948364], 'desired_c_quaternion_wxyz': [3.0908619663705394e-08, 0.7071067690849304, 3.0908619663705394e-08, -0.7071067690849304], 'hand_synergy': [0.9184257984161377, 0.9222198128700256], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0027219944167882204, 'orientation_error_rad': 7.161743269534782e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0028454717248678207, 'orientation_error_rad': 7.12792098056525e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004793850821442902, 'orientation_error_rad': 0.027994345873594284, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.0005114365485496819, 'orientation_error_rad': 0.028024576604366302, 'palm_alignment_cos': 0.9996095895767212, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6714873313903809, 0.0807032585144043, 1.1106818914413452], 'desired_c_quaternion_wxyz': [3.0908619663705394e-08, 0.7071067690849304, 3.0908619663705394e-08, -0.7071067690849304], 'hand_synergy': [0.9204527735710144, 0.9683366417884827], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0020498796366155148, 'orientation_error_rad': 4.8790268920129165e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0012598605826497078, 'orientation_error_rad': 3.399738125153817e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005114365485496819, 'orientation_error_rad': 0.028024576604366302, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.00047842669300734997, 'orientation_error_rad': 0.027997486293315887, 'palm_alignment_cos': 0.9996109008789062, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6727420091629028, 0.19502532482147217, 1.110622763633728], 'desired_c_quaternion_wxyz': [3.0908619663705394e-08, 0.7071067690849304, 3.0908619663705394e-08, -0.7071067690849304], 'hand_synergy': [0.9555376172065735, 0.906225323677063], 'seeds': [{'seed_index': 0, 'position_error_m': 0.002188568003475666, 'orientation_error_rad': 6.065968773327768e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.002143177669495344, 'orientation_error_rad': 5.622173921437934e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00047842669300734997, 'orientation_error_rad': 0.027997486293315887, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "corners/190.0",
+      "passed": false,
+      "error": "Palm-facing reset failed for 4/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0008095760713331401, 'orientation_error_rad': 0.036340173333883286, 'palm_alignment_cos': 0.9993600249290466, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.7175276279449463, 0.07657396793365479, 1.1086721420288086], 'desired_c_quaternion_wxyz': [0.061628442257642746, 0.704416036605835, 0.061628442257642746, -0.704416036605835], 'hand_synergy': [0.9175734519958496, 0.9049928188323975], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0010823372285813093, 'orientation_error_rad': 4.9146525270771235e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['forearm_link', 'inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0015388255706056952, 'orientation_error_rad': 4.234835796523839e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0008095760713331401, 'orientation_error_rad': 0.036340173333883286, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 1, 'attempts': 3, 'position_error_m': 0.0008073821081779897, 'orientation_error_rad': 0.03634226694703102, 'palm_alignment_cos': 0.999360978603363, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099999785423279, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.7159124612808228, 0.1964421272277832, 1.1117342710494995], 'desired_c_quaternion_wxyz': [0.061628442257642746, 0.704416036605835, 0.061628442257642746, -0.704416036605835], 'hand_synergy': [0.9599475264549255, 0.9425274133682251], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0028002834878861904, 'orientation_error_rad': 5.090067134005949e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0017778213368728757, 'orientation_error_rad': 6.767633749404922e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0008073821081779897, 'orientation_error_rad': 0.03634226694703102, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.0007991848397068679, 'orientation_error_rad': 0.03638002276420593, 'palm_alignment_cos': 0.9993584752082825, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, -0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6900937557220459, 0.0758962631225586, 1.1081570386886597], 'desired_c_quaternion_wxyz': [0.061628442257642746, 0.704416036605835, 0.061628442257642746, -0.704416036605835], 'hand_synergy': [0.9015242457389832, 0.9572767019271851], 'seeds': [{'seed_index': 0, 'position_error_m': 0.001111771329306066, 'orientation_error_rad': 5.353717278921977e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0024052229709923267, 'orientation_error_rad': 6.489754741778597e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0007991848397068679, 'orientation_error_rad': 0.03638002276420593, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0007889060652814806, 'orientation_error_rad': 0.03648816794157028, 'palm_alignment_cos': 0.9993558526039124, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.690000057220459, 0.059999942779541016, 1.0800000429153442], 'desired_c_position_local_m': [-0.6930564641952515, 0.19915294647216797, 1.111346960067749], 'desired_c_quaternion_wxyz': [0.061628442257642746, 0.704416036605835, 0.061628442257642746, -0.704416036605835], 'hand_synergy': [0.962211549282074, 0.944697916507721], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0014514311915263534, 'orientation_error_rad': 3.849560744129121e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0013610573951154947, 'orientation_error_rad': 5.316131137078628e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0007889060652814806, 'orientation_error_rad': 0.03648816794157028, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/0",
+      "passed": false,
+      "error": "Palm-facing reset failed for 3/4 rows; no episode started: [{'env_id': 1, 'attempts': 3, 'position_error_m': 0.00040271488251164556, 'orientation_error_rad': 0.027567878365516663, 'palm_alignment_cos': 0.9996201992034912, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7094938158988953, -0.047760009765625, 1.0800000429153442], 'desired_c_position_local_m': [-0.6667606234550476, 0.08583188056945801, 1.1083868741989136], 'desired_c_quaternion_wxyz': [0.05521516501903534, -0.7049477100372314, 0.05521516501903534, 0.7049477100372314], 'hand_synergy': [0.9586310386657715, 0.9502244591712952], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0013171880273148417, 'orientation_error_rad': 2.5192010070895776e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.002302231267094612, 'orientation_error_rad': 7.299504068214446e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00040271488251164556, 'orientation_error_rad': 0.027567878365516663, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.0004171114705968648, 'orientation_error_rad': 0.027148470282554626, 'palm_alignment_cos': 0.9996320605278015, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7089414596557617, 0.05963456630706787, 1.0800000429153442], 'desired_c_position_local_m': [-0.6751672029495239, 0.192649245262146, 1.1088014841079712], 'desired_c_quaternion_wxyz': [0.02609466016292572, -0.7066251039505005, 0.02609465830028057, 0.7066251635551453], 'hand_synergy': [0.9774421453475952, 0.9557361602783203], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0017946878215298057, 'orientation_error_rad': 4.4038308260496706e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0014102841960266232, 'orientation_error_rad': 3.410119825275615e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004171114705968648, 'orientation_error_rad': 0.027148470282554626, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0005943153519183397, 'orientation_error_rad': 0.02992849424481392, 'palm_alignment_cos': 0.9995590448379517, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6928671598434448, 0.025004267692565918, 1.0800000429153442], 'desired_c_position_local_m': [-0.6803635358810425, 0.16163909435272217, 1.111021637916565], 'desired_c_quaternion_wxyz': [0.027955997735261917, 0.7065539360046387, 0.027955997735261917, -0.7065539360046387], 'hand_synergy': [0.9429225921630859, 0.9790120124816895], 'seeds': [{'seed_index': 0, 'position_error_m': 0.3041996359825134, 'orientation_error_rad': 0.013443202711641788, 'pose_valid': False, 'collision_checked': False, 'cube_overlap_bodies': [], 'table_overlap_bodies': []}, {'seed_index': 1, 'position_error_m': 0.002496942412108183, 'orientation_error_rad': 6.623764056712389e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005943153519183397, 'orientation_error_rad': 0.02992849424481392, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/1",
+      "passed": false,
+      "error": "Palm-facing reset failed for 3/4 rows; no episode started: [{'env_id': 1, 'attempts': 3, 'position_error_m': 0.0006060354062356055, 'orientation_error_rad': 0.030043335631489754, 'palm_alignment_cos': 0.9995558857917786, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7041916847229004, 0.015295028686523438, 1.0800000429153442], 'desired_c_position_local_m': [-0.6930904984474182, 0.15469181537628174, 1.109628677368164], 'desired_c_quaternion_wxyz': [0.029696142300963402, 0.7064829468727112, 0.029696142300963402, -0.7064829468727112], 'hand_synergy': [0.925959587097168, 0.9202280640602112], 'seeds': [{'seed_index': 0, 'position_error_m': 0.31627777218818665, 'orientation_error_rad': 0.013672661036252975, 'pose_valid': False, 'collision_checked': False, 'cube_overlap_bodies': [], 'table_overlap_bodies': []}, {'seed_index': 1, 'position_error_m': 0.002449335064738989, 'orientation_error_rad': 6.44590545562096e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0006060354062356055, 'orientation_error_rad': 0.030043335631489754, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.0004097328055649996, 'orientation_error_rad': 0.027500562369823456, 'palm_alignment_cos': 0.9996219277381897, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6916000843048096, -0.049108028411865234, 1.0800000429153442], 'desired_c_position_local_m': [-0.6499156951904297, 0.08700132369995117, 1.1106078624725342], 'desired_c_quaternion_wxyz': [0.05044681578874588, -0.7053049802780151, 0.05044680833816528, 0.7053049802780151], 'hand_synergy': [0.956557035446167, 0.9542046189308167], 'seeds': [{'seed_index': 0, 'position_error_m': 0.002391632180660963, 'orientation_error_rad': 4.7910161811159924e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.001883100951090455, 'orientation_error_rad': 7.19827730790712e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004097328055649996, 'orientation_error_rad': 0.027500562369823456, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0007044058293104172, 'orientation_error_rad': 0.03296896815299988, 'palm_alignment_cos': 0.9994703531265259, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7014650106430054, 0.05811309814453125, 1.0800000429153442], 'desired_c_position_local_m': [-0.7027028799057007, 0.20002901554107666, 1.1116300821304321], 'desired_c_quaternion_wxyz': [0.04792638123035431, 0.7054807543754578, 0.04792637750506401, -0.7054807543754578], 'hand_synergy': [0.9564832448959351, 0.9472863674163818], 'seeds': [{'seed_index': 0, 'position_error_m': 0.002630038885399699, 'orientation_error_rad': 4.2863699491135776e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0015614406438544393, 'orientation_error_rad': 5.6070901337079704e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0007044058293104172, 'orientation_error_rad': 0.03296896815299988, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/2",
+      "passed": false,
+      "error": "Palm-facing reset failed for 3/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0004815631837118417, 'orientation_error_rad': 0.02751137502491474, 'palm_alignment_cos': 0.9996232390403748, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6960657238960266, -0.03921067714691162, 1.0800000429153442], 'desired_c_position_local_m': [-0.6734414100646973, 0.09912514686584473, 1.1118870973587036], 'desired_c_quaternion_wxyz': [0.007139607798308134, -0.7070707678794861, 0.007139607798308134, 0.7070707082748413], 'hand_synergy': [0.9356825947761536, 0.9455007910728455], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0025372342206537724, 'orientation_error_rad': 5.579522985499352e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0021224867086857557, 'orientation_error_rad': 4.619026731234044e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004815631837118417, 'orientation_error_rad': 0.02751137502491474, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 2, 'attempts': 3, 'position_error_m': 0.0006780863623134792, 'orientation_error_rad': 0.031762123107910156, 'palm_alignment_cos': 0.9995068907737732, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6975812911987305, 0.012548327445983887, 1.0800000429153442], 'desired_c_position_local_m': [-0.6927082538604736, 0.1503359079360962, 1.1105396747589111], 'desired_c_quaternion_wxyz': [0.04362102597951889, 0.7057600021362305, 0.04362102597951889, -0.7057600021362305], 'hand_synergy': [0.9168452024459839, 0.9749038815498352], 'seeds': [{'seed_index': 0, 'position_error_m': 0.30617406964302063, 'orientation_error_rad': 0.016302796080708504, 'pose_valid': False, 'collision_checked': False, 'cube_overlap_bodies': [], 'table_overlap_bodies': []}, {'seed_index': 1, 'position_error_m': 0.0023048974107950926, 'orientation_error_rad': 6.45158943370916e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0006780863623134792, 'orientation_error_rad': 0.031762123107910156, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0004574049380607903, 'orientation_error_rad': 0.027023646980524063, 'palm_alignment_cos': 0.9996358156204224, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6912100315093994, -0.053966403007507324, 1.0800000429153442], 'desired_c_position_local_m': [-0.6669107675552368, 0.08643960952758789, 1.1113646030426025], 'desired_c_quaternion_wxyz': [0.016879694536328316, -0.7069053053855896, 0.016879694536328316, 0.7069053053855896], 'hand_synergy': [0.9293891191482544, 0.9470857381820679], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0023039025254547596, 'orientation_error_rad': 4.976812851964496e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0011087828315794468, 'orientation_error_rad': 3.137190651614219e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004574049380607903, 'orientation_error_rad': 0.027023646980524063, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/3",
+      "passed": false,
+      "error": "Palm-facing reset failed for 1/4 rows; no episode started: [{'env_id': 1, 'attempts': 3, 'position_error_m': 0.00043612183071672916, 'orientation_error_rad': 0.027149995788931847, 'palm_alignment_cos': 0.9996321797370911, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7059816122055054, -0.025803804397583008, 1.0800000429153442], 'desired_c_position_local_m': [-0.6750628352165222, 0.11250114440917969, 1.1106860637664795], 'desired_c_quaternion_wxyz': [0.026281829923391342, -0.7066181898117065, 0.026281828060746193, 0.7066181898117065], 'hand_synergy': [0.9340858459472656, 0.9280597567558289], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0015914324903860688, 'orientation_error_rad': 3.1233237677952275e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.00255596567876637, 'orientation_error_rad': 4.888101830147207e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00043612183071672916, 'orientation_error_rad': 0.027149995788931847, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/4",
+      "passed": false,
+      "error": "Palm-facing reset failed for 1/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0004088407731615007, 'orientation_error_rad': 0.0272577702999115, 'palm_alignment_cos': 0.9996288418769836, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.704443097114563, 0.051238417625427246, 1.0800000429153442], 'desired_c_position_local_m': [-0.6733337044715881, 0.18852198123931885, 1.1089951992034912], 'desired_c_quaternion_wxyz': [0.03360220044851303, -0.7063079476356506, 0.03360220044851303, 0.7063079476356506], 'hand_synergy': [0.9515177607536316, 0.966397762298584], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0011326656676828861, 'orientation_error_rad': 2.935781594715081e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0010622639674693346, 'orientation_error_rad': 2.6052519388031214e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0004088407731615007, 'orientation_error_rad': 0.0272577702999115, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/5",
+      "passed": false,
+      "error": "Palm-facing reset failed for 3/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.00044213590444996953, 'orientation_error_rad': 0.027129029855132103, 'palm_alignment_cos': 0.999632716178894, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7022860050201416, -0.04086959362030029, 1.0800000429153442], 'desired_c_position_local_m': [-0.6707905530929565, 0.09814095497131348, 1.1082974672317505], 'desired_c_quaternion_wxyz': [0.02453647553920746, -0.706680953502655, 0.02453647553920746, 0.706680953502655], 'hand_synergy': [0.945793867111206, 0.9060461521148682], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0010689087212085724, 'orientation_error_rad': 2.3333082936005667e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0017311739502474666, 'orientation_error_rad': 3.829728302662261e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00044213590444996953, 'orientation_error_rad': 0.027129029855132103, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 1, 'attempts': 3, 'position_error_m': 0.00043400286813266575, 'orientation_error_rad': 0.027018029242753983, 'palm_alignment_cos': 0.9996365904808044, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.691799521446228, 0.05603981018066406, 1.0800000429153442], 'desired_c_position_local_m': [-0.6679868698120117, 0.19318890571594238, 1.1117513179779053], 'desired_c_quaternion_wxyz': [0.013928096741437912, -0.7069696187973022, 0.013928096741437912, 0.7069696187973022], 'hand_synergy': [0.977048397064209, 0.9325615167617798], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0020625453907996416, 'orientation_error_rad': 5.3782463510287926e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0015854177763685584, 'orientation_error_rad': 4.146578430663794e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.00043400286813266575, 'orientation_error_rad': 0.027018029242753983, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}, {'env_id': 3, 'attempts': 3, 'position_error_m': 0.0005405936390161514, 'orientation_error_rad': 0.028586111962795258, 'palm_alignment_cos': 0.9995949268341064, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7099044322967529, -0.054715871810913086, 1.0800000429153442], 'desired_c_position_local_m': [-0.6933438777923584, 0.08336758613586426, 1.1106141805648804], 'desired_c_quaternion_wxyz': [0.008108571171760559, 0.7070602774620056, 0.008108570240437984, -0.7070602774620056], 'hand_synergy': [0.9522868990898132, 0.9043907523155212], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0010603803675621748, 'orientation_error_rad': 2.4466209652018733e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.00227806787006557, 'orientation_error_rad': 4.814459680346772e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005405936390161514, 'orientation_error_rad': 0.028586111962795258, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/6",
+      "passed": false,
+      "error": "Palm-facing reset failed for 1/4 rows; no episode started: [{'env_id': 0, 'attempts': 3, 'position_error_m': 0.0005368751008063555, 'orientation_error_rad': 0.028609761968255043, 'palm_alignment_cos': 0.9995941519737244, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6942126750946045, -0.04198014736175537, 1.0800000429153442], 'desired_c_position_local_m': [-0.6798608303070068, 0.09810018539428711, 1.1119199991226196], 'desired_c_quaternion_wxyz': [0.00848036352545023, 0.707055926322937, 0.00848036352545023, -0.707055926322937], 'hand_synergy': [0.9634699821472168, 0.958685576915741], 'seeds': [{'seed_index': 0, 'position_error_m': 0.3173055648803711, 'orientation_error_rad': 0.010053211823105812, 'pose_valid': False, 'collision_checked': False, 'cube_overlap_bodies': [], 'table_overlap_bodies': []}, {'seed_index': 1, 'position_error_m': 0.0025253607891499996, 'orientation_error_rad': 5.5243777751456946e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005368751008063555, 'orientation_error_rad': 0.028609761968255043, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/7",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        52,
+        35,
+        34,
+        36
+      ],
+      "position_error_m": [
+        0.002200581133365631,
+        0.0017038702499121428,
+        0.0027416229713708162,
+        0.001684152870438993
+      ],
+      "orientation_error_rad": [
+        9.048231731867418e-05,
+        5.580544166150503e-05,
+        8.556676766602322e-05,
+        6.57820564811118e-05
+      ],
+      "finger_outward_cos": [
+        0.9960539937019348,
+        0.9997755289077759,
+        0.9990568161010742,
+        0.9969552159309387
+      ],
+      "arm_q": [
+        [
+          -2.467602491378784,
+          -1.7994928359985352,
+          -1.776145577430725,
+          -2.707439422607422,
+          -0.9856723546981812,
+          1.5707305669784546
+        ],
+        [
+          0.10060324519872665,
+          0.3243959844112396,
+          -1.7238959074020386,
+          -4.883665561676025,
+          1.6502139568328857,
+          1.5707976818084717
+        ],
+        [
+          0.16908319294452667,
+          0.3270137310028076,
+          -1.7275269031524658,
+          -4.882637977600098,
+          1.6964455842971802,
+          1.5708030462265015
+        ],
+        [
+          0.21481873095035553,
+          0.32355940341949463,
+          -1.7251269817352295,
+          -4.881600379943848,
+          1.70755934715271,
+          1.5707968473434448
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002200581133365631,
+            "orientation_error_rad": 9.048231731867418e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0017038702499121428,
+            "orientation_error_rad": 5.580544166150503e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0027416229713708162,
+            "orientation_error_rad": 8.556676766602322e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.001684152870438993,
+            "orientation_error_rad": 6.57820564811118e-05,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/8",
+      "passed": false,
+      "error": "Palm-facing reset failed for 1/4 rows; no episode started: [{'env_id': 3, 'attempts': 3, 'position_error_m': 0.0005082171410322189, 'orientation_error_rad': 0.028426069766283035, 'palm_alignment_cos': 0.9995993375778198, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.6945377588272095, 0.02528560161590576, 1.0800000429153442], 'desired_c_position_local_m': [-0.675345778465271, 0.16512668132781982, 1.1126617193222046], 'desired_c_quaternion_wxyz': [0.006130129564553499, 0.7070802450180054, 0.006130129564553499, -0.7070801854133606], 'hand_synergy': [0.9785051941871643, 0.955062985420227], 'seeds': [{'seed_index': 0, 'position_error_m': 0.0016300135757774115, 'orientation_error_rad': 4.319008075981401e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0022379783913493156, 'orientation_error_rad': 5.510430128197186e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0005082171410322189, 'orientation_error_rad': 0.028426069766283035, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    },
+    {
+      "case": "random/9",
+      "passed": false,
+      "error": "Palm-facing reset failed for 1/4 rows; no episode started: [{'env_id': 2, 'attempts': 3, 'position_error_m': 0.0007450105622410774, 'orientation_error_rad': 0.03451773151755333, 'palm_alignment_cos': 0.999421238899231, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4'], 'cube_position_local_m': [-0.7081141471862793, 0.051016807556152344, 1.0800000429153442], 'desired_c_position_local_m': [-0.7081397771835327, 0.18949651718139648, 1.1083005666732788], 'desired_c_quaternion_wxyz': [0.05431842803955078, 0.7050173878669739, 0.05431842803955078, -0.7050173878669739], 'hand_synergy': [0.9067308306694031, 0.9706088900566101], 'seeds': [{'seed_index': 0, 'position_error_m': 0.002080029109492898, 'orientation_error_rad': 2.8848824513261206e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 1, 'position_error_m': 0.0012304673437029123, 'orientation_error_rad': 4.768162398249842e-05, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}, {'seed_index': 2, 'position_error_m': 0.0007450105622410774, 'orientation_error_rad': 0.03451773151755333, 'pose_valid': True, 'collision_checked': True, 'cube_overlap_bodies': [], 'table_overlap_bodies': ['inspire_left_thumb_2', 'inspire_left_thumb_3', 'inspire_thumb_force_sensor_1', 'inspire_left_thumb_4', 'inspire_thumb_force_sensor_2', 'inspire_thumb_force_sensor_3', 'inspire_thumb_force_sensor_4']}]}]"
+    }
+  ],
+  "seed_offsets": [
+    [
+      0.0,
+      1.2,
+      -4.4,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.2,
+      -4.4,
+      3.141592653589793,
+      0.0,
+      0.0
+    ],
+    [
+      -2.0,
+      0.85,
+      -4.4,
+      3.55,
+      -1.87,
+      0.785
+    ]
+  ],
+  "passed": false
+}

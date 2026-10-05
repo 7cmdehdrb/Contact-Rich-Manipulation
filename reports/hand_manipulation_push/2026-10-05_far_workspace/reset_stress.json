@@ -1,0 +1,11 @@
+{
+  "num_envs": 2048,
+  "batch_size": 8,
+  "seed": 42,
+  "partial_reset_rows": 4000,
+  "boundary_reset_rows": 192,
+  "baseline_failure": null,
+  "physx_branch_rows": 33,
+  "elapsed_seconds": 93.42636820097687,
+  "passed": true
+}

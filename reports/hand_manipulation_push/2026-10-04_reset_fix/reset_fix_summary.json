@@ -1,0 +1,71 @@
+{
+  "fix": {
+    "internal_position_tolerance_m": 0.00285,
+    "internal_orientation_tolerance_rad": 0.0475,
+    "final_position_tolerance_m": 0.003,
+    "final_orientation_tolerance_rad": 0.05,
+    "robot_cube_table_clearance_m": 0.004,
+    "max_seeds": 3,
+    "iterations_per_seed_including_refinement": 80,
+    "real_fk_refinements_per_seed_max": 1,
+    "seed_collision_diagnostics_separated": true
+  },
+  "reward_action_ppo_and_scene_configs_unchanged_from_failed_run": true,
+  "tests": {
+    "pure_cpu_passed": 103,
+    "pure_cpu_skipped_optional_usd_import": 1,
+    "gpu_reset_stress": {
+      "num_envs": 2048,
+      "batch_size": 8,
+      "seed": 42,
+      "partial_reset_rows": 8000,
+      "boundary_reset_rows": 192,
+      "baseline_failure": null,
+      "precision_boundary_fixture": {
+        "env_id": 1927,
+        "env_origin_m": [
+          -48.75,
+          37.5,
+          0.0
+        ],
+        "baseline_cached_error_m": 0.0029996400649597815,
+        "baseline_real_error_m": 0.0030003595165908337,
+        "fixed_real_error_m": 0.001129701267927885,
+        "fixed_orientation_error_rad": 7.526484750997042e-06,
+        "final_collision_gate_passed": true
+      },
+      "physx_branch_rows": 33,
+      "elapsed_seconds": 312.63246489001904,
+      "passed": true
+    }
+  },
+  "original_checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-04_20-07-43/model_50.pt",
+  "ppo_validation_directory": "logs/rsl_rl/hand_manipulation_push/2026-10-04_20-50-14_reset_fix_validation",
+  "ppo_validation_completed": true,
+  "reproduction_note": "Original random reset failure was not reencountered in 8,000 baseline rows. A deterministic 3mm stopping-boundary fixture was reproduced with the actual robot and PhysX FK at env1927; both software and actual poses and final OBB gate are recorded.",
+  "ppo_validation": {
+    "iterations": [
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59
+    ],
+    "num_envs": 2048,
+    "rollout_steps": 36,
+    "environment_transitions": 737280,
+    "seconds_total": 115.16,
+    "collection_seconds_mean": 10.976700000000001,
+    "collection_seconds_range": [
+      10.271,
+      11.507
+    ],
+    "final_checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-04_20-50-14_reset_fix_validation/model_59.pt",
+    "checkpoint_load_and_optimizer_verified": true
+  }
+}

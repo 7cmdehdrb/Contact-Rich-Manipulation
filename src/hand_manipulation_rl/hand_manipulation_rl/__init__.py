@@ -7,6 +7,7 @@ math and MDP helpers exposed here.
 TASK_ID = "Isaac-Blind-Sweep-Inspire-v0"
 APPROACH_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v0"
 APPROACH_V1_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v1"
+APPROACH_V2_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v2"
 
 
 def _register_task() -> None:
@@ -59,8 +60,28 @@ def _register_task() -> None:
                 ),
             },
         )
+    if APPROACH_V2_TASK_ID not in gym.registry:
+        gym.register(
+            id=APPROACH_V2_TASK_ID,
+            entry_point="hand_manipulation_rl.env_v2:BlindSweepApproachV2Env",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": (
+                    "hand_manipulation_rl.env_v2_cfg:BlindSweepApproachV2EnvCfg"
+                ),
+                "rsl_rl_cfg_entry_point": (
+                    "hand_manipulation_rl.agents.rsl_rl_ppo_cfg_v2:"
+                    "BlindSweepApproachV2PPORunnerCfg"
+                ),
+            },
+        )
 
 
 _register_task()
 
-__all__ = ["APPROACH_TASK_ID", "APPROACH_V1_TASK_ID", "TASK_ID"]
+__all__ = [
+    "APPROACH_TASK_ID",
+    "APPROACH_V1_TASK_ID",
+    "APPROACH_V2_TASK_ID",
+    "TASK_ID",
+]

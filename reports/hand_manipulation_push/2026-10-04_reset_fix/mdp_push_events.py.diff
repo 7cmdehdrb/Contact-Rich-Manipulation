@@ -1,0 +1,124 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_20-07-43/source/hand_manipulation_test/mdp/push_events.py
++++ src/hand_manipulation_test/hand_manipulation_test/mdp/push_events.py
+@@ -12,7 +12,10 @@
+ 
+ from ..action_math import quaternion_rotate
+ from ..push_math import push_palm_start_pose
+-from ..reset_kinematics import NumpySerialArmKinematics, serial_arm_kinematics_from_usd
++from ..reset_kinematics import (
++    NumpySerialArmKinematics, bounded_dls_correction, cached_ik_convergence_tolerances,
++    serial_arm_kinematics_from_usd,
++)
+ from .contact_events import ContactSafePoseReset, _ids
+ 
+ 
+@@ -51,6 +54,7 @@
+         )
+         self._ik_identity = torch.eye(6, device=env.device).unsqueeze(0)
+         self._numpy_arm_kinematics = NumpySerialArmKinematics(self._arm_kinematics)
++        self.reset_io_counters["real_fk_refinements"] = 0
+ 
+     def cached_control_pose_w(self, env_ids=None, joint_positions=None):
+         """Expose cached FK for comparison with real simulator link poses."""
+@@ -84,6 +88,9 @@
+ 
+     def _solve_seed_numpy(self, env_ids):
+         task = self._env.cfg.task
++        position_tolerance, orientation_tolerance = cached_ik_convergence_tolerances(
++            task.reset_position_tolerance_m, task.reset_orientation_tolerance_rad
++        )
+         q = self.robot.data.joint_pos[env_ids].clone()
+         limits = self.robot.data.soft_joint_pos_limits[env_ids][:, self.arm_joint_ids]
+         lower = limits[..., 0] + task.reset_joint_limit_margin_rad
+@@ -98,8 +105,8 @@
+             data[:, :6], data[:, 6:13], data[:, 13:20], data[:, 20:26], data[:, 26:32],
+             max_iterations=task.reset_max_iterations, damping=task.reset_damping, step_size=task.reset_step_size,
+             position_error_step=task.reset_position_error_step_m, orientation_error_step=task.reset_orientation_error_step_rad,
+-            delta_limit=task.reset_joint_delta_limit_rad, position_tolerance=task.reset_position_tolerance_m,
+-            orientation_tolerance=task.reset_orientation_tolerance_rad,
++            delta_limit=task.reset_joint_delta_limit_rad, position_tolerance=position_tolerance,
++            orientation_tolerance=orientation_tolerance,
+         )
+         self.reset_io_counters["numpy_fk_batches"] += batches
+         self.reset_io_counters["software_fk_batches"] += batches
+@@ -108,26 +115,27 @@
+         # transfer; all hand states and non-arm joints remain the sampled seed.
+         result = torch.as_tensor(np.concatenate((solved_q, counts[:, None]), axis=-1), device=self._env.device, dtype=q.dtype)
+         q[:, self.arm_joint_ids] = result[:, :6]
+-        self.ik_iterations[env_ids] += result[:, 6].to(dtype=torch.long)
++        seed_iterations = result[:, 6].to(dtype=torch.long)
++        self.ik_iterations[env_ids] += seed_iterations
+         self._write_reset_joint_state(q, torch.zeros_like(q), env_ids)
+-        position_error, rotation_error = self._pose_errors(env_ids)
+-        self.position_error_m[env_ids] = position_error.norm(dim=-1)
+-        self.orientation_error_rad[env_ids] = rotation_error.norm(dim=-1)
+-        return (self.position_error_m[env_ids] <= task.reset_position_tolerance_m) & (
+-            self.orientation_error_rad[env_ids] <= task.reset_orientation_tolerance_rad
+-        )
++        return self._finish_cached_seed(env_ids, seed_iterations)
+ 
+     def _solve_seed_torch(self, env_ids, hand_targets):
+         task = self._env.cfg.task
++        position_tolerance, orientation_tolerance = cached_ik_convergence_tolerances(
++            task.reset_position_tolerance_m, task.reset_orientation_tolerance_rad
++        )
+         q = self.robot.data.joint_pos[env_ids].clone()
+         root = self.robot.data.root_link_pose_w[env_ids]
+         converged = torch.zeros(len(env_ids), dtype=torch.bool, device=self._env.device)
++        seed_iterations = torch.zeros(len(env_ids), dtype=torch.long, device=self._env.device)
+         for _ in range(task.reset_max_iterations):
+             rows = torch.where(~converged)[0]
+             if rows.numel() == 0:
+                 break
+             active_ids = env_ids[rows]
+             self.ik_iterations[active_ids] += 1
++            seed_iterations[rows] += 1
+             position, quaternion, jacobian = self._arm_kinematics.pose_and_jacobian(
+                 q[rows][:, self.arm_joint_ids], root[rows]
+             )
+@@ -137,8 +145,8 @@
+                 position, quaternion, self.desired_c_pos_w[active_ids], self.desired_c_quat_w[active_ids],
+                 rot_error_type="axis_angle",
+             )
+-            reached = (pos_error.norm(dim=-1) <= task.reset_position_tolerance_m) & (
+-                rot_error.norm(dim=-1) <= task.reset_orientation_tolerance_rad
++            reached = (pos_error.norm(dim=-1) <= position_tolerance) & (
++                rot_error.norm(dim=-1) <= orientation_tolerance
+             )
+             converged[rows[reached]] = True
+             solve_rows = rows[~reached]
+@@ -162,7 +170,34 @@
+         # One endpoint write refreshes real link FK for the existing pose,
+         # joint-limit and complete robot/Cube/Table collision certification.
+         self._write_reset_joint_state(q, torch.zeros_like(q), env_ids)
++        return self._finish_cached_seed(env_ids, seed_iterations)
++
++    def _finish_cached_seed(self, env_ids, seed_iterations):
++        """Check stored poses; refine at most once within the same seed budget."""
++
++        task = self._env.cfg.task
+         position_error, rotation_error = self._pose_errors(env_ids)
++        outside = (position_error.norm(dim=-1) > task.reset_position_tolerance_m) | (
++            rotation_error.norm(dim=-1) > task.reset_orientation_tolerance_rad
++        )
++        rows = torch.where(outside & (seed_iterations < task.reset_max_iterations))[0]
++        if rows.numel():
++            index = env_ids[rows]
++            # This rare path uses measured link FK/Jacobians, rather than
++            # repeating the same cached estimate after a float32 writeback.
++            delta = bounded_dls_correction(
++                self._numerical_control_jacobian(index), position_error[rows], rotation_error[rows],
++                damping=task.reset_damping, step_size=task.reset_step_size,
++                position_error_step=task.reset_position_error_step_m,
++                orientation_error_step=task.reset_orientation_error_step_rad,
++                delta_limit=task.reset_joint_delta_limit_rad,
++            )
++            q = self.robot.data.joint_pos[index].clone()
++            q[:, self.arm_joint_ids] = self._bounded_arm(q[:, self.arm_joint_ids] + delta, index)
++            self._write_reset_joint_state(q, torch.zeros_like(q), index)
++            self.ik_iterations[index] += 1
++            self.reset_io_counters["real_fk_refinements"] += 1
++            position_error, rotation_error = self._pose_errors(env_ids)
+         self.position_error_m[env_ids] = position_error.norm(dim=-1)
+         self.orientation_error_rad[env_ids] = rotation_error.norm(dim=-1)
+         return (self.position_error_m[env_ids] <= task.reset_position_tolerance_m) & (

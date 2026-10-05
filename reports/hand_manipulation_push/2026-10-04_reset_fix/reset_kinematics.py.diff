@@ -1,0 +1,39 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_20-07-43/source/hand_manipulation_test/reset_kinematics.py
++++ src/hand_manipulation_test/hand_manipulation_test/reset_kinematics.py
+@@ -10,6 +10,29 @@
+ import numpy as np
+ 
+ from .action_math import quaternion_conjugate, quaternion_multiply, quaternion_rotate
++
++
++def cached_ik_convergence_tolerances(position_tolerance: float, orientation_tolerance: float):
++    """Leave room for float32 joint storage and the independent PhysX FK gate.
++
++    These are internal stopping criteria. The configured final tolerances and
++    collision clearance remain authoritative and are never relaxed.
++    """
++
++    return .95 * position_tolerance, .95 * orientation_tolerance
++
++
++def bounded_dls_correction(jacobian, position_error, rotation_error, *, damping, step_size,
++                           position_error_step, orientation_error_step, delta_limit):
++    """One measured-FK correction with the existing reset's step bounds."""
++
++    position_error = position_error * (position_error_step / position_error.norm(dim=-1, keepdim=True).clamp_min(1.e-9)).clamp(max=1.)
++    rotation_error = rotation_error * (orientation_error_step / rotation_error.norm(dim=-1, keepdim=True).clamp_min(1.e-9)).clamp(max=1.)
++    error = torch.cat((position_error, rotation_error), dim=-1).unsqueeze(-1)
++    identity = torch.eye(6, dtype=jacobian.dtype, device=jacobian.device).unsqueeze(0)
++    transpose = jacobian.transpose(1, 2)
++    solution = torch.linalg.solve(jacobian @ transpose + damping**2 * identity, error)
++    return (step_size * (transpose @ solution).squeeze(-1)).clamp(-delta_limit, delta_limit)
+ 
+ 
+ def rotation_vector_from_quaternion(quaternion: torch.Tensor) -> torch.Tensor:
+@@ -240,4 +263,5 @@
+     return SerialArmKinematics(tensor(parent_frames), tensor(child_frames), tensor(axes), tensor(pose(control * hand_frame)))
+ 
+ 
+-__all__ = ["SerialArmKinematics", "NumpySerialArmKinematics", "rotation_vector_from_quaternion", "serial_arm_kinematics_from_usd"]
++__all__ = ["SerialArmKinematics", "NumpySerialArmKinematics", "rotation_vector_from_quaternion", "serial_arm_kinematics_from_usd",
++           "cached_ik_convergence_tolerances", "bounded_dls_correction"]

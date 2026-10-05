@@ -1,0 +1,27 @@
+{
+  "num_envs": 2048,
+  "steps": 60,
+  "device": "cuda:0",
+  "legacy_reset": true,
+  "markers": false,
+  "creation_s": 16.59205157199176,
+  "reset_seconds_by_batch_size": {
+    "1": [
+      0.6353627080097795,
+      0.6502567649877165
+    ],
+    "8": [
+      1.2276916010014247,
+      1.2537150789867155
+    ],
+    "2048": [
+      1.5657216539839283,
+      1.6589518529945053
+    ]
+  },
+  "policy_step_mean_s": 0.07902844083340217,
+  "environment_steps_per_second": 25914.721059945194,
+  "rollout_36_steps_s": 2.8450238700024784,
+  "terminated_rows_during_steps": 0,
+  "reset_work_during_steps": false
+}

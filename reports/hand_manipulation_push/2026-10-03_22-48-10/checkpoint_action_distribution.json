@@ -1,0 +1,481 @@
+{
+  "run_directory": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10",
+  "audit_method": "Read-only checkpoint loading on CPU with torch.load(weights_only=True); TensorBoard scalar event read; local installed RSL-RL source inspection. No simulator launch and no recorded action samples available.",
+  "saved_distribution": {
+    "class": "GaussianDistribution",
+    "std_type": "scalar",
+    "state_independent_std": true,
+    "number_of_independently_learned_std_parameters": 8,
+    "init_std": 1.0,
+    "std_upper_bound_in_implementation": null,
+    "clip_actions_in_saved_runner_config": null,
+    "environment_action_clamp": [
+      -1.0,
+      1.0
+    ]
+  },
+  "probability_method": {
+    "formula": "For each coordinate X~Normal(mu,sigma), P(abs(X)>1) >= 1-erf(1/(sqrt(2)*sigma)); the minimum over any mu is attained at mu=0.",
+    "joint_bound": "The diagonal Gaussian coordinates are independent conditional on an observation; multiplying the individual lower bounds gives a lower bound that holds for each observation. The actual observation-dependent means were not recorded or evaluated.",
+    "interpretation": "These are analytical probabilities under each saved Gaussian, not observed saturation rates. Clipping maps the six arm commands to endpoints; the two hand requests are additionally limited by synergy and joint-target rates before actuator execution."
+  },
+  "checkpoints": [
+    {
+      "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/model_0.pt",
+      "saved_iteration": 0,
+      "actor_parameters_finite": true,
+      "coordinate_labels": [
+        "eef_translation_x",
+        "eef_translation_y",
+        "eef_translation_z",
+        "eef_rotation_x",
+        "eef_rotation_y",
+        "eef_rotation_z",
+        "hand_common_flexion",
+        "hand_thumb_1"
+      ],
+      "std_by_coordinate": [
+        1.007188081741333,
+        1.008417010307312,
+        1.0046923160552979,
+        0.9967669248580933,
+        1.0123169422149658,
+        1.0170665979385376,
+        1.0020567178726196,
+        1.0063998699188232
+      ],
+      "mean_std": 1.0068630576133728,
+      "raw_diagonal_gaussian_entropy_nats": 11.406093838586653,
+      "entropy_coefficient": 0.005,
+      "entropy_loss_contribution": -0.05703046919293327,
+      "raw_action_outside_minus1_plus1_probability_lower_bound_by_coordinate": [
+        0.3207766168196301,
+        0.3213667063527639,
+        0.3195759865207969,
+        0.31574335955052957,
+        0.32323448260591414,
+        0.3254992801222588,
+        0.3183048153364919,
+        0.32039775980184304
+      ],
+      "all8_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.00011161237389853381,
+      "all6_arm_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.001094409024858176,
+      "expected_raw_action_coordinates_outside_bounds_lower_bound": 2.5648990071102284,
+      "actor_mlp_parameter_count": 57544,
+      "actor_mlp_parameter_l2_norm": 13.205585095064082,
+      "actor_mlp_parameter_delta_l2_vs_model0": 0.0,
+      "actor_mlp_parameter_delta_relative_to_model0_norm": 0.0,
+      "actor_mlp_parameter_delta_l2_vs_previous_selected_checkpoint": null,
+      "optimizer_param_group_learning_rates": [
+        0.01
+      ]
+    },
+    {
+      "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/model_100.pt",
+      "saved_iteration": 100,
+      "actor_parameters_finite": true,
+      "coordinate_labels": [
+        "eef_translation_x",
+        "eef_translation_y",
+        "eef_translation_z",
+        "eef_rotation_x",
+        "eef_rotation_y",
+        "eef_rotation_z",
+        "hand_common_flexion",
+        "hand_thumb_1"
+      ],
+      "std_by_coordinate": [
+        2.938920736312866,
+        2.412818670272827,
+        3.4213905334472656,
+        2.950021266937256,
+        3.1329002380371094,
+        3.071669101715088,
+        3.278719663619995,
+        3.176215410232544
+      ],
+      "mean_std": 3.047831952571869,
+      "raw_diagonal_gaussian_entropy_nats": 20.229529386084664,
+      "entropy_coefficient": 0.005,
+      "entropy_loss_contribution": -0.10114764693042333,
+      "raw_action_outside_minus1_plus1_probability_lower_bound_by_coordinate": [
+        0.7336600120928612,
+        0.6785423616361272,
+        0.7700734486240802,
+        0.73462433947149,
+        0.7495801225620327,
+        0.7447603822812658,
+        0.7603683584987537,
+        0.7528830580566905
+      ],
+      "all8_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.09000268497012998,
+      "all6_arm_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.15721859289302684,
+      "expected_raw_action_coordinates_outside_bounds_lower_bound": 5.924492083223301,
+      "actor_mlp_parameter_count": 57544,
+      "actor_mlp_parameter_l2_norm": 56.098052414220305,
+      "actor_mlp_parameter_delta_l2_vs_model0": 53.21267210268233,
+      "actor_mlp_parameter_delta_relative_to_model0_norm": 4.029558078617198,
+      "actor_mlp_parameter_delta_l2_vs_previous_selected_checkpoint": 53.21267210268233,
+      "optimizer_param_group_learning_rates": [
+        0.0005766503906250002
+      ]
+    },
+    {
+      "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/model_500.pt",
+      "saved_iteration": 500,
+      "actor_parameters_finite": true,
+      "coordinate_labels": [
+        "eef_translation_x",
+        "eef_translation_y",
+        "eef_translation_z",
+        "eef_rotation_x",
+        "eef_rotation_y",
+        "eef_rotation_z",
+        "hand_common_flexion",
+        "hand_thumb_1"
+      ],
+      "std_by_coordinate": [
+        14.038596153259277,
+        10.664421081542969,
+        22.037189483642578,
+        17.335424423217773,
+        17.02216339111328,
+        19.544904708862305,
+        22.046079635620117,
+        20.670515060424805
+      ],
+      "mean_std": 17.919911742210388,
+      "raw_diagonal_gaussian_entropy_nats": 34.234789189228394,
+      "entropy_coefficient": 0.005,
+      "entropy_loss_contribution": -0.17117394594614196,
+      "raw_action_outside_minus1_plus1_probability_lower_bound_by_coordinate": [
+        0.9432129596445269,
+        0.9252920691347559,
+        0.963806146021061,
+        0.9539992644300289,
+        0.9531536716933838,
+        0.9591946548132452,
+        0.9638207312990501,
+        0.9614149219653214
+      ],
+      "all8_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.6798343860008802,
+      "all6_arm_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.7336619662711626,
+      "expected_raw_action_coordinates_outside_bounds_lower_bound": 7.623894419001374,
+      "actor_mlp_parameter_count": 57544,
+      "actor_mlp_parameter_l2_norm": 137.4518948824552,
+      "actor_mlp_parameter_delta_l2_vs_model0": 135.3296835263417,
+      "actor_mlp_parameter_delta_relative_to_model0_norm": 10.24791272420974,
+      "actor_mlp_parameter_delta_l2_vs_previous_selected_checkpoint": 106.55633805827757,
+      "optimizer_param_group_learning_rates": [
+        0.0019461950683593758
+      ]
+    },
+    {
+      "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/model_1000.pt",
+      "saved_iteration": 1000,
+      "actor_parameters_finite": true,
+      "coordinate_labels": [
+        "eef_translation_x",
+        "eef_translation_y",
+        "eef_translation_z",
+        "eef_rotation_x",
+        "eef_rotation_y",
+        "eef_rotation_z",
+        "hand_common_flexion",
+        "hand_thumb_1"
+      ],
+      "std_by_coordinate": [
+        30.353036880493164,
+        27.881929397583008,
+        55.294151306152344,
+        47.88300704956055,
+        35.76538848876953,
+        49.888450622558594,
+        54.9675178527832,
+        55.1002082824707
+      ],
+      "mean_std": 44.64171123504639,
+      "raw_diagonal_gaussian_entropy_nats": 41.47647752155608,
+      "entropy_coefficient": 0.005,
+      "entropy_loss_contribution": -0.20738238760778038,
+      "raw_action_outside_minus1_plus1_probability_lower_bound_by_coordinate": [
+        0.9737179430128047,
+        0.9713895862615111,
+        0.9855709681768654,
+        0.9833380020590501,
+        0.9776940598857015,
+        0.9840076987033407,
+        0.9854852359793316,
+        0.9855201860935311
+      ],
+      "all8_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.8565139899544986,
+      "all6_arm_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.8818989274794313,
+      "expected_raw_action_coordinates_outside_bounds_lower_bound": 7.846723680172136,
+      "actor_mlp_parameter_count": 57544,
+      "actor_mlp_parameter_l2_norm": 197.26720325881573,
+      "actor_mlp_parameter_delta_l2_vs_model0": 195.3840720979767,
+      "actor_mlp_parameter_delta_relative_to_model0_norm": 14.795563444667545,
+      "actor_mlp_parameter_delta_l2_vs_previous_selected_checkpoint": 111.23117333026812,
+      "optimizer_param_group_learning_rates": [
+        0.01
+      ]
+    },
+    {
+      "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/model_1950.pt",
+      "saved_iteration": 1950,
+      "actor_parameters_finite": true,
+      "coordinate_labels": [
+        "eef_translation_x",
+        "eef_translation_y",
+        "eef_translation_z",
+        "eef_rotation_x",
+        "eef_rotation_y",
+        "eef_rotation_z",
+        "hand_common_flexion",
+        "hand_thumb_1"
+      ],
+      "std_by_coordinate": [
+        41.6305046081543,
+        59.51255798339844,
+        101.58216094970703,
+        88.93218994140625,
+        49.27402877807617,
+        95.8215560913086,
+        97.05634307861328,
+        98.09123229980469
+      ],
+      "mean_std": 78.9875717163086,
+      "raw_diagonal_gaussian_entropy_nats": 45.89634537140853,
+      "entropy_coefficient": 0.005,
+      "entropy_loss_contribution": -0.22948172685704266,
+      "raw_action_outside_minus1_plus1_probability_lower_bound_by_coordinate": [
+        0.980835979652269,
+        0.9865936359863313,
+        0.9921455532500115,
+        0.9910283582620039,
+        0.9838083101236105,
+        0.9916733759035279,
+        0.9917793065474497,
+        0.991866034082119
+      ],
+      "all8_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.9131526243889214,
+      "all6_arm_raw_actions_outside_bounds_probability_lower_bound_conditional_on_observation": 0.9282721282248921,
+      "expected_raw_action_coordinates_outside_bounds_lower_bound": 7.909730553807323,
+      "actor_mlp_parameter_count": 57544,
+      "actor_mlp_parameter_l2_norm": 265.60876862739536,
+      "actor_mlp_parameter_delta_l2_vs_model0": 263.9155659883811,
+      "actor_mlp_parameter_delta_relative_to_model0_norm": 19.985147503008115,
+      "actor_mlp_parameter_delta_l2_vs_previous_selected_checkpoint": 142.39747296266697,
+      "optimizer_param_group_learning_rates": [
+        1e-05
+      ]
+    }
+  ],
+  "tensorboard_event_file": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/events.out.tfevents.1791035310.min-System-Product-Name.964128.0",
+  "tensorboard_scalars": {
+    "Policy/mean_std": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 79.1303482055664,
+      "last100_mean": 78.08927726745605,
+      "last100_min": 76.9321060180664,
+      "last100_max": 79.1303482055664
+    },
+    "Loss/entropy": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 45.90889358520508,
+      "last100_mean": 45.80142078399658,
+      "last100_min": 45.67831802368164,
+      "last100_max": 45.90889358520508
+    },
+    "Loss/surrogate": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": -0.007358343340456486,
+      "last100_mean": -0.004078455416311045,
+      "last100_min": -0.013172321952879429,
+      "last100_max": 0.007644810248166323
+    },
+    "Loss/value": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 0.00011592938244575635,
+      "last100_mean": 0.001614314299658872,
+      "last100_min": 9.391770436195657e-05,
+      "last100_max": 0.044903188943862915
+    },
+    "Loss/learning_rate": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 0.0019461950287222862,
+      "last100_mean": 0.0017984324819917674,
+      "last100_min": 9.999999747378752e-06,
+      "last100_max": 0.0065684085711836815
+    },
+    "Train/mean_reward": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 0.16985732316970825,
+      "last100_mean": 0.1319002761505544,
+      "last100_min": 0.02646450698375702,
+      "last100_max": 0.18003123998641968
+    },
+    "Episode_Termination/success": {
+      "count": 1960,
+      "first_step": 0,
+      "last_step": 1959,
+      "last_value": 0.0,
+      "last100_mean": 0.0,
+      "last100_min": 0.0,
+      "last100_max": 0.0
+    }
+  },
+  "std_trend": {
+    "positive_changes": 1843,
+    "negative_changes": 115,
+    "zero_changes": 1,
+    "largest_negative_change": -0.10628890991210938
+  },
+  "checkpoint_vs_log": {
+    "last_checkpoint_iteration": 1950,
+    "last_logged_zero_based_step": 1959,
+    "number_of_logged_iterations": 1960,
+    "logged_updates_after_last_checkpoint": 9,
+    "note": "1960 logged iterations correspond to step0 through step1959. Periodic save_interval=50 explains why model1950 is the latest periodic checkpoint; the available artifacts alone do not establish why the final save did not occur. Model0 was saved after the first update, not before training."
+  },
+  "objective_interpretation": {
+    "ppo_loss": "surrogate_loss + value_loss_coef * value_loss - entropy_coef * raw_normal_entropy",
+    "final_logged_entropy_loss_contribution": -0.2295444679260254,
+    "last100_logged_entropy_loss_contribution_mean": -0.2290071039199829,
+    "limits": "The entropy term is numerically much larger than logged surrogate/value losses late in this run. Loss magnitudes alone do not prove gradient-norm dominance; gradients, recorded actions, and observations were not saved.",
+    "clipping_gradient": "PPO uses log-probability score gradients on the stored raw Gaussian action; it does not backpropagate through simulator action clipping. Saturation therefore does not zero every PPO gradient. It removes distinctions between raw tail amplitudes in the environment while raw Gaussian entropy continues to increase without a std cap.",
+    "reward_logging": "RewardManager already multiplies each term by its configured weight and policy dt; Episode_Reward is its episodic sum divided by max_episode_length_s (10). These logged rates are not raw reward functions or PPO loss units. Advantages are normalized over the rollout.",
+    "deterministic_playback": "play.py calls policy(observation) with stochastic_output default False; the MLP returns the mean. Training calls stochastic_output=True and samples the Gaussian. Replay omits the large std by design; deterministic replay return need not match stochastic training return."
+  },
+  "source_references": {
+    "saved_actor_distribution_config": {
+      "path": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/params/agent.yaml",
+      "lines": [
+        33,
+        34
+      ]
+    },
+    "saved_entropy_and_schedule_config": {
+      "path": "logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10/params/agent.yaml",
+      "lines": [
+        48,
+        49,
+        52,
+        53,
+        59
+      ]
+    },
+    "gaussian_std_and_sampling": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/modules/distribution.py",
+      "lines": [
+        155,
+        157,
+        169,
+        173,
+        176,
+        178,
+        180
+      ]
+    },
+    "gaussian_raw_entropy_log_probability": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/modules/distribution.py",
+      "lines": [
+        205,
+        208,
+        215,
+        217
+      ]
+    },
+    "ppo_raw_action_collection": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/algorithms/ppo.py",
+      "lines": [
+        144,
+        146
+      ]
+    },
+    "ppo_ratio_entropy_loss": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/algorithms/ppo.py",
+      "lines": [
+        262,
+        266,
+        297,
+        313
+      ]
+    },
+    "ppo_adaptive_learning_rate": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/algorithms/ppo.py",
+      "lines": [
+        269,
+        281,
+        282,
+        283,
+        284
+      ]
+    },
+    "ppo_advantage_normalization": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/algorithms/ppo.py",
+      "lines": [
+        208,
+        209
+      ]
+    },
+    "arm_and_hand_action_clipping": {
+      "path": "src/hand_manipulation_test/hand_manipulation_test/mdp/actions.py",
+      "lines": [
+        242,
+        243,
+        537,
+        539,
+        541,
+        547,
+        571
+      ]
+    },
+    "deterministic_play_policy_call": {
+      "path": "src/hand_manipulation_test/scripts/play.py",
+      "lines": [
+        84,
+        90
+      ]
+    },
+    "deterministic_actor_default": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/models/mlp_model.py",
+      "lines": [
+        87,
+        103,
+        104,
+        107
+      ]
+    },
+    "reward_weight_dt_and_logged_episode_rate": {
+      "path": "IsaacLab/source/isaaclab/isaaclab/managers/reward_manager.py",
+      "lines": [
+        120,
+        150
+      ]
+    },
+    "runner_logging_and_saving": {
+      "path": "/home/min/miniconda3/envs/env_isaaclab/lib/python3.11/site-packages/rsl_rl/runners/on_policy_runner.py",
+      "lines": [
+        108,
+        112,
+        128,
+        129,
+        133,
+        139
+      ]
+    }
+  }
+}

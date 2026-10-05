@@ -1,0 +1,91 @@
+{
+  "table_center_world_m": [
+    -0.75,
+    0.0,
+    1.03
+  ],
+  "push_distance_from_base_xy_m": 0.75,
+  "push_distance_increase_m": 0.25,
+  "common_table_owner": "ContactTaskCfg",
+  "push_table_override_removed": true,
+  "dynamic_table_relative_cube_spawn": true,
+  "contact_cube_xy_low_m": [
+    -0.82,
+    -0.22
+  ],
+  "contact_cube_xy_high_m": [
+    -0.63,
+    0.22
+  ],
+  "push_cube_xy_low_m": [
+    -0.71,
+    -0.06
+  ],
+  "push_cube_xy_high_m": [
+    -0.69,
+    0.06
+  ],
+  "push_initial_pad_offset_task_m": [
+    0.14,
+    0.0,
+    0.1
+  ],
+  "initial_finger_direction": "H +Z along projected world -X on both push sides; actual FK must point away from base",
+  "final_position_tolerance_m": 0.003,
+  "final_rotation_tolerance_rad": 0.05,
+  "collision_clearance_m": 0.004,
+  "seeds_max": 3,
+  "iterations_per_seed_max": 80,
+  "reward_observation_action_osc_ppo_unchanged": true,
+  "tests": {
+    "cpu_passed": 111,
+    "cpu_skipped_optional_pxr": 1,
+    "gpu_push_boundary_and_random_rows": 424,
+    "gpu_contact_rows": 44,
+    "hold_steps_each": 50,
+    "push_smoke_500_step_timeout_and_hand_range": true,
+    "large_grid_reset_stress": {
+      "num_envs": 2048,
+      "batch_size": 8,
+      "seed": 42,
+      "partial_reset_rows": 4000,
+      "boundary_reset_rows": 192,
+      "baseline_failure": null,
+      "physx_branch_rows": 33,
+      "elapsed_seconds": 93.42636820097687,
+      "passed": true
+    }
+  },
+  "ppo_validation_completed": true,
+  "limitations": [
+    "Outward finger pose is certified at reset; the policy retains its existing orientation actions.",
+    "Existing checkpoints load with the same 61D/8D contract, but were trained on the previous geometry.",
+    "Horizontal physical-push fixture does not include a downward approach from the new 10cm initial height."
+  ],
+  "ppo_validation": {
+    "run_directory": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-05_13-25-21_far_workspace_validation",
+    "num_envs": 2048,
+    "iterations": 2,
+    "elapsed_s": 18.77,
+    "collection_s": [
+      8.241,
+      7.325
+    ],
+    "checkpoint_cpu_load_verified": true,
+    "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-05_13-25-21_far_workspace_validation/model_1.pt"
+  },
+  "changed_package_files": [
+    "config/ur5e/contact_env_cfg.py",
+    "config/ur5e/push_env_cfg.py",
+    "mdp/contact_events.py",
+    "mdp/push_events.py",
+    "push_math.py"
+  ],
+  "existing_checkpoint_play": {
+    "checkpoint": "logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/model_4850.pt",
+    "envs": 2,
+    "steps": 50,
+    "passed": true,
+    "push_task_success_evaluated": false
+  }
+}

@@ -1,0 +1,920 @@
+{
+  "openblas_threads": 2,
+  "accepted_q_bitwise_identical": true,
+  "results": [
+    {
+      "mode": "generic_np_cross",
+      "profile_total_seconds": 5.488773839999994,
+      "profile_solver_cumulative_seconds": 5.09646307,
+      "seed_attempts": 44,
+      "80iter_attempts": 4,
+      "accepted_seed_hist": [
+        8,
+        12,
+        4
+      ],
+      "rows": [
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 52,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 43,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 17,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 26,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 68,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 14,
+              "hits": [
+                "Table:forearm_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 5,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 73,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 46,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 16,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 26,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 66,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 13,
+              "hits": [
+                "Table:forearm_link",
+                "Table:upper_arm_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 5,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 41,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 31,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "fixed_xyz",
+      "profile_total_seconds": 2.919455561000001,
+      "profile_solver_cumulative_seconds": 2.583745805,
+      "seed_attempts": 44,
+      "80iter_attempts": 4,
+      "accepted_seed_hist": [
+        8,
+        12,
+        4
+      ],
+      "rows": [
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 52,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 43,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 17,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": -0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 26,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 68,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 14,
+              "hits": [
+                "Table:forearm_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 5,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 73,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.46,
+          "y": 0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 46,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 16,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 30,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 28,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": -0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 29,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 26,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": -10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 64,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 0,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 66,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 10,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 80,
+              "hits": [
+                "IK"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 13,
+              "hits": [
+                "Table:forearm_link",
+                "Table:upper_arm_link"
+              ]
+            },
+            {
+              "seed": 2,
+              "iterations": 5,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 170,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 41,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 180,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 32,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 29,
+              "hits": []
+            }
+          ]
+        },
+        {
+          "x": -0.44,
+          "y": 0.06,
+          "angle": 190,
+          "attempts": [
+            {
+              "seed": 0,
+              "iterations": 31,
+              "hits": [
+                "Table:forearm_link",
+                "Table:wrist_1_link"
+              ]
+            },
+            {
+              "seed": 1,
+              "iterations": 27,
+              "hits": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

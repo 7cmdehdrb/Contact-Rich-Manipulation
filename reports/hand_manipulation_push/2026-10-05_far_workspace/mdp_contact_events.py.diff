@@ -1,0 +1,35 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/source/hand_manipulation_test/mdp/contact_events.py
++++ src/hand_manipulation_test/hand_manipulation_test/mdp/contact_events.py
+@@ -318,6 +318,22 @@
+         self._write_reset_joint_position(base_q, env_ids)
+         return torch.stack(columns, dim=-1)
+ 
++    def _finger_outward_cos(self, env_ids, hand_quaternion=None):
++        """Measure actual H +Z against the horizontal base-to-table direction."""
++
++        if hand_quaternion is None:
++            _, hand_quaternion = self.palm_reference_pose_w(env_ids)
++        outward = (
++            self._env.scene["table"].data.root_pos_w[env_ids]
++            - self.robot.data.root_link_pos_w[env_ids]
++        )
++        outward[:, 2] = 0.0
++        outward = torch.nn.functional.normalize(outward, dim=-1)
++        finger = quaternion_rotate(
++            hand_quaternion, outward.new_tensor((0.0, 0.0, 1.0)).expand(len(env_ids), -1)
++        )
++        return (finger * outward).sum(dim=-1)
++
+     def _check_pose_and_limits(self, env_ids):
+         task = self._env.cfg.task
+         position_error, rotation_error = self._pose_errors(env_ids)
+@@ -336,7 +352,8 @@
+                 & (wrist >= task.reset_wrist_3_range_rad[0]) & (wrist <= task.reset_wrist_3_range_rad[1])
+                 & (self.position_error_m[env_ids] <= task.reset_position_tolerance_m)
+                 & (self.orientation_error_rad[env_ids] <= task.reset_orientation_tolerance_rad)
+-                & (alignment >= math.cos(task.reset_orientation_tolerance_rad)))
++                & (alignment >= math.cos(task.reset_orientation_tolerance_rad))
++                & (self._finger_outward_cos(env_ids, hand_quat) > 0.0))
+ 
+     def _collision_free(self, env_ids):
+         task = self._env.cfg.task

@@ -1,0 +1,45 @@
+{
+  "num_envs": 2048,
+  "steps": 36,
+  "device": "cuda:0",
+  "legacy_reset": false,
+  "markers": false,
+  "stagger_timeouts": true,
+  "creation_s": 15.578328420990147,
+  "reset_seconds_by_batch_size": {
+    "1": [
+      0.33919904098729603
+    ],
+    "8": [
+      0.4254414059978444
+    ],
+    "2048": [
+      1.698023036995437
+    ]
+  },
+  "policy_step_mean_s": 0.317324278305427,
+  "environment_steps_per_second": 6453.965674913738,
+  "rollout_36_steps_s": 11.42367401899537,
+  "terminated_rows_during_steps": 138,
+  "rollout_reset_calls": 35,
+  "rollout_reset_rows": 138,
+  "reset_work_during_steps": true,
+  "reset_io_counters": {
+    "joint_state_writes": 611,
+    "joint_position_writes": 2646,
+    "physx_pose_queries": 3226,
+    "software_fk_batches": 4321,
+    "software_jacobian_batches": 4321,
+    "numpy_fk_batches": 4321,
+    "packed_host_transfers": 94
+  },
+  "rollout_reset_io_counters": {
+    "joint_state_writes": 215,
+    "joint_position_writes": 0,
+    "physx_pose_queries": 180,
+    "software_fk_batches": 4077,
+    "software_jacobian_batches": 4077,
+    "numpy_fk_batches": 4077,
+    "packed_host_transfers": 90
+  }
+}

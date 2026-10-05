@@ -1,0 +1,24 @@
+{
+  "num_envs": 2048,
+  "batch_size": 8,
+  "seed": 42,
+  "partial_reset_rows": 8000,
+  "boundary_reset_rows": 192,
+  "baseline_failure": null,
+  "precision_boundary_fixture": {
+    "env_id": 1927,
+    "env_origin_m": [
+      -48.75,
+      37.5,
+      0.0
+    ],
+    "baseline_cached_error_m": 0.0029996400649597815,
+    "baseline_real_error_m": 0.0030003595165908337,
+    "fixed_real_error_m": 0.001129701267927885,
+    "fixed_orientation_error_rad": 7.526484750997042e-06,
+    "final_collision_gate_passed": true
+  },
+  "physx_branch_rows": 33,
+  "elapsed_seconds": 312.63246489001904,
+  "passed": true
+}

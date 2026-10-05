@@ -1,0 +1,10 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/source/hand_manipulation_test/mdp/push_events.py
++++ src/hand_manipulation_test/hand_manipulation_test/mdp/push_events.py
+@@ -252,6 +252,7 @@
+             & (self.position_error_m[env_ids] <= task.reset_position_tolerance_m)
+             & (self.orientation_error_rad[env_ids] <= tolerance)
+             & (alignment >= math.cos(tolerance)) & (normal[:, 2].abs() <= math.sin(tolerance))
++            & (self._finger_outward_cos(env_ids, hand_quaternion) > 0.0)
+         )
+ 
+ 

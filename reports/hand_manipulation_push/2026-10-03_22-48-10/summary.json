@@ -1,0 +1,465 @@
+{
+  "run": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-03_22-48-10",
+  "iterations": 1960,
+  "first_iteration": 0,
+  "last_iteration": 1959,
+  "num_envs": 2048,
+  "rollout_steps": 36,
+  "policy_dt_s": 0.02,
+  "reward_log_denominator_s": 10.0,
+  "note": "Reward means are means of per-iteration reset-batch averages, not an episode-count-weighted estimate.",
+  "windows": {
+    "first_100": {
+      "start": 0,
+      "end": 99,
+      "means": {
+        "Episode_Reward/action_rate": -0.0011349948283532285,
+        "Episode_Reward/approach": 0.012996566217479995,
+        "Episode_Reward/progress": 4.33870279166193e-05,
+        "Episode_Reward/backslide": -0.00010400332900815102,
+        "Episode_Reward/first_contact": 0.001140125389865716,
+        "Episode_Reward/contact": 0.0001989475058348944,
+        "Episode_Reward/alignment": -0.002544998162015872,
+        "Episode_Reward/success": 0.0,
+        "Episode_Reward/failure": -0.011315713337389753,
+        "Metrics/target_position/goal_distance_m": 0.25018864318728445,
+        "Metrics/target_position/side_contact": 0.0021600529667921363,
+        "Metrics/target_position/contact_seen": 0.5700626853853464,
+        "Metrics/target_position/push_seen": 0.0004259259300306439,
+        "Metrics/target_position/settled_time_s": 0.0,
+        "Metrics/target_position/success": 0.0,
+        "Metrics/target_position/failure": 0.05657856419449672,
+        "Episode_Termination/time_out": 0.8751502864807844,
+        "Episode_Termination/success": 0.0,
+        "Episode_Termination/failure": 0.05721082954783924,
+        "Loss/value": 0.0028561811505278456,
+        "Loss/surrogate": -0.003249790967674926,
+        "Loss/entropy": 16.07897665977478,
+        "Loss/learning_rate": 0.004204998199020338,
+        "Policy/mean_std": 1.9032801365852356,
+        "Perf/total_fps": 2166.53,
+        "Perf/collection_time": 34.05768510818481,
+        "Perf/learning_time": 0.15393129587173462,
+        "Train/mean_reward": -0.009108472769730725,
+        "Train/mean_episode_length": 452.27299940109253
+      },
+      "episode_reward_contributions": {
+        "action_rate": -0.011349948283532285,
+        "approach": 0.12996566217479996,
+        "progress": 0.00043387027916619303,
+        "backslide": -0.0010400332900815101,
+        "first_contact": 0.01140125389865716,
+        "contact": 0.001989475058348944,
+        "alignment": -0.025449981620158723,
+        "success": 0.0,
+        "failure": -0.11315713337389753
+      },
+      "positive_share": {
+        "action_rate": 0.0,
+        "approach": 0.9038558028859848,
+        "progress": 0.003017382922242087,
+        "backslide": 0.0,
+        "first_contact": 0.07929086286359001,
+        "contact": 0.01383595132818315,
+        "alignment": 0.0,
+        "success": 0.0,
+        "failure": 0.0
+      },
+      "negative_share": {
+        "action_rate": 0.07516666572754764,
+        "approach": 0.0,
+        "progress": 0.0,
+        "backslide": 0.0068877701209004005,
+        "first_contact": 0.0,
+        "contact": 0.0,
+        "alignment": 0.16854616544731504,
+        "success": 0.0,
+        "failure": 0.7493993987042369
+      },
+      "sum_episode_contributions": -0.007206835156697788
+    },
+    "iterations_900_999": {
+      "start": 900,
+      "end": 999,
+      "means": {
+        "Episode_Reward/action_rate": -0.0016765199543442577,
+        "Episode_Reward/approach": 0.02017948841676116,
+        "Episode_Reward/progress": 0.00013611792270239675,
+        "Episode_Reward/backslide": -0.00043666557714459485,
+        "Episode_Reward/first_contact": 0.0018970118870493024,
+        "Episode_Reward/contact": 0.00029537534472183323,
+        "Episode_Reward/alignment": -0.0049054025206714865,
+        "Episode_Reward/success": 0.0,
+        "Episode_Reward/failure": -0.004369168087141589,
+        "Metrics/target_position/goal_distance_m": 0.24979588851332665,
+        "Metrics/target_position/side_contact": 0.0001203703717328608,
+        "Metrics/target_position/contact_seen": 0.948505933880806,
+        "Metrics/target_position/push_seen": 3.9682541973888874e-05,
+        "Metrics/target_position/settled_time_s": 0.0,
+        "Metrics/target_position/success": 0.0,
+        "Metrics/target_position/failure": 0.021845840057358144,
+        "Episode_Termination/time_out": 0.9741939371824264,
+        "Episode_Termination/success": 0.0,
+        "Episode_Termination/failure": 0.02580607123207301,
+        "Loss/value": 0.0030097613060206642,
+        "Loss/surrogate": -0.0037661843048408627,
+        "Loss/entropy": 41.270002937316896,
+        "Loss/learning_rate": 0.003603125749377796,
+        "Policy/mean_std": 43.39219615936279,
+        "Perf/total_fps": 2183.25,
+        "Perf/collection_time": 33.87528123855591,
+        "Perf/learning_time": 0.15293530702590943,
+        "Train/mean_reward": 0.10943419216549956,
+        "Train/mean_episode_length": 492.5046008300781
+      },
+      "episode_reward_contributions": {
+        "action_rate": -0.016765199543442577,
+        "approach": 0.2017948841676116,
+        "progress": 0.0013611792270239675,
+        "backslide": -0.0043666557714459485,
+        "first_contact": 0.018970118870493023,
+        "contact": 0.002953753447218332,
+        "alignment": -0.04905402520671487,
+        "success": 0.0,
+        "failure": -0.04369168087141589
+      },
+      "positive_share": {
+        "action_rate": 0.0,
+        "approach": 0.8965476355276123,
+        "progress": 0.006047536946001087,
+        "backslide": 0.0,
+        "first_contact": 0.08428169668013817,
+        "contact": 0.013123130846248514,
+        "alignment": 0.0,
+        "success": 0.0,
+        "failure": 0.0
+      },
+      "negative_share": {
+        "action_rate": 0.14722127290363884,
+        "approach": 0.0,
+        "progress": 0.0,
+        "backslide": 0.03834518159706242,
+        "first_contact": 0.0,
+        "contact": 0.0,
+        "alignment": 0.43076111401277245,
+        "success": 0.0,
+        "failure": 0.38367243148652636
+      },
+      "sum_episode_contributions": 0.11120237431932761
+    },
+    "checkpoint_1950_last_100": {
+      "start": 1851,
+      "end": 1950,
+      "means": {
+        "Episode_Reward/action_rate": -0.0011254393553826957,
+        "Episode_Reward/approach": 0.02037354713305831,
+        "Episode_Reward/progress": 0.00017736399568093474,
+        "Episode_Reward/backslide": -5.832977523823501e-05,
+        "Episode_Reward/first_contact": 0.0018066610721871256,
+        "Episode_Reward/contact": 0.00016389736090786756,
+        "Episode_Reward/alignment": -0.004315447139088064,
+        "Episode_Reward/success": 0.0,
+        "Episode_Reward/failure": -0.0033186309365555644,
+        "Metrics/target_position/goal_distance_m": 0.24995616018772127,
+        "Metrics/target_position/side_contact": 0.0,
+        "Metrics/target_position/contact_seen": 0.9033305233716965,
+        "Metrics/target_position/push_seen": 0.00016468254383653403,
+        "Metrics/target_position/settled_time_s": 0.0,
+        "Metrics/target_position/success": 0.0,
+        "Metrics/target_position/failure": 0.01659315406344831,
+        "Episode_Termination/time_out": 0.9836937141418457,
+        "Episode_Termination/success": 0.0,
+        "Episode_Termination/failure": 0.016306288162013516,
+        "Loss/value": 0.001606135059337248,
+        "Loss/surrogate": -0.004460470878984779,
+        "Loss/entropy": 45.78044479370117,
+        "Loss/learning_rate": 0.0020004877197061432,
+        "Policy/mean_std": 77.88786079406738,
+        "Perf/total_fps": 2175.58,
+        "Perf/collection_time": 33.91672779083252,
+        "Perf/learning_time": 0.15194000005722047,
+        "Train/mean_reward": 0.13374156845733523,
+        "Train/mean_episode_length": 494.78279968261717
+      },
+      "episode_reward_contributions": {
+        "action_rate": -0.011254393553826958,
+        "approach": 0.2037354713305831,
+        "progress": 0.0017736399568093475,
+        "backslide": -0.0005832977523823501,
+        "first_contact": 0.018066610721871258,
+        "contact": 0.0016389736090786757,
+        "alignment": -0.04315447139088064,
+        "success": 0.0,
+        "failure": -0.033186309365555645
+      },
+      "positive_share": {
+        "action_rate": 0.0,
+        "approach": 0.9046277853725904,
+        "progress": 0.007875329591347038,
+        "backslide": 0.0,
+        "first_contact": 0.08021950198351017,
+        "contact": 0.0072773830525524165,
+        "alignment": 0.0,
+        "success": 0.0,
+        "failure": 0.0
+      },
+      "negative_share": {
+        "action_rate": 0.12763198647660143,
+        "approach": 0.0,
+        "progress": 0.0,
+        "backslide": 0.0066149677890534496,
+        "first_contact": 0.0,
+        "contact": 0.0,
+        "alignment": 0.48939917398684274,
+        "success": 0.0,
+        "failure": 0.37635387174750246
+      },
+      "sum_episode_contributions": 0.13703622355569678
+    },
+    "last_100": {
+      "start": 1860,
+      "end": 1959,
+      "means": {
+        "Episode_Reward/action_rate": -0.0011268600646872073,
+        "Episode_Reward/approach": 0.020375238191336395,
+        "Episode_Reward/progress": 0.0001817277709051268,
+        "Episode_Reward/backslide": -5.857162781467196e-05,
+        "Episode_Reward/first_contact": 0.0018080459930934012,
+        "Episode_Reward/contact": 0.0001630639588984195,
+        "Episode_Reward/alignment": -0.004294843387324363,
+        "Episode_Reward/success": 0.0,
+        "Episode_Reward/failure": -0.003452779983053915,
+        "Metrics/target_position/goal_distance_m": 0.2498663491010666,
+        "Metrics/target_position/side_contact": 0.0,
+        "Metrics/target_position/contact_seen": 0.9040229821205139,
+        "Metrics/target_position/push_seen": 0.00012500000186264516,
+        "Metrics/target_position/settled_time_s": 0.0,
+        "Metrics/target_position/success": 0.0,
+        "Metrics/target_position/failure": 0.01726389922434464,
+        "Episode_Termination/time_out": 0.9825126159191132,
+        "Episode_Termination/success": 0.0,
+        "Episode_Termination/failure": 0.017487386236898602,
+        "Loss/value": 0.001614314299658872,
+        "Loss/surrogate": -0.004078455416311045,
+        "Loss/entropy": 45.80142078399658,
+        "Loss/learning_rate": 0.0017984324819917674,
+        "Policy/mean_std": 78.08927726745605,
+        "Perf/total_fps": 2155.01,
+        "Perf/collection_time": 34.33716367721558,
+        "Perf/learning_time": 0.15368343114852906,
+        "Train/mean_reward": 0.1319002761505544,
+        "Train/mean_episode_length": 494.47699981689453
+      },
+      "episode_reward_contributions": {
+        "action_rate": -0.011268600646872073,
+        "approach": 0.20375238191336395,
+        "progress": 0.0018172777090512682,
+        "backslide": -0.0005857162781467196,
+        "first_contact": 0.01808045993093401,
+        "contact": 0.001630639588984195,
+        "alignment": -0.04294843387324363,
+        "success": 0.0,
+        "failure": -0.03452779983053915
+      },
+      "positive_share": {
+        "action_rate": 0.0,
+        "approach": 0.9044375679888057,
+        "progress": 0.00806672401127299,
+        "backslide": 0.0,
+        "first_contact": 0.08025745296566003,
+        "contact": 0.007238255034261268,
+        "alignment": 0.0,
+        "success": 0.0,
+        "failure": 0.0
+      },
+      "negative_share": {
+        "action_rate": 0.12614498139272523,
+        "approach": 0.0,
+        "progress": 0.0,
+        "backslide": 0.0065567297416599096,
+        "first_contact": 0.0,
+        "contact": 0.0,
+        "alignment": 0.4807810269938757,
+        "success": 0.0,
+        "failure": 0.3865172618717391
+      },
+      "sum_episode_contributions": 0.13595020851353184
+    }
+  },
+  "all_run_ranges": {
+    "Episode_Reward/action_rate": {
+      "min": -0.0017657732823863626,
+      "max": -3.6039487895322964e-05,
+      "nonzero_iterations": 1960,
+      "last": -0.001173978322185576
+    },
+    "Episode_Reward/approach": {
+      "min": 0.00016650873294565827,
+      "max": 0.021688485518097878,
+      "nonzero_iterations": 1960,
+      "last": 0.019989119842648506
+    },
+    "Episode_Reward/progress": {
+      "min": 0.0,
+      "max": 0.0014644094044342637,
+      "nonzero_iterations": 1948,
+      "last": 0.00022974507010076195
+    },
+    "Episode_Reward/backslide": {
+      "min": -0.002769928425550461,
+      "max": 0.0,
+      "nonzero_iterations": 1948,
+      "last": -4.19803436670918e-05
+    },
+    "Episode_Reward/first_contact": {
+      "min": 0.0,
+      "max": 0.001999999862164259,
+      "nonzero_iterations": 1948,
+      "last": 0.00187294976785779
+    },
+    "Episode_Reward/contact": {
+      "min": 0.0,
+      "max": 0.0009618925978429615,
+      "nonzero_iterations": 1948,
+      "last": 0.00018750196613837034
+    },
+    "Episode_Reward/alignment": {
+      "min": -0.01458597183227539,
+      "max": -1.011787844618084e-06,
+      "nonzero_iterations": 1960,
+      "last": -0.00395487155765295
+    },
+    "Episode_Reward/success": {
+      "min": 0.0,
+      "max": 0.0,
+      "nonzero_iterations": 0,
+      "last": 0.0
+    },
+    "Episode_Reward/failure": {
+      "min": -0.1071128249168396,
+      "max": 0.0,
+      "nonzero_iterations": 1731,
+      "last": 0.0
+    },
+    "Metrics/target_position/goal_distance_m": {
+      "min": 0.23869724571704865,
+      "max": 0.25903815031051636,
+      "nonzero_iterations": 1960,
+      "last": 0.24456606805324554
+    },
+    "Metrics/target_position/side_contact": {
+      "min": 0.0,
+      "max": 0.04722222313284874,
+      "nonzero_iterations": 84,
+      "last": 0.0
+    },
+    "Metrics/target_position/contact_seen": {
+      "min": 0.0,
+      "max": 1.0,
+      "nonzero_iterations": 1948,
+      "last": 0.9364749193191528
+    },
+    "Metrics/target_position/push_seen": {
+      "min": 0.0,
+      "max": 0.05439814552664757,
+      "nonzero_iterations": 95,
+      "last": 0.0
+    },
+    "Metrics/target_position/settled_time_s": {
+      "min": 0.0,
+      "max": 0.0,
+      "nonzero_iterations": 0,
+      "last": 0.0
+    },
+    "Metrics/target_position/success": {
+      "min": 0.0,
+      "max": 0.0,
+      "nonzero_iterations": 0,
+      "last": 0.0
+    },
+    "Metrics/target_position/failure": {
+      "min": 0.0,
+      "max": 0.535564124584198,
+      "nonzero_iterations": 1731,
+      "last": 0.0
+    },
+    "Episode_Termination/time_out": {
+      "min": 0.0370144322514534,
+      "max": 0.998887836933136,
+      "nonzero_iterations": 1960,
+      "last": 0.986328125
+    },
+    "Episode_Termination/success": {
+      "min": 0.0,
+      "max": 0.0,
+      "nonzero_iterations": 0,
+      "last": 0.0
+    },
+    "Episode_Termination/failure": {
+      "min": 0.0006374783115461469,
+      "max": 0.3507893979549408,
+      "nonzero_iterations": 1960,
+      "last": 0.013671875
+    },
+    "Loss/value": {
+      "min": 9.442223017686047e-06,
+      "max": 0.13248296082019806,
+      "nonzero_iterations": 1960,
+      "last": 0.00011592938244575635
+    },
+    "Loss/surrogate": {
+      "min": -0.014156791381537914,
+      "max": 0.02736319787800312,
+      "nonzero_iterations": 1960,
+      "last": -0.007358343340456486
+    },
+    "Loss/entropy": {
+      "min": 11.389012336730957,
+      "max": 45.90889358520508,
+      "nonzero_iterations": 1960,
+      "last": 45.90889358520508
+    },
+    "Loss/learning_rate": {
+      "min": 9.999999747378752e-06,
+      "max": 0.009999999776482582,
+      "nonzero_iterations": 1960,
+      "last": 0.0019461950287222862
+    },
+    "Policy/mean_std": {
+      "min": 1.0068631172180176,
+      "max": 79.1303482055664,
+      "nonzero_iterations": 1960,
+      "last": 79.1303482055664
+    },
+    "Perf/total_fps": {
+      "min": 1311.0,
+      "max": 2835.0,
+      "nonzero_iterations": 1960,
+      "last": 2056.0
+    },
+    "Perf/collection_time": {
+      "min": 25.851455688476562,
+      "max": 56.00693893432617,
+      "nonzero_iterations": 1960,
+      "last": 35.68091583251953
+    },
+    "Perf/learning_time": {
+      "min": 0.14073467254638672,
+      "max": 0.2931220531463623,
+      "nonzero_iterations": 1960,
+      "last": 0.16431236267089844
+    },
+    "Train/mean_reward": {
+      "min": -1.0452258586883545,
+      "max": 0.20224888622760773,
+      "nonzero_iterations": 1960,
+      "last": 0.16985732316970825
+    },
+    "Train/mean_episode_length": {
+      "min": 25.690000534057617,
+      "max": 500.0,
+      "nonzero_iterations": 1960,
+      "last": 500.0
+    }
+  }
+}

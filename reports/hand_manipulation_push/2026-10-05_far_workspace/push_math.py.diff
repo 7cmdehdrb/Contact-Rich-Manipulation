@@ -1,0 +1,31 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/source/hand_manipulation_test/push_math.py
++++ src/hand_manipulation_test/hand_manipulation_test/push_math.py
+@@ -5,6 +5,8 @@
+ import math
+ 
+ import torch
++
++from .contact_math import palm_facing_rotation
+ 
+ 
+ def push_direction_from_angle(angle_rad: torch.Tensor) -> torch.Tensor:
+@@ -18,17 +20,13 @@
+ 
+ 
+ def push_palm_rotation(direction_w: torch.Tensor) -> torch.Tensor:
+-    """Keep the thumb upward: H +X is up, +Y pushes, +Z is their cross."""
++    """Keep H +Y horizontal along the push and H +Z toward world -X."""
+ 
+     horizontal = direction_w.clone()
+     horizontal[..., 2] = 0.0
+     if bool((horizontal.norm(dim=-1) <= torch.finfo(horizontal.dtype).eps).any()):
+         raise ValueError("A push direction must have a nonzero horizontal component")
+-    hand_y = torch.nn.functional.normalize(horizontal, dim=-1)
+-    hand_x = torch.zeros_like(hand_y)
+-    hand_x[..., 2] = 1.0
+-    hand_z = torch.linalg.cross(hand_x, hand_y, dim=-1)
+-    return torch.stack((hand_x, hand_y, hand_z), dim=-1)
++    return palm_facing_rotation(horizontal)
+ 
+ 
+ def push_palm_start_pose(

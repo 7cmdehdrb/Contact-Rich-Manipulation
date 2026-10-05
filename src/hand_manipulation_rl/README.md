@@ -5,7 +5,9 @@
 낮고 안전한 시작 자세와 dense 접근 보상을 추가한 상속 환경
 `Isaac-Blind-Sweep-Inspire-Approach-v0`도 제공한다. 해당 환경의 실제 학습에서 확인된
 중력 하강·선반 접촉 reward shortcut을 수정한 2차 상속 환경
-`Isaac-Blind-Sweep-Inspire-Approach-v1`도 함께 제공한다. 환경 코드는
+`Isaac-Blind-Sweep-Inspire-Approach-v1`과, v1의 제어·관측·접근 보상을 유지하면서 미는
+행동의 우선순위를 높인 계수 조정 환경 `Isaac-Blind-Sweep-Inspire-Approach-v2`도 함께
+제공한다. 환경 코드는
 `src/sweep_rl`, `example/Sweep-Policy`, `src/inspire_tactile`,
 `src/axia80_feasibility`를 import하지 않는다. 참고 자산은 이 패키지 안의 상대 경로 USD로
 복사했으며 Nucleus, ROS, 절대 경로에도 의존하지 않는다.
@@ -77,6 +79,10 @@
 - v1 actor에는 episode-fixed 접촉 frontier 오차 3D를 action 축 순서로 추가해 관측은 60D다.
   PPO는 초기 표준편차 `0.5`, fixed learning rate `3e-4`를 사용해 기존 adaptive LR이 첫
   iteration부터 `0.01`로 상승하던 현상을 차단한다.
+- Approach-v2는 v1 전체를 상속하며 goal reward를 `4.0 -> 12.0`, 실제 접촉 법선 정렬
+  reward를 `0.75 -> 4.0`, success terminal bonus를 `1.0 -> 4.0`으로 높인다. goal이 가장
+  크고 정렬은 그보다 작도록 하여 목표까지 계속 미는 행동을 우선하면서 접촉 방향을 유지한다.
+  초기 탐색에 필요한 접근 progress `2.0`과 최초 접촉 bonus `0.5`는 v1 값을 그대로 유지한다.
 - 독립형 RSL-RL PPO train/play 진입점, vectorized palm/dorsal smoke probe, simulator 독립
   pure-torch tests.
 - `extras["episode_diagnostics"]`에 명령·초기/현재 pose, reset 표본/IK/보수적 live-FK 충돌 인증 결과,
@@ -152,6 +158,11 @@
   --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
   --headless --device cuda:0 --num_envs 4096
 
+# 미는 행동을 우선한 Approach-v2 본 학습
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v2 \
+  --headless --device cuda:0 --num_envs 4096
+
 # checkpoint 재생
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
   --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
@@ -164,6 +175,11 @@
 # Approach-v1 checkpoint 재생(v0 checkpoint와 관측/action 계약이 달라 호환되지 않음)
 ./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
   --task Isaac-Blind-Sweep-Inspire-Approach-v1 \
+  --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
+
+# Approach-v2 checkpoint 재생(v1과 동일한 60D 관측/8D action 계약)
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py \
+  --task Isaac-Blind-Sweep-Inspire-Approach-v2 \
   --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/model.pt
 ```
 

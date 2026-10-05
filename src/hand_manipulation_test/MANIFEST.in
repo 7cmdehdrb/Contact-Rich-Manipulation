@@ -1,0 +1,1 @@
+recursive-include hand_manipulation_test/assets/data *.usd *.yaml .asset_hash

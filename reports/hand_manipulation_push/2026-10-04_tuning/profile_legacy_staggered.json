@@ -1,0 +1,32 @@
+{
+  "num_envs": 2048,
+  "steps": 36,
+  "device": "cuda:0",
+  "legacy_reset": true,
+  "markers": false,
+  "stagger_timeouts": true,
+  "creation_s": 16.002674123999896,
+  "reset_seconds_by_batch_size": {
+    "1": [
+      0.6292547799821477
+    ],
+    "8": [
+      1.4244171169993933
+    ],
+    "2048": [
+      1.5753316259942949
+    ]
+  },
+  "policy_step_mean_s": 1.0665148561108961,
+  "environment_steps_per_second": 1920.2732978967986,
+  "rollout_36_steps_s": 38.39453481999226,
+  "terminated_rows_during_steps": 138,
+  "reset_work_during_steps": true,
+  "reset_io_counters": {
+    "joint_state_writes": 4592,
+    "joint_position_writes": 31178,
+    "physx_pose_queries": 35918,
+    "software_fk_batches": 0,
+    "software_jacobian_batches": 0
+  }
+}

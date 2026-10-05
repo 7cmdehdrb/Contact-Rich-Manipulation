@@ -16,6 +16,7 @@ if str(PACKAGE_ROOT) not in sys.path:
 BASE_TASK_ID = "Isaac-Blind-Sweep-Inspire-v0"
 APPROACH_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v0"
 APPROACH_V1_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v1"
+APPROACH_V2_TASK_ID = "Isaac-Blind-Sweep-Inspire-Approach-v2"
 
 from isaaclab.app import AppLauncher
 
@@ -26,7 +27,12 @@ parser.add_argument("--num-envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument(
     "--task",
-    choices=(BASE_TASK_ID, APPROACH_TASK_ID, APPROACH_V1_TASK_ID),
+    choices=(
+        BASE_TASK_ID,
+        APPROACH_TASK_ID,
+        APPROACH_V1_TASK_ID,
+        APPROACH_V2_TASK_ID,
+    ),
     default=BASE_TASK_ID,
     help="Registered blind-sweep task variant to validate.",
 )
@@ -58,6 +64,9 @@ import isaaclab.utils.math as math_utils  # noqa: E402
 
 from hand_manipulation_rl import APPROACH_TASK_ID as REGISTERED_APPROACH_TASK_ID  # noqa: E402
 from hand_manipulation_rl import APPROACH_V1_TASK_ID as REGISTERED_APPROACH_V1_TASK_ID  # noqa: E402
+from hand_manipulation_rl import (  # noqa: E402
+    APPROACH_V2_TASK_ID as REGISTERED_APPROACH_V2_TASK_ID,
+)
 from hand_manipulation_rl import TASK_ID as REGISTERED_BASE_TASK_ID  # noqa: E402
 from hand_manipulation_rl.assets.robot import (  # noqa: E402
     FT_SENSOR_BODY_NAME,
@@ -66,9 +75,18 @@ from hand_manipulation_rl.assets.robot import (  # noqa: E402
 from hand_manipulation_rl.env_approach_cfg import BlindSweepApproachEnvCfg  # noqa: E402
 from hand_manipulation_rl.env_cfg import BlindSweepEnvCfg  # noqa: E402
 from hand_manipulation_rl.env_v1_cfg import BlindSweepApproachV1EnvCfg  # noqa: E402
+from hand_manipulation_rl.env_v2_cfg import BlindSweepApproachV2EnvCfg  # noqa: E402
+
+
+CORRECTED_APPROACH_TASK_IDS = (
+    REGISTERED_APPROACH_V1_TASK_ID,
+    REGISTERED_APPROACH_V2_TASK_ID,
+)
 
 
 def _make_env_cfg():
+    if args.task == REGISTERED_APPROACH_V2_TASK_ID:
+        return BlindSweepApproachV2EnvCfg()
     if args.task == REGISTERED_APPROACH_V1_TASK_ID:
         return BlindSweepApproachV1EnvCfg()
     if args.task == REGISTERED_APPROACH_TASK_ID:
@@ -100,7 +118,7 @@ def main() -> None:
         if env._eef_frame_markers.count != 4 * args.num_envs:
             raise RuntimeError("Virtual EEF marker instance count is incorrect")
     policy = observation["policy"]
-    expected_observation_dim = 60 if args.task == REGISTERED_APPROACH_V1_TASK_ID else 57
+    expected_observation_dim = 60 if args.task in CORRECTED_APPROACH_TASK_IDS else 57
     if policy.shape != (args.num_envs, expected_observation_dim):
         raise RuntimeError(
             f"Expected a ({args.num_envs}, {expected_observation_dim}) policy observation, "
@@ -144,8 +162,8 @@ def main() -> None:
     initial_c_position_w, initial_c_quaternion_w = env.control_point_pose_w()
     initial_c_position_w = initial_c_position_w.clone()
     initial_c_quaternion_w = initial_c_quaternion_w.clone()
-    if args.task in (REGISTERED_APPROACH_TASK_ID, REGISTERED_APPROACH_V1_TASK_ID):
-        if args.task == REGISTERED_APPROACH_V1_TASK_ID:
+    if args.task in (REGISTERED_APPROACH_TASK_ID, *CORRECTED_APPROACH_TASK_IDS):
+        if args.task in CORRECTED_APPROACH_TASK_IDS:
             required_v1_terms = {
                 "selected_surface_approach_progress",
                 "selected_surface_height_safety",
@@ -153,17 +171,42 @@ def main() -> None:
             }
             missing = required_v1_terms - set(env.reward_manager.active_terms)
             if missing:
-                raise RuntimeError(f"Approach-v1 reward terms are missing: {sorted(missing)}")
+                raise RuntimeError(
+                    f"Corrected Approach reward terms are missing: {sorted(missing)}"
+                )
             if "selected_surface_approach" in env.reward_manager.active_terms:
-                raise RuntimeError("Approach-v1 retained the pre-contact v0 occupancy reward")
+                raise RuntimeError(
+                    "Corrected Approach task retained the pre-contact v0 occupancy reward"
+                )
             if env.cfg.actions.arm_action.gravity_compensation is not True:
-                raise RuntimeError("Approach-v1 OSC gravity compensation is disabled")
-            if env.action_manager.get_term("arm_action").__class__.__name__ != "TaskFrameOscAction":
-                raise RuntimeError("Approach-v1 did not instantiate its task-frame OSC action")
+                raise RuntimeError("Corrected Approach OSC gravity compensation is disabled")
+            if (
+                env.action_manager.get_term("arm_action").__class__.__name__
+                != "TaskFrameOscAction"
+            ):
+                raise RuntimeError(
+                    "Corrected Approach task did not instantiate its task-frame OSC action"
+                )
             if bool((policy[:, -2] <= 0.0).any()):
                 raise RuntimeError(
-                    "Approach-v1 target-error observation must point along positive approach action"
+                    "Corrected Approach target-error observation must point along "
+                    "positive approach action"
                 )
+            if args.task == REGISTERED_APPROACH_V2_TASK_ID:
+                expected_weights = {
+                    "goal": 12.0,
+                    "actual_normal_alignment": 4.0,
+                    "success_terminal": 4.0,
+                    "selected_surface_approach_progress": 2.0,
+                    "target_hand_contact_acquisition": 0.5,
+                }
+                for term_name, expected_weight in expected_weights.items():
+                    actual_weight = getattr(cfg.rewards, term_name).weight
+                    if actual_weight != expected_weight:
+                        raise RuntimeError(
+                            f"Approach-v2 {term_name} weight is {actual_weight}, "
+                            f"expected {expected_weight}"
+                        )
         elif "selected_surface_approach" not in env.reward_manager.active_terms:
             raise RuntimeError("Approach task did not activate its dense reward")
         actual_height = initial_c_position_w[:, 2] - env.object_initial_pos_w[:, 2]
@@ -261,7 +304,7 @@ def main() -> None:
             )
             support_mode = (
                 "gravity-compensated"
-                if args.task == REGISTERED_APPROACH_V1_TASK_ID
+                if args.task in CORRECTED_APPROACH_TASK_IDS
                 else "uncompensated"
             )
             print(f"{support_mode} zero-delta smoke termination: {details}", flush=True)
@@ -332,7 +375,7 @@ def main() -> None:
         torch.sum(final_c_quaternion_w * initial_c_quaternion_w, dim=-1)
     ).clamp(max=1.0)
     hold_orientation_drift_rad = 2.0 * torch.acos(quaternion_dot)
-    # v0 deliberately preserves uncompensated reference behavior; v1 enables
+    # v0 deliberately preserves uncompensated reference behavior; v1/v2 enable
     # active support and is expected to remain contact-free for long probes.
     if bool((physical_contact_peak > env.cfg.task.reset_contact_tolerance_n).any()):
         raise RuntimeError(
@@ -342,7 +385,7 @@ def main() -> None:
     print("policy shape:", tuple(observation["policy"].shape))
     support_mode = (
         "gravity-compensated"
-        if args.task == REGISTERED_APPROACH_V1_TASK_ID
+        if args.task in CORRECTED_APPROACH_TASK_IDS
         else "uncompensated"
     )
     print(f"{support_mode} zero-delta C position drift [m]:", hold_position_drift_m.tolist())

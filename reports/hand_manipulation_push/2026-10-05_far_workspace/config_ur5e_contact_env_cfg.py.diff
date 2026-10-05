@@ -1,0 +1,60 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/source/hand_manipulation_test/config/ur5e/contact_env_cfg.py
++++ src/hand_manipulation_test/hand_manipulation_test/config/ur5e/contact_env_cfg.py
+@@ -25,11 +25,11 @@
+     tactile_threshold_n: float = 0.01
+     contact_threshold_n: float = 0.01
+     table_size: tuple[float, float, float] = (0.36, 1.00, 0.04)
+-    table_center: tuple[float, float, float] = (-0.70, 0.0, 1.03)
++    table_center: tuple[float, float, float] = (-0.75, 0.0, 1.03)
+     cube_size: float = 0.06
+     cube_mass: float = 1.0
+-    object_xy_range_low: tuple[float, float] = (-0.77, -0.22)
+-    object_xy_range_high: tuple[float, float] = (-0.58, 0.22)
++    object_xy_offset_low: tuple[float, float] = (-0.07, -0.22)
++    object_xy_offset_high: tuple[float, float] = (0.12, 0.22)
+     reset_position_offset_task: tuple[float, float, float] = (0.14, 0.0, 0.10)
+     reset_position_jitter_task: tuple[float, float, float] = (0.004, 0.004, 0.003)
+     reset_c_y_range: tuple[float, float] = (-0.25, 0.25)
+@@ -54,6 +54,14 @@
+     @property
+     def cube_center_height_m(self) -> float:
+         return self.table_center[2] + 0.5 * (self.table_size[2] + self.cube_size)
++
++    @property
++    def object_xy_range_low(self) -> tuple[float, float]:
++        return tuple(self.table_center[axis] + self.object_xy_offset_low[axis] for axis in range(2))
++
++    @property
++    def object_xy_range_high(self) -> tuple[float, float]:
++        return tuple(self.table_center[axis] + self.object_xy_offset_high[axis] for axis in range(2))
+ 
+     def validate(self):
+         # The parent assumes every instance attribute is a scalar. Restrict
+@@ -69,7 +77,8 @@
+             if not math.isfinite(value) or value <= 0.0:
+                 raise ValueError(f"{name} must be finite and positive")
+         vectors = (
+-            ("table_size", 3), ("table_center", 3), ("object_xy_range_low", 2),
++            ("table_size", 3), ("table_center", 3), ("object_xy_offset_low", 2),
++            ("object_xy_offset_high", 2), ("object_xy_range_low", 2),
+             ("object_xy_range_high", 2), ("reset_position_offset_task", 3),
+             ("reset_position_jitter_task", 3), ("reset_c_y_range", 2),
+             ("initial_hand_open_range", 2), ("reset_wrist_3_range_rad", 2),
+@@ -153,7 +162,11 @@
+             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.18, 0.43, 0.90)),
+             activate_contact_sensors=True,
+         ),
+-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.675, 0.0, _TASK.cube_center_height_m)),
++        init_state=RigidObjectCfg.InitialStateCfg(pos=(
++            (_TASK.object_xy_range_low[0] + _TASK.object_xy_range_high[0]) / 2,
++            (_TASK.object_xy_range_low[1] + _TASK.object_xy_range_high[1]) / 2,
++            _TASK.cube_center_height_m,
++        )),
+     )
+     table_contacts = ContactSensorCfg(
+         prim_path="{ENV_REGEX_NS}/Table", update_period=0.0, history_length=2,
+@@ -214,3 +227,4 @@
+         )
+         self.scene.table_contacts.history_length = self.decimation
+         self.scene.lazy_sensor_update = False
++        self.viewer.lookat = (*self.task.table_center[:2], self.task.cube_center_height_m)

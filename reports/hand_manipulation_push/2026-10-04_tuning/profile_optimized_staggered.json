@@ -1,0 +1,36 @@
+{
+  "num_envs": 2048,
+  "steps": 36,
+  "device": "cuda:0",
+  "legacy_reset": false,
+  "markers": false,
+  "stagger_timeouts": true,
+  "creation_s": 17.531801806995645,
+  "reset_seconds_by_batch_size": {
+    "1": [
+      0.3849335639970377
+    ],
+    "8": [
+      0.7830859430250712
+    ],
+    "2048": [
+      1.774245467997389
+    ]
+  },
+  "policy_step_mean_s": 0.41895357069410644,
+  "environment_steps_per_second": 4888.3698415720655,
+  "rollout_36_steps_s": 15.082328544987831,
+  "terminated_rows_during_steps": 138,
+  "rollout_reset_calls": 35,
+  "rollout_reset_rows": 138,
+  "reset_work_during_steps": true,
+  "reset_io_counters": {
+    "joint_state_writes": 611,
+    "joint_position_writes": 2646,
+    "physx_pose_queries": 3226,
+    "software_fk_batches": 4321,
+    "software_jacobian_batches": 4321,
+    "numpy_fk_batches": 4321,
+    "packed_host_transfers": 94
+  }
+}

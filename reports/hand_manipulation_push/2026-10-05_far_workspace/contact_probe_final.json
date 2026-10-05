@@ -1,0 +1,1300 @@
+{
+  "task": "Isaac-Hand-Manipulation-Contact-v0",
+  "center": [
+    -0.75,
+    0.0,
+    1.03
+  ],
+  "cube_low": [
+    -0.8200000000000001,
+    -0.22
+  ],
+  "cube_high": [
+    -0.63,
+    0.22
+  ],
+  "cases": [
+    {
+      "case": "contact/corners",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        16,
+        20,
+        11
+      ],
+      "position_error_m": [
+        0.000526615884155035,
+        0.0018577729351818562,
+        0.00041212778887711465,
+        0.0025204606354236603
+      ],
+      "orientation_error_rad": [
+        0.024426860734820366,
+        0.00017756402667146176,
+        0.025331223383545876,
+        0.012532317079603672
+      ],
+      "finger_outward_cos": [
+        0.9914754629135132,
+        0.9920411109924316,
+        0.9953960180282593,
+        0.9932428598403931
+      ],
+      "arm_q": [
+        [
+          -0.20960062742233276,
+          -1.0635367631912231,
+          1.0791441202163696,
+          0.060053274035453796,
+          1.2528241872787476,
+          -2.1657376289367676
+        ],
+        [
+          -0.24441342055797577,
+          -1.0713449716567993,
+          1.085920810699463,
+          0.05896632745862007,
+          1.4299882650375366,
+          2.1734886169433594
+        ],
+        [
+          -0.2972504496574402,
+          -1.5621016025543213,
+          1.7219092845916748,
+          -0.10250420868396759,
+          1.1942211389541626,
+          -2.170516014099121
+        ],
+        [
+          -0.36058077216148376,
+          -1.5531024932861328,
+          1.7074249982833862,
+          -0.08635705709457397,
+          1.3069151639938354,
+          2.1479218006134033
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.000526615884155035,
+            "orientation_error_rad": 0.024426860734820366,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0018577729351818562,
+            "orientation_error_rad": 0.00017756402667146176,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00041212778887711465,
+            "orientation_error_rad": 0.025331223383545876,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0025204606354236603,
+            "orientation_error_rad": 0.012532317079603672,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/0",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        14,
+        20,
+        20,
+        12
+      ],
+      "position_error_m": [
+        0.002551669953390956,
+        0.0005052569904364645,
+        0.00042725622188299894,
+        0.0025946651585400105
+      ],
+      "orientation_error_rad": [
+        0.0006291663739830256,
+        0.027121273800730705,
+        0.025755608454346657,
+        0.0044028060510754585
+      ],
+      "finger_outward_cos": [
+        0.9927277565002441,
+        0.9909955859184265,
+        0.9904065728187561,
+        0.994747519493103
+      ],
+      "arm_q": [
+        [
+          -0.27747291326522827,
+          -1.2382276058197021,
+          1.329747200012207,
+          -0.020486263558268547,
+          1.392213225364685,
+          2.1744437217712402
+        ],
+        [
+          -0.4159453511238098,
+          -1.0642669200897217,
+          1.0695462226867676,
+          0.08269791305065155,
+          1.045772671699524,
+          -2.2058191299438477
+        ],
+        [
+          -0.36430609226226807,
+          -1.2947819232940674,
+          1.4021471738815308,
+          -0.020238136872649193,
+          1.0928843021392822,
+          -2.19091796875
+        ],
+        [
+          -0.15116792917251587,
+          -1.3581994771957397,
+          1.4878612756729126,
+          -0.07121347635984421,
+          1.5041297674179077,
+          2.170119285583496
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002551669953390956,
+            "orientation_error_rad": 0.0006291663739830256,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0005052569904364645,
+            "orientation_error_rad": 0.027121273800730705,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00042725622188299894,
+            "orientation_error_rad": 0.025755608454346657,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0025946651585400105,
+            "orientation_error_rad": 0.0044028060510754585,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/1",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        14,
+        12,
+        16
+      ],
+      "position_error_m": [
+        0.000435841764556244,
+        0.0012202002108097076,
+        0.0025512066204100847,
+        0.001399941393174231
+      ],
+      "orientation_error_rad": [
+        0.025441868230700493,
+        0.0006840873975306749,
+        0.004090806469321251,
+        0.00022682794951833785
+      ],
+      "finger_outward_cos": [
+        0.9934239387512207,
+        0.9945403933525085,
+        0.9953991174697876,
+        0.9916103482246399
+      ],
+      "arm_q": [
+        [
+          -0.2754596173763275,
+          -1.2080702781677246,
+          1.2988003492355347,
+          -0.022292688488960266,
+          1.200687289237976,
+          -2.174506902694702
+        ],
+        [
+          0.11791319400072098,
+          -1.1423461437225342,
+          1.192464828491211,
+          0.012644835747778416,
+          1.7729272842407227,
+          2.210806131362915
+        ],
+        [
+          0.13653293251991272,
+          -1.255112648010254,
+          1.3674838542938232,
+          -0.05715101584792137,
+          1.7864176034927368,
+          2.178292989730835
+        ],
+        [
+          0.29148179292678833,
+          -0.897644579410553,
+          0.810997486114502,
+          0.16701577603816986,
+          1.967571496963501,
+          2.2085964679718018
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.000435841764556244,
+            "orientation_error_rad": 0.025441868230700493,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0012202002108097076,
+            "orientation_error_rad": 0.0006840873975306749,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0025512066204100847,
+            "orientation_error_rad": 0.004090806469321251,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.001399941393174231,
+            "orientation_error_rad": 0.00022682794951833785,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/2",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        20,
+        20,
+        16
+      ],
+      "position_error_m": [
+        0.00043792923679575324,
+        0.0004474798624869436,
+        0.0005036270595155656,
+        0.0012470727087929845
+      ],
+      "orientation_error_rad": [
+        0.023709140717983246,
+        0.025637811049818993,
+        0.025635764002799988,
+        0.00014913585619069636
+      ],
+      "finger_outward_cos": [
+        0.9908859133720398,
+        0.9910299777984619,
+        0.9944677352905273,
+        0.9917952418327332
+      ],
+      "arm_q": [
+        [
+          -0.23636221885681152,
+          -1.1889411211013794,
+          1.2666621208190918,
+          0.000705271027982235,
+          1.2220760583877563,
+          -2.1633660793304443
+        ],
+        [
+          -0.37810206413269043,
+          -1.1466487646102905,
+          1.1985838413238525,
+          0.03265998139977455,
+          1.082781195640564,
+          -2.190145492553711
+        ],
+        [
+          -0.7034533023834229,
+          -0.976245641708374,
+          0.9453107714653015,
+          0.11392438411712646,
+          0.7814844250679016,
+          -2.211444616317749
+        ],
+        [
+          -0.18619389832019806,
+          -1.075858235359192,
+          1.0916155576705933,
+          0.05954401567578316,
+          1.488854169845581,
+          2.1880452632904053
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00043792923679575324,
+            "orientation_error_rad": 0.023709140717983246,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0004474798624869436,
+            "orientation_error_rad": 0.025637811049818993,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0005036270595155656,
+            "orientation_error_rad": 0.025635764002799988,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0012470727087929845,
+            "orientation_error_rad": 0.00014913585619069636,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/3",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        13,
+        11,
+        20,
+        13
+      ],
+      "position_error_m": [
+        0.0029767293017357588,
+        0.002750810468569398,
+        0.0002758199698291719,
+        0.0024247143883258104
+      ],
+      "orientation_error_rad": [
+        0.0016661089612171054,
+        0.011685886420309544,
+        0.027588941156864166,
+        0.0016653810162097216
+      ],
+      "finger_outward_cos": [
+        0.9911340475082397,
+        0.9910078048706055,
+        0.9956454038619995,
+        0.9938158392906189
+      ],
+      "arm_q": [
+        [
+          0.08791843801736832,
+          -1.1559475660324097,
+          1.2146610021591187,
+          0.018976423889398575,
+          1.7675729990005493,
+          2.192336082458496
+        ],
+        [
+          0.04403369128704071,
+          -1.3573453426361084,
+          1.4895150661468506,
+          -0.05676107108592987,
+          1.7261276245117188,
+          2.1664929389953613
+        ],
+        [
+          -0.8753485083580017,
+          -1.3236817121505737,
+          1.4464894533157349,
+          -0.03197506442666054,
+          0.6203414797782898,
+          -2.2407538890838623
+        ],
+        [
+          -0.29960116744041443,
+          -1.3428006172180176,
+          1.4737237691879272,
+          -0.06538806855678558,
+          1.3626335859298706,
+          2.169779062271118
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0029767293017357588,
+            "orientation_error_rad": 0.0016661089612171054,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002750810468569398,
+            "orientation_error_rad": 0.011685886420309544,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0002758199698291719,
+            "orientation_error_rad": 0.027588941156864166,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0024247143883258104,
+            "orientation_error_rad": 0.0016653810162097216,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/4",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        13,
+        20,
+        20
+      ],
+      "position_error_m": [
+        0.00042861283873207867,
+        0.002053213305771351,
+        0.00041566864820197225,
+        0.00036495376843959093
+      ],
+      "orientation_error_rad": [
+        0.025239018723368645,
+        0.0015890611102804542,
+        0.024665722623467445,
+        0.025136593729257584
+      ],
+      "finger_outward_cos": [
+        0.9946380853652954,
+        0.991563618183136,
+        0.9944628477096558,
+        0.9919672012329102
+      ],
+      "arm_q": [
+        [
+          -0.25562620162963867,
+          -1.1959035396575928,
+          1.2892564535140991,
+          -0.03233609348535538,
+          1.229526400566101,
+          -2.1694540977478027
+        ],
+        [
+          -0.17066633701324463,
+          -1.297597050666809,
+          1.4078574180603027,
+          -0.03597116097807884,
+          1.5071746110916138,
+          2.170657157897949
+        ],
+        [
+          -0.48599720001220703,
+          -1.0494496822357178,
+          1.0661791563034058,
+          0.05230182409286499,
+          0.9979685544967651,
+          -2.1827895641326904
+        ],
+        [
+          -0.5920777916908264,
+          -1.1046149730682373,
+          1.1396563053131104,
+          0.05652979016304016,
+          0.8750951886177063,
+          -2.206840991973877
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00042861283873207867,
+            "orientation_error_rad": 0.025239018723368645,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002053213305771351,
+            "orientation_error_rad": 0.0015890611102804542,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00041566864820197225,
+            "orientation_error_rad": 0.024665722623467445,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00036495376843959093,
+            "orientation_error_rad": 0.025136593729257584,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/5",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        15,
+        13,
+        14,
+        20
+      ],
+      "position_error_m": [
+        0.0017885230481624603,
+        0.0027867681346833706,
+        0.0028986555989831686,
+        0.0004643085412681103
+      ],
+      "orientation_error_rad": [
+        0.0002794246538542211,
+        0.001875304733403027,
+        0.0006791458581574261,
+        0.026188289746642113
+      ],
+      "finger_outward_cos": [
+        0.9930668473243713,
+        0.994799017906189,
+        0.9928621053695679,
+        0.9941099286079407
+      ],
+      "arm_q": [
+        [
+          -0.21073436737060547,
+          -1.1501842737197876,
+          1.1981117725372314,
+          0.021638499572873116,
+          1.4558457136154175,
+          2.1881017684936523
+        ],
+        [
+          -0.20248624682426453,
+          -1.283956527709961,
+          1.387968897819519,
+          -0.04363248869776726,
+          1.451142430305481,
+          2.190500020980835
+        ],
+        [
+          -0.16557040810585022,
+          -1.1738228797912598,
+          1.2361239194869995,
+          0.007481411565095186,
+          1.5026601552963257,
+          2.1863746643066406
+        ],
+        [
+          -0.2669219672679901,
+          -1.1404993534088135,
+          1.1981849670410156,
+          0.007292738184332848,
+          1.2146002054214478,
+          -2.1780176162719727
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0017885230481624603,
+            "orientation_error_rad": 0.0002794246538542211,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0027867681346833706,
+            "orientation_error_rad": 0.001875304733403027,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0028986555989831686,
+            "orientation_error_rad": 0.0006791458581574261,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0004643085412681103,
+            "orientation_error_rad": 0.026188289746642113,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/6",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        20,
+        20,
+        20
+      ],
+      "position_error_m": [
+        0.00037549491389654577,
+        0.0004007680108770728,
+        0.0003317151276860386,
+        0.00046920718159526587
+      ],
+      "orientation_error_rad": [
+        0.025954904034733772,
+        0.02581043727695942,
+        0.023526763543486595,
+        0.023276420310139656
+      ],
+      "finger_outward_cos": [
+        0.9945199489593506,
+        0.9948993921279907,
+        0.9937580823898315,
+        0.9938919544219971
+      ],
+      "arm_q": [
+        [
+          -0.49124765396118164,
+          -1.3291364908218384,
+          1.4544286727905273,
+          -0.05541275441646576,
+          0.9937726259231567,
+          -2.1926498413085938
+        ],
+        [
+          -0.3955974578857422,
+          -1.1734386682510376,
+          1.2559785842895508,
+          -0.018998214974999428,
+          1.092137098312378,
+          -2.182690143585205
+        ],
+        [
+          -0.5126142501831055,
+          -1.4693344831466675,
+          1.6311019659042358,
+          -0.0878220871090889,
+          0.9655933380126953,
+          -2.178943634033203
+        ],
+        [
+          -0.6860792636871338,
+          -0.9819538593292236,
+          0.9645113945007324,
+          0.10142495483160019,
+          0.7934247255325317,
+          -2.1948351860046387
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00037549491389654577,
+            "orientation_error_rad": 0.025954904034733772,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0004007680108770728,
+            "orientation_error_rad": 0.02581043727695942,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0003317151276860386,
+            "orientation_error_rad": 0.023526763543486595,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00046920718159526587,
+            "orientation_error_rad": 0.023276420310139656,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/7",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        14,
+        20,
+        20,
+        10
+      ],
+      "position_error_m": [
+        0.0022150850854814053,
+        0.00031577833578921854,
+        0.0004016902530565858,
+        0.002245596842840314
+      ],
+      "orientation_error_rad": [
+        0.0007242710562422872,
+        0.024155430495738983,
+        0.024019351229071617,
+        0.040602218359708786
+      ],
+      "finger_outward_cos": [
+        0.995540201663971,
+        0.9916794896125793,
+        0.9946224093437195,
+        0.9947176575660706
+      ],
+      "arm_q": [
+        [
+          -0.23343388736248016,
+          -1.234459400177002,
+          1.3225046396255493,
+          -0.031051071360707283,
+          1.4135338068008423,
+          2.1994757652282715
+        ],
+        [
+          -0.6683403849601746,
+          -1.1579787731170654,
+          1.2269917726516724,
+          0.029926255345344543,
+          0.7968077063560486,
+          -2.2104990482330322
+        ],
+        [
+          -0.2821464538574219,
+          -1.4094339609146118,
+          1.5608752965927124,
+          -0.09056545048952103,
+          1.2023924589157104,
+          -2.162203311920166
+        ],
+        [
+          -0.06780967861413956,
+          -1.5274964570999146,
+          1.6811295747756958,
+          -0.09627114236354828,
+          1.5883549451828003,
+          2.1526029109954834
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0022150850854814053,
+            "orientation_error_rad": 0.0007242710562422872,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00031577833578921854,
+            "orientation_error_rad": 0.024155430495738983,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0004016902530565858,
+            "orientation_error_rad": 0.024019351229071617,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002245596842840314,
+            "orientation_error_rad": 0.040602218359708786,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/8",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        20,
+        20,
+        14
+      ],
+      "position_error_m": [
+        0.00037953327409923077,
+        0.00037258537486195564,
+        0.0002955503005068749,
+        0.0011545566376298666
+      ],
+      "orientation_error_rad": [
+        0.025008855387568474,
+        0.0240076445043087,
+        0.028079930692911148,
+        0.0005110402125865221
+      ],
+      "finger_outward_cos": [
+        0.9924035668373108,
+        0.9910699725151062,
+        0.9949913620948792,
+        0.9910179972648621
+      ],
+      "arm_q": [
+        [
+          -0.4568219482898712,
+          -1.402565598487854,
+          1.5486369132995605,
+          -0.06559406220912933,
+          1.0126131772994995,
+          -2.189391851425171
+        ],
+        [
+          -0.5847886800765991,
+          -1.0872751474380493,
+          1.122027039527893,
+          0.06053171679377556,
+          0.8761878609657288,
+          -2.2010653018951416
+        ],
+        [
+          -0.8264515995979309,
+          -1.1815541982650757,
+          1.2530888319015503,
+          0.021004363894462585,
+          0.6640464663505554,
+          -2.243570566177368
+        ],
+        [
+          0.09590356796979904,
+          -1.1469281911849976,
+          1.2049283981323242,
+          0.018727485090494156,
+          1.7773528099060059,
+          2.1782686710357666
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00037953327409923077,
+            "orientation_error_rad": 0.025008855387568474,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00037258537486195564,
+            "orientation_error_rad": 0.0240076445043087,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0002955503005068749,
+            "orientation_error_rad": 0.028079930692911148,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0011545566376298666,
+            "orientation_error_rad": 0.0005110402125865221,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    },
+    {
+      "case": "random/9",
+      "passed": true,
+      "accepted_seed": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "iterations": [
+        20,
+        20,
+        14,
+        20
+      ],
+      "position_error_m": [
+        0.0004422458878252655,
+        0.00030826585134491324,
+        0.002877254271879792,
+        0.00044340730528347194
+      ],
+      "orientation_error_rad": [
+        0.025467460975050926,
+        0.024927709251642227,
+        0.000725726829841733,
+        0.026692278683185577
+      ],
+      "finger_outward_cos": [
+        0.9915052056312561,
+        0.9948400259017944,
+        0.9916538596153259,
+        0.9923883676528931
+      ],
+      "arm_q": [
+        [
+          -0.3192771375179291,
+          -1.338034749031067,
+          1.4583226442337036,
+          -0.04055993631482124,
+          1.1442394256591797,
+          -2.182236671447754
+        ],
+        [
+          -0.679293692111969,
+          -1.4604243040084839,
+          1.615585207939148,
+          -0.07753389328718185,
+          0.8082219362258911,
+          -2.2014994621276855
+        ],
+        [
+          0.023312490433454514,
+          -1.0955032110214233,
+          1.1161010265350342,
+          0.055943407118320465,
+          1.6984926462173462,
+          2.2062714099884033
+        ],
+        [
+          -0.3044965863227844,
+          -1.3824567794799805,
+          1.5119941234588623,
+          -0.05376971513032913,
+          1.1652965545654297,
+          -2.1881256103515625
+        ]
+      ],
+      "seed_diagnostics": [
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.0004422458878252655,
+            "orientation_error_rad": 0.025467460975050926,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00030826585134491324,
+            "orientation_error_rad": 0.024927709251642227,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.002877254271879792,
+            "orientation_error_rad": 0.000725726829841733,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ],
+        [
+          {
+            "seed_index": 0,
+            "position_error_m": 0.00044340730528347194,
+            "orientation_error_rad": 0.026692278683185577,
+            "pose_valid": true,
+            "collision_checked": true,
+            "cube_overlap_bodies": [],
+            "table_overlap_bodies": []
+          }
+        ]
+      ]
+    }
+  ],
+  "seed_offsets": [
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.2,
+      -0.12,
+      0.12,
+      0.0,
+      0.0,
+      -0.15
+    ],
+    [
+      -0.2,
+      -0.12,
+      0.12,
+      0.0,
+      0.0,
+      0.15
+    ]
+  ],
+  "passed": true,
+  "hold_50_steps": true
+}

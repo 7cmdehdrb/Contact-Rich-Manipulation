@@ -1,0 +1,91 @@
+{
+  "task": "Isaac-Hand-Manipulation-Push-v0",
+  "parameters": {
+    "ppo_reference": "example/Sweep-Policy/sweeping_policy/config/ur5e/agents/rsl_rl_ppo_cfg_02.py",
+    "default_max_iterations": 90000,
+    "initial_std": 1.0,
+    "entropy_coef": 0.005,
+    "gamma": 0.98,
+    "osc_stiffness": [
+      200.0,
+      200.0,
+      200.0,
+      200.0,
+      200.0,
+      200.0
+    ],
+    "hand_openness_range": [
+      0.8,
+      1.0
+    ],
+    "physical_hand_limits": true,
+    "approach_weight": 0.05,
+    "progress_weight": 12.0,
+    "progress_sigma_fraction": 0.5,
+    "alignment_weight": 0.3
+  },
+  "matched_performance": {
+    "num_envs": 2048,
+    "rollout_steps": 36,
+    "reset_rows": 138,
+    "old_collection_s": 38.39453481999226,
+    "new_collection_s": 11.42367401899537,
+    "speedup": 3.360962047424457,
+    "new_rollout_reset_io": {
+      "joint_state_writes": 215,
+      "joint_position_writes": 0,
+      "physx_pose_queries": 180,
+      "software_fk_batches": 4077,
+      "software_jacobian_batches": 4077,
+      "numpy_fk_batches": 4077,
+      "packed_host_transfers": 90
+    },
+    "method": "Same headless hold-action timeout workload, same 1 reset repeat per batch, markers disabled. Policy/contact failure frequencies can change throughput."
+  },
+  "tests": {
+    "cpu_passed": 95,
+    "cpu_skipped": 1,
+    "skip_reason": "pxr requires Kit; actual USD/FK was checked in GPU smoke.",
+    "gpu_boundary_specs": 24,
+    "gpu_minimum_distance_specs": 2,
+    "gpu_random_resets": 4,
+    "gpu_partial_reset": true,
+    "gpu_fk_and_jacobian_comparison": true,
+    "gpu_timeout_policy_steps": 500,
+    "gpu_hand_endpoint_steps_each": 50,
+    "gpu_measured_hand_openness_min": [
+      0.8000936508,
+      0.8000001311
+    ],
+    "gpu_measured_hand_openness_max": [
+      0.9964745641,
+      0.990457952
+    ]
+  },
+  "ppo_validation": {
+    "run": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-04_18-56-32_tuning_validation",
+    "num_envs": 2048,
+    "iterations": 2,
+    "collection_seconds": [
+      12.193570137023926,
+      12.07859992980957
+    ],
+    "checkpoint": "model_1.pt",
+    "replay_envs": 2,
+    "replay_steps": 50,
+    "source_snapshot": true
+  },
+  "physical_push_fixture": {
+    "stiffness": 200.0,
+    "policy_steps": 350,
+    "mass_and_friction_unchanged": true,
+    "side_contact_both_directions": true,
+    "max_forward_displacement_m": [
+      2.2268652628554264e-06,
+      2.8856138669652864e-05
+    ],
+    "required_displacement_m": 0.015,
+    "passed": false,
+    "interpretation": "Straight scripted OSC pushing remained force limited. This does not prove every possible 8D policy is unable to move the Cube."
+  }
+}

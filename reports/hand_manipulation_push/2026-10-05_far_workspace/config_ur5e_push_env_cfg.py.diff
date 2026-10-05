@@ -1,0 +1,32 @@
+--- logs/rsl_rl/hand_manipulation_push/2026-10-04_22-06-26/source/hand_manipulation_test/config/ur5e/push_env_cfg.py
++++ src/hand_manipulation_test/hand_manipulation_test/config/ur5e/push_env_cfg.py
+@@ -26,21 +26,21 @@
+ @configclass
+ class PushTaskCfg(ContactTaskCfg):
+     # Isaac Lab's configclass post-init detects properties on the immediate
+-    # class; redeclare this inherited read-only property for that check.
++    # class; redeclare inherited read-only properties for that check.
+     cube_center_height_m = ContactTaskCfg.cube_center_height_m
+-    table_center: tuple[float, float, float] = (-0.50, 0.0, 1.03)
+-    object_xy_range_low: tuple[float, float] = (-0.46, -0.06)
+-    object_xy_range_high: tuple[float, float] = (-0.44, 0.06)
++    object_xy_range_low = ContactTaskCfg.object_xy_range_low
++    object_xy_range_high = ContactTaskCfg.object_xy_range_high
++    object_xy_offset_low: tuple[float, float] = (0.04, -0.06)
++    object_xy_offset_high: tuple[float, float] = (0.06, 0.06)
+     command_distance_range: tuple[float, float] = (0.20, 0.30)
+     command_angle_jitter_rad: float = math.pi / 18.0
+     command_sample_attempts: int = 128
+     table_path_margin_m: float = 0.01
+     table_failure_margin_m: float = 0.005
+-    # These offsets locate the physical pad face, rather than the virtual C.
+-    reset_position_offset_task: tuple[float, float, float] = (0.14, 0.0, 0.03)
++    # Inherit the common 10cm start height so the outward-facing thumb clears
++    # the table on both sides. Push applies this offset to the physical pad.
+     reset_position_jitter_task: tuple[float, float, float] = (0.004, 0.004, 0.003)
+-    # The closer Table needs an elbow-up branch. Keep the bounded three-seed
+-    # search while offering both wrist branches for the two pushing sides.
++    # Keep a bounded three-seed search with both wrist branches.
+     reset_joint_seed_offsets: tuple[tuple[float, ...], ...] = (
+         (0.0, 1.2, -4.4, 0.0, 0.0, 0.0),
+         (0.0, 1.2, -4.4, math.pi, 0.0, 0.0),

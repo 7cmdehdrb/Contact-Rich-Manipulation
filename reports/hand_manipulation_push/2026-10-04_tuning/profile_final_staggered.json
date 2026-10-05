@@ -1,0 +1,48 @@
+{
+  "num_envs": 2048,
+  "steps": 36,
+  "device": "cuda:0",
+  "legacy_reset": false,
+  "markers": false,
+  "stagger_timeouts": true,
+  "creation_s": 15.680980481003644,
+  "reset_seconds_by_batch_size": {
+    "1": [
+      0.4253344120224938,
+      0.33618422399740666
+    ],
+    "8": [
+      0.4373619160032831,
+      0.6874821840028744
+    ],
+    "2048": [
+      1.7478773949842434,
+      1.6704386280034669
+    ]
+  },
+  "policy_step_mean_s": 0.3067444596106523,
+  "environment_steps_per_second": 6676.567207112742,
+  "rollout_36_steps_s": 11.042800545983482,
+  "terminated_rows_during_steps": 151,
+  "rollout_reset_calls": 35,
+  "rollout_reset_rows": 151,
+  "reset_work_during_steps": true,
+  "reset_io_counters": {
+    "joint_state_writes": 822,
+    "joint_position_writes": 3969,
+    "physx_pose_queries": 4757,
+    "software_fk_batches": 4549,
+    "software_jacobian_batches": 4549,
+    "numpy_fk_batches": 4549,
+    "packed_host_transfers": 102
+  },
+  "rollout_reset_io_counters": {
+    "joint_state_writes": 223,
+    "joint_position_writes": 0,
+    "physx_pose_queries": 184,
+    "software_fk_batches": 4146,
+    "software_jacobian_batches": 4146,
+    "numpy_fk_batches": 4146,
+    "packed_host_transfers": 94
+  }
+}
