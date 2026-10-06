@@ -1,0 +1,233 @@
+{
+  "run": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17",
+  "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_4300.pt",
+  "analysis_time_utc": "2026-10-06T02:47:39.367442+00:00",
+  "verified_facts": {
+    "initial_ten_iterations": {
+      "valid_contact_seen_percent": 10.195442792028189,
+      "raw_contact_seen_percent": 16.619189716875553,
+      "push_seen_percent": 6.851439923048019,
+      "episodic_progress_contribution": 0.21969649521633983
+    },
+    "last_hundred_iterations": {
+      "valid_contact_seen_percent": 0.02175925951451063,
+      "raw_contact_seen_percent": 0.02175925951451063,
+      "push_seen_percent": 0.0069444444961845875,
+      "success": 0.0,
+      "signed_central_palm_height_error_m": 0.34503112941980363,
+      "central_palm_approach_gap_m": 0.518189926147461,
+      "goal_error_m": 0.24997233748435974,
+      "episodic_rewards": {
+        "action_rate": -0.017556758655700833,
+        "approach": 0.0006166720813780557,
+        "progress": 0.0001162019891125965,
+        "backslide": -2.533965992590481e-08,
+        "first_contact": 4.351852203399176e-06,
+        "contact": 1.6064811987348547e-07,
+        "alignment": -0.011578666474088095,
+        "success": 0.0,
+        "failure": -0.09624743943568319,
+        "roll": -0.004222355315869208,
+        "action_excess": -0.38442181553691623
+      },
+      "raw_excess_share_of_negative_rewards": 0.747862991824006,
+      "terminal_raw_input_axis_clipping_fraction": 0.8494807630777359,
+      "progress_nonzero_iterations": 2,
+      "contact_seen_nonzero_iterations": 3,
+      "mean_valid_contact_duration_all_selected_episodes_s": 3.212962896213867e-05
+    },
+    "all_logged_success_values_zero": true,
+    "training": {
+      "collection_seconds": 47070.91811656952,
+      "learning_seconds": 661.9969303607941,
+      "logged_iteration_seconds": 47732.91504693031,
+      "collection_fraction": 0.9861312276924649,
+      "transition_throughput_per_second": 6698.906523635069,
+      "first_scalar_wall_time_utc": "2026-10-05T13:17:49.607220+00:00",
+      "last_scalar_wall_time_utc": "2026-10-06T02:37:10.946374+00:00",
+      "wall_time_span_seconds": 47961.33915472031
+    },
+    "saved_ppo_unchanged_reference": {
+      "class_name": "PPO",
+      "num_learning_epochs": 8,
+      "num_mini_batches": 4,
+      "learning_rate": 0.001,
+      "schedule": "adaptive",
+      "gamma": 0.98,
+      "lam": 0.95,
+      "entropy_coef": 0.005,
+      "desired_kl": 0.02,
+      "max_grad_norm": 1.0,
+      "optimizer": "adam",
+      "value_loss_coef": 1.0,
+      "use_clipped_value_loss": true,
+      "clip_param": 0.2,
+      "normalize_advantage_per_mini_batch": false,
+      "share_cnn_encoders": false,
+      "rnd_cfg": null,
+      "symmetry_cfg": null
+    }
+  },
+  "source_findings": [
+    {
+      "fact": "The 6 cm projection bounds controller target error relative to current C, not absolute EEF height or workspace.",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_actions.py",
+          "lines": [
+            80
+          ],
+          "anchor": "self._desired_c_pose_b[index, :3] = accumulated_translation_target("
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/accumulation_math.py",
+          "lines": [
+            28
+          ],
+          "anchor": "proposed = previous_target_b + quaternion_rotate("
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/accumulation_math.py",
+          "lines": [
+            32
+          ],
+          "anchor": "return current_position_b + error * scale"
+        }
+      ],
+      "inference": "Repeated upward increments can move the persistent target and measured EEF away from the contact plane while remaining within the per-update error ball."
+    },
+    {
+      "fact": "Approach shaping rewards new best records only, and is suppressed after first valid contact. Retreat or hovering has no direct approach cost.",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            287
+          ],
+          "anchor": "approach_delta = (approach - self._best_approach).clamp_min(0.)"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            288
+          ],
+          "anchor": "approach_delta *= (~contact_seen & good)"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            309
+          ],
+          "anchor": "self._best_approach[changed] = torch.maximum"
+        }
+      ],
+      "inference": "Once a small approach reward is collected, staying high and avoiding collision can be a local policy attractor. Terminal height/gap statistics support that behavior, but do not by themselves prove the causal trajectory."
+    },
+    {
+      "fact": "Physical progress requires aligned actual pad-to-Cube force, full-3D palm-normal alignment, same-substep vertical Table support, current support and no failure.",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            261
+          ],
+          "anchor": "active_pair = pair_norm >= threshold"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            271
+          ],
+          "anchor": "aligned_substep &= (palm_dot >= self.cfg.alignment_cos)"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            276
+          ],
+          "anchor": "valid_push = (aligned_substep & support_substep).any(-1) & good"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_state.py",
+          "lines": [
+            284
+          ],
+          "anchor": "progress *= (valid_push & grounded & good)"
+        }
+      ],
+      "inference": "Late raw_contact_seen equals valid contact_seen and is nearly zero, so lack of physical approach dominates the late bottleneck. Raising gated progress weight alone cannot reward episodes that never touch."
+    },
+    {
+      "fact": "Input excess is a nonpositive raw-Gaussian rate, while physical arm commands clamp each finite input to [-1,1].",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_rewards.py",
+          "lines": [
+            42
+          ],
+          "anchor": "return -excess.square().mean(-1)"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_actions.py",
+          "lines": [
+            64
+          ],
+          "anchor": "normalized = sanitized.clamp(-1.0, 1.0)"
+        }
+      ],
+      "inference": "High latent standard deviations produce mostly endpoint physical inputs. This impairs fine motion during stochastic training. Deterministic play uses actor means, so its abnormal motion needs an actual-observation mean-action trace."
+    },
+    {
+      "fact": "C and H have identical orientation; the initial H/C +X axis is world up. Therefore initial action[0] controls vertical increments, not action[2].",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/constants.py",
+          "lines": [
+            8
+          ],
+          "anchor": "C_QUAT_H_WXYZ = (1.0, 0.0, 0.0, 0.0)"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_v1_math.py",
+          "lines": [
+            30
+          ],
+          "anchor": "return torch.stack((up, normal, finger), dim=-1)"
+        }
+      ]
+    },
+    {
+      "fact": "The logged height error refers to the actual central palm reference P, not control point C.",
+      "sources": [
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_commands.py",
+          "lines": [
+            257
+          ],
+          "anchor": "height_error = sample.palm_pos_w[:, 2]"
+        },
+        {
+          "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_events.py",
+          "lines": [
+            38
+          ],
+          "anchor": "control = palm + (rotation @ (self.c_offset_h - self.palm_reference_h)"
+        }
+      ]
+    }
+  ],
+  "recommended_fixes": [
+    "Add a V1-only continuous nonpositive actual-C-height soft cost, with explicit metres, deadband and normalization; let RewardManager integrate dt exactly once. Keep reset poses inside the hard envelope.",
+    "Treat the actual-C-height hard bound as shared physical failure before reward computation, so positive rewards, success, timeout precedence and failure penalty remain consistent. Add subtype diagnostics for height, robot-Table, footprint, fall and invalid state.",
+    "Consider a small ongoing nonpositive pre-contact approach-gap cost if the Z-only correction still leaves horizontal avoidance. Preserve bounded record rewards and real contact/support gates; do not add a stationary positive near-object bonus.",
+    "Keep requested reference PPO parameters unchanged. Measure actual-observation raw actor means, processed actions, measured C height and persistent target height during deterministic and stochastic checks before attributing all odd play motion to std."
+  ],
+  "limitations": [
+    "The run logs only aggregate failure; robot-Table/footprint/fall/invalid failure subtype frequencies cannot be recovered.",
+    "Metrics are means of episode-ending selected reset rows, not complete motion trajectories or exact episode-count-weighted population rates.",
+    "The 32 microsecond mean valid contact duration includes all selected episodes, including the many with no contact; it is not contact duration conditional on touching.",
+    "model_4300.pt has network/optimizer weights and std but no actual 64D rollout observations. The checkpoint report gives analytic stochastic clipping lower bounds, not empirical actor-mean or deterministic-play distributions.",
+    "Do not compare differential-entropy coefficients directly to episodic reward magnitudes; PPO losses and reward logs use different normalizations.",
+    "A fixed numeric C-height envelope must be checked against realized reset and physical push poses; signed palm height statistics do not certify that envelope."
+  ]
+}

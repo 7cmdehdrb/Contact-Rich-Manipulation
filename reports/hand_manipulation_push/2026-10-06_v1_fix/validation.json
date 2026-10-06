@@ -1,0 +1,185 @@
+{
+  "task": "Isaac-Hand-Manipulation-Push-v1",
+  "analysis_run": "logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17",
+  "geometry": {
+    "table_center_m": [
+      -0.75,
+      0,
+      1.03
+    ],
+    "table_size_m": [
+      0.36,
+      1,
+      0.04
+    ],
+    "table_front_world_x_m": -0.57,
+    "cube_path_midpoint_x_m": -0.7,
+    "cube_initial_bbox_x_m": [
+      -0.73,
+      -0.67
+    ],
+    "cube_initial_bbox_y_m": [
+      -0.03,
+      0.03
+    ]
+  },
+  "reward_changes": {
+    "contact_distance_weight": 1.0,
+    "contact_distance_unweighted_rate": "-gap_m from live palmar reference to current Cube side center",
+    "action_excess_weight": 0.02,
+    "eef_height_weight": 5.0,
+    "eef_height_rate": "-relu(actual_C_height_above_table_m - 0.15)",
+    "manager_dt_s": 0.02,
+    "eef_hard_height_above_table_m": 0.25
+  },
+  "controller": {
+    "configured_stiffness_all_axes": 200.0,
+    "contact_prediction": "implicit Cartesian impedance with measured Cube-pad reaction at actual C in base axes",
+    "reaction_force_cap_n": 20.0,
+    "reaction_moment_cap_nm": 2.0,
+    "reaction_ema_current_fraction": 0.5,
+    "v1_only": true
+  },
+  "hand": {
+    "action_open_range": [
+      0.8,
+      1.0
+    ],
+    "left_contact_reference": "inspire_thumb_force_sensor_4",
+    "thumb_pad_collision_exposure_m": 0.012,
+    "mass_joints_actuators_visuals_preserved": true
+  },
+  "orientation": {
+    "finger_outward_minimum_cos": 0.25,
+    "wrist_2_branch_minimum_sine": 0.15,
+    "reset_right_arm_seed": [
+      0.179,
+      0.154,
+      -1.56,
+      -4.876,
+      1.75,
+      1.571
+    ],
+    "reset_left_arm_seed": [
+      -0.615,
+      0.159,
+      -1.625,
+      -4.818,
+      0.955,
+      -1.571
+    ],
+    "thumb_orientation": "right up, left down; both fingers outward"
+  },
+  "cpu": {
+    "passed": 280,
+    "skipped": 1,
+    "skip_reason": "pxr unavailable in simulator-free CPU test session",
+    "compile_passed": true,
+    "diff_whitespace_passed": true
+  },
+  "gpu_core": {
+    "passed": true,
+    "num_envs": 4,
+    "boundary_poses": 24,
+    "steps": 50,
+    "timeout_steps": 500,
+    "debug_markers": true,
+    "reset_obb_clearance_m": 0.004,
+    "normal_steps_run_no_new_IK": true,
+    "note": "Reset poses and geometry are unchanged when changing only the live left contact reference from Thumb3 to Thumb4"
+  },
+  "gpu_height": {
+    "passed": true,
+    "num_envs": 4,
+    "terminal_heights_above_table_m": [
+      0.2522304952144623,
+      0.2523166835308075,
+      0.25129255652427673,
+      0.25214383006095886
+    ],
+    "terminated": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "truncated": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "exact_height_contribution_and_no_positive_terminal_rewards": true,
+    "policy_steps": 58
+  },
+  "gpu_full_goal": {
+    "all_rows_passed": false,
+    "command_distance_m": 0.2,
+    "fixture": "Thumb4 side-center approach, tangential Cube tracking, original real physics and actions",
+    "last_logged_step": 350,
+    "last_logged_forward_m": [
+      0.18361175060272217,
+      0.24483180046081543,
+      0.18400418758392334,
+      0.18646860122680664
+    ],
+    "last_logged_goal_error_m": [
+      0.01642981916666031,
+      0.05478040128946304,
+      0.01599792018532753,
+      0.03558732569217682
+    ],
+    "exit_code": 1,
+    "termination_failure_row": 3,
+    "note": "All sides displaced more than 18 cm, but left lateral drift and one failure prevented all-row stable goal success. The exact failure subtype was not printed at the terminal step."
+  },
+  "ppo": {
+    "passed": true,
+    "num_envs": 2048,
+    "iterations": 2,
+    "fresh_no_checkpoint": true,
+    "ppo_numeric_configuration": "unchanged Sweep-Policy _02",
+    "learn_elapsed_s": 16.31,
+    "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-06_12-42-54_v1_fixed_validation/model_1.pt",
+    "checkpoint_exists": true,
+    "limits": "Execution verification only; no convergence or policy success demonstrated"
+  },
+  "replay": {
+    "passed": true,
+    "num_envs": 4,
+    "steps": 100,
+    "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-06_12-42-54_v1_fixed_validation/model_1.pt"
+  },
+  "gpu_physical_final": {
+    "passed": true,
+    "exit_code": 0,
+    "num_envs": 4,
+    "left_contact_reference": "inspire_thumb_force_sensor_4",
+    "approach_tangent_centered": true,
+    "steps": 276,
+    "forward_m": [
+      0.015092611312866211,
+      0.030825376510620117,
+      0.015640854835510254,
+      0.03051018714904785
+    ],
+    "settled_policy_steps": [
+      25,
+      35,
+      25,
+      35
+    ],
+    "normal_steps_no_new_IK": true
+  },
+  "source_sha256": {
+    "src/hand_manipulation_test/hand_manipulation_test/mdp/push_v1_controller.py": "02500c2fd175494883d3c3aadd17ca56a04b34ea837b674459f45043d5a70ecd",
+    "src/hand_manipulation_test/hand_manipulation_test/mdp/push_v1_rewards.py": "a7457c440cbefae47fdae53274b0e3b1918160e4b9dddda28e0f75dbc0169a4d",
+    "src/hand_manipulation_test/hand_manipulation_test/mdp/push_v1_commands.py": "c79aae54ed68631b01a1a9688bbf2234a395b139926cf33f6a52df15394d182d",
+    "src/hand_manipulation_test/hand_manipulation_test/mdp/push_v1_actions.py": "59c7b3c005e2ddd660e8fe2cc0d74052f27f323847e014d223d4655abfc09083",
+    "src/hand_manipulation_test/hand_manipulation_test/mdp/push_v1_events.py": "e2e8e86ad30834e65cb809b3644a6632f7687bf925ddde1b25bf6daf3969b40f",
+    "src/hand_manipulation_test/hand_manipulation_test/config/ur5e/push_v1_env_cfg.py": "12cadcb93e2bc27bffc0e9d2b77c8c24c5390a1629194aaceba2bf9fc317ae89",
+    "src/hand_manipulation_test/hand_manipulation_test/assets/push_v1_robot.py": "4455a55dedef405d8f99d49f4c96c0bcc3c082bf3edf5ff0757b7565501dcca1",
+    "src/hand_manipulation_test/hand_manipulation_test/impedance_math.py": "c172130fad67b2423b8193cc7ba72350a4033776f7cb0e0e4e2a098075f7caad",
+    "src/hand_manipulation_test/hand_manipulation_test/height_math.py": "10cfebb1d5bd973b61a899779d056622e118d2f3c11a273dfbba0693b75948ff"
+  }
+}

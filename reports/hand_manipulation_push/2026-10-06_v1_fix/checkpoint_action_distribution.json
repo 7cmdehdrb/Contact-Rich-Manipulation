@@ -1,0 +1,422 @@
+[
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_0.pt",
+    "saved_iteration": 0,
+    "std_parameterization": "scalar",
+    "std_mean": 1.0074748992919922,
+    "latent_gaussian_entropy_nats": 11.41098898461683,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 1.0168381929397583,
+        "clip_probability_lower_bound": 0.3253906184361597,
+        "zero_mean_boundary_mass_each_sign": 0.16269530921807984,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6746093815638403
+      },
+      {
+        "action": "C_dy",
+        "std": 1.007737159729004,
+        "clip_probability_lower_bound": 0.3210403556186286,
+        "zero_mean_boundary_mass_each_sign": 0.1605201778093143,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6789596443813715
+      },
+      {
+        "action": "C_dz",
+        "std": 1.00303053855896,
+        "clip_probability_lower_bound": 0.31877488880262084,
+        "zero_mean_boundary_mass_each_sign": 0.15938744440131042,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6812251111973792
+      },
+      {
+        "action": "C_rx",
+        "std": 1.0016454458236694,
+        "clip_probability_lower_bound": 0.318106152166818,
+        "zero_mean_boundary_mass_each_sign": 0.159053076083409,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.681893847833182
+      },
+      {
+        "action": "C_ry",
+        "std": 1.001916527748108,
+        "clip_probability_lower_bound": 0.3182371063036752,
+        "zero_mean_boundary_mass_each_sign": 0.1591185531518376,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6817628936963248
+      },
+      {
+        "action": "C_rz",
+        "std": 1.009722113609314,
+        "clip_probability_lower_bound": 0.3219925724335535,
+        "zero_mean_boundary_mass_each_sign": 0.16099628621677675,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6780074275664465
+      },
+      {
+        "action": "hand_common_open",
+        "std": 1.0117007493972778,
+        "clip_probability_lower_bound": 0.32293986157320126,
+        "zero_mean_boundary_mass_each_sign": 0.16146993078660063,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6770601384267987
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 1.0072084665298462,
+        "clip_probability_lower_bound": 0.3207864108584726,
+        "zero_mean_boundary_mass_each_sign": 0.1603932054292363,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.6792135891415274
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.32090849577414116,
+    "expected_clipped_axes_lower_bound": 2.5672679661931292,
+    "any_axis_clipped_probability_lower_bound": 0.9547722292017875,
+    "all_eight_axes_clipped_probability_lower_bound": 0.00011244887483398063,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  },
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_100.pt",
+    "saved_iteration": 100,
+    "std_parameterization": "scalar",
+    "std_mean": 2.8455302119255066,
+    "latent_gaussian_entropy_nats": 19.710345126740485,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 2.6717758178710938,
+        "clip_probability_lower_bound": 0.7081938532499366,
+        "zero_mean_boundary_mass_each_sign": 0.3540969266249683,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.29180614675006344
+      },
+      {
+        "action": "C_dy",
+        "std": 2.8032023906707764,
+        "clip_probability_lower_bound": 0.721290309113327,
+        "zero_mean_boundary_mass_each_sign": 0.3606451545566635,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.27870969088667297
+      },
+      {
+        "action": "C_dz",
+        "std": 2.6933023929595947,
+        "clip_probability_lower_bound": 0.7104205071663034,
+        "zero_mean_boundary_mass_each_sign": 0.3552102535831517,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.28957949283369655
+      },
+      {
+        "action": "C_rx",
+        "std": 2.860926628112793,
+        "clip_probability_lower_bound": 0.7266861224803993,
+        "zero_mean_boundary_mass_each_sign": 0.36334306124019966,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.2733138775196007
+      },
+      {
+        "action": "C_ry",
+        "std": 3.0334408283233643,
+        "clip_probability_lower_bound": 0.7416579032357722,
+        "zero_mean_boundary_mass_each_sign": 0.3708289516178861,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.2583420967642278
+      },
+      {
+        "action": "C_rz",
+        "std": 2.8801090717315674,
+        "clip_probability_lower_bound": 0.7284342553334138,
+        "zero_mean_boundary_mass_each_sign": 0.3642171276667069,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.27156574466658623
+      },
+      {
+        "action": "hand_common_open",
+        "std": 2.8222544193267822,
+        "clip_probability_lower_bound": 0.7230940855412461,
+        "zero_mean_boundary_mass_each_sign": 0.36154704277062305,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.2769059144587539
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 2.999230146408081,
+        "clip_probability_lower_bound": 0.7388181025272478,
+        "zero_mean_boundary_mass_each_sign": 0.3694090512636239,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.2611818974727522
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.7248243923309559,
+    "expected_clipped_axes_lower_bound": 5.798595138647647,
+    "any_axis_clipped_probability_lower_bound": 0.9999673396026534,
+    "all_eight_axes_clipped_probability_lower_bound": 0.0761116142913904,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  },
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_600.pt",
+    "saved_iteration": 600,
+    "std_parameterization": "scalar",
+    "std_mean": 9.310667037963867,
+    "latent_gaussian_entropy_nats": 29.198160836743916,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 9.307137489318848,
+        "clip_probability_lower_bound": 0.9144364154751407,
+        "zero_mean_boundary_mass_each_sign": 0.4572182077375703,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08556358452485935
+      },
+      {
+        "action": "C_dy",
+        "std": 9.272974014282227,
+        "clip_probability_lower_bound": 0.9141224001322497,
+        "zero_mean_boundary_mass_each_sign": 0.45706120006612483,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08587759986775034
+      },
+      {
+        "action": "C_dz",
+        "std": 9.690019607543945,
+        "clip_probability_lower_bound": 0.9178050608730516,
+        "zero_mean_boundary_mass_each_sign": 0.4589025304365258,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08219493912694842
+      },
+      {
+        "action": "C_rx",
+        "std": 9.00883674621582,
+        "clip_probability_lower_bound": 0.9116146636313815,
+        "zero_mean_boundary_mass_each_sign": 0.4558073318156908,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08838533636861845
+      },
+      {
+        "action": "C_ry",
+        "std": 9.38657283782959,
+        "clip_probability_lower_bound": 0.9151577637934082,
+        "zero_mean_boundary_mass_each_sign": 0.4575788818967041,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08484223620659181
+      },
+      {
+        "action": "C_rz",
+        "std": 8.90998363494873,
+        "clip_probability_lower_bound": 0.9106381475190846,
+        "zero_mean_boundary_mass_each_sign": 0.4553190737595423,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08936185248091544
+      },
+      {
+        "action": "hand_common_open",
+        "std": 9.384323120117188,
+        "clip_probability_lower_bound": 0.9151375012981547,
+        "zero_mean_boundary_mass_each_sign": 0.45756875064907737,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08486249870184526
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 9.52548885345459,
+        "clip_probability_lower_bound": 0.9163904974562653,
+        "zero_mean_boundary_mass_each_sign": 0.45819524872813266,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.08360950254373467
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.914412806272342,
+    "expected_clipped_axes_lower_bound": 7.315302450178736,
+    "any_axis_clipped_probability_lower_bound": 0.9999999971283607,
+    "all_eight_axes_clipped_probability_lower_bound": 0.4887967974629535,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  },
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_1200.pt",
+    "saved_iteration": 1200,
+    "std_parameterization": "scalar",
+    "std_mean": 10.848006129264832,
+    "latent_gaussian_entropy_nats": 30.421190834231645,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 10.466444969177246,
+        "clip_probability_lower_bound": 0.9238831998305018,
+        "zero_mean_boundary_mass_each_sign": 0.4619415999152509,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07611680016949818
+      },
+      {
+        "action": "C_dy",
+        "std": 10.70157527923584,
+        "clip_probability_lower_bound": 0.9255506880288378,
+        "zero_mean_boundary_mass_each_sign": 0.4627753440144189,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07444931197116222
+      },
+      {
+        "action": "C_dz",
+        "std": 11.03821849822998,
+        "clip_probability_lower_bound": 0.9278149380761781,
+        "zero_mean_boundary_mass_each_sign": 0.46390746903808905,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.0721850619238219
+      },
+      {
+        "action": "C_rx",
+        "std": 11.270310401916504,
+        "clip_probability_lower_bound": 0.9292975225186294,
+        "zero_mean_boundary_mass_each_sign": 0.4646487612593147,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.0707024774813706
+      },
+      {
+        "action": "C_ry",
+        "std": 10.917652130126953,
+        "clip_probability_lower_bound": 0.9270199949687996,
+        "zero_mean_boundary_mass_each_sign": 0.4635099974843998,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07298000503120039
+      },
+      {
+        "action": "C_rz",
+        "std": 10.821683883666992,
+        "clip_probability_lower_bound": 0.9263746297702831,
+        "zero_mean_boundary_mass_each_sign": 0.46318731488514153,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07362537022971694
+      },
+      {
+        "action": "hand_common_open",
+        "std": 11.023612022399902,
+        "clip_probability_lower_bound": 0.9277195535256688,
+        "zero_mean_boundary_mass_each_sign": 0.4638597767628344,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07228044647433118
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 10.544551849365234,
+        "clip_probability_lower_bound": 0.924445326823035,
+        "zero_mean_boundary_mass_each_sign": 0.4622226634115175,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.07555467317696496
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.9265132316927418,
+    "expected_clipped_axes_lower_bound": 7.412105853541934,
+    "any_axis_clipped_probability_lower_bound": 0.9999999991513342,
+    "all_eight_axes_clipped_probability_lower_bound": 0.5430091073591995,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  },
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_1800.pt",
+    "saved_iteration": 1800,
+    "std_parameterization": "scalar",
+    "std_mean": 5.6484280824661255,
+    "latent_gaussian_entropy_nats": 25.193555898768533,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 6.0648369789123535,
+        "clip_probability_lower_bound": 0.869034582808333,
+        "zero_mean_boundary_mass_each_sign": 0.4345172914041665,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.130965417191667
+      },
+      {
+        "action": "C_dy",
+        "std": 5.903597354888916,
+        "clip_probability_lower_bound": 0.8654912683859113,
+        "zero_mean_boundary_mass_each_sign": 0.43274563419295564,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.13450873161408872
+      },
+      {
+        "action": "C_dz",
+        "std": 5.223940849304199,
+        "clip_probability_lower_bound": 0.8481915668666258,
+        "zero_mean_boundary_mass_each_sign": 0.4240957834333129,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.15180843313337422
+      },
+      {
+        "action": "C_rx",
+        "std": 5.683001518249512,
+        "clip_probability_lower_bound": 0.8603227335455087,
+        "zero_mean_boundary_mass_each_sign": 0.43016136677275435,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.1396772664544913
+      },
+      {
+        "action": "C_ry",
+        "std": 5.600279331207275,
+        "clip_probability_lower_bound": 0.8582812247436563,
+        "zero_mean_boundary_mass_each_sign": 0.42914061237182816,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.1417187752563437
+      },
+      {
+        "action": "C_rz",
+        "std": 5.67769193649292,
+        "clip_probability_lower_bound": 0.8601934566436609,
+        "zero_mean_boundary_mass_each_sign": 0.43009672832183043,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.13980654335633913
+      },
+      {
+        "action": "hand_common_open",
+        "std": 5.283259868621826,
+        "clip_probability_lower_bound": 0.8498756582539284,
+        "zero_mean_boundary_mass_each_sign": 0.4249378291269642,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.1501243417460716
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 5.750816822052002,
+        "clip_probability_lower_bound": 0.8619532151051124,
+        "zero_mean_boundary_mass_each_sign": 0.4309766075525562,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.13804678489488764
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.8591679632940921,
+    "expected_clipped_axes_lower_bound": 6.8733437063527365,
+    "any_axis_clipped_probability_lower_bound": 0.9999998466227191,
+    "all_eight_axes_clipped_probability_lower_bound": 0.2968382965859043,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  },
+  {
+    "path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_4300.pt",
+    "saved_iteration": 4300,
+    "std_parameterization": "scalar",
+    "std_mean": 5.299002707004547,
+    "latent_gaussian_entropy_nats": 24.683113200178518,
+    "per_axis": [
+      {
+        "action": "C_dx",
+        "std": 5.471822738647461,
+        "clip_probability_lower_bound": 0.85499068378089,
+        "zero_mean_boundary_mass_each_sign": 0.427495341890445,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.14500931621910995
+      },
+      {
+        "action": "C_dy",
+        "std": 5.204303741455078,
+        "clip_probability_lower_bound": 0.8476257583453278,
+        "zero_mean_boundary_mass_each_sign": 0.4238128791726639,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.15237424165467217
+      },
+      {
+        "action": "C_dz",
+        "std": 5.6334662437438965,
+        "clip_probability_lower_bound": 0.8591073360902811,
+        "zero_mean_boundary_mass_each_sign": 0.42955366804514056,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.14089266390971888
+      },
+      {
+        "action": "C_rx",
+        "std": 5.079460144042969,
+        "clip_probability_lower_bound": 0.8439282413664517,
+        "zero_mean_boundary_mass_each_sign": 0.42196412068322586,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.15607175863354827
+      },
+      {
+        "action": "C_ry",
+        "std": 5.4123125076293945,
+        "clip_probability_lower_bound": 0.8534142191314886,
+        "zero_mean_boundary_mass_each_sign": 0.4267071095657443,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.14658578086851137
+      },
+      {
+        "action": "C_rz",
+        "std": 5.039482593536377,
+        "clip_probability_lower_bound": 0.842706246069073,
+        "zero_mean_boundary_mass_each_sign": 0.4213531230345365,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.15729375393092704
+      },
+      {
+        "action": "hand_common_open",
+        "std": 5.591064929962158,
+        "clip_probability_lower_bound": 0.8580501417995059,
+        "zero_mean_boundary_mass_each_sign": 0.42902507089975295,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.1419498582004941
+      },
+      {
+        "action": "hand_thumb_open",
+        "std": 4.960108757019043,
+        "clip_probability_lower_bound": 0.8402228132518718,
+        "zero_mean_boundary_mass_each_sign": 0.4201114066259359,
+        "max_sensitivity_d_expected_clipped_action_d_mean": 0.15977718674812824
+      }
+    ],
+    "mean_axis_clip_probability_lower_bound": 0.8500056799793613,
+    "expected_clipped_axes_lower_bound": 6.80004543983489,
+    "any_axis_clipped_probability_lower_bound": 0.9999997459183964,
+    "all_eight_axes_clipped_probability_lower_bound": 0.27243424684956663,
+    "note": "Analytic bounds under saved diagonal Gaussian, not measured rollout histograms. Per-axis means/observations were not saved. Bounds concern stochastic sampling; deterministic play uses the network mean. Torque clipping is a separate quantity."
+  }
+]

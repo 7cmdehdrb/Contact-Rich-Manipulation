@@ -1,0 +1,677 @@
+{
+  "run": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-05_13-31-47",
+  "analysis_scope": "Latest Push TensorBoard, saved code/configuration, model1800, local Sweep source, short GPU diagnostic rollouts. No production physics or reward changes.",
+  "logged_iterations": [
+    0,
+    1806
+  ],
+  "logged_transitions": 133226496,
+  "latest_100_iteration_evidence": {
+    "start": 1707,
+    "end": 1806,
+    "statistics": {
+      "Episode_Reward/action_rate": {
+        "n": 100,
+        "mean": -0.00072248368000146,
+        "min": -0.0007696993998251855,
+        "max": -0.0006838540430180728,
+        "p05": -0.0007606214989209547,
+        "median": -0.0007214316865429282,
+        "p95": -0.0006914603058248758,
+        "last": -0.0007060607895255089
+      },
+      "Episode_Reward/approach": {
+        "n": 100,
+        "mean": 0.0032840099604800345,
+        "min": 0.003043573349714279,
+        "max": 0.0034317716490477324,
+        "p05": 0.003176348062697798,
+        "median": 0.003290545428171754,
+        "p95": 0.0033728211652487516,
+        "last": 0.0033842858392745256
+      },
+      "Episode_Reward/progress": {
+        "n": 100,
+        "mean": 1.894417717807073e-08,
+        "min": 0.0,
+        "max": 1.4189430430633365e-06,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Episode_Reward/backslide": {
+        "n": 100,
+        "mean": -3.732872254025299e-08,
+        "min": -2.5940948944480624e-06,
+        "max": 0.0,
+        "p05": -6.841168911364548e-08,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Episode_Reward/first_contact": {
+        "n": 100,
+        "mean": 4.472883902053582e-06,
+        "min": 0.0,
+        "max": 2.777777990559116e-05,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 2.0462965585466003e-05,
+        "last": 0.0
+      },
+      "Episode_Reward/contact": {
+        "n": 100,
+        "mean": 5.322420626896474e-08,
+        "min": 0.0,
+        "max": 7.407407451864856e-07,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 2.8047840459066706e-07,
+        "last": 0.0
+      },
+      "Episode_Reward/alignment": {
+        "n": 100,
+        "mean": -0.0009839720040326937,
+        "min": -0.004554674029350281,
+        "max": -0.0007079823990352452,
+        "p05": -0.001300859363982454,
+        "median": -0.0008809129358269274,
+        "p95": -0.0007396061235340313,
+        "last": -0.0009000194841064513
+      },
+      "Episode_Reward/success": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Episode_Reward/failure": {
+        "n": 100,
+        "mean": -0.002222841618931852,
+        "min": -0.017111994326114655,
+        "max": 0.0,
+        "p05": -0.009233796643093229,
+        "median": -0.0009259259677492082,
+        "p95": 0.0,
+        "last": -0.0062500000931322575
+      },
+      "Metrics/target_position/goal_distance_m": {
+        "n": 100,
+        "mean": 0.2499577844142914,
+        "min": 0.24166913330554962,
+        "max": 0.25685733556747437,
+        "p05": 0.245822773873806,
+        "median": 0.2501102536916733,
+        "p95": 0.2550013601779938,
+        "last": 0.24717088043689728
+      },
+      "Metrics/target_position/side_contact": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Metrics/target_position/contact_seen": {
+        "n": 100,
+        "mean": 0.002236441848799586,
+        "min": 0.0,
+        "max": 0.013888888992369175,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.010231482097879049,
+        "last": 0.0
+      },
+      "Metrics/target_position/push_seen": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Metrics/target_position/settled_time_s": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Metrics/target_position/success": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Metrics/target_position/failure": {
+        "n": 100,
+        "mean": 0.011114207771606743,
+        "min": 0.0,
+        "max": 0.08555997163057327,
+        "p05": 0.0,
+        "median": 0.004629629664123058,
+        "p95": 0.04616897944360971,
+        "last": 0.03125
+      },
+      "Episode_Termination/time_out": {
+        "n": 100,
+        "mean": 0.9899391067028046,
+        "min": 0.9645724892616272,
+        "max": 0.9990912675857544,
+        "p05": 0.9694044202566147,
+        "median": 0.9956190288066864,
+        "p95": 0.9990234375,
+        "last": 0.9934760332107544
+      },
+      "Episode_Termination/success": {
+        "n": 100,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p05": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "last": 0.0
+      },
+      "Episode_Termination/failure": {
+        "n": 100,
+        "mean": 0.010060899594100193,
+        "min": 0.0009087456855922937,
+        "max": 0.0354275181889534,
+        "p05": 0.0009765625,
+        "median": 0.0043809679336845875,
+        "p95": 0.0305955677293241,
+        "last": 0.006523980293422937
+      },
+      "Loss/value": {
+        "n": 100,
+        "mean": 0.0006988785099929373,
+        "min": 2.5816123070399044e-06,
+        "max": 0.005319295451045036,
+        "p05": 3.1363158655040026e-06,
+        "median": 0.00037447409704327583,
+        "p95": 0.0028226369060575956,
+        "last": 0.0011252322001382709
+      },
+      "Loss/surrogate": {
+        "n": 100,
+        "mean": -0.006631775572277548,
+        "min": -0.018196405842900276,
+        "max": 0.005919191986322403,
+        "p05": -0.01679291818290949,
+        "median": -0.0038359175669029355,
+        "p95": 0.0003243091021431567,
+        "last": -0.003298810450360179
+      },
+      "Loss/entropy": {
+        "n": 100,
+        "mean": 31.004216842651367,
+        "min": 30.922313690185547,
+        "max": 31.103057861328125,
+        "p05": 30.933631134033202,
+        "median": 31.00431728363037,
+        "p95": 31.07661008834839,
+        "last": 31.051416397094727
+      },
+      "Loss/learning_rate": {
+        "n": 100,
+        "mean": 0.0009590132268567686,
+        "min": 9.999999747378752e-06,
+        "max": 0.004378939047455788,
+        "p05": 9.999999747378752e-06,
+        "median": 9.999999747378752e-06,
+        "p95": 0.002992274868302043,
+        "last": 9.999999747378752e-06
+      },
+      "Policy/mean_std": {
+        "n": 100,
+        "mean": 12.354480085372925,
+        "min": 12.227560997009277,
+        "max": 12.512336730957031,
+        "p05": 12.24517102241516,
+        "median": 12.355087757110596,
+        "p95": 12.474181890487671,
+        "last": 12.445047378540039
+      },
+      "Perf/total_fps": {
+        "n": 100,
+        "mean": 9922.78,
+        "min": 8693.0,
+        "max": 11315.0,
+        "p05": 9159.55,
+        "median": 9904.0,
+        "p95": 10733.0,
+        "last": 9396.0
+      },
+      "Perf/collection_time": {
+        "n": 100,
+        "mean": 7.290049014091491,
+        "min": 6.367066383361816,
+        "max": 8.332626342773438,
+        "p05": 6.721180844306946,
+        "median": 7.287757158279419,
+        "p95": 7.857850980758667,
+        "last": 7.653676509857178
+      },
+      "Perf/learning_time": {
+        "n": 100,
+        "mean": 0.15782957315444945,
+        "min": 0.1470801830291748,
+        "max": 0.19434189796447754,
+        "p05": 0.14775038957595826,
+        "median": 0.1510990858078003,
+        "p95": 0.1885494112968445,
+        "last": 0.19277644157409668
+      },
+      "Train/mean_reward": {
+        "n": 100,
+        "mean": -0.00813562186434865,
+        "min": -0.1426149159669876,
+        "max": 0.019298898056149483,
+        "p05": -0.08659261316061019,
+        "median": -0.0015106492792256176,
+        "p95": 0.018466949369758366,
+        "last": -0.043011169880628586
+      },
+      "Train/mean_episode_length": {
+        "n": 100,
+        "mean": 498.21270050048827,
+        "min": 489.1499938964844,
+        "max": 500.0,
+        "p05": 491.4695098876953,
+        "median": 499.88999938964844,
+        "p95": 500.0,
+        "last": 498.3800048828125
+      }
+    },
+    "means": {
+      "Episode_Reward/action_rate": -0.00072248368000146,
+      "Episode_Reward/approach": 0.0032840099604800345,
+      "Episode_Reward/progress": 1.894417717807073e-08,
+      "Episode_Reward/backslide": -3.732872254025299e-08,
+      "Episode_Reward/first_contact": 4.472883902053582e-06,
+      "Episode_Reward/contact": 5.322420626896474e-08,
+      "Episode_Reward/alignment": -0.0009839720040326937,
+      "Episode_Reward/success": 0.0,
+      "Episode_Reward/failure": -0.002222841618931852,
+      "Metrics/target_position/goal_distance_m": 0.2499577844142914,
+      "Metrics/target_position/side_contact": 0.0,
+      "Metrics/target_position/contact_seen": 0.002236441848799586,
+      "Metrics/target_position/push_seen": 0.0,
+      "Metrics/target_position/settled_time_s": 0.0,
+      "Metrics/target_position/success": 0.0,
+      "Metrics/target_position/failure": 0.011114207771606743,
+      "Episode_Termination/time_out": 0.9899391067028046,
+      "Episode_Termination/success": 0.0,
+      "Episode_Termination/failure": 0.010060899594100193,
+      "Loss/value": 0.0006988785099929373,
+      "Loss/surrogate": -0.006631775572277548,
+      "Loss/entropy": 31.004216842651367,
+      "Loss/learning_rate": 0.0009590132268567686,
+      "Policy/mean_std": 12.354480085372925,
+      "Perf/total_fps": 9922.78,
+      "Perf/collection_time": 7.290049014091491,
+      "Perf/learning_time": 0.15782957315444945,
+      "Train/mean_reward": -0.00813562186434865,
+      "Train/mean_episode_length": 498.21270050048827
+    },
+    "episode_reward_contributions": {
+      "action_rate": -0.0072248368000146,
+      "approach": 0.032840099604800346,
+      "progress": 1.894417717807073e-07,
+      "backslide": -3.7328722540252993e-07,
+      "first_contact": 4.472883902053582e-05,
+      "contact": 5.322420626896474e-07,
+      "alignment": -0.009839720040326938,
+      "success": 0.0,
+      "failure": -0.02222841618931852
+    },
+    "positive_share": {
+      "action_rate": 0.0,
+      "approach": 0.9986179181227447,
+      "progress": 5.760638670946083e-06,
+      "backslide": 0.0,
+      "first_contact": 0.0013601365598844206,
+      "contact": 1.6184678700024376e-05,
+      "alignment": 0.0,
+      "success": 0.0,
+      "failure": 0.0
+    },
+    "negative_share": {
+      "action_rate": 0.18386921647622267,
+      "approach": 0.0,
+      "progress": 0.0,
+      "backslide": 9.500011080555841e-06,
+      "first_contact": 0.0,
+      "contact": 0.0,
+      "alignment": 0.2504169525540901,
+      "success": 0.0,
+      "failure": 0.5657043309586066
+    },
+    "sum_episode_contributions": -0.006407796189230111,
+    "implied_maintaining_contact_seconds_per_episode_mean": 0.00010644841253792948,
+    "implied_credited_progress_potential_per_episode_mean": 1.5786814315058942e-08,
+    "mean_completed_episode_length_s": 9.964254010009766,
+    "performance": {
+      "collection_seconds_per_iteration": 7.290049014091491,
+      "learning_seconds_per_iteration": 0.15782957315444945,
+      "learning_fraction": 0.02119121187403933,
+      "transition_throughput_per_second": 9899.19466816429
+    }
+  },
+  "approach_geometry": {
+    "reset_palm_height_m": 0.1,
+    "approach_palm_height_m": 0.1,
+    "cube_center_height_m": 1.08,
+    "cube_top_height_m": 1.11,
+    "central_pad_half_vertical_extent_m": 0.02499557,
+    "nominal_pad_bottom_gap_above_cube_top_m": 0.04500443000000001,
+    "source": [
+      "src/hand_manipulation_test/hand_manipulation_test/mdp/push_commands.py:63",
+      "src/hand_manipulation_test/hand_manipulation_test/push_state.py:194",
+      "src/hand_manipulation_test/hand_manipulation_test/push_math.py:22"
+    ],
+    "interpretation": "Reset clearance height is incorrectly reused as the rewarded contact target height. This does not guide the hand down to the Cube side. Flat left outward-finger pose also places thumb downward; lowering the target alone is insufficient."
+  },
+  "gpu_rollout_artifact": "checkpoint_rollout.json",
+  "gpu_max_normal_artifact": "max_normal_rollout.json",
+  "raw_action_axis_statistics": {
+    "deterministic": {
+      "C_dx": {
+        "p01": -93.38591346740722,
+        "median": 16.094242095947266,
+        "p99": 74.2356018829346,
+        "clipped_fraction": 0.9869010416666667
+      },
+      "C_dy": {
+        "p01": -59.160998573303225,
+        "median": 13.701953887939453,
+        "p99": 47.35043422698999,
+        "clipped_fraction": 0.993125
+      },
+      "C_dz": {
+        "p01": -118.14094528198243,
+        "median": -17.131980895996094,
+        "p99": 47.375500411987375,
+        "clipped_fraction": 0.9826041666666666
+      },
+      "C_rx": {
+        "p01": -67.35962532043457,
+        "median": 2.096147298812866,
+        "p99": 83.96629989624026,
+        "clipped_fraction": 0.9768489583333333
+      },
+      "C_ry": {
+        "p01": -60.913564376831054,
+        "median": 12.999267578125,
+        "p99": 64.30598815917973,
+        "clipped_fraction": 0.98203125
+      },
+      "C_rz": {
+        "p01": -42.65204334259033,
+        "median": 5.2166032791137695,
+        "p99": 72.44058547973638,
+        "clipped_fraction": 0.9665625
+      },
+      "hand_common_open": {
+        "p01": -82.41392929077148,
+        "median": -8.393576622009277,
+        "p99": 72.68607269287114,
+        "clipped_fraction": 0.971171875
+      },
+      "hand_thumb_open": {
+        "p01": -52.016865463256835,
+        "median": 8.866214752197266,
+        "p99": 61.09496112823494,
+        "clipped_fraction": 0.9719010416666667
+      }
+    },
+    "stochastic": {
+      "C_dx": {
+        "p01": -89.69655685424804,
+        "median": 9.333982467651367,
+        "p99": 70.32681320190449,
+        "clipped_fraction": 0.9805208333333333
+      },
+      "C_dy": {
+        "p01": -66.43422225952149,
+        "median": 12.260526657104492,
+        "p99": 42.44704517364508,
+        "clipped_fraction": 0.9826041666666666
+      },
+      "C_dz": {
+        "p01": -116.16007965087891,
+        "median": -16.754920959472656,
+        "p99": 41.837702445983915,
+        "clipped_fraction": 0.9754947916666666
+      },
+      "C_rx": {
+        "p01": -73.19531059265137,
+        "median": 0.48848187923431396,
+        "p99": 83.4086428833008,
+        "clipped_fraction": 0.97640625
+      },
+      "C_ry": {
+        "p01": -58.42158203125,
+        "median": 11.161003112792969,
+        "p99": 67.92995933532725,
+        "clipped_fraction": 0.976328125
+      },
+      "C_rz": {
+        "p01": -56.883772697448734,
+        "median": 4.851009368896484,
+        "p99": 99.91489395141625,
+        "clipped_fraction": 0.9726302083333334
+      },
+      "hand_common_open": {
+        "p01": -80.82420372009277,
+        "median": -9.240947723388672,
+        "p99": 76.99860252380371,
+        "clipped_fraction": 0.974375
+      },
+      "hand_thumb_open": {
+        "p01": -60.635717124938964,
+        "median": 6.473814010620117,
+        "p99": 66.59776748657227,
+        "clipped_fraction": 0.971015625
+      }
+    },
+    "scripted_approach_target": {
+      "C_dx": {
+        "p01": -0.45289614170789716,
+        "median": -0.03641108423471451,
+        "p99": 0.0546296150237322,
+        "clipped_fraction": 0.0
+      },
+      "C_dy": {
+        "p01": 0.0002181359304813668,
+        "median": 0.026993637904524803,
+        "p99": 1.0849288702011108,
+        "clipped_fraction": 0.05481770833333333
+      },
+      "C_dz": {
+        "p01": -0.30939423412084577,
+        "median": -0.0041618188843131065,
+        "p99": 0.5907077735662478,
+        "clipped_fraction": 0.009010416666666667
+      },
+      "C_rx": {
+        "p01": -0.06740228794515132,
+        "median": -0.0003162499633617699,
+        "p99": 0.0038161991187371336,
+        "clipped_fraction": 0.0
+      },
+      "C_ry": {
+        "p01": -0.005892883497290313,
+        "median": -0.002500007161870599,
+        "p99": 0.03791236486285929,
+        "clipped_fraction": 0.0
+      },
+      "C_rz": {
+        "p01": -0.11580375701189041,
+        "median": 0.11524898558855057,
+        "p99": 4.025815019607544,
+        "clipped_fraction": 0.4092708333333333
+      },
+      "hand_common_open": {
+        "p01": 0.009430885314941406,
+        "median": 0.39611542224884033,
+        "p99": 0.79221510887146,
+        "clipped_fraction": 0.0
+      },
+      "hand_thumb_open": {
+        "p01": 0.0023528337478637695,
+        "median": 0.39123737812042236,
+        "p99": 0.7973804473876953,
+        "clipped_fraction": 0.0
+      }
+    },
+    "scripted_side_height_03": {
+      "C_dx": {
+        "p01": -1.006747487783432,
+        "median": -0.008325368165969849,
+        "p99": 1.0052516543865204,
+        "clipped_fraction": 0.16375
+      },
+      "C_dy": {
+        "p01": 0.4941926285624504,
+        "median": 0.5815845131874084,
+        "p99": 1.6575308799743653,
+        "clipped_fraction": 0.10419270833333333
+      },
+      "C_dz": {
+        "p01": -0.7362999767065048,
+        "median": -0.12920430302619934,
+        "p99": 1.1181722009182036,
+        "clipped_fraction": 0.017760416666666667
+      },
+      "C_rx": {
+        "p01": -0.6006692010164261,
+        "median": -0.4730224013328552,
+        "p99": 0.0016515476710628767,
+        "clipped_fraction": 0.0
+      },
+      "C_ry": {
+        "p01": -0.013149112211540342,
+        "median": 0.0034113165456801653,
+        "p99": 0.03408421527594328,
+        "clipped_fraction": 0.0
+      },
+      "C_rz": {
+        "p01": -0.087050771266222,
+        "median": 0.04355950653553009,
+        "p99": 0.11793692275881769,
+        "clipped_fraction": 0.0
+      },
+      "hand_common_open": {
+        "p01": 0.00261688232421875,
+        "median": 0.3500899076461792,
+        "p99": 0.795760989189148,
+        "clipped_fraction": 0.0
+      },
+      "hand_thumb_open": {
+        "p01": 0.0023528337478637695,
+        "median": 0.3517707586288452,
+        "p99": 0.7769527435302734,
+        "clipped_fraction": 0.0
+      }
+    }
+  },
+  "maximum_normal_action_contact_measurement": {
+    "valid_right_contact_policy_intervals": 6777,
+    "forward_force_n_quantiles": {
+      "minimum": 2.157405138015747,
+      "p01": 2.3512674522399903,
+      "median": 2.4965975284576416,
+      "p99": 2.688938188552856,
+      "peak": 7.853118419647217
+    },
+    "raw_local_normal_action_quantiles": {
+      "minimum": 1.4774646759033203,
+      "median": 1.5975971221923828,
+      "maximum": 1.801472783088684
+    },
+    "executed_normal_action_is_one_fraction": 1.0,
+    "nominal_static_friction_force_n": 7.3575,
+    "nominal_kinetic_friction_force_n": 5.395500000000001,
+    "notes": [
+      "Normal actions saturate at +1, corresponding to 0.012m actual-frame offset; stiffness remains200.",
+      "Force quantiles are conditioned on valid supported RIGHT contact, not all policy intervals.",
+      "The short 7.85N impact peak is not sustained; the Cube never acquires 5mm contact-qualified forward displacement.",
+      "Ideal friction estimate assumes horizontal flat-Cube pushing and no added vertical load; actual contact geometry and operational inertia matter."
+    ]
+  },
+  "sweep_comparison": {
+    "reference_ppo": "example/Sweep-Policy/sweeping_policy/config/ur5e/agents/rsl_rl_ppo_cfg_02.py",
+    "ppo_matches_latest_run": true,
+    "native_osc_scale": 1.0,
+    "push_scale": [
+      0.012,
+      0.012,
+      0.008
+    ],
+    "native_osc_gain": 100,
+    "push_gain": 200,
+    "normal_unit_action_position_error_ratio": 83.33333333333333,
+    "same_pose_operational_inertia_desired_acceleration_ratio_example_to_push": 41.66666666666667,
+    "notes": [
+      "Sweep has JointPosition, DiffIK and OSC task variants; the user has not yet identified the successful task.",
+      "No Sweep training log/checkpoint is present in the searched workspace log directories, so its success rate is not independently verified here.",
+      "Native Sweep OSC does not clip raw actions by default. Comparing identical normalized unit actions understates the difference when actor outputs leave the unit interval.",
+      "Sweep shaping uses recurring geometric distance/position/velocity terms, rather than the same filtered pad-force, force-direction and fresh-distance-record requirements.",
+      "Robotiq TCP offset and Inspire physical palm reference are different geometry; equal numerical height offsets are not equivalent contact poses.",
+      "External USD Sweep object friction is not available from the local configuration; no low-friction assumption is made."
+    ]
+  },
+  "recommendation_order": [
+    {
+      "priority": 1,
+      "change": "Separate reset clearance height from physical side-contact reward target; establish a realizable central palm contact pose on both sides, including roll and thumb clearance.",
+      "acceptance": "With actual robot/table geometry and unchanged contact termination, a scripted 8D-action trajectory reaches supported palmar side contact in both directions without Table failure."
+    },
+    {
+      "priority": 2,
+      "change": "Keep stiffness200 and measure/calibrate action-to-wrench response. Use bounded accumulated pose error or a calibrated translational target scale so pushing overcomes Cube friction.",
+      "acceptance": "At safe side contact, real dynamic Cube advances at least5mm and then the full goal distance, without joint teleportation/Cube force injection or change to Cube mass/friction."
+    },
+    {
+      "priority": 3,
+      "change": "Keep the small contact reward and progress-record protections. After physical feasibility is established, add per-step reasons for denying progress and quantify contact/support/direction gates; adjust overly intermittent gates only with grounded side-contact validation.",
+      "acceptance": "Contact-qualified advancing motion earns progress immediately; stationary contact and back-and-forth movement do not become an alternative to reaching the goal."
+    },
+    {
+      "priority": 4,
+      "change": "Train from fresh weights after correcting the environment, using the unchanged Sweep_02 PPO contract.",
+      "acceptance": "Monitor raw action saturation, successful side-contact frequency, actual forward displacement and stable goal success rather than aggregate episode return alone."
+    }
+  ],
+  "ppo_contract_validation": {
+    "test": "src/hand_manipulation_test/tests/test_push_ppo.py",
+    "full_cpu_suite_passed": 112,
+    "optional_pxr_test_skipped": 1,
+    "ppo_hyperparameters_changed": false
+  },
+  "limits": [
+    "The log contribution means are per-iteration reset-batch means, not episode-count-weighted population estimates.",
+    "Short GPU samples diagnose failures and compare baselines; they do not establish that every possible 6D policy lacks a solution.",
+    "Right/left scripted counts differ because failing environments automatically resample a new command.",
+    "Only the latest checkpoint and one diagnostic seed were replayed; geometry and force recommendations still need their own implementation and full validation."
+  ]
+}

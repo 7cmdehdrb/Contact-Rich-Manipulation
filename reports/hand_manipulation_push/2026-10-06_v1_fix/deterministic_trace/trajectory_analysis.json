@@ -1,0 +1,113 @@
+{
+  "trace_summary": "/home/min/7cmdehdrb/grad/reports/hand_manipulation_push/2026-10-06_v1_fix/deterministic_trace/summary.json",
+  "rows": 16000,
+  "replayed_actor_on_recorded_64d_inputs": {
+    "mean_abs_error": 1.102274950426363e-06,
+    "max_abs_error": 3.7670135498046875e-05,
+    "tolerance": 0.0001
+  },
+  "first_policy_step": {
+    "C_height_above_table_mean_m": 0.1298673565625,
+    "raw_mean_world_up": 1.902147271875,
+    "normalized_world_up": 1.001506551875,
+    "commanded_world_dz_mean_m": 0.012010497390625,
+    "raw_mean_action0_min": 0.9865242,
+    "raw_mean_action0_max": 4.19718,
+    "action0_positive_clip_fraction": 0.96875,
+    "right_environments": 17,
+    "left_environments": 15
+  },
+  "all_transition_fractions": {
+    "any_mean_input_clipped": 0.635,
+    "mean_input_axis_clipped": 0.2690390625,
+    "C_height_above_0_15m": 0.966125,
+    "C_height_above_0_25m": 0.8881875,
+    "C_height_above_0_40m": 0.2381875,
+    "normal_outside_30_degrees": 0.0445,
+    "wrist_sin_at_or_below_0_15": 0.543
+  },
+  "windows": {
+    "steps_0_49": {
+      "n": 1600,
+      "eef_c_above_table_m": 0.261176219925,
+      "desired_c_above_table_m": 0.29394635681875003,
+      "palm_height_error_m": 0.20604181359374998,
+      "approach_gap_m": 0.2415581646775,
+      "commanded_world_dz_m": 0.0075313155356606255,
+      "raw_mean_translation_world_up": 1.8906595507912498,
+      "normalized_translation_world_up": 0.62093806384125,
+      "raw_mean_clip_fraction": 0.186015625,
+      "palm_normal_cos": 0.9989022944062499,
+      "finger_outward_cos": 0.0629626351375,
+      "controller_error_norm_m": 0.045770938249375004,
+      "failures": 0
+    },
+    "steps_50_99": {
+      "n": 1600,
+      "eef_c_above_table_m": 0.35450728106250007,
+      "desired_c_above_table_m": 0.34662349987499996,
+      "palm_height_error_m": 0.30002386443749995,
+      "approach_gap_m": 0.39451379073750004,
+      "commanded_world_dz_m": -0.002256357030774875,
+      "raw_mean_translation_world_up": -0.1827768706401688,
+      "normalized_translation_world_up": -0.18894179289016877,
+      "raw_mean_clip_fraction": 0.02796875,
+      "palm_normal_cos": 0.99921321183125,
+      "finger_outward_cos": 0.06271871546249999,
+      "controller_error_norm_m": 0.044203077198749996,
+      "failures": 0
+    },
+    "steps_100_249": {
+      "n": 4800,
+      "eef_c_above_table_m": 0.3578622874208333,
+      "desired_c_above_table_m": 0.3661535565270833,
+      "palm_height_error_m": 0.3033554142202083,
+      "approach_gap_m": 0.6575250690625001,
+      "commanded_world_dz_m": 0.0016060810981131668,
+      "raw_mean_translation_world_up": 0.5871892616490876,
+      "normalized_translation_world_up": 0.1325279227630458,
+      "raw_mean_clip_fraction": 0.23151041666666666,
+      "palm_normal_cos": 0.9799017795166666,
+      "finger_outward_cos": 0.135863916984375,
+      "controller_error_norm_m": 0.04752166364077083,
+      "failures": 4
+    },
+    "steps_250_499": {
+      "n": 8000,
+      "eef_c_above_table_m": 0.353952451409875,
+      "desired_c_above_table_m": 0.3738808792520375,
+      "palm_height_error_m": 0.2991967801624812,
+      "approach_gap_m": 0.841655229147375,
+      "commanded_world_dz_m": 0.002014134788873256,
+      "raw_mean_translation_world_up": 0.7973507815714906,
+      "normalized_translation_world_up": 0.16891668768367823,
+      "raw_mean_clip_fraction": 0.356375,
+      "palm_normal_cos": 0.9547384025385,
+      "finger_outward_cos": 0.31204331209612496,
+      "controller_error_norm_m": 0.050672027000025,
+      "failures": 8
+    }
+  },
+  "observed_events": {
+    "done": 33,
+    "time_out": 21,
+    "success": 0,
+    "failure": 12,
+    "table_failure": 12,
+    "footprint_failure": 0,
+    "fall_failure": 0,
+    "invalid_state": 0
+  },
+  "observed_contact_intervals": {
+    "raw_palm_contact": 0,
+    "valid_push_contact": 0,
+    "grounded": 16000
+  },
+  "interpretation": [
+    "The deterministic policy itself commands nearly maximum upward translation at its first step; this observation does not depend on stochastic Gaussian std.",
+    "Measured C rises above the contact/reset plane and the physical approach gap grows. During this original-geometry probe, no actual Cube-palmar contact occurs.",
+    "Raw actor mean clipping is measured on real observations here. It is distinct from the earlier analytic stochastic clipping bound based only on saved std.",
+    "The 6cm controller projection applies at action updates. Post-physics error can exceed it while the robot moves; it is not an absolute height or final-error guarantee.",
+    "All 12 failures in this 32-environment probe are Robot-Table contact, but this does not recover missing failure-subtype counts from the full training run."
+  ]
+}

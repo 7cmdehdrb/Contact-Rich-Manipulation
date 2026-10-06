@@ -1,0 +1,7394 @@
+{
+  "geometry": [
+    {
+      "name": "inspire_base_link",
+      "path": "/ur5e_inspire/inspire_base_link/collisions/base_link/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_index_1",
+      "path": "/ur5e_inspire/inspire_left_index_1/collisions/left_index_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_index_force_sensor_1",
+      "path": "/ur5e_inspire/inspire_index_force_sensor_1/collisions/index_force_sensor_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_index_2",
+      "path": "/ur5e_inspire/inspire_left_index_2/collisions/left_index_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_index_force_sensor_2",
+      "path": "/ur5e_inspire/inspire_index_force_sensor_2/collisions/index_force_sensor_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_index_force_sensor_3",
+      "path": "/ur5e_inspire/inspire_index_force_sensor_3/collisions/index_force_sensor_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_little_1",
+      "path": "/ur5e_inspire/inspire_left_little_1/collisions/left_little_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_little_2",
+      "path": "/ur5e_inspire/inspire_left_little_2/collisions/left_little_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_little_force_sensor_2",
+      "path": "/ur5e_inspire/inspire_little_force_sensor_2/collisions/little_force_sensor_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_little_force_sensor_3",
+      "path": "/ur5e_inspire/inspire_little_force_sensor_3/collisions/little_force_sensor_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_little_force_sensor_1",
+      "path": "/ur5e_inspire/inspire_little_force_sensor_1/collisions/little_force_sensor_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_middle_1",
+      "path": "/ur5e_inspire/inspire_left_middle_1/collisions/left_middle_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_middle_2",
+      "path": "/ur5e_inspire/inspire_left_middle_2/collisions/left_middle_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_middle_force_sensor_2",
+      "path": "/ur5e_inspire/inspire_middle_force_sensor_2/collisions/middle_force_sensor_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_middle_force_sensor_3",
+      "path": "/ur5e_inspire/inspire_middle_force_sensor_3/collisions/middle_force_sensor_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_middle_force_sensor_1",
+      "path": "/ur5e_inspire/inspire_middle_force_sensor_1/collisions/middle_force_sensor_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_ring_1",
+      "path": "/ur5e_inspire/inspire_left_ring_1/collisions/left_ring_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_ring_2",
+      "path": "/ur5e_inspire/inspire_left_ring_2/collisions/left_ring_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_ring_force_sensor_2",
+      "path": "/ur5e_inspire/inspire_ring_force_sensor_2/collisions/ring_force_sensor_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_ring_force_sensor_3",
+      "path": "/ur5e_inspire/inspire_ring_force_sensor_3/collisions/ring_force_sensor_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_ring_force_sensor_1",
+      "path": "/ur5e_inspire/inspire_ring_force_sensor_1/collisions/ring_force_sensor_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_thumb_1",
+      "path": "/ur5e_inspire/inspire_left_thumb_1/collisions/left_thumb_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_thumb_2",
+      "path": "/ur5e_inspire/inspire_left_thumb_2/collisions/left_thumb_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_thumb_3",
+      "path": "/ur5e_inspire/inspire_left_thumb_3/collisions/left_thumb_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_left_thumb_4",
+      "path": "/ur5e_inspire/inspire_left_thumb_4/collisions/left_thumb_4/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_thumb_force_sensor_3",
+      "path": "/ur5e_inspire/inspire_thumb_force_sensor_3/collisions/thumb_force_sensor_3/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_thumb_force_sensor_4",
+      "path": "/ur5e_inspire/inspire_thumb_force_sensor_4/collisions/thumb_force_sensor_4/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_thumb_force_sensor_2",
+      "path": "/ur5e_inspire/inspire_thumb_force_sensor_2/collisions/thumb_force_sensor_2/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_thumb_force_sensor_1",
+      "path": "/ur5e_inspire/inspire_thumb_force_sensor_1/collisions/thumb_force_sensor_1/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    },
+    {
+      "name": "inspire_palm_force_sensor",
+      "path": "/ur5e_inspire/inspire_palm_force_sensor/collisions/palm_force_sensor/node_STL_BINARY_/mesh",
+      "approximation": "convexHull",
+      "attrs": {
+        "physics:approximation": "convexHull",
+        "physics:collisionEnabled": "True"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.08184461033909506,
+        0.06986055347533346,
+        0.13875872329298436
+      ],
+      "min_h": [
+        0.07277166593431741,
+        0.0545353711258743,
+        0.12739940593862495
+      ],
+      "max_h": [
+        0.08826065935123979,
+        0.06986055347533345,
+        0.1399679839792545
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.05184461033909506,
+          0.11184461033909505
+        ],
+        "z": [
+          0.10875872329298436,
+          0.16875872329298436
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07785287710659028,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.067910101975025,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07308718879858679,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06986055364063332,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05420219746356609,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06986055364063332,
+      "carrier_to_own_gap_mm": 7.992323465956963,
+      "required_extra_plus2mm": 9.992323465956964,
+      "common": 0.8,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3920064824957925,
+        0.9167639101474662,
+        0.07664818989429356
+      ],
+      "projected_spawn_extra_plus2mm": 10.899560241578062
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.08184461033909506,
+        0.06986055347533346,
+        0.13875872329298436
+      ],
+      "min_h": [
+        0.07277166593431741,
+        0.0545353711258743,
+        0.12739940593862495
+      ],
+      "max_h": [
+        0.08826065935123979,
+        0.06986055347533345,
+        0.1399679839792545
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06184461033909505,
+          0.12184461033909505
+        ],
+        "z": [
+          0.10875872329298436,
+          0.16875872329298436
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07785287710659028,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.067910101975025,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07308718879858679,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06986055364063332,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05420219746356609,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06986055364063332,
+      "carrier_to_own_gap_mm": 7.992323465956963,
+      "required_extra_plus2mm": 9.992323465956964,
+      "common": 0.8,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3920064824957925,
+        0.9167639101474662,
+        0.07664818989429356
+      ],
+      "projected_spawn_extra_plus2mm": 10.899560241578062
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.08960667777356655,
+        0.07279637468412051,
+        0.14005036032728455
+      ],
+      "min_h": [
+        0.08653307893580386,
+        0.06580100864076231,
+        0.13852160293802454
+      ],
+      "max_h": [
+        0.09347788371040944,
+        0.07308716588813284,
+        0.14180950780489265
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.059606677773566555,
+          0.11960667777356655
+        ],
+        "z": [
+          0.11005036032728455,
+          0.17005036032728454
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07785287710659078,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.067910101975025,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07308718879858679,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06986055364063332,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05420219746356609,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07308718879858679,
+      "carrier_to_own_gap_mm": 4.765688308003988,
+      "required_extra_plus2mm": 6.765688308003989,
+      "common": 0.8,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.39200642172370664,
+        0.9167640774800063,
+        0.07664817449845163
+      ],
+      "projected_spawn_extra_plus2mm": 7.379966639401337
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.08960667777356655,
+        0.07279637468412051,
+        0.14005036032728455
+      ],
+      "min_h": [
+        0.08653307893580386,
+        0.06580100864076231,
+        0.13852160293802454
+      ],
+      "max_h": [
+        0.09347788371040944,
+        0.07308716588813284,
+        0.14180950780489265
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06960667777356655,
+          0.12960667777356655
+        ],
+        "z": [
+          0.11005036032728455,
+          0.17005036032728454
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07785287710659078,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.067910101975025,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07308718879858679,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06986055364063332,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07308718879858679,
+      "carrier_to_own_gap_mm": 4.765688308003988,
+      "required_extra_plus2mm": 6.765688308003989,
+      "common": 0.8,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.39200642172370664,
+        0.9167640774800063,
+        0.07664817449845163
+      ],
+      "projected_spawn_extra_plus2mm": 7.379966639401337
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.08629184529985401,
+        0.06434469160991077,
+        0.1387587232929844
+      ],
+      "min_h": [
+        0.0765907113612586,
+        0.04934668327370972,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09187340359277224,
+        0.06434469160991078,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.05629184529985401,
+          0.11629184529985401
+        ],
+        "z": [
+          0.10875872329298439,
+          0.16875872329298439
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07167301922565625,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06332791071673631,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0667881590008022,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06434469176952134,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.050368938750333506,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06434469176952134,
+      "carrier_to_own_gap_mm": 7.328327456134903,
+      "required_extra_plus2mm": 9.328327456134906,
+      "common": 0.8,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.3019377145784894,
+        0.9502414249982548,
+        0.07664818989429353
+      ],
+      "projected_spawn_extra_plus2mm": 9.816797300909123
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.08629184529985401,
+        0.06434469160991077,
+        0.1387587232929844
+      ],
+      "min_h": [
+        0.0765907113612586,
+        0.04934668327370972,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09187340359277224,
+        0.06434469160991078,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.066291845299854,
+          0.126291845299854
+        ],
+        "z": [
+          0.10875872329298439,
+          0.16875872329298439
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07167301922565623,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06332791071673631,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0667881590008022,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06434469176952134,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.050368938750339674,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06434469176952134,
+      "carrier_to_own_gap_mm": 7.32832745613489,
+      "required_extra_plus2mm": 9.328327456134891,
+      "common": 0.8,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.3019377145784894,
+        0.9502414249982548,
+        0.07664818989429353
+      ],
+      "projected_spawn_extra_plus2mm": 9.816797300909107
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09424815784993003,
+        0.06647902684368995,
+        0.1401382482558447
+      ],
+      "min_h": [
+        0.0910259409219819,
+        0.059501033533311376,
+        0.13852160293802449
+      ],
+      "max_h": [
+        0.09772351523307092,
+        0.06678813710419676,
+        0.1418095078048926
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06424815784993003,
+          0.12424815784993003
+        ],
+        "z": [
+          0.1101382482558447,
+          0.1701382482558447
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07167301922565629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06332791071673631,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0667881590008022,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06434469176952134,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.050368938750339674,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0667881590008022,
+      "carrier_to_own_gap_mm": 4.884860224854084,
+      "required_extra_plus2mm": 6.884860224854086,
+      "common": 0.8,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.3019376379810697,
+        0.950241585703764,
+        0.07664817449845165
+      ],
+      "projected_spawn_extra_plus2mm": 7.24537878412788
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09424815784993003,
+        0.06647902684368995,
+        0.1401382482558447
+      ],
+      "min_h": [
+        0.0910259409219819,
+        0.059501033533311376,
+        0.13852160293802449
+      ],
+      "max_h": [
+        0.09772351523307092,
+        0.06678813710419676,
+        0.1418095078048926
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07424815784993002,
+          0.13424815784993002
+        ],
+        "z": [
+          0.1101382482558447,
+          0.1701382482558447
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07167301922565629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06332791071673631,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0667881590008022,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06434469176952134,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0667881590008022,
+      "carrier_to_own_gap_mm": 4.884860224854084,
+      "required_extra_plus2mm": 6.884860224854086,
+      "common": 0.8,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.3019376379810697,
+        0.950241585703764,
+        0.07664817449845165
+      ],
+      "projected_spawn_extra_plus2mm": 7.24537878412788
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.08769719764038528,
+        0.06189608887007959,
+        0.1389867469006774
+      ],
+      "min_h": [
+        0.07799095179535442,
+        0.04719473129242315,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09315122823440093,
+        0.062022652887629814,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.05769719764038528,
+          0.11769719764038528
+        ],
+        "z": [
+          0.10898674690067739,
+          0.1689867469006774
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06908827031814524,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0613931970012298,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0641460985954577,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.062022653044546155,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04875720325954366,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.062022653044546155,
+      "carrier_to_own_gap_mm": 7.065617273599084,
+      "required_extra_plus2mm": 9.065617273599086,
+      "common": 0.8,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.26507719622343,
+        0.9611759616791924,
+        0.07664818989429352
+      ],
+      "projected_spawn_extra_plus2mm": 9.431797750914706
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.08769719764038528,
+        0.06189608887007959,
+        0.1389867469006774
+      ],
+      "min_h": [
+        0.07799095179535442,
+        0.04719473129242315,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09315122823440093,
+        0.062022652887629814,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06769719764038527,
+          0.12769719764038528
+        ],
+        "z": [
+          0.10898674690067739,
+          0.1689867469006774
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06908827031814527,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0613931970012298,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0641460985954577,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.062022653044546155,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04875720325954946,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.062022653044546155,
+      "carrier_to_own_gap_mm": 7.065617273599112,
+      "required_extra_plus2mm": 9.065617273599113,
+      "common": 0.8,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.26507719622343,
+        0.9611759616791924,
+        0.07664818989429352
+      ],
+      "projected_spawn_extra_plus2mm": 9.431797750914733
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09590243787952955,
+        0.06382767496999289,
+        0.14019000395290493
+      ],
+      "min_h": [
+        0.09265847757034937,
+        0.05687755121383417,
+        0.13852160293802454
+      ],
+      "max_h": [
+        0.09923959403451381,
+        0.06414606214874759,
+        0.14180950780489265
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06590243787952955,
+          0.12590243787952954
+        ],
+        "z": [
+          0.11019000395290493,
+          0.17019000395290493
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06908827031814524,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0613931970012298,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0641460985954577,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.062022653044546155,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04875720325954945,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0641460985954577,
+      "carrier_to_own_gap_mm": 4.942171722687544,
+      "required_extra_plus2mm": 6.9421717226875455,
+      "common": 0.8,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.26507711348704893,
+        0.9611761193120466,
+        0.07664817449845165
+      ],
+      "projected_spawn_extra_plus2mm": 7.222580319261723
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09590243787952955,
+        0.06382767496999289,
+        0.14019000395290493
+      ],
+      "min_h": [
+        0.09265847757034937,
+        0.05687755121383417,
+        0.13852160293802454
+      ],
+      "max_h": [
+        0.09923959403451381,
+        0.06414606214874759,
+        0.14180950780489265
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07590243787952955,
+          0.13590243787952955
+        ],
+        "z": [
+          0.11019000395290493,
+          0.17019000395290493
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06908827031814524,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0613931970012298,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0641460985954577,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.062022653044546155,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0641460985954577,
+      "carrier_to_own_gap_mm": 4.942171722687544,
+      "required_extra_plus2mm": 6.9421717226875455,
+      "common": 0.8,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.26507711348704893,
+        0.9611761193120466,
+        0.07664817449845165
+      ],
+      "projected_spawn_extra_plus2mm": 7.222580319261723
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.0892283353274747,
+        0.05952168810579983,
+        0.1389867469006774
+      ],
+      "min_h": [
+        0.07931522009803292,
+        0.04500384267380224,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09433053744696188,
+        0.05963962844128434,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.05922833532747471,
+          0.1192283353274747
+        ],
+        "z": [
+          0.10898674690067739,
+          0.1689867469006774
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06644065267276894,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05939843356071391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.0614398982725648,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.059639628595273116,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0471042077390483,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.059639628595273116,
+      "carrier_to_own_gap_mm": 6.801024077495825,
+      "required_extra_plus2mm": 8.801024077495827,
+      "common": 0.8,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22782250866183712,
+        0.9706812318236212,
+        0.0766481898942935
+      ],
+      "projected_spawn_extra_plus2mm": 9.066853039860801
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.0892283353274747,
+        0.05952168810579983,
+        0.1389867469006774
+      ],
+      "min_h": [
+        0.07931522009803292,
+        0.04500384267380224,
+        0.127399405938625
+      ],
+      "max_h": [
+        0.09433053744696188,
+        0.05963962844128434,
+        0.13996798397925456
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.0692283353274747,
+          0.12922833532747469
+        ],
+        "z": [
+          0.10898674690067739,
+          0.1689867469006774
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.0664406526727691,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05939843356071391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06143988541586739,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.059639628595273116,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04710420773905364,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.059639628595273116,
+      "carrier_to_own_gap_mm": 6.801024077495978,
+      "required_extra_plus2mm": 8.80102407749598,
+      "common": 0.8,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22782250866183712,
+        0.9706812318236212,
+        0.0766481898942935
+      ],
+      "projected_spawn_extra_plus2mm": 9.066853039860959
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09748839086890118,
+        0.06113126840963583,
+        0.14020248165883875
+      ],
+      "min_h": [
+        0.09419323150880048,
+        0.05420073392514115,
+        0.1385216029380246
+      ],
+      "max_h": [
+        0.10064810402036341,
+        0.06143984396434278,
+        0.1418095078048927
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06748839086890118,
+          0.12748839086890118
+        ],
+        "z": [
+          0.11020248165883875,
+          0.17020248165883875
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06644065267276894,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05939843356071391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06143988541586739,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.059639628595273116,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0471042077390483,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06143988541586739,
+      "carrier_to_own_gap_mm": 5.000767256901552,
+      "required_extra_plus2mm": 7.000767256901554,
+      "common": 0.8,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22782241990952362,
+        0.9706813861494205,
+        0.07664817449845161
+      ],
+      "projected_spawn_extra_plus2mm": 7.212219536497737
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09748839086890118,
+        0.06113126840963583,
+        0.14020248165883875
+      ],
+      "min_h": [
+        0.09419323150880048,
+        0.05420073392514115,
+        0.1385216029380246
+      ],
+      "max_h": [
+        0.10064810402036341,
+        0.06143984396434278,
+        0.1418095078048927
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07748839086890118,
+          0.1374883908689012
+        ],
+        "z": [
+          0.11020248165883875,
+          0.17020248165883875
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06644065267276894,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05939843356071391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.061439884315829606,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.059639628595273116,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.061439884315829606,
+      "carrier_to_own_gap_mm": 5.000768356939335,
+      "required_extra_plus2mm": 7.000768356939337,
+      "common": 0.8,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22782241990952362,
+        0.9706813861494205,
+        0.07664817449845161
+      ],
+      "projected_spawn_extra_plus2mm": 7.212220669761234
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.08688205706000376,
+        0.07372680615332991,
+        0.13232490452970327
+      ],
+      "min_h": [
+        0.07669735583652038,
+        0.05754863997489991,
+        0.12261571240991366
+      ],
+      "max_h": [
+        0.09329810322334192,
+        0.0737268061533299,
+        0.13372295700690873
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.056882057060003766,
+          0.11688205706000376
+        ],
+        "z": [
+          0.10232490452970328,
+          0.16232490452970327
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08118257196462064,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06948821657942891,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04534866486991544,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07702090311366046,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07372680631837601,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05620034970430406,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07372680631837601,
+      "carrier_to_own_gap_mm": 7.455765646244631,
+      "required_extra_plus2mm": 9.455765646244632,
+      "common": 0.9,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38511136717610894,
+        0.9220557943912114,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 10.255090531140596
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.08688205706000376,
+        0.07372680615332991,
+        0.13232490452970327
+      ],
+      "min_h": [
+        0.07669735583652038,
+        0.05754863997489991,
+        0.12261571240991366
+      ],
+      "max_h": [
+        0.09329810322334192,
+        0.0737268061533299,
+        0.13372295700690873
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06688205706000376,
+          0.12688205706000377
+        ],
+        "z": [
+          0.10232490452970328,
+          0.16232490452970327
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08118257196462059,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06948821657942891,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07702090311366046,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07372680631837601,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05620034970430406,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07372680631837601,
+      "carrier_to_own_gap_mm": 7.455765646244575,
+      "required_extra_plus2mm": 9.455765646244577,
+      "common": 0.9,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38511136717610894,
+        0.9220557943912114,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 10.255090531140537
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09468937305605145,
+        0.07668879303646141,
+        0.13250885034704946
+      ],
+      "min_h": [
+        0.09160351477931743,
+        0.06969257942737438,
+        0.13090031367924554
+      ],
+      "max_h": [
+        0.09860319005133616,
+        0.07702086955124761,
+        0.13464022922232324
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06468937305605145,
+          0.12468937305605145
+        ],
+        "z": [
+          0.10250885034704946,
+          0.16250885034704945
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08118257196462059,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06948821657942891,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07702090311366046,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07372680631837601,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05620034970430406,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07702090311366046,
+      "carrier_to_own_gap_mm": 4.161668850960129,
+      "required_extra_plus2mm": 6.1616688509601305,
+      "common": 0.9,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38511130957593614,
+        0.9220559592891797,
+        0.03876129822196073
+      ],
+      "projected_spawn_extra_plus2mm": 6.682532430797595
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09468937305605145,
+        0.07668879303646141,
+        0.13250885034704946
+      ],
+      "min_h": [
+        0.09160351477931743,
+        0.06969257942737438,
+        0.13090031367924554
+      ],
+      "max_h": [
+        0.09860319005133616,
+        0.07702086955124761,
+        0.13464022922232324
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07468937305605144,
+          0.13468937305605144
+        ],
+        "z": [
+          0.10250885034704946,
+          0.16250885034704945
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.0811825719646206,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06932054184401161,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07702090311366046,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07372680631837601,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07702090311366046,
+      "carrier_to_own_gap_mm": 4.161668850960143,
+      "required_extra_plus2mm": 6.161668850960145,
+      "common": 0.9,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38511130957593614,
+        0.9220559592891797,
+        0.03876129822196073
+      ],
+      "projected_spawn_extra_plus2mm": 6.68253243079761
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09149328123674595,
+        0.06759269306997555,
+        0.13258852857630074
+      ],
+      "min_h": [
+        0.08078820243211496,
+        0.051968032829020974,
+        0.12261571240991372
+      ],
+      "max_h": [
+        0.09725962239512734,
+        0.06770808177994181,
+        0.13372295700690878
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06149328123674595,
+          0.12149328123674595
+        ],
+        "z": [
+          0.10258852857630074,
+          0.16258852857630074
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07454628829041082,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06472405822304901,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.03793342627970982,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07021023040863168,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06770808193933188,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0521072023152519,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06770808193933188,
+      "carrier_to_own_gap_mm": 6.838206351078943,
+      "required_extra_plus2mm": 8.838206351078945,
+      "common": 0.9,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2945652185417189,
+        0.9548450058120057,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 9.256168589961764
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09149328123674595,
+        0.06759269306997555,
+        0.13258852857630074
+      ],
+      "min_h": [
+        0.08078820243211496,
+        0.051968032829020974,
+        0.12261571240991372
+      ],
+      "max_h": [
+        0.09725962239512734,
+        0.06770808177994181,
+        0.13372295700690878
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07149328123674595,
+          0.13149328123674595
+        ],
+        "z": [
+          0.10258852857630074,
+          0.16258852857630074
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07454628829041063,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06472405822304901,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07021023040863168,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06770808193933163,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05119231205749226,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06770808193933163,
+      "carrier_to_own_gap_mm": 6.838206351078998,
+      "required_extra_plus2mm": 8.838206351079,
+      "common": 0.9,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2945652185417189,
+        0.9548450058120057,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 9.256168589961822
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09968202284966457,
+        0.06988217987332822,
+        0.13258233962002652
+      ],
+      "min_h": [
+        0.09644743568510503,
+        0.06288644848557713,
+        0.1309003136792456
+      ],
+      "max_h": [
+        0.10320367928648423,
+        0.07021020461554192,
+        0.1346402292223233
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06968202284966457,
+          0.12968202284966457
+        ],
+        "z": [
+          0.10258233962002652,
+          0.16258233962002652
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07454628829041063,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06472405822304901,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07021023040863168,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06770808193933163,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0521072023152519,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07021023040863168,
+      "carrier_to_own_gap_mm": 4.336057881778946,
+      "required_extra_plus2mm": 6.336057881778948,
+      "common": 0.9,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.29456514533583583,
+        0.9548451643995793,
+        0.03876129822196071
+      ],
+      "projected_spawn_extra_plus2mm": 6.635691437745463
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09968202284966457,
+        0.06988217987332822,
+        0.13258233962002652
+      ],
+      "min_h": [
+        0.09644743568510503,
+        0.06288644848557713,
+        0.1309003136792456
+      ],
+      "max_h": [
+        0.10320367928648423,
+        0.07021020461554192,
+        0.1346402292223233
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07968202284966457,
+          0.13968202284966458
+        ],
+        "z": [
+          0.10258233962002652,
+          0.16258233962002652
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07454628829041095,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06407472351600906,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07021023040863168,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06770808193933163,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07021023040863168,
+      "carrier_to_own_gap_mm": 4.336057881779265,
+      "required_extra_plus2mm": 6.336057881779267,
+      "common": 0.9,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.29456514533583583,
+        0.9548451643995793,
+        0.03876129822196071
+      ],
+      "projected_spawn_extra_plus2mm": 6.635691437745797
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09324122593663205,
+        0.06506770100154483,
+        0.1325885285763007
+      ],
+      "min_h": [
+        0.08228637696679089,
+        0.04965228435462414,
+        0.12261571240991366
+      ],
+      "max_h": [
+        0.09866311594723297,
+        0.06517587960240681,
+        0.13372295700690873
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06324122593663205,
+          0.12324122593663205
+        ],
+        "z": [
+          0.10258852857630071,
+          0.1625885285763007
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07179234567574225,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06270210490737627,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.03462731470355542,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06735431953200072,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06517587975911644,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.050386850447861495,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06517587975911644,
+      "carrier_to_own_gap_mm": 6.616465916625805,
+      "required_extra_plus2mm": 8.616465916625806,
+      "common": 0.9,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.2575326931394213,
+        0.9654918772641313,
+        0.03876133592259212
+      ],
+      "projected_spawn_extra_plus2mm": 8.924431286819189
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09324122593663205,
+        0.06506770100154483,
+        0.1325885285763007
+      ],
+      "min_h": [
+        0.08228637696679089,
+        0.04965228435462414,
+        0.12261571240991366
+      ],
+      "max_h": [
+        0.09866311594723297,
+        0.06517587960240681,
+        0.13372295700690873
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07324122593663204,
+          0.13324122593663204
+        ],
+        "z": [
+          0.10258852857630071,
+          0.1625885285763007
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07179234567574225,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06270210490737627,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06735431953200072,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06517587975911619,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04837191780779818,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06517587975911619,
+      "carrier_to_own_gap_mm": 6.616465916626055,
+      "required_extra_plus2mm": 8.616465916626057,
+      "common": 0.9,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.2575326931394213,
+        0.9654918772641313,
+        0.03876133592259212
+      ],
+      "projected_spawn_extra_plus2mm": 8.924431286819448
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10150190351329576,
+        0.0670361385776264,
+        0.1325948859704475
+      ],
+      "min_h": [
+        0.09820646419030588,
+        0.060051426323772396,
+        0.13090031367924548
+      ],
+      "max_h": [
+        0.10484761869827872,
+        0.06735429941198175,
+        0.1346402292223232
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07150190351329576,
+          0.13150190351329577
+        ],
+        "z": [
+          0.1025948859704475,
+          0.1625948859704475
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07179234567574225,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06270210490737627,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06735431953200072,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06517587975911619,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.050386850447861495,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06735431953200072,
+      "carrier_to_own_gap_mm": 4.4380261437415305,
+      "required_extra_plus2mm": 6.438026143741532,
+      "common": 0.9,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25753261387371135,
+        0.9654920329113834,
+        0.038761298221960755
+      ],
+      "projected_spawn_extra_plus2mm": 6.668129745543368
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10150190351329576,
+        0.0670361385776264,
+        0.1325948859704475
+      ],
+      "min_h": [
+        0.09820646419030588,
+        0.060051426323772396,
+        0.13090031367924548
+      ],
+      "max_h": [
+        0.10484761869827872,
+        0.06735429941198175,
+        0.1346402292223232
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08150190351329575,
+          0.14150190351329575
+        ],
+        "z": [
+          0.1025948859704475,
+          0.1625948859704475
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07179234567574222,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06181698957264153,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06735431953200072,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06517587975911619,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06735431953200072,
+      "carrier_to_own_gap_mm": 4.438026143741503,
+      "required_extra_plus2mm": 6.438026143741505,
+      "common": 0.9,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25753261387371135,
+        0.9654920329113834,
+        0.038761298221960755
+      ],
+      "projected_spawn_extra_plus2mm": 6.6681297455433395
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09489052138106563,
+        0.062477195229216374,
+        0.13258852857630074
+      ],
+      "min_h": [
+        0.08370219208228714,
+        0.04729394486690676,
+        0.12261571240991372
+      ],
+      "max_h": [
+        0.09995989790539062,
+        0.06257800285963305,
+        0.13372295700690878
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06489052138106563,
+          0.12489052138106563
+        ],
+        "z": [
+          0.10258852857630074,
+          0.16258852857630074
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06896484952652995,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06061815552404692,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0309905851151202,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06442950005269088,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06257800301342921,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04862281526898872,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06257800301342921,
+      "carrier_to_own_gap_mm": 6.386846513100744,
+      "required_extra_plus2mm": 8.386846513100746,
+      "common": 0.9,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.2201172171900478,
+        0.9747030644227858,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 8.60451435850096
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09489052138106563,
+        0.062477195229216374,
+        0.13258852857630074
+      ],
+      "min_h": [
+        0.08370219208228714,
+        0.04729394486690676,
+        0.12261571240991372
+      ],
+      "max_h": [
+        0.09995989790539062,
+        0.06257800285963305,
+        0.13372295700690878
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07489052138106563,
+          0.1348905213810656
+        ],
+        "z": [
+          0.10258852857630074,
+          0.16258852857630074
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06896484952653001,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06061815552401747,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06442950005269088,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06257800301342897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.045360913350306224,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06257800301342897,
+      "carrier_to_own_gap_mm": 6.386846513101036,
+      "required_extra_plus2mm": 8.386846513101037,
+      "common": 0.9,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.2201172171900478,
+        0.9747030644227858,
+        0.03876133592259211
+      ],
+      "projected_spawn_extra_plus2mm": 8.604514358501259
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10321432515864658,
+        0.064120490352635,
+        0.1326085678330736
+      ],
+      "min_h": [
+        0.09985946014171493,
+        0.05715834964745947,
+        0.1309003136792456
+      ],
+      "max_h": [
+        0.10637565017416567,
+        0.06442948033772734,
+        0.1346402292223233
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07321432515864658,
+          0.13321432515864656
+        ],
+        "z": [
+          0.1026085678330736,
+          0.1626085678330736
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06896484952652995,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06061815552401747,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06442950005269088,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06257800301342897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04857029021330776,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06442950005269088,
+      "carrier_to_own_gap_mm": 4.535349473839073,
+      "required_extra_plus2mm": 6.535349473839075,
+      "common": 0.9,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22011713198237853,
+        0.9747032168982689,
+        0.03876129822196073
+      ],
+      "projected_spawn_extra_plus2mm": 6.70496348071577
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10321432515864658,
+        0.064120490352635,
+        0.1326085678330736
+      ],
+      "min_h": [
+        0.09985946014171493,
+        0.05715834964745947,
+        0.1309003136792456
+      ],
+      "max_h": [
+        0.10637565017416567,
+        0.06442948033772734,
+        0.1346402292223233
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08321432515864657,
+          0.14321432515864657
+        ],
+        "z": [
+          0.1026085678330736,
+          0.1626085678330736
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06896484952653001,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.059472685738328264,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06442950005269088,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06257800301342897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06442950005269088,
+      "carrier_to_own_gap_mm": 4.535349473839129,
+      "required_extra_plus2mm": 6.535349473839131,
+      "common": 0.9,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.22011713198237853,
+        0.9747032168982689,
+        0.03876129822196073
+      ],
+      "projected_spawn_extra_plus2mm": 6.704963480715827
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.08857157455629304,
+        0.07502351278321617,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.07816520156641313,
+        0.058675341960246784,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.09514755964750658,
+        0.07514626753587474,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.05857157455629304,
+          0.11857157455629304
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08236636317335758,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07006207889395749,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04743591945092602,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07843501668553428,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07514626770027652,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05695674424520074,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07514626770027652,
+      "carrier_to_own_gap_mm": 7.220095473081056,
+      "required_extra_plus2mm": 9.220095473081058,
+      "common": 0.94,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3836301745211629,
+        0.9231925510829146,
+        0.02331302391327117
+      ],
+      "projected_spawn_extra_plus2mm": 9.987185730935316
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.08857157455629304,
+        0.07502351278321617,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.07816520156641313,
+        0.058675341960246784,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.09514755964750658,
+        0.07514626753587474,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06857157455629304,
+          0.12857157455629303
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08236636317335758,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07006207889395749,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07843501668553428,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07514626770027621,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05695674424520074,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07514626770027621,
+      "carrier_to_own_gap_mm": 7.220095473081361,
+      "required_extra_plus2mm": 9.220095473081363,
+      "common": 0.94,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3836301745211629,
+        0.9231925510829146,
+        0.02331302391327117
+      ],
+      "projected_spawn_extra_plus2mm": 9.987185730935646
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09654977943692765,
+        0.0781013574509896,
+        0.1292549394331061
+      ],
+      "min_h": [
+        0.09344517364970362,
+        0.07110605471571979,
+        0.12765666191759897
+      ],
+      "max_h": [
+        0.10044567248087628,
+        0.07843498412984012,
+        0.13155426981529206
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06654977943692765,
+          0.12654977943692763
+        ],
+        "z": [
+          0.09925493943310609,
+          0.1592549394331061
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08236636317335758,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07006207889395749,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07843501668553428,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07514626770027621,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05695674424520074,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07843501668553428,
+      "carrier_to_own_gap_mm": 3.9313464878232978,
+      "required_extra_plus2mm": 5.9313464878232995,
+      "common": 0.94,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3836301189277427,
+        0.9231927144406437,
+        0.02331297750118759
+      ],
+      "projected_spawn_extra_plus2mm": 6.4248194283217055
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09654977943692765,
+        0.0781013574509896,
+        0.1292549394331061
+      ],
+      "min_h": [
+        0.09344517364970362,
+        0.07110605471571979,
+        0.12765666191759897
+      ],
+      "max_h": [
+        0.10044567248087628,
+        0.07843498412984012,
+        0.13155426981529206
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07654977943692765,
+          0.13654977943692764
+        ],
+        "z": [
+          0.09925493943310609,
+          0.1592549394331061
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08236636317335758,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06889268982230981,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07843501668553428,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07514626770027621,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07843501668553428,
+      "carrier_to_own_gap_mm": 3.9313464878232978,
+      "required_extra_plus2mm": 5.9313464878232995,
+      "common": 0.94,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3836301189277427,
+        0.9231927144406437,
+        0.02331297750118759
+      ],
+      "projected_spawn_extra_plus2mm": 6.4248194283217055
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09348456069521799,
+        0.0688361325407937,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.08235767659687308,
+        0.0529481907345927,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.09923712850661906,
+        0.0689429212836725,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06348456069521799,
+          0.12348456069521799
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07557787110663629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06522328086137016,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04023490170784533,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07144042554917536,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06894292144250176,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05276521669461095,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06894292144250176,
+      "carrier_to_own_gap_mm": 6.634949664134526,
+      "required_extra_plus2mm": 8.634949664134528,
+      "common": 0.94,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2929814793033325,
+        0.9558339029158511,
+        0.0233130239132711
+      ],
+      "projected_spawn_extra_plus2mm": 9.033943698578689
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09348456069521799,
+        0.0688361325407937,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.08235767659687308,
+        0.0529481907345927,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.09923712850661906,
+        0.0689429212836725,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07348456069521798,
+          0.13348456069521797
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07557787110663629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06522328086137016,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07144042554917536,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0689429214425015,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05034965054197384,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0689429214425015,
+      "carrier_to_own_gap_mm": 6.63494966413479,
+      "required_extra_plus2mm": 8.634949664134792,
+      "common": 0.94,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2929814793033325,
+        0.9558339029158511,
+        0.0233130239132711
+      ],
+      "projected_spawn_extra_plus2mm": 9.033943698578966
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10166047989091394,
+        0.07111761029874394,
+        0.12932849568295043
+      ],
+      "min_h": [
+        0.0984166042518879,
+        0.06411608032317956,
+        0.12765666191759892
+      ],
+      "max_h": [
+        0.10517372832097574,
+        0.07144039244872623,
+        0.131554269815292
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07166047989091394,
+          0.13166047989091395
+        ],
+        "z": [
+          0.09932849568295044,
+          0.15932849568295043
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07557787110663629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06522328086137016,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07144042554917536,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0689429214425015,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05276521669461095,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07144042554917536,
+      "carrier_to_own_gap_mm": 4.137445557460929,
+      "required_extra_plus2mm": 6.13744555746093,
+      "common": 0.94,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2929814082431476,
+        0.9558340601635095,
+        0.023312977501187618
+      ],
+      "projected_spawn_extra_plus2mm": 6.421036677026376
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10166047989091394,
+        0.07111761029874394,
+        0.12932849568295043
+      ],
+      "min_h": [
+        0.0984166042518879,
+        0.06411608032317956,
+        0.12765666191759892
+      ],
+      "max_h": [
+        0.10517372832097574,
+        0.07144039244872623,
+        0.131554269815292
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08166047989091393,
+          0.14166047989091393
+        ],
+        "z": [
+          0.09932849568295044,
+          0.15932849568295043
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07557787110663629,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06298097491819504,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07144042554917536,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0689429214425015,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07144042554917536,
+      "carrier_to_own_gap_mm": 4.137445557460929,
+      "required_extra_plus2mm": 6.13744555746093,
+      "common": 0.94,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2929814082431476,
+        0.9558340601635095,
+        0.023312977501187618
+      ],
+      "projected_spawn_extra_plus2mm": 6.421036677026376
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09527896499609816,
+        0.06623344330790892,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.08389246939997833,
+        0.05057119647431761,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.1006867603011712,
+        0.06633355930808073,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06527896499609816,
+          0.12527896499609814
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.0727494430310128,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06317931288230536,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.036921590440480434,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06850765210253508,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06633355946426432,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05100374839067571,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06633355946426432,
+      "carrier_to_own_gap_mm": 6.415883566748478,
+      "required_extra_plus2mm": 8.41588356674848,
+      "common": 0.94,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.2559120050332845,
+        0.9664189789413088,
+        0.02331302391327114
+      ],
+      "projected_spawn_extra_plus2mm": 8.708317769139736
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09527896499609816,
+        0.06623344330790892,
+        0.12982496512073285
+      ],
+      "min_h": [
+        0.08389246939997833,
+        0.05057119647431761,
+        0.12056316654156374
+      ],
+      "max_h": [
+        0.1006867603011712,
+        0.06633355930808073,
+        0.13101368001677804
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07527896499609815,
+          0.13527896499609815
+        ],
+        "z": [
+          0.09982496512073286,
+          0.15982496512073285
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07274944303101294,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06317931288230536,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06850765210253508,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06633355946426431,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0473125360147858,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06633355946426431,
+      "carrier_to_own_gap_mm": 6.415883566748631,
+      "required_extra_plus2mm": 8.415883566748633,
+      "common": 0.94,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.2559120050332845,
+        0.9664189789413088,
+        0.02331302391327114
+      ],
+      "projected_spawn_extra_plus2mm": 8.708317769139894
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10352149996274297,
+        0.06818972725550024,
+        0.12935581671172205
+      ],
+      "min_h": [
+        0.10022157642824318,
+        0.061204223698071825,
+        0.12765666191759886
+      ],
+      "max_h": [
+        0.10686363190473862,
+        0.06850761797308672,
+        0.13155426981529195
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07352149996274297,
+          0.13352149996274298
+        ],
+        "z": [
+          0.09935581671172206,
+          0.15935581671172205
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07274944303101294,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06317931288230536,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06850765210253508,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06633355946426431,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05038304620922419,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06850765210253508,
+      "carrier_to_own_gap_mm": 4.241790928477859,
+      "required_extra_plus2mm": 6.241790928477861,
+      "common": 0.94,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.255911927963337,
+        0.9664191333323678,
+        0.023312977501187604
+      ],
+      "projected_spawn_extra_plus2mm": 6.458678965673172
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10352149996274297,
+        0.06818972725550024,
+        0.12935581671172205
+      ],
+      "min_h": [
+        0.10022157642824318,
+        0.061204223698071825,
+        0.12765666191759886
+      ],
+      "max_h": [
+        0.10686363190473862,
+        0.06850761797308672,
+        0.13155426981529195
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08352149996274297,
+          0.14352149996274297
+        ],
+        "z": [
+          0.09935581671172206,
+          0.15935581671172205
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07274944303101294,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06043433711355612,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06850765210253508,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06633355946426431,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06850765210253508,
+      "carrier_to_own_gap_mm": 4.241790928477859,
+      "required_extra_plus2mm": 6.241790928477861,
+      "common": 0.94,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.255911927963337,
+        0.9664191333323678,
+        0.023312977501187604
+      ],
+      "projected_spawn_extra_plus2mm": 6.458678965673172
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.0969716899280359,
+        0.06356350691488595,
+        0.12982496512073294
+      ],
+      "min_h": [
+        0.08534251452799585,
+        0.04815024478042508,
+        0.12056316654156385
+      ],
+      "max_h": [
+        0.1020266713470815,
+        0.06365680130007917,
+        0.13101368001677816
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.0669716899280359,
+          0.1269716899280359
+        ],
+        "z": [
+          0.09982496512073294,
+          0.15982496512073294
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06985901660803967,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06107276425529197,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06550424879551964,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06365680145338512,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04919767944937672,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06365680145338512,
+      "carrier_to_own_gap_mm": 6.20221515465455,
+      "required_extra_plus2mm": 8.202215154654551,
+      "common": 0.94,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.2184619901758022,
+        0.9755669920751449,
+        0.023313023913271155
+      ],
+      "projected_spawn_extra_plus2mm": 8.407639066598064
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.0969716899280359,
+        0.06356350691488595,
+        0.12982496512073294
+      ],
+      "min_h": [
+        0.08534251452799585,
+        0.04815024478042508,
+        0.12056316654156385
+      ],
+      "max_h": [
+        0.1020266713470815,
+        0.06365680130007917,
+        0.13101368001677816
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.0769716899280359,
+          0.13697168992803588
+        ],
+        "z": [
+          0.09982496512073294,
+          0.15982496512073294
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06985901660803961,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06107276425529197,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06550424879551964,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0636568014533851,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04405942398059248,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.0636568014533851,
+      "carrier_to_own_gap_mm": 6.202215154654509,
+      "required_extra_plus2mm": 8.20221515465451,
+      "common": 0.94,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.2184619901758022,
+        0.9755669920751449,
+        0.023313023913271155
+      ],
+      "projected_spawn_extra_plus2mm": 8.407639066598021
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10527049776644344,
+        0.0651963248034954,
+        0.12937238943915855
+      ],
+      "min_h": [
+        0.10191751958335037,
+        0.05823259835130102,
+        0.12765666191759897
+      ],
+      "max_h": [
+        0.1084346297453995,
+        0.06550421464459445,
+        0.13155426981529206
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07527049776644344,
+          0.13527049776644345
+        ],
+        "z": [
+          0.09937238943915855,
+          0.15937238943915855
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06985901660803961,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06107276425529197,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06550424879551964,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0636568014533851,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.047316836416078006,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06550424879551964,
+      "carrier_to_own_gap_mm": 4.354767812519977,
+      "required_extra_plus2mm": 6.354767812519979,
+      "common": 0.94,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.218461907210695,
+        0.9755671433800255,
+        0.02331297750118759
+      ],
+      "projected_spawn_extra_plus2mm": 6.51392152312834
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10527049776644344,
+        0.0651963248034954,
+        0.12937238943915855
+      ],
+      "min_h": [
+        0.10191751958335037,
+        0.05823259835130102,
+        0.12765666191759897
+      ],
+      "max_h": [
+        0.1084346297453995,
+        0.06550421464459445,
+        0.13155426981529206
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08527049776644344,
+          0.14527049776644343
+        ],
+        "z": [
+          0.09937238943915855,
+          0.15937238943915855
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.0698590166080396,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05777718473798267,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06550424879551964,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0636568014533851,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06550424879551964,
+      "carrier_to_own_gap_mm": 4.354767812519963,
+      "required_extra_plus2mm": 6.354767812519965,
+      "common": 0.94,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.218461907210695,
+        0.9755671433800255,
+        0.02331297750118759
+      ],
+      "projected_spawn_extra_plus2mm": 6.513921523128325
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09033300531593064,
+        0.07637541234330894,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.07956975764159606,
+        0.059753473954362354,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.09689553072566491,
+        0.07648783762342544,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06033300531593064,
+          0.12033300531593064
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08345554654649935,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07060597508863391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04926967822076568,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07975276432793005,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07648783778687498,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05768719475623015,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07648783778687498,
+      "carrier_to_own_gap_mm": 6.967708759624366,
+      "required_extra_plus2mm": 8.967708759624369,
+      "common": 0.98,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3828881343385401,
+        0.9237620017191588,
+        0.007780426136030208
+      ],
+      "projected_spawn_extra_plus2mm": 9.70781298963921
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09033300531593064,
+        0.07637541234330894,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.07956975764159606,
+        0.059753473954362354,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.09689553072566491,
+        0.07648783762342544,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07033300531593063,
+          0.13033300531593062
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08345554654649932,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07060597508863391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07975274817446547,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07648783778687467,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.056812055940088105,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07648783778687467,
+      "carrier_to_own_gap_mm": 6.967708759624658,
+      "required_extra_plus2mm": 8.96770875962466,
+      "common": 0.98,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.3828881343385401,
+        0.9237620017191588,
+        0.007780426136030208
+      ],
+      "projected_spawn_extra_plus2mm": 9.707812989639526
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.09824669516468468,
+        0.07940981954734869,
+        0.12594121344540168
+      ],
+      "min_h": [
+        0.0951733682752153,
+        0.07243244480916629,
+        0.12431324097990469
+      ],
+      "max_h": [
+        0.10216259038791732,
+        0.07975272611093544,
+        0.12835445200804416
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06824669516468468,
+          0.12824669516468468
+        ],
+        "z": [
+          0.09594121344540169,
+          0.15594121344540168
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08345554654649932,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07060597508863391,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07975274817446547,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07648783778687467,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05768719475623015,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07975274817446547,
+      "carrier_to_own_gap_mm": 3.7027983720338553,
+      "required_extra_plus2mm": 5.7027983720338575,
+      "common": 0.98,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38288808116355133,
+        0.9237621632206818,
+        0.00778037118026581
+      ],
+      "projected_spawn_extra_plus2mm": 6.173448750218501
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.09824669516468468,
+        0.07940981954734869,
+        0.12594121344540168
+      ],
+      "min_h": [
+        0.0951733682752153,
+        0.07243244480916629,
+        0.12431324097990469
+      ],
+      "max_h": [
+        0.10216259038791732,
+        0.07975272611093544,
+        0.12835445200804416
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07824669516468467,
+          0.13824669516468469
+        ],
+        "z": [
+          0.09594121344540169,
+          0.15594121344540168
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.08345554654649891,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06803630812161837,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07975275887289306,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07648783778687467,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07975275887289306,
+      "carrier_to_own_gap_mm": 3.702787673605851,
+      "required_extra_plus2mm": 5.702787673605853,
+      "common": 0.98,
+      "thumb": 0.8,
+      "source_spawn_direction_h_per_m": [
+        -0.38288808116355133,
+        0.9237621632206818,
+        0.00778037118026581
+      ],
+      "projected_spawn_extra_plus2mm": 6.173437168852181
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09536794646243037,
+        0.07001219750219617,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08385947908264921,
+        0.05388609579197054,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.10110612267851249,
+        0.07011000025437834,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06536794646243037,
+          0.12536794646243038
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07652538938862684,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0657166280980271,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.041964858068726144,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07258677438992531,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07011000041237897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.053400661394295286,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07011000041237897,
+      "carrier_to_own_gap_mm": 6.415388976247868,
+      "required_extra_plus2mm": 8.41538897624787,
+      "common": 0.98,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2921880693145886,
+        0.9563292797920848,
+        0.007780426136030194
+      ],
+      "projected_spawn_extra_plus2mm": 8.799677217953064
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09536794646243037,
+        0.07001219750219617,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08385947908264921,
+        0.05388609579197054,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.10110612267851249,
+        0.07011000025437834,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07536794646243036,
+          0.13536794646243036
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07652538938862692,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0657166280980271,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07258677438992531,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07011000041237897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04959912041307958,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07011000041237897,
+      "carrier_to_own_gap_mm": 6.415388976247952,
+      "required_extra_plus2mm": 8.415388976247954,
+      "common": 0.98,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.2921880693145886,
+        0.9563292797920848,
+        0.007780426136030194
+      ],
+      "projected_spawn_extra_plus2mm": 8.799677217953151
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.1034925580135461,
+        0.07226209896833624,
+        0.12599715422902535
+      ],
+      "min_h": [
+        0.1002644525969932,
+        0.06526995352031335,
+        0.12431324097990458
+      ],
+      "max_h": [
+        0.1070095190687586,
+        0.0725867421922281,
+        0.12835445200804405
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.0734925580135461,
+          0.1334925580135461
+        ],
+        "z": [
+          0.09599715422902536,
+          0.15599715422902535
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07652538938862692,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.0657166280980271,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07258677438992531,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07011000041237897,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05260109842063864,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07258677438992531,
+      "carrier_to_own_gap_mm": 3.9386149987016146,
+      "required_extra_plus2mm": 5.938614998701616,
+      "common": 0.98,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.29218800084028407,
+        0.9563294354249575,
+        0.00778037118026581
+      ],
+      "projected_spawn_extra_plus2mm": 6.209800492089543
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.1034925580135461,
+        0.07226209896833624,
+        0.12599715422902535
+      ],
+      "min_h": [
+        0.1002644525969932,
+        0.06526995352031335,
+        0.12431324097990458
+      ],
+      "max_h": [
+        0.1070095190687586,
+        0.0725867421922281,
+        0.12835445200804405
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08349255801354609,
+          0.1434925580135461
+        ],
+        "z": [
+          0.09599715422902536,
+          0.15599715422902535
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.0765253893886268,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06147041301999643,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07258677438992531,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07011000041237896,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07258677438992531,
+      "carrier_to_own_gap_mm": 3.93861499870149,
+      "required_extra_plus2mm": 5.938614998701492,
+      "common": 0.98,
+      "thumb": 0.9,
+      "source_spawn_direction_h_per_m": [
+        -0.29218800084028407,
+        0.9563294354249575,
+        0.00778037118026581
+      ],
+      "projected_spawn_extra_plus2mm": 6.209800492089413
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09720629299652359,
+        0.06733602097880294,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08542931124155002,
+        0.05145049589797588,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.10259936092307236,
+        0.0674277124756615,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06720629299652359,
+          0.12720629299652358
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07363130426570672,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06364194998746991,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.03861496763387046,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06958237044813431,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06742771263106848,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.051599486911249236,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06742771263106848,
+      "carrier_to_own_gap_mm": 6.203591634638239,
+      "required_extra_plus2mm": 8.20359163463824,
+      "common": 0.98,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25510008596490263,
+        0.9668833980259118,
+        0.007780426136030208
+      ],
+      "projected_spawn_extra_plus2mm": 8.484571822608117
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09720629299652359,
+        0.06733602097880294,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08542931124155002,
+        0.05145049589797588,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.10259936092307236,
+        0.0674277124756615,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07720629299652358,
+          0.1372062929965236
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07363130426570742,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06364194998746991,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06958237044813431,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06742771263106848,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04636010596810932,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06742771263106848,
+      "carrier_to_own_gap_mm": 6.203591634638947,
+      "required_extra_plus2mm": 8.203591634638949,
+      "common": 0.98,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25510008596490263,
+        0.9668833980259118,
+        0.007780426136030208
+      ],
+      "projected_spawn_extra_plus2mm": 8.48457182260885
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10539964360915761,
+        0.06926679230877301,
+        0.1260145082651748
+      ],
+      "min_h": [
+        0.10211253781244466,
+        0.062285996189600346,
+        0.12431324097990458
+      ],
+      "max_h": [
+        0.10874225432464012,
+        0.06958233704744879,
+        0.12835445200804405
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07539964360915762,
+          0.13539964360915763
+        ],
+        "z": [
+          0.0960145082651748,
+          0.1560145082651748
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07363130426570742,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06364194998746991,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06958237044813431,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06742771263106848,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04951671286853113,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06958237044813431,
+      "carrier_to_own_gap_mm": 4.048933817573111,
+      "required_extra_plus2mm": 6.048933817573113,
+      "common": 0.98,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25510001154117007,
+        0.966883550903083,
+        0.007780371180265838
+      ],
+      "projected_spawn_extra_plus2mm": 6.256114101768846
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10539964360915761,
+        0.06926679230877301,
+        0.1260145082651748
+      ],
+      "min_h": [
+        0.10211253781244466,
+        0.062285996189600346,
+        0.12431324097990458
+      ],
+      "max_h": [
+        0.10874225432464012,
+        0.06958233704744879,
+        0.12835445200804405
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08539964360915761,
+          0.1453996436091576
+        ],
+        "z": [
+          0.0960145082651748,
+          0.1560145082651748
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07363130426570692,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05861589850281105,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06958237044813431,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06742771263106846,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06958237044813431,
+      "carrier_to_own_gap_mm": 4.048933817572611,
+      "required_extra_plus2mm": 6.048933817572613,
+      "common": 0.98,
+      "thumb": 0.94,
+      "source_spawn_direction_h_per_m": [
+        -0.25510001154117007,
+        0.966883550903083,
+        0.007780371180265838
+      ],
+      "projected_spawn_extra_plus2mm": 6.256114101768329
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09894009422918519,
+        0.0645909577647049,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08691211044493148,
+        0.04896963105405863,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.1039800343860806,
+        0.06467640166118609,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06894009422918519,
+          0.12894009422918518
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07068078977820194,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.061503878261882555,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06650573841673936,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06467640181376831,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04975282592897221,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06467640181376831,
+      "carrier_to_own_gap_mm": 6.00438796443363,
+      "required_extra_plus2mm": 8.004387964433631,
+      "common": 0.98,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.21763276934964726,
+        0.9759997627779619,
+        0.007780426136030194
+      ],
+      "projected_spawn_extra_plus2mm": 8.201219170024137
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.01,
+      "face_h": [
+        0.09894009422918519,
+        0.0645909577647049,
+        0.12695379437200888
+      ],
+      "min_h": [
+        0.08691211044493148,
+        0.04896963105405863,
+        0.11843649337548882
+      ],
+      "max_h": [
+        0.1039800343860806,
+        0.06467640166118609,
+        0.12819249875313254
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07894009422918519,
+          0.13894009422918518
+        ],
+        "z": [
+          0.09695379437200888,
+          0.15695379437200888
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07068078977820194,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.061503878261882555,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06650573841673936,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06467640181376831,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06467640181376831,
+      "carrier_to_own_gap_mm": 6.00438796443363,
+      "required_extra_plus2mm": 8.004387964433631,
+      "common": 0.98,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.21763276934964726,
+        0.9759997627779619,
+        0.007780426136030194
+      ],
+      "projected_spawn_extra_plus2mm": 8.201219170024137
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10719450630866377,
+        0.06619869827912815,
+        0.1260328309036267
+      ],
+      "min_h": [
+        0.1038487821512372,
+        0.05924066154391356,
+        0.12431324097990464
+      ],
+      "max_h": [
+        0.1103532903300215,
+        0.06650570494492178,
+        0.1283544520080441
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07719450630866377,
+          0.13719450630866376
+        ],
+        "z": [
+          0.09603283090362671,
+          0.1560328309036267
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07068078977820194,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.061503878261882555,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06650573841673936,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06467640181376831,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.046224208485114465,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06650573841673936,
+      "carrier_to_own_gap_mm": 4.1750513614625815,
+      "required_extra_plus2mm": 6.175051361462583,
+      "common": 0.98,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.21763268908715472,
+        0.9759999126721035,
+        0.0077803711802657965
+      ],
+      "projected_spawn_extra_plus2mm": 6.326897452845522
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.01,
+      "face_h": [
+        0.10719450630866377,
+        0.06619869827912815,
+        0.1260328309036267
+      ],
+      "min_h": [
+        0.1038487821512372,
+        0.05924066154391356,
+        0.12431324097990464
+      ],
+      "max_h": [
+        0.1103532903300215,
+        0.06650570494492178,
+        0.1283544520080441
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.08719450630866377,
+          0.14719450630866376
+        ],
+        "z": [
+          0.09603283090362671,
+          0.1560328309036267
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.07068078977820193,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.05562354731618138,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06650573841673936,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06467640181376831,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06650573841673936,
+      "carrier_to_own_gap_mm": 4.175051361462567,
+      "required_extra_plus2mm": 6.175051361462569,
+      "common": 0.98,
+      "thumb": 0.98,
+      "source_spawn_direction_h_per_m": [
+        -0.21763268908715472,
+        0.9759999126721035,
+        0.0077803711802657965
+      ],
+      "projected_spawn_extra_plus2mm": 6.3268974528455075
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09727739687838562,
+        0.06327753698260045,
+        0.12968390935948051
+      ],
+      "min_h": [
+        0.08559809136649145,
+        0.04788618745262943,
+        0.12045856240591532
+      ],
+      "max_h": [
+        0.10228699815039675,
+        0.06336958751280188,
+        0.1308752273492453
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06727739687838562,
+          0.12727739687838563
+        ],
+        "z": [
+          0.09968390935948052,
+          0.1596839093594805
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456506,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06517543418479071,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06336958766570161,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04899688839942556,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06336958766570161,
+      "carrier_to_own_gap_mm": 6.165356368863451,
+      "required_extra_plus2mm": 8.165356368863453,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.0
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10557450685446347,
+        0.06486354808595637,
+        0.12922471785297832
+      ],
+      "min_h": [
+        0.1022215831397516,
+        0.057908677057611296,
+        0.1274917931760803
+      ],
+      "max_h": [
+        0.10872207987151121,
+        0.06517540006778748,
+        0.1313969203740758
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07557450685446347,
+          0.13557450685446348
+        ],
+        "z": [
+          0.09922471785297832,
+          0.15922471785297831
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456505,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06517543418479071,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06336958766570161,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.046871973653178696,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06517543418479071,
+      "carrier_to_own_gap_mm": 4.359509849774332,
+      "required_extra_plus2mm": 6.359509849774334,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.0
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09642261495558922,
+        0.06718409839131438,
+        0.12977406107939804
+      ],
+      "min_h": [
+        0.08474330944369504,
+        0.05179274886134336,
+        0.12054871412583285
+      ],
+      "max_h": [
+        0.10143221622760035,
+        0.0672761489215158,
+        0.13096537906916284
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06642261495558922,
+          0.1264226149555892
+        ],
+        "z": [
+          0.09977406107939804,
+          0.15977406107939804
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456507,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.034392025338113065,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06908199619686031,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06727614907441555,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04899688839942556,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06727614907441555,
+      "carrier_to_own_gap_mm": 2.258794960149524,
+      "required_extra_plus2mm": 4.258794960149526,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.004
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10471972526594261,
+        0.06877011009802593,
+        0.1293148693855219
+      ],
+      "min_h": [
+        0.10136680155123086,
+        0.061815239069680894,
+        0.1275819447086238
+      ],
+      "max_h": [
+        0.10786729828299046,
+        0.06908196207985708,
+        0.1314870719066193
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07471972526594262,
+          0.1347197252659426
+        ],
+        "z": [
+          0.09931486938552189,
+          0.1593148693855219
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456506,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.06908199619686031,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06727614907441555,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.048528105789856814,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.06908199619686031,
+      "carrier_to_own_gap_mm": 0.452947837704748,
+      "required_extra_plus2mm": 2.45294783770475,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.004
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_3",
+      "height": 0.0,
+      "face_h": [
+        0.09556783303279281,
+        0.07109065980002831,
+        0.1298642127993156
+      ],
+      "min_h": [
+        0.08388852752089863,
+        0.055699310270057284,
+        0.12063886584575037
+      ],
+      "max_h": [
+        0.10057743430480394,
+        0.07118271033022973,
+        0.13105553078908036
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.06556783303279282,
+          0.1255678330327928
+        ],
+        "z": [
+          0.0998642127993156,
+          0.1598642127993156
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456507,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.03583822342290234,
+          "name": "inspire_left_thumb_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07298855820892992,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07118271048312949,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04899688839942556,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07118271048312949,
+      "carrier_to_own_gap_mm": -1.6477664485644166,
+      "required_extra_plus2mm": 0.3522335514355851,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.008
+    },
+    {
+      "pad": "inspire_thumb_force_sensor_4",
+      "height": 0.0,
+      "face_h": [
+        0.10386494367742209,
+        0.07267667211009547,
+        0.12940502091806536
+      ],
+      "min_h": [
+        0.10051201996271011,
+        0.06572180108175049,
+        0.12767209624116727
+      ],
+      "max_h": [
+        0.10701251669446972,
+        0.07298852409192667,
+        0.13157722343916275
+      ],
+      "cube_patch_h": {
+        "x": [
+          0.07386494367742209,
+          0.13386494367742208
+        ],
+        "z": [
+          0.09940502091806536,
+          0.15940502091806535
+        ]
+      },
+      "top_carriers": [
+        {
+          "y": 0.06953494403456506,
+          "name": "inspire_left_thumb_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.06082726147741337,
+          "name": "inspire_left_thumb_3",
+          "approximation": "convexHull"
+        }
+      ],
+      "top_pads": [
+        {
+          "y": 0.07298855820892992,
+          "name": "inspire_thumb_force_sensor_4",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.07118271048312949,
+          "name": "inspire_thumb_force_sensor_3",
+          "approximation": "convexHull"
+        },
+        {
+          "y": 0.04899688839942556,
+          "name": "inspire_thumb_force_sensor_2",
+          "approximation": "convexHull"
+        }
+      ],
+      "own_max_y": 0.07298855820892992,
+      "carrier_to_own_gap_mm": -3.4536141743648634,
+      "required_extra_plus2mm": 0,
+      "common": 0.942,
+      "thumb": 0.985,
+      "exposure": 0.008
+    }
+  ],
+  "low_central_table": [
+    {
+      "common": 0.8,
+      "thumb": 0.8,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9982328507199488,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0118233785382047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0171890793267742,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0174272632374985,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0332713443955712,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0365018192932192,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.8,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0132328507199488,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0268233785382048,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0321890793267743,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0324272632374987,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0482713443955713,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0515018192932193,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.8,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4"
+      ],
+      "lowest": [
+        [
+          1.0482328507199488,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0618233785382047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0671890793267742,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0674272632374986,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0832713443955715,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0865018192932192,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.8,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.073232850719949,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0868233785382049,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0921890793267743,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0924272632374987,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1082713443955714,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.1115018192932193,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.9,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9939071005158189,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0075674665773524,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0135763348663906,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.014460359496186,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0314488642201947,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0339810781669756,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.9,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.008907100515819,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0225674665773525,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0285763348663908,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0294603594961862,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0464488642201948,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0489810781669757,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.9,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4"
+      ],
+      "lowest": [
+        [
+          1.043907100515819,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0575674665773525,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0635763348663907,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0644603594961861,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0814488642201947,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0839810781669756,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.9,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.068907100515819,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0825674665773526,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0885763348663908,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0894603594961862,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1064488642201948,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.1089810781669758,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.94,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9923949100140943,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0060476835902175,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0122985101671536,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.013438906073587,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0308415476783386,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0330875009135934,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.94,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0073949100140944,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0210476835902176,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0272985101671537,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0284389060735872,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0458415476783387,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0480875009135935,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.94,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0423949100140943,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0560476835902175,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0622985101671536,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0634389060735872,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0808415476783388,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0830875009135934,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.94,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0673949100140945,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0810476835902176,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0872985101671537,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0884389060735873,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1058415476783388,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.1080875009135935,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.98,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9910108315682427,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0046357110147395,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0111192009142311,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0125142723311031,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0303051731268886,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0322615259231065,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.98,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0060108315682428,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0196357110147396,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0261192009142313,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0275142723311033,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0453051731268888,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0472615259231066,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.98,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0410108315682427,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0546357110147395,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0611192009142312,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0625142723311032,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0803051731268885,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0822615259231065,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.8,
+      "thumb": 0.98,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0660108315682428,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0796357110147397,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0861192009142313,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0875142723311033,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1053051731268888,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.1072615259231067,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.8,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9962519837076561,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0065975468755008,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0121516349801625,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0169756413872433,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0335315984602669,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0338990423287282,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.8,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0112519837076563,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.021597546875501,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0271516349801626,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0319756413872434,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.048531598460267,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0488990423287283,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.8,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4"
+      ],
+      "lowest": [
+        [
+          1.0462519837076563,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.056597546875501,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0621516349801625,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0669756413872433,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0835315984602671,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.0838990423287282,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.8,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0712519837076564,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.081597546875501,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0871516349801627,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0919756413872435,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.108531598460267,
+          "inspire_left_thumb_2"
+        ],
+        [
+          1.1088990423287284,
+          "inspire_thumb_force_sensor_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.9,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9917890881630318,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.001979817141667,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.008190115556673,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0139774708423788,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0311980939520784,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.031727138511563,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.9,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.006789088163032,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.016979817141667,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0231901155566732,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.028977470842379,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0461980939520785,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.046727138511563,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.9,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0417890881630318,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.051979817141667,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.058190115556673,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0639774708423788,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0811980939520784,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.081727138511563,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.9,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.066789088163032,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0769798171416671,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0831901155566732,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.088977470842379,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1061980939520786,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1067271385115631,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.94,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9902274822203067,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0003296657270486,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0067866219351216,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0129447515867944,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0302395852821893,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0311263149745726,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.94,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.005227482220307,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0153296657270487,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0217866219351217,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0279447515867945,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0452395852821894,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0461263149745728,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.94,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0402274822203068,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0503296657270487,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0567866219351216,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0629447515867945,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0802395852821893,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.081126314974573,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.94,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.065227482220307,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0753296657270488,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0817866219351218,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0879447515867946,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1052395852821895,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1061263149745728,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.98,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9887972112938066,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.998795827404047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.005489839925537,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.012009586817958,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0293529137194615,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0305960099796463,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.98,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0037972112938067,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.013795827404047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.020489839925537,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.027009586817958,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0443529137194616,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0455960099796464,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.98,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0387972112938066,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.048795827404047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.055489839925537,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.062009586817958,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0793529137194615,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.080596009979646,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.9,
+      "thumb": 0.98,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0637972112938068,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.073795827404047,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0804898399255372,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0870095868179581,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1043529137194616,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1055960099796465,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.8,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9957106819462695,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0047163037930367,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0103021784223454,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0168914299074763,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0329137957005499,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.033665120060604,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.8,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0107106819462697,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0197163037930368,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0253021784223455,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0318914299074764,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.04791379570055,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.048665120060604,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.8,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0457106819462696,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0547163037930367,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0603021784223454,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0668914299074765,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.08291379570055,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0836651200606042,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.8,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0707106819462697,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0797163037930368,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0853021784223456,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0918914299074765,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.10791379570055,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1086651200606041,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.9,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9912103099004945,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9999683237898128,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0062126093022752,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0138874296708535,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0301446323275059,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0318699051522735,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.9,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0062103099004946,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.014968323789813,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0212126093022753,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0288874296708537,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.045144632327506,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0468699051522736,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.9,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0412103099004946,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.049968323789813,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0562126093022752,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0638874296708536,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.080144632327506,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0818699051522735,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.9,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0662103099004947,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.074968323789813,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0812126093022754,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0888874296708537,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.105144632327506,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1068699051522737,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.94,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9896352006546855,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9982712412376389,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0047629774349431,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0128526099193524,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0291615447580194,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0312724127617041,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.94,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0046352006546855,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.013271241237639,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0197629774349433,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0278526099193526,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0441615447580195,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0462724127617042,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.94,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0396352006546854,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.048271241237639,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0547629774349432,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0628526099193525,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0791615447580194,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0812724127617044,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.94,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0646352006546855,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.073271241237639,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0797629774349433,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0878526099193526,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1041615447580195,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1062724127617043,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.98,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9881923071464843,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9966935326497601,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0034230663344894,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0119154816690554,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0282518973395776,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0307452216661117,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.98,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0031923071464846,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0116935326497603,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0184230663344895,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0269154816690556,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0432518973395777,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0457452216661118,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.98,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0381923071464845,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0466935326497602,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0534230663344895,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0619154816690555,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0782518973395776,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0807452216661115,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.94,
+      "thumb": 0.98,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0631923071464846,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0716935326497603,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0784230663344896,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0869154816690556,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1032518973395777,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1057452216661119,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.8,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9953127388598219,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.002961665476939,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0085542072434113,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0168618199249548,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.031962358603436,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.033815348082595,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.8,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.010312738859822,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0179616654769392,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0235542072434114,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.031861819924955,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0469623586034362,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.048815348082595,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.8,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0453127388598218,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0529616654769391,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0585542072434113,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.066861819924955,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0819623586034361,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0838153480825952,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.8,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0703127388598221,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0779616654769393,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0835542072434114,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.091861819924955,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1069623586034363,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.108815348082595,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.9,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9907848160478685,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9980922009932387,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.004343615022629,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0138557704404287,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0291273211248453,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0320305349162096,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.9,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0057848160478686,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0130922009932388,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0193436150226292,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0288557704404289,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0441273211248454,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0470305349162097,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.9,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0407848160478683,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0480922009932387,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.054343615022629,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0638557704404288,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0791273211248453,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0820305349162096,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.9,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0657848160478687,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0730922009932389,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0793436150226292,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.088855770440429,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1041273211248455,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1070305349162097,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.94,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9891997798953496,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9963513457550253,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0028503767027754,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.012820212345461,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0281204981157412,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.03143679044951,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.94,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0041997798953497,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0113513457550254,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0178503767027756,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0278202123454612,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0431204981157414,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0464367904495102,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.94,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0391997798953496,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0463513457550253,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0528503767027755,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.062820212345461,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0781204981157413,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0814367904495104,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.94,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0641997798953498,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0713513457550254,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0778503767027756,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0878202123454612,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1031204981157414,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1064367904495103,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.98,
+      "height": 0.025,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_2",
+        "inspire_thumb_force_sensor_1"
+      ],
+      "lowest": [
+        [
+          0.9877476069501482,
+          "inspire_left_thumb_4"
+        ],
+        [
+          0.9947327193614586,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0014697031828736,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0118823939268191,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0271886632917453,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.030913102848528,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.98,
+      "height": 0.04,
+      "table_hits": [
+        "inspire_left_thumb_2",
+        "inspire_left_thumb_3",
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4",
+        "inspire_thumb_force_sensor_2"
+      ],
+      "lowest": [
+        [
+          1.0027476069501484,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0097327193614585,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0164697031828738,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0268823939268192,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0421886632917454,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.0459131028485282,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.98,
+      "height": 0.075,
+      "table_hits": [
+        "inspire_left_thumb_4",
+        "inspire_thumb_force_sensor_3",
+        "inspire_thumb_force_sensor_4"
+      ],
+      "lowest": [
+        [
+          1.0377476069501483,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0447327193614584,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0514697031828737,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0618823939268192,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.0771886632917453,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.080913102848528,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    },
+    {
+      "common": 0.98,
+      "thumb": 0.98,
+      "height": 0.1,
+      "table_hits": [],
+      "lowest": [
+        [
+          1.0627476069501485,
+          "inspire_left_thumb_4"
+        ],
+        [
+          1.0697327193614585,
+          "inspire_thumb_force_sensor_4"
+        ],
+        [
+          1.0764697031828738,
+          "inspire_thumb_force_sensor_3"
+        ],
+        [
+          1.0868823939268193,
+          "inspire_left_thumb_3"
+        ],
+        [
+          1.1021886632917455,
+          "inspire_thumb_force_sensor_2"
+        ],
+        [
+          1.1059131028485283,
+          "inspire_left_thumb_2"
+        ]
+      ]
+    }
+  ],
+  "method": "Exact support of source convex hull intersected with the6cm Cube XZ footprint at each hand FK pose; excludes contact offsets and contact-induced joint/body deflection. Central palm35mm contact override included."
+}

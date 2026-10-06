@@ -218,3 +218,14 @@ OSC를 정책 학습에 포함하려면 실제 로봇과 Isaac Lab의 OSC가 유
 git submodule update --init --remote example/Sweep-Policy
 git submodule update --init --remote docs
 ```
+
+
+
+cd /home/min/7cmdehdrb/grad
+conda activate env_isaaclab
+
+python src/hand_manipulation_test/scripts/train.py \
+  --task Isaac-Hand-Manipulation-Push-v1 \
+  --num_envs 2048 \
+  --device cuda:0 \
+  --headless

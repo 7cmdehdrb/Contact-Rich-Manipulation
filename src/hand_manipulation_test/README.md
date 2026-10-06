@@ -303,12 +303,15 @@ CPU 테스트는 111개 통과했고, 결과는
 이 재생 검증은 체크포인트 실행 경로를 확인하며 새로운 배치의 밀기 성공률을
 검증하지는 않습니다.
 
-Push PPO는 `example/Sweep-Policy/.../rsl_rl_ppo_cfg_02.py`의 설정을 따릅니다.
+Push PPO의 기준은
+`example/Sweep-Policy/sweeping_policy/config/ur5e/agents/rsl_rl_ppo_cfg_02.py`입니다.
 `36` rollout steps, 최대 `90000` iteration, `50`마다 저장, ELU `[256,128,64]`,
 초기 Gaussian std `1.0`, entropy `0.005`, gamma `0.98`, lambda `0.95`, PPO epochs
 `8`, minibatches `4`, adaptive learning rate `0.001`, desired KL `0.02`입니다.
 환경·로그 이름은 Push 이름을 사용하고, 설치된 RSL-RL의 actor/critic API에 맞춰
-같은 값을 선언합니다. 이번 PPO 변경에는 별도 std 상한을 추가하지 않습니다.
+기존 `init_noise_std`를 Gaussian `init_std`로 옮기는 등 같은 의미의 값을 선언합니다.
+PPO 설정을 바꿀 때도 이 기준을 유지하며, `tests/test_push_ppo.py`가 기준 파일과
+수치 및 API 기본값을 비교합니다. 별도 std 상한은 추가하지 않습니다.
 
 Headless 학습에서는 Target·Goal·방향·EEF 마커 업데이트를 기본으로 끕니다.
 재생 화면의 기본 마커는 유지하며, headless 디버깅에는 `--enable-markers`를 쓸 수
@@ -399,6 +402,152 @@ reset, cached FK/Jacobian과 실제 PhysX 비교, 500-step timeout을 통과했�
 rollout 수집 `12.19s`, `12.08s`, 전체 학습 호출 `27.95s`였으며 checkpoint를 저장했습니다.
 이는 실행 경로 검증이며 학습된 밀기 성공률을 입증하는 실험은 아닙니다.
 
+## Push v1 상속 환경
+
+`Isaac-Hand-Manipulation-Push-v1`은 기존 Push v0 환경과 설정을 상속하는 별도
+환경입니다. 환경 클래스는 Manager의 기본 step·reset 흐름을 사용합니다.
+관측은 기존 61D 뒤에 누적 병진 목표 오차 3D를 추가한 **64D**, action은 기존
+**8D**입니다. 관측 차원이 달라 Push v0 체크포인트와 호환되지 않으므로 새로
+학습해야 합니다.
+
+병진 action은 현재 EEF 제어점 C의 좌표축으로 목표 위치를 누적하고, 실제 C에서
+목표까지의 오차 norm을 `0.06m`로 제한합니다. OSC stiffness는 `200`을 사용합니다.
+v1은 실제 Cube→palmar pad 접촉 반력을 예측하는 implicit Cartesian impedance를
+사용합니다. `200`은 operational inertia를 곱하는 가속도 gain 대신 Cartesian
+spring gain으로 적용하며, measured 반력은 `20N`·moment `2Nm` norm 제한과
+EMA `0.5`를 거쳐 제어에만 사용합니다. 접촉 필터는 Cube–palm pair로 제한하고
+F/T 관측의 Hand 자중과 실제 tactile·reward 측정값을 유지합니다. 부분 reset은
+해당 행의 controller 접촉 이력도 초기화합니다.
+회전 action은 reset 때 실현한 C 자세에 대한 제한된 잔차로 해석합니다. 회전
+action이 0이면 부하 중에도 reset에서 실현한 손 자세를 목표로 유지합니다. 이는 v0의
+현재 자세 기준 회전 증분과 의미가 다릅니다. 추가된 마지막 3D 관측은 현재 C
+좌표축에서 표현한 실제 C→누적 목표 위치 오차이며 미터 값을 그대로 전달합니다.
+
+기존 progress `12`, 접촉 유지 `0.005` 가중치를 사용하고, palm 법선 정렬
+`0.3`과 reset roll 유지 `0.1` 항은 모두 0 이하의 벌점으로 계산합니다. 원본
+policy 입력이 `[-1,1]`을 벗어난 양의 제곱 평균에는 `0.02` 가중치로 벌점을
+줍니다. PPO 수치 설정은 유지하면서 범위 밖 action 입력을 억제하는 환경 항입니다.
+
+기존 접근 record 보상에 더해, 현재 palmar 접촉 목표까지의 거리를 매 step
+`-거리(m)`로 계산하는 가중치 `1`의 연속 벌점을 적용합니다. 접근 후 다시
+멀어지거나 접촉을 잃어도 비용이 생기며, 가까이 머무르는 양의 보너스는 없습니다.
+실제 EEF 제어점 **C**의 Table 상판 기준 높이가 `0.15m`를 넘으면
+`-5 × max(높이−0.15, 0)`의 선형 벌점을 적용하고 `0.25m` 이상이면 실패합니다.
+RewardManager가 각 rate에 dt를 한 번 적용하며 실패는 성공과 timeout보다 우선합니다.
+
+v1은 공통 테이블 중심 `(-0.75, 0, 1.03)m`과 크기 `(0.36, 1.0, 0.04)m`를
+상속합니다. 베이스 쪽 Table 가장자리는 `X=-0.57m`입니다. Cube 배치 bounding box는
+`X∈[-0.73,-0.67]m`, `Y∈[-0.03,0.03]m`입니다. 방향 `±10°` 또는 `170~190°`와
+거리 `0.20~0.30m`를 각각 한 번 균등 샘플링한 뒤 경로의 X 중점을 `-0.70m`로 두고
+초기 X에 `±0.002m` jitter를 적용합니다. 명령 방향과 거리를 재추첨하지 않습니다.
+
+손바닥 법선 H+Y는 수평 밀기 방향을 향하고, 손가락 축 H+Z는 world−X를 그 법선의
+수직 평면에 투영한 방향을 사용합니다. 양쪽 모두 손가락이 베이스 반대쪽을 향하며
+오른쪽의 엄지는 위, 왼쪽의 엄지는 아래를 향합니다. 초기 palmar 기준점은 Cube 뒤로
+`0.14m`, 위로 `0.10m`에 두고 공통 위치 jitter `±(0.004, 0.004, 0.003)m`를 사용합니다.
+접촉 접근 높이 설정 `0.025m`는 reset 높이와 별개입니다. 오른쪽 접촉 기준점은
+기존 central palm, 왼쪽 접근 기준점은 실제 좌측 접촉력이 확인된 palmar **thumb4**
+센서의 노출 면을 사용합니다. 접촉 판정은 기존 17개 palmar pad의 실제
+Cube-filtered force를 사용합니다.
+mesh 정점은 시작 시 한 번 cache하고 reset에서 실제 손 자세에 맞는 면을 선택합니다.
+정상 step은 해당 점을 실제 sensor body pose로 변환하므로 thumb joint 변형도
+접근 거리와 C 목표 변환에 반영되며 mesh를 다시 읽지 않습니다. C 높이 검사는
+이 접촉 기준점과 분리하여 실제 제어점 C로 계산합니다. v1 전용 spawner는 carrier에
+가려진 기존 palmar thumb3·thumb4의 collision 면만 H+Y 방향으로 `12mm` 노출합니다.
+body·joint·mass·visual과 기존 task 자산을 유지하고, 실제 filtered thumb4 접촉력도
+물리 probe에서 확인했습니다. 센서값을 만들어 접촉을 판정하지 않습니다. 실제 wrist_2의
+`sin(q)>0.15`와 actual outward cosine `>0.25`를 reset 최종 검사에 적용하며,
+동일한 물리 방향과 wrist 분기를 정상 rollout에서도 검사합니다. 각도의 `2π`
+표현 차이는 같은 분기로 취급합니다. 최대 3개 seed, seed당 80 iteration,
+위치 `3mm`·회전 `0.05rad` 허용오차와 전체 로봇의 `4mm` Cube·Table 여유를 유지합니다.
+
+IK의 nominal arm seed는 v1의 먼 작업영역에 맞춰 방향별로 선택합니다.
+`(shoulder_pan, shoulder_lift, elbow, wrist_1, wrist_2, wrist_3)` 순서로 오른쪽은
+`(0.179, 0.154, -1.560, -4.876, 1.750, 1.571)`, 왼쪽은
+`(-0.615, 0.159, -1.625, -4.818, 0.955, -1.571)`을 사용합니다. 기존 3개 seed
+offset 목록과 실패 행만 재시도하는 정책은 유지합니다. 이 anchor는 reset 대상 행의
+팔 기본값에만 임시 적용하고 성공·실패 후 원래 모델 기본값을 복원합니다.
+Cube 배치와 angle·distance는 고정된 채 IK를 수행합니다.
+
+현재 먼 배치와 outward 자세의 GPU core smoke는 sampling corner와 500-step
+timeout을 통과했습니다. 최신 Thumb4 기준점·옆방향 중심 정렬·Cube 이동 추종
+fixture에서 실제 OSC로 **양방향 18cm 이상** 밀기를 확인했습니다. 다만 좌측
+한 행의 실패 종료로 전체 `0.20m` 목표를 모든 행에서 안정적으로 완료하는
+검증은 실패했습니다. 별도 fixture의 오른쪽 두 행은 `0.20m` 목표와 정지 후
+성공 종료를 확인했지만, 좌측의 전체 목표 안정성은 확인하지 못했습니다. 최신 Thumb4
+fixture의 별도 짧은 밀기 검증은 양쪽의 `15~31mm` 실제 변위와 `25~35 step`
+연속 정지를 통과했습니다. 이때 일반 step에서 IK 계산 횟수도 증가하지 않았습니다.
+
+높이 종료는 4개 환경·58 step GPU probe를 통과했습니다. 실제 C의 상판 기준
+높이 `0.25129~0.25232m`에서 `terminated=True`, `truncated=False`였고,
+높이 벌점 `-5 × max(높이−0.15, 0) × 0.02`와 terminal 양의 task 보상 0을 확인했습니다.
+
+2048개 환경의 fresh PPO 2 iteration과 checkpoint 생성도 통과했습니다.
+첫 rollout 수집은 `6.54s`였으며 checkpoint는
+`logs/rsl_rl/hand_manipulation_push_v1/2026-10-06_12-42-54_v1_fixed_validation/model_1.pt`입니다.
+이 checkpoint의 100-step 재생도 통과했습니다. 이 결과는 실행 경로와 실제
+스크립트 물리 검증이며, 학습 수렴이나 학습된 정책의 성공률을 증명하지 않습니다.
+이전의 가까운 배치 결과를 현재 설정의 검증 결과로 사용하지 않습니다. 설정과
+리워드 의미가 달라졌으므로 기존 64D v1 checkpoint도 새 설정으로 다시 학습해야 합니다.
+
+PPO는 `PushPPORunnerCfg`를 상속하며 Sweep-Policy `_02`의 모든 수치와 모델
+설정을 유지합니다. 로그 이름만 `logs/rsl_rl/hand_manipulation_push_v1`로
+분리합니다.
+
+```bash
+# Push v1 관측·부분 reset·센서·timeout 계약 검증
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_test/scripts/smoke_env.py \
+  --task Isaac-Hand-Manipulation-Push-v1 \
+  --headless --device cuda:0 --num_envs 4 --steps 50 \
+  --skip-physical-fixture --check-timeout --debug-vis
+
+# Push v1 학습: 최대 iteration 등은 Sweep-Policy _02 기본값 사용
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_test/scripts/train.py \
+  --task Isaac-Hand-Manipulation-Push-v1 \
+  --headless --device cuda:0 --num_envs 2048
+
+# 새 Push v1 checkpoint 재생
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_test/scripts/play.py \
+  --task Isaac-Hand-Manipulation-Push-v1 \
+  --device cuda:0 --num_envs 1 --checkpoint /absolute/path/to/push_v1_model.pt
+```
+
+`smoke_env.py`는 v1 선택 시 전용 `smoke_push_v1_env.py`를 실행합니다.
+`--check-boundaries`는 각 명령 방향·길이에 조건화된 실제 sampling 범위의 XY
+corner를 검증하며 경계값을 출력합니다. 초기·최종 Cube footprint가 테이블
+안에 남는지도 확인합니다.
+전용 스크립트의 물리 fixture는 좌우의 실제 접촉 기준점과 live Hand offset을 사용해
+OSC action으로 뒤쪽에서 접촉 높이까지
+접근한 뒤 Cube를 밀고 멈춥니다. `--physical-only --physical-steps 350`으로
+별도 실행할 수 있으며 Cube에 외력을 가하거나 센서값을 덮어쓰지 않습니다.
+접근 시작점은 실제 pad의 normal 간격을 유지하고 옆방향 위치를 Cube 중심에
+맞춥니다. 이후 Cube의 실제 옆방향 이동을 따라가며 모서리만 스치는 경로를 피합니다.
+이 fixture는 학습된 정책의 성공률 평가와 별개입니다.
+
+전체 명령 목표까지 밀고 실제 성공 종료를 확인하는 fixture는 다음과 같이
+실행합니다. 자동 reset 전의 Cube 위치·속도·접촉 이력·지지와 정지 시간을
+기록하며, 실패 또는 timeout은 검증 실패로 처리합니다. `--fixture-verbose`는
+fixture 상태만 출력합니다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/hand_manipulation_test/scripts/smoke_push_v1_env.py \
+  --headless --device cuda:0 --num_envs 2 \
+  --physical-only --physical-goal --physical-goal-distance .20 \
+  --physical-steps 450 --fixture-verbose
+```
+
+`--physical-angle-offset-deg -10` 또는 `10`을 추가하면 양방향 명령에 해당
+각도를 적용하고 초기 Cube X를 실제 조건부 배치 공식으로 계산합니다. 기본값은
+`0°/180°`이며, `--physical-goal-distance .30`으로 최대 목표 거리를 검사할 수 있습니다.
+
+과거 Table 폭 `0.82m`·경로 X 중점 `-0.44m`·양방향 엄지 위 배치에서는
+1,184개 reset, 64D/8D manager smoke와 500-step timeout, 실제 OSC `0.20~0.30m`
+목표 fixture, 2048개 환경 PPO 2 iteration과 checkpoint 재생을 통과했습니다.
+이 기록은 **이전 배치**의 실행 경로 검증이며, 현재 먼 배치나 학습된 정책의
+성공률을 증명하지 않습니다. 당시
+[`reset 기록`](../../reports/hand_manipulation_push/2026-10-05_push_v1/thumb_up_boundaries_certified.json)과
+[`validation.json`](../../reports/hand_manipulation_push/2026-10-05_push_v1/validation.json)을 보존합니다.
+
 ## 설치와 실행
 
 저장소 루트에서 Isaac Lab Python 환경을 사용합니다.
@@ -434,8 +583,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 ./IsaacLab/isaaclab.sh -p -m pytest -q \
 이 환경에서 Target을 현재 EEF 기준으로 관측하던 기존 55D checkpoint도 관측의
 의미가 달라졌으므로 `base_link` 기준 관측으로 새로 학습해야 합니다.
 
-Isaac Lab 2.3.2 / Isaac Sim 5.1 / RSL-RL 5.0.1 / RTX 3090에서 단위 테스트 63개를
-통과했습니다. Reaching 환경은 2개 환경의 GPU smoke로 실제 `base_link` 변환,
+Isaac Lab 2.3.2 / Isaac Sim 5.1 / RSL-RL 5.0.1 / RTX 3090에서 최신 단위 테스트는
+280개를 통과했고 `pxr`가 필요한 1개는 CPU 실행에서 skip했습니다. Reaching 환경은
+2개 환경의 GPU smoke로 실제 `base_link` 변환,
 EEF 이동·회전 중 Target 관측 유지, 부분 reset, 센서와 마커를 검증했습니다.
 50-step zero-action hold의 최대 위치 변화는 약 `0.55mm`였습니다. Contact 환경은
 4개 환경의 GPU smoke로 네 sampling corner, random reset, 부분 reset, 실제 Cube
@@ -454,16 +604,24 @@ ON→연속 ON→OFF와 Table 종료 우선순위 검증을 통과했습니다.
 - `config/ur5e/reach_env_cfg.py`: UR5e–Inspire 자산·palm 센서·EEF FrameTransformer·action 설정
 - `config/ur5e/contact_env_cfg.py`: Reach 설정을 상속한 Table·Cube·접촉 보상과 종료 설정
 - `config/ur5e/push_env_cfg.py`: Contact 설정을 상속한 수평 Push·61D 관측·성공/실패 설정
+- `push_v1_env.py`, `config/ur5e/push_v1_env_cfg.py`: Push v0를 상속한 얇은 환경 클래스와 64D v1 설정
 - `mdp/commands.py`: episode-fixed Target, 초기 EEF pose, 도달 지표와 Target marker
 - `mdp/observations.py`: 개별 관측 term과 센서 reset masking
 - `mdp/events.py`: 초기 root·joint·제어 목표 복원
 - `mdp/contact_events.py`: Cube 배치와 cached collision bounds를 사용하는 안전한 palm IK reset
 - `mdp/push_commands.py`, `mdp/push_events.py`: reset 고정 Push 명령과 수평 palm pose 초기화
+- `mdp/push_v1_commands.py`, `mdp/push_v1_events.py`: v1 조건부 배치·접촉 진단과 실제 outward 손가락·wrist 분기 검사
+- `mdp/push_v1_actions.py`, `accumulation_math.py`: 누적 위치 목표와 reset 기준 회전 잔차, 목표 오차 관측
+- `mdp/push_v1_controller.py`, `impedance_math.py`: 실제 Cube–pad 반력 예측과 implicit Cartesian impedance
+- `mdp/push_v1_rewards.py`, `push_v1_math.py`, `height_math.py`: 법선·roll·접근 거리·입력 범위·EEF 높이 벌점과 양방향 outward palm 회전
 - `push_state.py`, `mdp/push_rewards.py`: 접촉·전진 record·정착 이력을 공유하는 Push 상태와 보상
 - `mdp/rewards.py`: 거리 보상과 부분 reset을 지원하는 Action Rate term
 - `mdp/actions.py`: current-EEF OSC와 Hand synergy ActionTerm
 - `geometry.py`, `sensors.py`, `action_math.py`: EEF 계산, palm/F/T reader와 pure Torch math
 - `assets/`: 패키지 내부 상대 경로 USD와 F/T chain 조립
+- `assets/push_v1_robot.py`: v1에서만 기존 palmar thumb3·thumb4 collision 면을 노출하는 spawner
+- `agents/rsl_rl_push_v1_ppo_cfg.py`: 기존 Push PPO를 상속하고 v1 로그 이름을 분리
+- `scripts/smoke_push_v1_env.py`: 관측·reset 계약과 실제 OSC 목표 도달 fixture
 
 기존 task나 `example/Sweep-Policy`를 runtime import하지 않습니다. 로봇 자산과 필요한
 저수준 구현을 이 패키지 안에 포함하며 Nucleus·ROS·절대 자산 경로에 의존하지 않습니다.

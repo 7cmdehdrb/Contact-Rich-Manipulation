@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import runpy
 import sys
 import time
 import traceback
@@ -15,11 +16,12 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 TASK_ID = "Isaac-Hand-Manipulation-Test-v0"
 CONTACT_TASK_ID = "Isaac-Hand-Manipulation-Contact-v0"
 PUSH_TASK_ID = "Isaac-Hand-Manipulation-Push-v0"
+PUSH_V1_TASK_ID = "Isaac-Hand-Manipulation-Push-v1"
 
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--task", choices=(TASK_ID, CONTACT_TASK_ID, PUSH_TASK_ID), default=TASK_ID)
+parser.add_argument("--task", choices=(TASK_ID, CONTACT_TASK_ID, PUSH_TASK_ID, PUSH_V1_TASK_ID), default=TASK_ID)
 parser.add_argument("--num_envs", "--num-envs", type=int, default=2)
 parser.add_argument("--steps", type=int, default=50, help="Hold steps (arm zero; contact hand holds initial openness).")
 parser.add_argument("--seed", type=int, default=42)
@@ -32,6 +34,9 @@ args, extra_args = parser.parse_known_args()
 if args.task == PUSH_TASK_ID:
     push_smoke = PACKAGE_ROOT / "scripts" / "smoke_push_env.py"
     os.execv(sys.executable, [sys.executable, str(push_smoke), *sys.argv[1:]])
+if args.task == PUSH_V1_TASK_ID:
+    runpy.run_path(str(PACKAGE_ROOT / "scripts" / "smoke_push_v1_env.py"), run_name="__main__")
+    raise SystemExit(0)
 if extra_args:
     parser.error(f"unrecognized arguments: {' '.join(extra_args)}")
 app_launcher = AppLauncher(args, fast_shutdown=True)

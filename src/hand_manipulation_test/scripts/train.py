@@ -17,11 +17,12 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 TASK_ID = "Isaac-Hand-Manipulation-Test-v0"
 CONTACT_TASK_ID = "Isaac-Hand-Manipulation-Contact-v0"
 PUSH_TASK_ID = "Isaac-Hand-Manipulation-Push-v0"
+PUSH_V1_TASK_ID = "Isaac-Hand-Manipulation-Push-v1"
 
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--task", choices=(TASK_ID, CONTACT_TASK_ID, PUSH_TASK_ID), default=TASK_ID)
+parser.add_argument("--task", choices=(TASK_ID, CONTACT_TASK_ID, PUSH_TASK_ID, PUSH_V1_TASK_ID), default=TASK_ID)
 parser.add_argument("--num_envs", "--num-envs", type=int, default=None)
 parser.add_argument("--max_iterations", "--max-iterations", type=int, default=None)
 parser.add_argument("--seed", type=int, default=None)

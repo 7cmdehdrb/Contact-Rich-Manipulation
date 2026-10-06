@@ -60,6 +60,8 @@ class PushSnapshot:
     table_pos_w: torch.Tensor
     table_quat_w: torch.Tensor
     live: torch.Tensor | None = None
+    additional_failure: torch.Tensor | None = None
+    approach_target_pos_w: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -85,11 +87,12 @@ class PushStepState:
     fall_failure: torch.Tensor
     table_failure: torch.Tensor
     invalid_state: torch.Tensor
+    additional_failure: torch.Tensor
 
 
 _BOOLEAN_FIELDS = frozenset({"first_contact", "success", "failure", "grounded", "valid_push_contact",
                            "contact_seen", "push_seen", "palm_cube_contact", "footprint_failure",
-                           "fall_failure", "table_failure", "invalid_state"})
+                           "fall_failure", "table_failure", "invalid_state", "additional_failure"})
 
 
 def push_progress_potential(goal_distance_m: torch.Tensor, command_distance_m: torch.Tensor,
@@ -134,6 +137,7 @@ class PushStateTracker:
         self._push_seen = torch.zeros_like(self._initialized)
         self._settled_time = torch.zeros_like(self._previous_goal_error)
         self._failure_flags = torch.zeros((num_envs, 4), device=self.device, dtype=torch.bool)
+        self._additional_failure = torch.zeros_like(self._initialized)
         self._cached = PushStepState(**{
             field.name: torch.zeros(num_envs, device=self.device,
                                    dtype=torch.bool if field.name in _BOOLEAN_FIELDS else dtype)
@@ -157,6 +161,13 @@ class PushStateTracker:
             value = getattr(sample, name)
             if value is not None and value.shape != (self.num_envs,):
                 raise ValueError(f"{name} must have shape (N,)")
+        if sample.additional_failure is not None:
+            if sample.additional_failure.shape != (self.num_envs,):
+                raise ValueError("additional_failure must have shape (N,)")
+            if sample.additional_failure.dtype != torch.bool:
+                raise ValueError("additional_failure must be a boolean tensor")
+        if sample.approach_target_pos_w is not None and sample.approach_target_pos_w.shape != (self.num_envs, 3):
+            raise ValueError("approach_target_pos_w must have shape (N, 3)")
         palm, table = sample.cube_palm_forces_w_history, sample.cube_table_forces_w_history
         if palm.ndim != 5 or palm.shape[0] != self.num_envs or tuple(palm.shape[2:]) != (1, 17, 3) or palm.shape[1] == 0:
             raise ValueError("Cube-palm history must have shape (N, T, 1, 17, 3), T > 0")
@@ -191,8 +202,12 @@ class PushStateTracker:
         fall = centre[:, 2] < self.cfg.table_size_m[2] / 2 - half_cube
         local_direction = quaternion_rotate(quaternion_conjugate(safe["cube_quat_w"]), direction)
         support_extent = local_direction.abs().sum(-1) * half_cube
-        approach_target = safe["cube_pos_w"] - support_extent[:, None] * direction
-        approach_target[:, 2] += self.cfg.palm_height_offset_m
+        if sample.approach_target_pos_w is None:
+            approach_target = safe["cube_pos_w"] - support_extent[:, None] * direction
+            approach_target[:, 2] += self.cfg.palm_height_offset_m
+        else:
+            invalid |= ~torch.isfinite(sample.approach_target_pos_w).all(-1)
+            approach_target = torch.nan_to_num(sample.approach_target_pos_w, nan=0., posinf=0., neginf=0.)
         gap = torch.linalg.vector_norm(safe["palm_pos_w"] - approach_target, dim=-1)
         approach = torch.exp(-gap / self.cfg.approach_sigma_m)
         error_xy = torch.linalg.vector_norm(safe["cube_pos_w"][:, :2] - safe["goal_pos_w"][:, :2], dim=-1)
@@ -218,6 +233,7 @@ class PushStateTracker:
         self._push_seen[index] = False
         self._settled_time[index] = 0
         self._failure_flags[index] = False
+        self._additional_failure[index] = False
         self._initialized[index] = True
         # Once every row has been initialized, resets cannot make it uninitialized
         # again. Avoid a device-to-host read on every subsequent partial reset.
@@ -271,7 +287,10 @@ class PushStateTracker:
         aligned_substep &= (palm_dot >= self.cfg.alignment_cos)[:, None]
         flags = torch.stack((snapshot.robot_table_failure.bool(), footprint, fall, invalid), dim=-1) & live[:, None]
         flags = self._failure_flags | flags
-        failure = flags.any(-1)
+        additional = self._additional_failure
+        if snapshot.additional_failure is not None:
+            additional = additional | (snapshot.additional_failure & live)
+        failure = flags.any(-1) | additional
         good = live & ~failure
         valid_push = (aligned_substep & support_substep).any(-1) & good
         first = valid_push & ~self._contact_seen
@@ -301,6 +320,7 @@ class PushStateTracker:
             cube_goal_distance_m=error_3d, palm_cube_contact=palm_contact, palm_alignment_cos=palm_dot,
             force_alignment_cos=torch.where(active_pair, force_dot, torch.full_like(force_dot, -1.)).flatten(1).amax(-1),
             footprint_failure=flags[:, 1], fall_failure=flags[:, 2], table_failure=flags[:, 0], invalid_state=flags[:, 3],
+            additional_failure=additional,
         )
         # Baselines/records always advance, including no-contact and failure
         # intervals. Only initialized reset rows can restart these histories.
@@ -311,6 +331,7 @@ class PushStateTracker:
         self._push_seen[changed] = push_seen[changed]
         self._settled_time[changed] = settled_time[changed]
         self._failure_flags[changed] = flags[changed]
+        self._additional_failure[changed] = additional[changed]
         self._last_counter[changed] = physics_counter
         self._cached = PushStepState(**{
             field.name: torch.where(changed, getattr(result, field.name), getattr(self._cached, field.name))

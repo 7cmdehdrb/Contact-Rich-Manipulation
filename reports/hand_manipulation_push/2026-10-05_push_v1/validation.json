@@ -1,0 +1,279 @@
+{
+  "task_id": "Isaac-Hand-Manipulation-Push-v1",
+  "parent_task_id": "Isaac-Hand-Manipulation-Push-v0",
+  "status": "implementation_and_execution_validation_passed",
+  "learned_policy_success_rate": "not_evaluated",
+  "observation_dim": 64,
+  "action_dim": 8,
+  "physics_dt_s": 0.01,
+  "policy_dt_s": 0.02,
+  "workspace": {
+    "table_center_m": [
+      -0.75,
+      0,
+      1.03
+    ],
+    "table_size_m": [
+      0.82,
+      1,
+      0.04
+    ],
+    "cube_initial_bounding_x_m": [
+      -0.47,
+      -0.41
+    ],
+    "cube_initial_y_m": [
+      -0.03,
+      0.03
+    ],
+    "path_midpoint_x_m": -0.44,
+    "cube_mass_kg": 1,
+    "cube_size_m": 0.06
+  },
+  "control": {
+    "stiffness": 200,
+    "translation_target_error_cap_m": 0.06,
+    "translation": "persistent target; measured-current-C increments",
+    "rotation": "bounded residual relative to realized reset C orientation",
+    "reset_orientation": "thumb up on both sides",
+    "hand_openness_range": [
+      0.8,
+      1
+    ]
+  },
+  "cpu_tests": {
+    "passed": 197,
+    "skipped": 1,
+    "skip_reason": "pxr unavailable in standalone CPU interpreter"
+  },
+  "safe_reset": {
+    "status": "passed",
+    "cases": 37,
+    "certified_rows": 1184,
+    "total_rows": 1184,
+    "all_pass": true,
+    "artifact": "thumb_up_boundaries_certified.json",
+    "max_seeds": 3,
+    "iterations_per_seed": 80,
+    "clearance_m": 0.004,
+    "fixture_env_spacing_m": 0.5
+  },
+  "manager_smoke": {
+    "status": "passed",
+    "log": "smoke_final_core_goal20.log",
+    "hold_steps": 50,
+    "peak_target_error_m": 0.0003978991007898003,
+    "reset_seconds": [
+      1.084058478998486,
+      0.3001794239971787,
+      0.145498426980339,
+      0.197498369961977,
+      0.24691424297634512,
+      0.13902369199786335,
+      0.16934114001924172,
+      0.27290048298891634,
+      0.2629761639982462,
+      0.40339439699891955,
+      0.28925175295444205
+    ],
+    "conditional_boundary_cases": 24,
+    "timeout_policy_steps": 500,
+    "partial_resets_sensors_and_markers": "passed",
+    "normal_steps_ik_and_obb_counters": "unchanged"
+  },
+  "physical_goal_tests": [
+    {
+      "steps": 292,
+      "distance_m": 0.2,
+      "episodes": [
+        {
+          "env_id": 0,
+          "goal_error_m": 0.007364852819591761,
+          "speed_m_s": 0.00010107225534738973,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            0.8072584867477417,
+            -1.0568355321884155,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            0.8100000023841858,
+            -1.0499999523162842,
+            1.0800000429153442
+          ]
+        },
+        {
+          "env_id": 1,
+          "goal_error_m": 0.006791271734982729,
+          "speed_m_s": 0.00010077805200126022,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            0.8132139444351196,
+            1.0559825897216797,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            0.8100000023841858,
+            1.0499999523162842,
+            1.0800000429153442
+          ]
+        },
+        {
+          "env_id": 2,
+          "goal_error_m": 0.007163217756897211,
+          "speed_m_s": 7.54377615521662e-05,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            -1.6933754682540894,
+            -1.0563180446624756,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            -1.690000057220459,
+            -1.0499999523162842,
+            1.0800000429153442
+          ]
+        },
+        {
+          "env_id": 3,
+          "goal_error_m": 0.0063349539414048195,
+          "speed_m_s": 7.488410483347252e-05,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            -1.6869945526123047,
+            1.0555765628814697,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            -1.690000057220459,
+            1.0499999523162842,
+            1.0800000429153442
+          ]
+        }
+      ],
+      "angle_offset_deg": 0,
+      "log": "smoke_final_core_goal20.log"
+    },
+    {
+      "steps": 374,
+      "distance_m": 0.3,
+      "episodes": [
+        {
+          "env_id": 0,
+          "goal_error_m": 0.006405608728528023,
+          "speed_m_s": 0.00015565096691716462,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            0.834591805934906,
+            0.28920426964759827,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            0.8360472321510315,
+            0.2954423427581787,
+            1.0800000429153442
+          ]
+        },
+        {
+          "env_id": 1,
+          "goal_error_m": 0.006286838091909885,
+          "speed_m_s": 0.00015330829774029553,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            -1.7146315574645996,
+            -0.28931698203086853,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            -1.7160472869873047,
+            -0.2954423427581787,
+            1.0800000429153442
+          ]
+        }
+      ],
+      "angle_offset_deg": -10,
+      "log": "smoke_goal_30cm_minus10.log"
+    },
+    {
+      "steps": 381,
+      "distance_m": 0.3,
+      "episodes": [
+        {
+          "env_id": 0,
+          "goal_error_m": 0.00782389473170042,
+          "speed_m_s": 2.6015060939243995e-05,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            0.7779160737991333,
+            0.29046523571014404,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            0.7839527726173401,
+            0.2954423427581787,
+            1.0800000429153442
+          ]
+        },
+        {
+          "env_id": 1,
+          "goal_error_m": 0.0072832354344427586,
+          "speed_m_s": 5.926930680288933e-05,
+          "settled_time_s": 0.19999997317790985,
+          "cube_position_w": [
+            -1.6582129001617432,
+            -0.2909591794013977,
+            1.0799999237060547
+          ],
+          "goal_w": [
+            -1.6639528274536133,
+            -0.2954423427581787,
+            1.0800000429153442
+          ]
+        }
+      ],
+      "angle_offset_deg": 10,
+      "log": "smoke_goal_30cm_plus10.log"
+    }
+  ],
+  "ppo": {
+    "status": "passed",
+    "num_envs": 2048,
+    "iterations": 2,
+    "rollout_steps_per_env": 36,
+    "reference": "example/Sweep-Policy/sweeping_policy/config/ur5e/agents/rsl_rl_ppo_cfg_02.py",
+    "collection_seconds": [
+      13.231,
+      13.912
+    ],
+    "learning_seconds": [
+      0.231,
+      0.156
+    ],
+    "training_call_seconds": 31.03,
+    "mean_action_std": [
+      1.01,
+      1.01
+    ],
+    "losses_finite": true,
+    "log": "ppo_2_iterations.log",
+    "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_20-28-38_v1_validation/model_1.pt"
+  },
+  "replay": {
+    "status": "passed",
+    "num_envs": 4,
+    "policy_steps": 100,
+    "log": "checkpoint_play.log"
+  },
+  "gpu_regressions": {
+    "reaching": {
+      "status": "passed",
+      "log": "reaching_regression.log",
+      "hold_steps": 50
+    },
+    "contact": {
+      "status": "passed",
+      "log": "contact_regression.log",
+      "hold_steps": 50
+    }
+  }
+}

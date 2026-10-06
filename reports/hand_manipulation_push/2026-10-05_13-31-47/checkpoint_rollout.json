@@ -1,0 +1,895 @@
+{
+  "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push/2026-10-05_13-31-47/model_1800.pt",
+  "num_envs": 64,
+  "steps_per_mode": 600,
+  "dt": 0.02,
+  "translation_scale": [
+    0.012,
+    0.012,
+    0.008
+  ],
+  "approach_palm_height_m": 0.1,
+  "modes": {
+    "deterministic": {
+      "wall_time_s": 37.700194260978606,
+      "all": {
+        "transitions": 38400,
+        "completed_episodes": 76,
+        "raw_contact_step_fraction": 0.00028645833333333333,
+        "force_aligned_step_fraction": 0.00018229166666666667,
+        "normal_aligned_step_fraction": 0.9888020833333333,
+        "valid_contact_step_fraction": 0.00018229166666666667,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.013157894736842105,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.19736842105263158,
+        "table_failure_completed_fraction": 0.19736842105263158,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 0.8026315789473685,
+        "forward_m": {
+          "mean": 2.9981114494148642e-05,
+          "p01": -0.0005490494659170508,
+          "p50": 0.00012224764213897288,
+          "p99": 0.0009378260583616793,
+          "max": 0.0011105218436568975
+        },
+        "palm_force_n": {
+          "mean": 0.00039969562203623354,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 5.088949680328369
+        },
+        "forward_force_n": {
+          "mean": 0.0003127483942080289,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 3.988368511199951
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.18039759993553162,
+          "p01": 0.046655888557434085,
+          "p50": 0.17702698707580566,
+          "p99": 0.3990171170234681,
+          "max": 0.44063031673431396
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.12454189360141754,
+          "p01": -0.009000466391444206,
+          "p50": 0.1208779513835907,
+          "p99": 0.34772943735122747,
+          "max": 0.39047273993492126
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9831618070602417,
+          "p01": 0.8580389088392257,
+          "p50": 0.990921288728714,
+          "p99": 0.9999440956115723,
+          "max": 0.9999999403953552
+        },
+        "raw_action_clip_fraction": 0.9788932291666667,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.009036948904395103,
+          "approach": 0.1072140783071518,
+          "progress": 0.0,
+          "backslide": -8.572119440941606e-06,
+          "first_contact": 0.0020833334419876337,
+          "contact": 1.822916601668112e-05,
+          "alignment": -0.05046629533171654,
+          "success": 0.0,
+          "failure": -0.78125
+        }
+      },
+      "right": {
+        "transitions": 20970,
+        "completed_episodes": 36,
+        "raw_contact_step_fraction": 0.0002861230329041488,
+        "force_aligned_step_fraction": 0.0002384358607534573,
+        "normal_aligned_step_fraction": 0.9794945159752027,
+        "valid_contact_step_fraction": 0.0002384358607534573,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.08333333333333333,
+        "table_failure_completed_fraction": 0.08333333333333333,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 0.9166666666666666,
+        "forward_m": {
+          "mean": 5.7935754739446566e-05,
+          "p01": -0.0005490659386850893,
+          "p50": 0.00036683393409475684,
+          "p99": 0.0005396041669882834,
+          "max": 0.0005504118162207305
+        },
+        "palm_force_n": {
+          "mean": 0.0002576235856395215,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 3.2048048973083496
+        },
+        "forward_force_n": {
+          "mean": 0.00018386414740234613,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 1.668938159942627
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.17709769308567047,
+          "p01": 0.026492961645126344,
+          "p50": 0.17096102237701416,
+          "p99": 0.36442002296447756,
+          "max": 0.4253108501434326
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.12093674391508102,
+          "p01": -0.02930583171546459,
+          "p50": 0.11513152718544006,
+          "p99": 0.30620866894722,
+          "max": 0.36800310015678406
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9805968999862671,
+          "p01": 0.8293429923057556,
+          "p50": 0.9910849332809448,
+          "p99": 0.9999403685331345,
+          "max": 0.9999999403953552
+        },
+        "raw_action_clip_fraction": 0.9797210300429184,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.007234584074467421,
+          "approach": 0.10555603355169296,
+          "progress": 0.0,
+          "backslide": -1.2170438822067808e-05,
+          "first_contact": 0.0019074869342148304,
+          "contact": 2.3843584131100215e-05,
+          "alignment": -0.05816270783543587,
+          "success": 0.0,
+          "failure": -0.28612303733825684
+        }
+      },
+      "left": {
+        "transitions": 17430,
+        "completed_episodes": 40,
+        "raw_contact_step_fraction": 0.00028686173264486515,
+        "force_aligned_step_fraction": 0.00011474469305794607,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.00011474469305794607,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.025,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.3,
+        "table_failure_completed_fraction": 0.3,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 0.7,
+        "forward_m": {
+          "mean": -3.6510443806037074e-06,
+          "p01": -0.0005392705788835883,
+          "p50": -0.0002332326548639685,
+          "p99": 0.0009378260583616793,
+          "max": 0.0011105218436568975
+        },
+        "palm_force_n": {
+          "mean": 0.0005706222727894783,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 5.088949680328369
+        },
+        "forward_force_n": {
+          "mean": 0.0004678088298533112,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 3.988368511199951
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.18436768651008606,
+          "p01": 0.07965099215507507,
+          "p50": 0.1818186640739441,
+          "p99": 0.41208470940589903,
+          "max": 0.44063031673431396
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.12887924909591675,
+          "p01": 0.021671378090977668,
+          "p50": 0.12503370642662048,
+          "p99": 0.3596634459495544,
+          "max": 0.39047273993492126
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9862476587295532,
+          "p01": 0.9137316298484802,
+          "p50": 0.9907439649105072,
+          "p99": 0.9999582922458649,
+          "max": 0.9999992251396179
+        },
+        "raw_action_clip_fraction": 0.9778973034997132,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.011205294169485569,
+          "approach": 0.10920853167772293,
+          "progress": 0.0,
+          "backslide": -4.242986960889539e-06,
+          "first_contact": 0.002294893842190504,
+          "contact": 1.1474468919914216e-05,
+          "alignment": -0.041206635534763336,
+          "success": 0.0,
+          "failure": -1.3769363164901733
+        }
+      }
+    },
+    "stochastic": {
+      "wall_time_s": 33.93103317898931,
+      "all": {
+        "transitions": 38400,
+        "completed_episodes": 64,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": -2.915183358709328e-05,
+          "p01": -0.0005499253165908158,
+          "p50": -0.00019454126595519483,
+          "p99": 0.0006971688708290458,
+          "max": 0.0006974072894081473
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.17008692026138306,
+          "p01": 0.08506040930747986,
+          "p50": 0.16928720474243164,
+          "p99": 0.3369949030876165,
+          "max": 0.4061223268508911
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.11413723230361938,
+          "p01": 0.028556309416890146,
+          "p50": 0.11312583088874817,
+          "p99": 0.2850187456607819,
+          "max": 0.3557870090007782
+        },
+        "palm_alignment_cos": {
+          "mean": 0.994035542011261,
+          "p01": 0.9668815100193023,
+          "p50": 0.9964605867862701,
+          "p99": 0.9999738937616348,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.976171875,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.015701929107308388,
+          "approach": 0.10669194161891937,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -0.017893284559249878,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      },
+      "right": {
+        "transitions": 18200,
+        "completed_episodes": 31,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": -5.7730558182811365e-05,
+          "p01": -0.0005499253165908158,
+          "p50": -0.0004005674854852259,
+          "p99": 0.0005396496853791177,
+          "max": 0.0005396496853791177
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.16528715193271637,
+          "p01": 0.08004202842712402,
+          "p50": 0.1621788740158081,
+          "p99": 0.2934189522266388,
+          "max": 0.32678043842315674
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.10981223732233047,
+          "p01": 0.024641246274113654,
+          "p50": 0.10832706093788147,
+          "p99": 0.23554171204566948,
+          "max": 0.2686464488506317
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9949448108673096,
+          "p01": 0.969718507528305,
+          "p50": 0.9971450865268707,
+          "p99": 0.9999800932407379,
+          "max": 0.9999998211860657
+        },
+        "raw_action_clip_fraction": 0.9766346153846154,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.01395201962441206,
+          "approach": 0.10513536632061005,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -0.015165448188781738,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      },
+      "left": {
+        "transitions": 20200,
+        "completed_episodes": 33,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": -3.402689799258951e-06,
+          "p01": -0.0005393074825406075,
+          "p50": 3.8042104279156774e-05,
+          "p99": 0.0006971688708290458,
+          "max": 0.0006974072894081473
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.17441144585609436,
+          "p01": 0.0895302164554596,
+          "p50": 0.17486274242401123,
+          "p99": 0.35129876613616934,
+          "max": 0.4061223268508911
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.1180340126156807,
+          "p01": 0.03261419892311096,
+          "p50": 0.11667022109031677,
+          "p99": 0.3017700755596161,
+          "max": 0.3557870090007782
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9932162761688232,
+          "p01": 0.9656394416093826,
+          "p50": 0.9956770241260529,
+          "p99": 0.9999641197919845,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.9757549504950495,
+        "reward_per_1000_transitions": {
+          "action_rate": -0.017279120162129402,
+          "approach": 0.10809493809938431,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -0.020351171493530273,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      }
+    },
+    "scripted_approach_target": {
+      "wall_time_s": 36.56937793997349,
+      "all": {
+        "transitions": 38400,
+        "completed_episodes": 64,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": 4.9880254664458334e-06,
+          "p01": -0.0005476615042425692,
+          "p50": 0.00017462699906900525,
+          "p99": 0.0005395502084866166,
+          "max": 0.0005491027259267867
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.09896814823150635,
+          "p01": 0.09517546772956847,
+          "p50": 0.10036146640777588,
+          "p99": 0.10067369103431702,
+          "max": 0.10255193710327148
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.04415985196828842,
+          "p01": 0.040471863746643064,
+          "p50": 0.04535648226737976,
+          "p99": 0.04568037867546082,
+          "max": 0.047575563192367554
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9920963644981384,
+          "p01": 0.9709673500061036,
+          "p50": 0.9999760389328003,
+          "p99": 0.9999974375963211,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.059137369791666665,
+        "reward_per_1000_transitions": {
+          "action_rate": -3.00468832392653e-06,
+          "approach": 0.14165230095386505,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -0.02370844967663288,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      },
+      "right": {
+        "transitions": 19100,
+        "completed_episodes": 31,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": 1.5731235180282965e-05,
+          "p01": -0.0005476615042425692,
+          "p50": 0.00028192467289045453,
+          "p99": 0.0005395502084866166,
+          "max": 0.0005395502084866166
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.10036864131689072,
+          "p01": 0.09964835166931152,
+          "p50": 0.10038018226623535,
+          "p99": 0.1007089638710022,
+          "max": 0.10255193710327148
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.045379314571619034,
+          "p01": 0.044665886163711546,
+          "p50": 0.04539045691490173,
+          "p99": 0.0457279622554779,
+          "max": 0.047575563192367554
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9999783039093018,
+          "p01": 0.9999740719795227,
+          "p50": 0.9999774098396301,
+          "p99": 0.9999983906745911,
+          "max": 0.9999998807907104
+        },
+        "raw_action_clip_fraction": 0.008848167539267015,
+        "reward_per_1000_transitions": {
+          "action_rate": -1.919797796290368e-06,
+          "approach": 0.153508722782135,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -6.506924546556547e-05,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      },
+      "left": {
+        "transitions": 19300,
+        "completed_episodes": 33,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": -5.643854365189327e-06,
+          "p01": -0.0005389710422605276,
+          "p50": 0.00016994273755699396,
+          "p99": 0.0005431297468021512,
+          "max": 0.0005491027259267867
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.09758215397596359,
+          "p01": 0.09490739941596985,
+          "p50": 0.09717237949371338,
+          "p99": 0.1006329846382141,
+          "max": 0.10233116149902344
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.04295302554965019,
+          "p01": 0.04019686341285705,
+          "p50": 0.042641252279281616,
+          "p99": 0.045603959560394265,
+          "max": 0.04731270670890808
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9842960834503174,
+          "p01": 0.970950893163681,
+          "p50": 0.9820211827754974,
+          "p99": 0.9999968409538269,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.10890544041450777,
+        "reward_per_1000_transitions": {
+          "action_rate": -4.0783534132060595e-06,
+          "approach": 0.1299184262752533,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -0.047111254185438156,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      }
+    },
+    "scripted_side_height_03": {
+      "wall_time_s": 43.42130931903375,
+      "all": {
+        "transitions": 38400,
+        "completed_episodes": 196,
+        "raw_contact_step_fraction": 0.745546875,
+        "force_aligned_step_fraction": 0.745546875,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.745546875,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.002916666666666667,
+        "contact_seen_completed_fraction": 0.32653061224489793,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.673469387755102,
+        "table_failure_completed_fraction": 0.673469387755102,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 0.32653061224489793,
+        "forward_m": {
+          "mean": -8.587308911955915e-06,
+          "p01": -0.0005487981834448874,
+          "p50": -0.00010608650336507708,
+          "p99": 0.0005641869502142072,
+          "max": 0.0005729408585466444
+        },
+        "palm_force_n": {
+          "mean": 1.0980137586593628,
+          "p01": 0.0,
+          "p50": 1.3475983142852783,
+          "p99": 1.8261358344554905,
+          "max": 6.564385414123535
+        },
+        "forward_force_n": {
+          "mean": 1.0923198461532593,
+          "p01": 0.0,
+          "p50": 1.3371548652648926,
+          "p99": 1.8260113167762757,
+          "max": 6.563217639923096
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.037990786135196686,
+          "p01": 0.029843209981918334,
+          "p50": 0.030100464820861816,
+          "p99": 0.09802866458892823,
+          "max": 0.10253012180328369
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": -0.017000827938318253,
+          "p01": -0.02514222078025341,
+          "p50": -0.02488747052848339,
+          "p99": 0.043040152788162235,
+          "max": 0.04755505919456482
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9996591210365295,
+          "p01": 0.999347984790802,
+          "p50": 0.9995942711830139,
+          "p99": 0.9999990463256836,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.035712890625,
+        "reward_per_1000_transitions": {
+          "action_rate": -3.1752190352563048e-06,
+          "approach": 0.028705716133117676,
+          "progress": 0.001166859408840537,
+          "backslide": -0.0018579314928501844,
+          "first_contact": 0.056249964982271194,
+          "contact": 0.07453732937574387,
+          "alignment": -0.0010222381679341197,
+          "success": 0.0,
+          "failure": -6.875
+        }
+      },
+      "right": {
+        "transitions": 36581,
+        "completed_episodes": 64,
+        "raw_contact_step_fraction": 0.782619392580848,
+        "force_aligned_step_fraction": 0.782619392580848,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.782619392580848,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0030616986960443947,
+        "contact_seen_completed_fraction": 1.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 0.0,
+        "table_failure_completed_fraction": 0.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 1.0,
+        "forward_m": {
+          "mean": -7.281441867235117e-06,
+          "p01": -0.0005490009789355099,
+          "p50": -0.00010513549204915762,
+          "p99": 0.0005641869502142072,
+          "max": 0.0005729408585466444
+        },
+        "palm_force_n": {
+          "mean": 1.1526128053665161,
+          "p01": 0.0,
+          "p50": 1.3514621257781982,
+          "p99": 1.8285006046295165,
+          "max": 6.564385414123535
+        },
+        "forward_force_n": {
+          "mean": 1.1466355323791504,
+          "p01": 0.0,
+          "p50": 1.3416742086410522,
+          "p99": 1.8282591819763183,
+          "max": 6.563217639923096
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.03540703281760216,
+          "p01": 0.02983853816986084,
+          "p50": 0.03009498119354248,
+          "p99": 0.09605100154876699,
+          "max": 0.10253012180328369
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": -0.01958286017179489,
+          "p01": -0.02514508180320263,
+          "p50": -0.024893788620829582,
+          "p99": 0.04107415080070487,
+          "max": 0.04755505919456482
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9996427297592163,
+          "p01": 0.9993479251861572,
+          "p50": 0.9995869994163513,
+          "p99": 0.9999986290931702,
+          "max": 1.0
+        },
+        "raw_action_clip_fraction": 0.025723736365872996,
+        "reward_per_1000_transitions": {
+          "action_rate": -2.520168209230178e-06,
+          "approach": 0.021575935184955597,
+          "progress": 0.001224881736561656,
+          "backslide": -0.0019503177609294653,
+          "first_contact": 0.05904700979590416,
+          "contact": 0.07824371755123138,
+          "alignment": -0.0010719441343098879,
+          "success": 0.0,
+          "failure": 0.0
+        }
+      },
+      "left": {
+        "transitions": 1819,
+        "completed_episodes": 132,
+        "raw_contact_step_fraction": 0.0,
+        "force_aligned_step_fraction": 0.0,
+        "normal_aligned_step_fraction": 1.0,
+        "valid_contact_step_fraction": 0.0,
+        "grounded_step_fraction": 1.0,
+        "progress_paid_step_fraction": 0.0,
+        "contact_seen_completed_fraction": 0.0,
+        "push_seen_completed_fraction": 0.0,
+        "success_completed_fraction": 0.0,
+        "failure_completed_fraction": 1.0,
+        "table_failure_completed_fraction": 1.0,
+        "footprint_failure_completed_fraction": 0.0,
+        "fall_failure_completed_fraction": 0.0,
+        "timeout_completed_fraction": 0.0,
+        "forward_m": {
+          "mean": -3.484894841676578e-05,
+          "p01": -0.0005396041087806225,
+          "p50": -0.00023254851112142205,
+          "p99": 0.000549537013284862,
+          "max": 0.0005497237434610724
+        },
+        "palm_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "forward_force_n": {
+          "mean": 0.0,
+          "p01": 0.0,
+          "p50": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "palm_height_from_cube_m": {
+          "mean": 0.08995131403207779,
+          "p01": 0.07880305051803589,
+          "p50": 0.08997583389282227,
+          "p99": 0.10108573913574219,
+          "max": 0.10221636295318604
+        },
+        "central_pad_bottom_from_cube_top_m": {
+          "mean": 0.034925129264593124,
+          "p01": 0.023770726397633554,
+          "p50": 0.03495141863822937,
+          "p99": 0.046067069768905636,
+          "max": 0.04719814658164978
+        },
+        "palm_alignment_cos": {
+          "mean": 0.9999889731407166,
+          "p01": 0.9999233365058899,
+          "p50": 0.9999914169311523,
+          "p99": 0.9999997508525849,
+          "max": 0.9999998807907104
+        },
+        "raw_action_clip_fraction": 0.23659978009895546,
+        "reward_per_1000_transitions": {
+          "action_rate": -1.635080116102472e-05,
+          "approach": 0.17208939790725708,
+          "progress": 0.0,
+          "backslide": 0.0,
+          "first_contact": 0.0,
+          "contact": 0.0,
+          "alignment": -2.265679358970374e-05,
+          "success": 0.0,
+          "failure": -145.1346893310547
+        }
+      }
+    }
+  },
+  "notes": [
+    "Terminal transitions recorded before automatic reset.",
+    "Scripted baselines use the exact unmodified 8D actions, OSC, cube physics and rewards.",
+    "Scripted low target is a feasibility probe, not a proposed safe production controller."
+  ]
+}

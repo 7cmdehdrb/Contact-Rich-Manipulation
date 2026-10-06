@@ -3,6 +3,7 @@
 TASK_ID = "Isaac-Hand-Manipulation-Test-v0"
 CONTACT_TASK_ID = "Isaac-Hand-Manipulation-Contact-v0"
 PUSH_TASK_ID = "Isaac-Hand-Manipulation-Push-v0"
+PUSH_V1_TASK_ID = "Isaac-Hand-Manipulation-Push-v1"
 
 
 def _register_task() -> None:
@@ -50,6 +51,20 @@ def _register_task() -> None:
                 ),
                 "rsl_rl_cfg_entry_point": (
                     "hand_manipulation_test.agents.rsl_rl_push_ppo_cfg:PushPPORunnerCfg"
+                ),
+            },
+        )
+    if PUSH_V1_TASK_ID not in gym.registry:
+        gym.register(
+            id=PUSH_V1_TASK_ID,
+            entry_point="hand_manipulation_test.push_v1_env:HandManipulationPushV1Env",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": (
+                    "hand_manipulation_test.config.ur5e.push_v1_env_cfg:UR5eInspirePushV1EnvCfg"
+                ),
+                "rsl_rl_cfg_entry_point": (
+                    "hand_manipulation_test.agents.rsl_rl_push_v1_ppo_cfg:PushV1PPORunnerCfg"
                 ),
             },
         )

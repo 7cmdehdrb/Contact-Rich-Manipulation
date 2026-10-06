@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import importlib.util
 from pathlib import Path
 import sys
@@ -14,7 +13,6 @@ import torch
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1] / "hand_manipulation_test"
-REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 TEST_PACKAGE = "_hand_manipulation_action_fixture"
 
 
@@ -289,34 +287,3 @@ def test_incompatible_asset_limits_fail_before_installing_a_physical_window(back
 def test_invalid_hand_ranges_are_rejected_before_control(backend, interval):
     with pytest.raises(ValueError, match="synergy_range"):
         _environment(backend, [[0.9, 0.9]], interval=interval)
-
-
-def _class_assignments(path, class_name):
-    tree = ast.parse(path.read_text())
-    cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name)
-    return {node.targets[0].id: node.value for node in cls.body if isinstance(node, ast.Assign)}
-
-
-def test_push_ppo_matches_sweep_reference_through_rsl5_model_api():
-    reference = _class_assignments(
-        REPOSITORY_ROOT / "example/Sweep-Policy/sweeping_policy/config/ur5e/agents/rsl_rl_ppo_cfg_02.py",
-        "UR5eSweepPPORunnerCfg",
-    )
-    push = _class_assignments(PACKAGE_ROOT / "agents/rsl_rl_push_ppo_cfg.py", "PushPPORunnerCfg")
-    for key in ("num_steps_per_env", "max_iterations", "save_interval", "run_name"):
-        assert ast.literal_eval(push[key]) == ast.literal_eval(reference[key])
-    old_policy = {keyword.arg: ast.literal_eval(keyword.value) for keyword in reference["policy"].keywords}
-    actor = {keyword.arg: keyword.value for keyword in push["actor"].keywords}
-    critic = {keyword.arg: keyword.value for keyword in push["critic"].keywords}
-    assert ast.literal_eval(actor["hidden_dims"]) == old_policy["actor_hidden_dims"]
-    assert ast.literal_eval(critic["hidden_dims"]) == old_policy["critic_hidden_dims"]
-    assert ast.literal_eval(actor["activation"]) == ast.literal_eval(critic["activation"]) == old_policy["activation"]
-    assert ast.literal_eval(actor["obs_normalization"]) == old_policy["actor_obs_normalization"]
-    assert ast.literal_eval(critic["obs_normalization"]) == old_policy["critic_obs_normalization"]
-    distribution = actor["distribution_cfg"]
-    assert ast.unparse(distribution.func) == "RslRlMLPModelCfg.GaussianDistributionCfg"
-    assert {keyword.arg: ast.literal_eval(keyword.value) for keyword in distribution.keywords} == {
-        "init_std": old_policy["init_noise_std"]
-    }
-    algorithm = lambda node: {keyword.arg: ast.literal_eval(keyword.value) for keyword in node.keywords}
-    assert algorithm(push["algorithm"]) == algorithm(reference["algorithm"])

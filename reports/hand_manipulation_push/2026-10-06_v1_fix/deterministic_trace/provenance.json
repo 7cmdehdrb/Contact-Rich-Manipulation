@@ -1,0 +1,271 @@
+{
+  "saved_env_path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/params/env.yaml",
+  "saved_agent_path": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/params/agent.yaml",
+  "saved_reset_source": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/mdp/push_v1_events.py",
+  "saved_rotation_source": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/push_v1_math.py",
+  "saved_robot_source": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/source/hand_manipulation_test/assets/contact_robot.py",
+  "reset_pose_guard": "PushSafePoseReset._check_pose_and_limits with saved H+X-up virtual guard",
+  "baseline_relevant_source_comparisons": [
+    {
+      "relative_path": "constants.py",
+      "same": true,
+      "saved_sha256": "74955ad8e9379c7f7c10c26d01ba413e0d3fa73ed2ddd9f8529c033886fab015",
+      "active_sha256": "74955ad8e9379c7f7c10c26d01ba413e0d3fa73ed2ddd9f8529c033886fab015"
+    },
+    {
+      "relative_path": "action_math.py",
+      "same": true,
+      "saved_sha256": "ee750de251ef05f71ab0717471f6a9535a2631d896a237fc6952b3931cd97035",
+      "active_sha256": "ee750de251ef05f71ab0717471f6a9535a2631d896a237fc6952b3931cd97035"
+    },
+    {
+      "relative_path": "accumulation_math.py",
+      "same": true,
+      "saved_sha256": "2bd62016987f875262db955fdf666705a6c5258e5a8c924e19e12f608a9430c9",
+      "active_sha256": "2bd62016987f875262db955fdf666705a6c5258e5a8c924e19e12f608a9430c9"
+    },
+    {
+      "relative_path": "geometry.py",
+      "same": true,
+      "saved_sha256": "af82f66cb48d182b50297db328db9f0056e9b29a16e793b939369f39c6537b80",
+      "active_sha256": "af82f66cb48d182b50297db328db9f0056e9b29a16e793b939369f39c6537b80"
+    },
+    {
+      "relative_path": "mdp/actions.py",
+      "same": true,
+      "saved_sha256": "1d9e19cdd4e594201db6b395439ef277c0f5ab2b2f37883ddf7341ad956cd738",
+      "active_sha256": "1d9e19cdd4e594201db6b395439ef277c0f5ab2b2f37883ddf7341ad956cd738"
+    },
+    {
+      "relative_path": "mdp/push_v1_actions.py",
+      "same": true,
+      "saved_sha256": "075129f8109d3c2c38baa285ef6d1e96ac855952513f59a989138f03d13e15bb",
+      "active_sha256": "075129f8109d3c2c38baa285ef6d1e96ac855952513f59a989138f03d13e15bb"
+    },
+    {
+      "relative_path": "mdp/observations.py",
+      "same": true,
+      "saved_sha256": "4459ff78b0d829c1d28498b0dfe298915a46ec0bbbc7ca3af0f8e4a899e0da6a",
+      "active_sha256": "4459ff78b0d829c1d28498b0dfe298915a46ec0bbbc7ca3af0f8e4a899e0da6a"
+    },
+    {
+      "relative_path": "assets/robot.py",
+      "same": true,
+      "saved_sha256": "a1f151f6b91fe793d1f5f3dd44b1d8ce75917c64018d7ca36b76f2926b5c05ce",
+      "active_sha256": "a1f151f6b91fe793d1f5f3dd44b1d8ce75917c64018d7ca36b76f2926b5c05ce"
+    }
+  ],
+  "disabled_new_guards": {
+    "eef_soft_height_above_table_m": 100.0,
+    "eef_hard_height_above_table_m": 101.0,
+    "enforce_outward_fingers": false
+  },
+  "task": {
+    "arm_velocity_observation_scale": 3.14,
+    "rotation_observation_scale_rad": 3.141592653589793,
+    "wrench_force_observation_scale_n": 40.0,
+    "wrench_moment_observation_scale_nm": 4.0,
+    "tactile_threshold_n": 0.01,
+    "goal_reward_sigma_m": 0.05,
+    "success_distance_m": 0.01,
+    "contact_threshold_n": 0.01,
+    "table_size": [
+      0.82,
+      1.0,
+      0.04
+    ],
+    "table_center": [
+      -0.75,
+      0.0,
+      1.03
+    ],
+    "cube_size": 0.06,
+    "cube_mass": 1.0,
+    "object_xy_offset_low": [
+      0.28,
+      -0.03
+    ],
+    "object_xy_offset_high": [
+      0.34,
+      0.03
+    ],
+    "reset_position_offset_task": [
+      0.1,
+      0.0,
+      0.1
+    ],
+    "reset_position_jitter_task": [
+      0.004,
+      0.004,
+      0.003
+    ],
+    "reset_c_y_range": [
+      -0.25,
+      0.25
+    ],
+    "initial_hand_open_range": [
+      0.9,
+      0.98
+    ],
+    "reset_joint_seed_offsets": [
+      [
+        0.0,
+        1.2,
+        -4.4,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.2,
+        -4.4,
+        3.141592653589793,
+        0.0,
+        0.0
+      ],
+      [
+        -2.0,
+        0.85,
+        -4.4,
+        3.55,
+        -1.87,
+        0.785
+      ]
+    ],
+    "reset_max_iterations": 80,
+    "reset_damping": 0.045,
+    "reset_step_size": 0.65,
+    "reset_position_error_step_m": 0.06,
+    "reset_orientation_error_step_rad": 0.25,
+    "reset_joint_delta_limit_rad": 0.18,
+    "reset_position_tolerance_m": 0.003,
+    "reset_orientation_tolerance_rad": 0.05,
+    "reset_joint_limit_margin_rad": 0.035,
+    "reset_wrist_3_range_rad": [
+      -2.8,
+      2.8
+    ],
+    "reset_clearance_margin_m": 0.004,
+    "command_distance_range": [
+      0.2,
+      0.3
+    ],
+    "command_angle_jitter_rad": 0.17453292519943295,
+    "command_sample_attempts": 128,
+    "table_path_margin_m": 0.01,
+    "table_failure_margin_m": 0.005,
+    "side_contact_angle_rad": 0.5235987755982988,
+    "success_speed_m_s": 0.02,
+    "success_hold_time_s": 0.2,
+    "progress_sigma_fraction": 0.5,
+    "command_centered_path": true,
+    "command_midpoint_x_offset_m": 0.31,
+    "command_initial_x_jitter_m": 0.002,
+    "contact_palm_height_m": 0.025,
+    "accumulated_position_error_limit_m": 0.06,
+    "eef_soft_height_above_table_m": 100.0,
+    "eef_hard_height_above_table_m": 101.0,
+    "enforce_outward_fingers": false,
+    "minimum_finger_outward_cos": 0.25,
+    "wrist_2_branch_sin_margin": 0.15
+  },
+  "reward_weights": {
+    "action_rate": 0.001,
+    "approach": 0.05,
+    "progress": 12.0,
+    "backslide": 6.0,
+    "first_contact": 0.02,
+    "contact": 0.005,
+    "alignment": 0.3,
+    "success": 2.0,
+    "failure": 2.0,
+    "roll": 0.1,
+    "action_excess": 0.002,
+    "contact_distance": 0.0,
+    "eef_height": 0.0
+  },
+  "scene_env_spacing_m": 2.5,
+  "agent": {
+    "seed": 42,
+    "device": "cuda:0",
+    "num_steps_per_env": 36,
+    "max_iterations": 90000,
+    "empirical_normalization": {},
+    "obs_groups": {
+      "actor": [
+        "policy"
+      ],
+      "critic": [
+        "policy"
+      ]
+    },
+    "clip_actions": null,
+    "check_for_nan": true,
+    "save_interval": 50,
+    "experiment_name": "hand_manipulation_push_v1",
+    "run_name": "",
+    "logger": "tensorboard",
+    "neptune_project": "isaaclab",
+    "wandb_project": "isaaclab",
+    "resume": false,
+    "load_run": ".*",
+    "load_checkpoint": "model_.*.pt",
+    "class_name": "OnPolicyRunner",
+    "actor": {
+      "class_name": "MLPModel",
+      "hidden_dims": [
+        256,
+        128,
+        64
+      ],
+      "activation": "elu",
+      "obs_normalization": false,
+      "distribution_cfg": {
+        "class_name": "GaussianDistribution",
+        "init_std": 1.0,
+        "std_type": "scalar"
+      }
+    },
+    "critic": {
+      "class_name": "MLPModel",
+      "hidden_dims": [
+        256,
+        128,
+        64
+      ],
+      "activation": "elu",
+      "obs_normalization": false,
+      "distribution_cfg": null
+    },
+    "algorithm": {
+      "class_name": "PPO",
+      "num_learning_epochs": 8,
+      "num_mini_batches": 4,
+      "learning_rate": 0.001,
+      "schedule": "adaptive",
+      "gamma": 0.98,
+      "lam": 0.95,
+      "entropy_coef": 0.005,
+      "desired_kl": 0.02,
+      "max_grad_norm": 1.0,
+      "optimizer": "adam",
+      "value_loss_coef": 1.0,
+      "use_clipped_value_loss": true,
+      "clip_param": 0.2,
+      "normalize_advantage_per_mini_batch": false,
+      "share_cnn_encoders": false,
+      "rnd_cfg": null,
+      "symmetry_cfg": null
+    },
+    "policy": {}
+  },
+  "checkpoint": "/home/min/7cmdehdrb/grad/logs/rsl_rl/hand_manipulation_push_v1/2026-10-05_22-17-17/model_4300.pt",
+  "checkpoint_sha256": "d7990a19130c9583c90c294588ca2494494f49cac6756a830c60747bb11c47bd",
+  "num_envs": 32,
+  "steps": 500,
+  "seed": 42,
+  "mode": "deterministic",
+  "capture_stage": "post_physics_pre_auto_reset",
+  "inference_only": true
+}
