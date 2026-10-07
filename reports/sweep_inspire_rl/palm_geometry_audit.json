@@ -1,0 +1,66 @@
+{
+  "robot_usd": "/home/min/7cmdehdrb/grad/src/hand_manipulation_rl/hand_manipulation_rl/assets/data/ur5e_inspire_usd/ur5e_inspire.usd",
+  "robot_usd_sha256": "fce59ec771fa140f3f0cbadd3a4bc705c15d4ab4892ce85436dee8264423ce95",
+  "collision_approximation": "convexHull",
+  "origins_in_hand_frame_m": {
+    "inspire_palm_force_sensor": [
+      0.000368176815827459,
+      0.012295976313353177,
+      0.11959998309612274
+    ],
+    "inspire_middle_force_sensor_3": [
+      0.010449110253455074,
+      0.01381997855459595,
+      0.2456469386816026
+    ],
+    "inspire_little_force_sensor_3": [
+      -0.04041493029809484,
+      0.010387886507689306,
+      0.2278439849615091
+    ]
+  },
+  "pad_vertices_inside_base_hull_fraction": 1.0,
+  "pad_max_signed_distance_to_base_hull_m": -0.0011284508472284224,
+  "rays": [
+    {
+      "x_h_m": 0.0004,
+      "z_h_m": 0.1196,
+      "base_y_interval_h_m": [
+        -0.034709504570378566,
+        0.01787939599339871
+      ],
+      "pad_y_interval_h_m": [
+        0.01076608205482211,
+        0.012697631646442753
+      ],
+      "base_ahead_of_pad_m": 0.005181764346955957
+    },
+    {
+      "x_h_m": -0.02,
+      "z_h_m": 0.1196,
+      "base_y_interval_h_m": [
+        -0.03344241659855179,
+        0.01711558829614269
+      ],
+      "pad_y_interval_h_m": [
+        0.010755535969621479,
+        0.01267918660996289
+      ],
+      "base_ahead_of_pad_m": 0.004436401686179802
+    },
+    {
+      "x_h_m": 0.02,
+      "z_h_m": 0.1196,
+      "base_y_interval_h_m": [
+        -0.033543616300384396,
+        0.01790123819178591
+      ],
+      "pad_y_interval_h_m": [
+        0.01077734169859018,
+        0.012707730386016082
+      ],
+      "base_ahead_of_pad_m": 0.005193507805769828
+    }
+  ],
+  "limitation": "Static source collision geometry; does not reproduce the remote checkpoint or cooked PhysX contacts."
+}

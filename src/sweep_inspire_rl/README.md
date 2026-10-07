@@ -10,10 +10,15 @@
 - 명령은 선반의 오른쪽인 world `+Y`로 `0.18 m` 미는 방향만 생성한다.
   IK로 물체 왼쪽 옆의 약간 높은 위치에서 시작하며, 손바닥이 `+Y`를 향하도록 정렬한다.
   Control point는 물체 origin보다 `0.12 m` 높게 두고, 실제 palm pad 중심이 물체의
-  선반 깊이 위치와 맞도록 X offset을 보정한다. Reaching/pushing 보상은 control point
-  대신 실제 palm 표면 위치와 물체 USD collider의 upstream 표면을 기준으로 계산한다.
-  실제 palm pad(channel 0) 접촉이 있어야 밀기·목표 도달 보상을 준다. Thumb/base carrier나
-  finger pad만 닿는 동작은 이 보상을 얻지 못한다.
+  선반 깊이 위치와 맞도록 X offset을 보정한다. Reaching 보상은 실제 palm 표면과
+  물체 USD collider의 upstream 표면을 기준으로 계산한다.
+  밀기 보상은 원본 `reward_random_sweep.pushing_target`을 직접 호출하며,
+  이 환경에서 EEF 거리 한계만 `0.052 m`로 지정한다. 원본 환경의 기본값은 `0.04 m`다.
+  원본 offset `(target_x - 0.02, target_y - width * sign(sweep_dir_y), target_z + 0.09)`에
+  대해 EEF 3D 거리 `< 0.052 m`, wrist Y 거리 `< 0.04 m`만으로 밀기 게이트를 계산한다.
+  목표 거리 `< 0.03 m`에서는 게이트 없이 목표 근처 보상을 준다.
+  속도 보정도 원본대로 `abs(v_y)`를 사용한다. Tactile·F/T는 관측이며,
+  손바닥 접촉·자세 정렬·upstream AABB 조건은 밀기 게이트에 사용하지 않는다.
 - Arm은 6D relative pose OSC, fixed impedance, 전 축 stiffness `200`이다.
   마지막 3개 Arm 회전 action은 독립 회전으로 적용하지 않고, 현재 자세에서 고정된
   오른쪽 손바닥 방향으로 돌아가는 회전 명령으로 대체한다.
@@ -81,6 +86,44 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 제한할 수 있다. 체크포인트는 이 환경의 71D 관측과 8D action으로 학습한 것을 사용한다.
 세 스크립트 모두 `AppLauncher` 실행 후 simulator 모듈을 import한다.
 
+### 물체 옆에서 멈출 때 Sweeping 게이트 진단
+
+학습한 체크포인트를 동일한 물체로 재생하며 각 제어 스텝의 조건을 CSV로 저장한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
+  --checkpoint /path/to/model.pt --object-name cup_1 \
+  --num_envs 1 --steps 500 --gate-log /tmp/sweep_gate.csv
+```
+
+`--gate-log-env`는 기록할 vector environment 번호이며 기본값은 0이다.
+로그는 reward 계산 시점에 복사하므로 종료 스텝도 자동 reset 이전 상태를 기록한다.
+이 옵션은 보상 가중치나 게이트 조건을 변경하지 않는다. 50스텝마다 현재 조건을
+출력하고 실행 종료 시 각 조건이 실패한 횟수를 출력한다. 실패 횟수는 서로 중복될 수 있다.
+
+| CSV 필드 | 해석 |
+|---|---|
+| `near_hand` / `reaching_distance_m` | 원본 offset과 `ee_frame` 첫 target 사이 3D 거리가 0.052 m 미만이어야 참 |
+| `near_wrist` / `wrist_y_distance_m` | 원본 offset과 `wrist_frame` 첫 target 사이 Y 거리가 0.04 m 미만이어야 참 |
+| `gate` / `sweeping_raw` | 위 두 조건의 AND와 가중치·dt 적용 전 밀기 보상 |
+| `goal_region` / `goal_distance_m` | 목표 3D 거리 0.03 m 미만이면 게이트 없이 목표 근처 보상 지급 |
+| `object_velocity_y_m_s` | 물체 +Y 속도. 원본 속도 보정은 절댓값 사용 |
+| `palm_contact` / `palm_force_n` | 손바닥 접촉 비트와 net force 크기. 진단 정보이며 게이트 조건이 아님 |
+| `other_pad_contact` / `alignment` | 다른 tactile pad 접촉 및 자세 정렬. 진단 정보이며 게이트 조건이 아님 |
+| `sensor_data_fresh` | 현재 physics step의 센서 값인지 |
+| `eef_*_w_m` / `palm_*_w_m` / `object_*_w_m` | EEF control point, 손바닥 표면 기준점, 물체 origin의 world 좌표 |
+| `done_*` / `episode_step` | 해당 스텝의 종료 원인과 에피소드 스텝 번호 |
+
+게이트는 Inspire의 `ee_frame` control point와 Axia80 `wrist_frame`을 원본 조건에
+그대로 대입한다. 거리 게이트가 참이면 tactile 값이 0이어도 밀기 보상을 받을 수 있다.
+목표 거리 3 cm 이내에서는 거리 게이트 자체도 요구하지 않는다.
+
+2026-10-06 source USD 형상 감사에서는 손바닥 pad collision mesh의 모든 vertex가
+base collision hull 안에 있고, pad 중심의 +Y 방향 선에서 base가 약 5.18 mm
+먼저 닿는 것으로 확인되었다. 이 형상은 현재 밀기 보상의 접촉 조건으로 사용되지 않는다.
+`scripts/audit_palm_geometry.py`는 pxr·NumPy·SciPy가 있는 USD Python에서 형상을
+재검사하며, 결과는 `reports/sweep_inspire_rl/palm_geometry_audit.json`에 있다.
+
 시뮬레이터가 필요 없는 계약 검사는 다음과 같이 실행한다.
 
 ```bash
@@ -96,7 +139,7 @@ collider의 보수적인 AABB와 물체·선반 표면 높이를 검사한다.
 Reset 직후에는 이전 에피소드의 접촉·F/T가 새 자세에 섞이지 않도록 해당 환경의
 sensor 관측을 0으로 초기화하고, 첫 physics step부터 live 값을 사용한다.
 
-검증: 수치 테스트 29개, 실제 AppLauncher에서 6종 물체 config 검증과 PPO 전체 설정
+검증: 기존 수치 테스트와 원본 밀기 보상 회귀 검사를 통과했다. 실제 AppLauncher에서 6종 물체 config 검증과 PPO 전체 설정
 비교를 통과했다. `/tmp`의 임시 선반·물체·ground fixture를 사용한 CPU smoke에서도
 8개 환경의 reset, 71D 관측, OSC/Hand 제어, 센서, 두 번의 step과 재reset을 검증했다.
 원본 Nucleus 자산을 사용하는 smoke는 서버 응답 대기로 완료하지 못했다. 실제 선반의

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import torch
 from isaaclab.utils.math import matrix_from_quat
+from sweeping_policy.mdp.reward_random_sweep import pushing_target as source_pushing_target
 
 from .events import collision_aabbs
 from .observations import palm_tactile_bits
@@ -53,39 +54,68 @@ def palm_alignment(env):
     return 0.5 * (right * right.abs() + up * up.abs())
 
 
-def pushing_target(env, command_name="target_goal_pos"):
-    """Retain Sweep's goal kernel; gate progress by the upstream palm pose.
+def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.052):
+    """Sweep-Policy reward with a 5.2 cm EEF gate; sensors are observations only."""
+    result = source_pushing_target(
+        env, command_name=command_name, eef_distance_threshold=eef_distance_threshold
+    )
+    diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
+    if diagnostic_env is None:
+        return result
 
-    The Robotiq wrist/finger proxy has no matching meaning on Inspire. The
-    replacement gate requires an upstream hand and a palmar normal aligned to
-    world +Y. Velocity shaping rewards rightward motion only.
-    """
+    # Mirror only the source gate for logging. The reward above is evaluated
+    # by the source function itself, including its ungated goal-region branch.
     objects = env.scene["object_collection"]
-    target = objects.data.object_pos_w[:, 0]
+    rows = torch.arange(env.num_envs, device=env.target_id.device)
+    ids = env.target_id.squeeze(-1).long()
+    target = objects.data.object_pos_w[rows, ids]
     goal = env.command_manager.get_command(command_name)[:, :3]
+    offset = target.clone()
+    offset[:, 0] -= 0.02
+    offset[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
+    offset[:, 2] += 0.09
+    ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0]
+    ee_distance = torch.norm(offset - ee, dim=-1, p=2)
+    wrist_y_distance = torch.abs(offset[:, 1] - wrist[:, 1])
+    near_hand = ee_distance < eef_distance_threshold
+    near_wrist = wrist_y_distance < 0.04
+    distance = torch.norm(goal - target, dim=-1, p=2)
+    tactile = palm_tactile_bits(env)
     hand = palm_surface_position(env)
-    distance = torch.linalg.vector_norm(goal - target, dim=-1)
-    near_hand = torch.linalg.vector_norm(reaching_position(env) - hand, dim=-1) < 0.04
-    # C is ahead of the physical pad by 37.3 mm. Testing C against the
-    # object's center would turn this gate off before the pad can touch it.
-    # A right-facing hand can still touch through a protruding thumb/carrier.
-    # Require the actual palm pad, channel zero, for any positive sweep reward.
-    # At the raised pre-push height and within this proximity gate, that pad
-    # cannot be contacting the shelf's active board.
-    palm_contact = palm_tactile_bits(env)[:, 0] > 0.5
-    gate = near_hand & (hand[:, 1] <= upstream_surface_position(env) + 0.015) & (palm_alignment(env) > 0.9)
-    gate &= palm_contact
-    velocity_y = objects.data.object_lin_vel_w[:, 0, 1]
-    velocity_reward = torch.where(
-        velocity_y > 0.05,
-        torch.where(velocity_y < 0.1, 0.5, -0.5),
-        torch.where(velocity_y < -0.05, -0.5, 0.0),
-    )
-    return torch.where(
-        distance < 0.03,
-        gate.to(distance.dtype) * 2.0 * torch.exp(-5.0 * distance),
-        gate.to(distance.dtype) * (1.0 - distance / 0.18 + velocity_reward),
-    )
+    values = {
+        "episode_step": env.episode_length_buf,
+        "reaching_distance_m": ee_distance,
+        "wrist_y_distance_m": wrist_y_distance,
+        "near_hand": near_hand,
+        "near_wrist": near_wrist,
+        "gate": near_hand & near_wrist,
+        "goal_region": distance < 0.03,
+        "goal_distance_m": distance,
+        "object_velocity_y_m_s": objects.data.object_lin_vel_w[rows, ids, 1],
+        "palm_contact": tactile[:, 0] > 0.5,
+        "other_pad_contact": (tactile[:, 1:] > 0.5).any(dim=1),
+        "alignment": palm_alignment(env),
+        "sweeping_raw": result,
+    }
+    sensor = env.scene["palm_tactile"]
+    pad_index = sensor.body_names.index("inspire_palm_force_sensor")
+    values["palm_force_n"] = torch.linalg.vector_norm(sensor.data.net_forces_w[:, pad_index], dim=-1)
+    if hasattr(env, "sensor_data_fresh"):
+        values["sensor_data_fresh"] = env.sensor_data_fresh
+    for axis, name in enumerate(("x", "y", "z")):
+        values[f"eef_{name}_w_m"] = ee[:, axis]
+        values[f"palm_{name}_w_m"] = hand[:, axis]
+        values[f"object_{name}_w_m"] = target[:, axis]
+    values.update({
+        f"done_{name}": env.termination_manager.get_term(name)
+        for name in env.termination_manager.active_terms
+    })
+    # Copy before automatic reset, including the terminal step's state.
+    env.sweep_gate_diagnostics = {
+        name: value[diagnostic_env].detach().clone() for name, value in values.items()
+    }
+    return result
 
 
 def hand_velocity_limit(env, threshold=1.0):

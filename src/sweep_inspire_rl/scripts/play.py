@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import importlib.metadata
 from pathlib import Path
 import sys
@@ -28,6 +29,8 @@ parser.add_argument("--seed", type=int, default=None)
 parser.add_argument("--steps", type=int, default=0, help="Zero runs until the simulator closes.")
 parser.add_argument("--real-time", action="store_true")
 parser.add_argument("--disable-markers", action="store_true")
+parser.add_argument("--gate-log", type=Path, help="Write pre-reset sweep gate diagnostics to CSV each step.")
+parser.add_argument("--gate-log-env", type=int, default=0, help="Vector environment index to diagnose (default: 0).")
 AppLauncher.add_app_launcher_args(parser)
 # Add required task arguments after AppLauncher's preliminary parse so --help
 # can show all launcher options without requiring a checkpoint.
@@ -57,6 +60,8 @@ def main() -> None:
         raise ValueError("--num_envs must be positive")
     if args.steps < 0:
         raise ValueError("--steps cannot be negative")
+    if not 0 <= args.gate_log_env < args.num_envs:
+        raise ValueError("--gate-log-env must be a valid environment index")
     checkpoint = args.checkpoint.expanduser().resolve()
     if not checkpoint.is_file():
         raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
@@ -79,7 +84,17 @@ def main() -> None:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
 
     env = gym.make(REGISTERED_TASK_ID, cfg=env_cfg)
+    gate_log = None
     try:
+        if args.gate_log is not None:
+            path = args.gate_log.expanduser().resolve()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            gate_log = path.open("w", newline="", encoding="utf-8")
+            env.unwrapped.sweep_gate_diagnostic_env = args.gate_log_env
+            print(f"[INFO] Sweep gate diagnostics: {path} (env {args.gate_log_env})", flush=True)
+        gate_writer = None
+        gate_hits = 0
+        blocked_counts = dict.fromkeys(("near_hand", "near_wrist"), 0)
         wrapped_env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
         runner = OnPolicyRunner(wrapped_env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
         compatible_checkpoint = handle_deprecated_rsl_rl_checkpoint(str(checkpoint), installed_version)
@@ -98,11 +113,35 @@ def main() -> None:
                 elif hasattr(runner.alg, "policy"):
                     runner.alg.policy.reset(dones)
             steps += 1
+            if gate_log is not None:
+                snapshot = env.unwrapped.sweep_gate_diagnostics
+                row = {"step": steps, "env_id": args.gate_log_env}
+                row.update({name: value.item() for name, value in snapshot.items()})
+                if gate_writer is None:
+                    gate_writer = csv.DictWriter(gate_log, fieldnames=list(row))
+                    gate_writer.writeheader()
+                gate_writer.writerow(row)
+                gate_hits += int(row["gate"])
+                for name in blocked_counts:
+                    blocked_counts[name] += int(not row[name])
+                if steps % 50 == 0:
+                    gate_log.flush()
+                    print(
+                        f"[GATE] step={steps} active={row['gate']} "
+                        f"reach={row['reaching_distance_m']:.4f}m "
+                        f"wrist_y={row['wrist_y_distance_m']:.4f}m goal_region={row['goal_region']} "
+                        f"palm={row['palm_contact']} other_pad={row['other_pad_contact']} "
+                        f"sweep={row['sweeping_raw']:.3f}", flush=True,
+                    )
             sleep_time = env.unwrapped.step_dt - (time.time() - started)
             if args.real_time and sleep_time > 0.0:
                 time.sleep(sleep_time)
         print(f"[INFO] Completed {steps} policy steps", flush=True)
+        if gate_log is not None:
+            print(f"[GATE] enabled={gate_hits}/{steps}; blocked counts (can overlap): {blocked_counts}", flush=True)
     finally:
+        if gate_log is not None:
+            gate_log.close()
         env.close()
 
 
