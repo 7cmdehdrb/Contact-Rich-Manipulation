@@ -15,14 +15,14 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-TASK_ID = "Isaac-Sweep-Inspire-Right-OSC-v0"
+from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID
 OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
 
 from isaaclab.app import AppLauncher
 
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--task", choices=(TASK_ID,), default=TASK_ID)
+parser.add_argument("--task", choices=TASK_IDS, default=TASK_ID)
 parser.add_argument("--object-name", choices=OBJECT_NAMES, default="cup_1")
 parser.add_argument("--num_envs", "--num-envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=None)
@@ -50,9 +50,8 @@ from isaaclab_rl.rsl_rl import (  # noqa: E402
     handle_deprecated_rsl_rl_checkpoint,
 )
 
-from sweep_inspire_rl import TASK_ID as REGISTERED_TASK_ID  # noqa: E402
-from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import InspireShelfSweepPPORunnerCfg  # noqa: E402
-from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg_PLAY  # noqa: E402
+from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import InspireShelfSweepPPORunnerCfg, InspireShelfSweepV1PPORunnerCfg  # noqa: E402
+from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg_PLAY, InspireShelfSweepV1EnvCfg_PLAY  # noqa: E402
 
 
 def main() -> None:
@@ -66,8 +65,10 @@ def main() -> None:
     if not checkpoint.is_file():
         raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
 
-    env_cfg = InspireShelfSweepEnvCfg_PLAY(object_name=args.object_name)
-    agent_cfg = InspireShelfSweepPPORunnerCfg()
+    env_cfg_type = InspireShelfSweepV1EnvCfg_PLAY if args.task == TASK_V1_ID else InspireShelfSweepEnvCfg_PLAY
+    agent_cfg_type = InspireShelfSweepV1PPORunnerCfg if args.task == TASK_V1_ID else InspireShelfSweepPPORunnerCfg
+    env_cfg = env_cfg_type(object_name=args.object_name)
+    agent_cfg = agent_cfg_type()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.commands.target_goal_pos.debug_vis = not args.disable_markers
     if args.seed is not None:
@@ -83,7 +84,7 @@ def main() -> None:
     if agent_cfg.class_name != "OnPolicyRunner":
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
 
-    env = gym.make(REGISTERED_TASK_ID, cfg=env_cfg)
+    env = gym.make(args.task, cfg=env_cfg)
     gate_log = None
     try:
         if args.gate_log is not None:

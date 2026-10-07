@@ -8,3 +8,8 @@ from sweeping_policy.config.ur5e.agents.rsl_rl_ppo_cfg_02 import UR5eSweepPPORun
 @configclass
 class InspireShelfSweepPPORunnerCfg(UR5eSweepPPORunnerCfg):
     experiment_name = "UR5e_shelf_sweep_inspire_right"
+
+
+@configclass
+class InspireShelfSweepV1PPORunnerCfg(InspireShelfSweepPPORunnerCfg):
+    experiment_name = "UR5e_shelf_sweep_inspire_right_v1"

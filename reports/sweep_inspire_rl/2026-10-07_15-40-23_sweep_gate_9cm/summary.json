@@ -1,0 +1,46 @@
+{
+  "run": "logs/2026-10-07_15-40-23_sweep_gate_9cm",
+  "checkpoint_iteration": 1500,
+  "window": [
+    1401,
+    1500
+  ],
+  "configured_eef_distance_threshold_m": 0.09,
+  "configured_wrist_y_distance_threshold_m": 0.04,
+  "tail_mean": {
+    "Episode_Reward/action_rate": -0.02892574332654476,
+    "Episode_Reward/joint_vel": -0.003724318663589656,
+    "Episode_Reward/shelf_collision": -0.04372420623898506,
+    "Episode_Reward/object_collision": 0.0,
+    "Episode_Reward/reaching": 2.7606165766716004,
+    "Episode_Reward/orientation": 1.9726754117012024,
+    "Episode_Reward/sweeping_object": 0.0016864215197711018,
+    "Curriculum/obj_collision": -0.5,
+    "Episode_Termination/time_out": 0.9844822937250137,
+    "Episode_Termination/object_drop": 0.0,
+    "Episode_Termination/push_fast": 0.0,
+    "Episode_Termination/shelf_collision": 0.0002034505209303461,
+    "Episode_Termination/hand_velocity": 0.015314263361506163,
+    "Loss/value": 0.0032554586877813563,
+    "Loss/surrogate": 0.003472493976187252,
+    "Loss/entropy": -6.409334917068481,
+    "Loss/learning_rate": 0.000533603311778279,
+    "Policy/mean_std": 0.2563263863325119,
+    "Perf/total_fps": 12292.87,
+    "Perf/collection_time": 5.857353434562683,
+    "Perf/learning_time": 0.14495471477508545,
+    "Train/mean_reward": 46.50820358276367,
+    "Train/mean_episode_length": 492.3681985473633
+  },
+  "interpretation": {
+    "sweep_reward_is_not_gate_activation": "At initial goal distance 0.18 m and abs(v_y)<=0.05 m/s the original reward is gate*(1-0.18/0.18+0)=0, even with an enabled gate.",
+    "missing_evidence": [
+      "live near_hand",
+      "live near_wrist",
+      "live gate",
+      "live object goal distance and velocity"
+    ],
+    "assessment": "Policy still gets almost all reward from reaching and orientation. These aggregate logs do not identify which gate clause fails or whether the policy is stalled with an open gate.",
+    "next_step": "Replay model_1500.pt with --gate-log before changing thresholds further."
+  }
+}

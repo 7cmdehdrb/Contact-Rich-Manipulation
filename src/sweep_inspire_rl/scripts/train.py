@@ -15,14 +15,14 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-TASK_ID = "Isaac-Sweep-Inspire-Right-OSC-v0"
+from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID
 OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
 
 from isaaclab.app import AppLauncher
 
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--task", choices=(TASK_ID,), default=TASK_ID)
+parser.add_argument("--task", choices=TASK_IDS, default=TASK_ID)
 parser.add_argument("--object-name", choices=OBJECT_NAMES, default="cup_1")
 parser.add_argument("--num_envs", "--num-envs", type=int, default=None)
 parser.add_argument("--max_iterations", "--max-iterations", type=int, default=None)
@@ -41,9 +41,8 @@ from rsl_rl.runners import OnPolicyRunner  # noqa: E402
 from isaaclab.utils.io import dump_yaml  # noqa: E402
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg  # noqa: E402
 
-from sweep_inspire_rl import TASK_ID as REGISTERED_TASK_ID  # noqa: E402
-from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import InspireShelfSweepPPORunnerCfg  # noqa: E402
-from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg  # noqa: E402
+from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import InspireShelfSweepPPORunnerCfg, InspireShelfSweepV1PPORunnerCfg  # noqa: E402
+from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg, InspireShelfSweepV1EnvCfg  # noqa: E402
 
 
 def main() -> None:
@@ -57,8 +56,10 @@ def main() -> None:
         if not checkpoint.is_file():
             raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
 
-    env_cfg = InspireShelfSweepEnvCfg(object_name=args.object_name)
-    agent_cfg = InspireShelfSweepPPORunnerCfg()
+    env_cfg_type = InspireShelfSweepV1EnvCfg if args.task == TASK_V1_ID else InspireShelfSweepEnvCfg
+    agent_cfg_type = InspireShelfSweepV1PPORunnerCfg if args.task == TASK_V1_ID else InspireShelfSweepPPORunnerCfg
+    env_cfg = env_cfg_type(object_name=args.object_name)
+    agent_cfg = agent_cfg_type()
     if args.num_envs is not None:
         env_cfg.scene.num_envs = args.num_envs
     if args.max_iterations is not None:
@@ -84,7 +85,7 @@ def main() -> None:
     env_cfg.log_dir = str(log_dir)
     print(f"[INFO] Logging experiment in directory: {log_dir}")
 
-    env = gym.make(REGISTERED_TASK_ID, cfg=env_cfg)
+    env = gym.make(args.task, cfg=env_cfg)
     started = time.time()
     try:
         wrapped_env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)

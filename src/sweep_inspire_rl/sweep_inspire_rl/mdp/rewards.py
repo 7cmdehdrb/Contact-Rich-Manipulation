@@ -46,6 +46,13 @@ def hand_reaching(env):
     return torch.exp(-10.0 * torch.linalg.vector_norm(reaching_position(env) - hand, dim=-1))
 
 
+def hand_reaching_object_center(env, z_offset=0.12):
+    """V1: pull the palm toward the live object's XY center at the raised height."""
+    target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
+    target[:, 2] += z_offset
+    return torch.exp(-10.0 * torch.linalg.vector_norm(target - palm_surface_position(env), dim=-1))
+
+
 def palm_alignment(env):
     """Signed palmar-normal/right and hand-up/world-up alignment."""
     rotation = matrix_from_quat(env.scene["ee_frame"].data.target_quat_w[:, 0])
@@ -54,10 +61,11 @@ def palm_alignment(env):
     return 0.5 * (right * right.abs() + up * up.abs())
 
 
-def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09):
+def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09, eef_distance_xy_only=False):
     """Sweep-Policy reward with a 9 cm EEF gate; sensors are observations only."""
     result = source_pushing_target(
-        env, command_name=command_name, eef_distance_threshold=eef_distance_threshold
+        env, command_name=command_name, eef_distance_threshold=eef_distance_threshold,
+        eef_distance_xy_only=eef_distance_xy_only,
     )
     diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
     if diagnostic_env is None:
@@ -76,7 +84,10 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
     offset[:, 2] += 0.09
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0]
-    ee_distance = torch.norm(offset - ee, dim=-1, p=2)
+    ee_delta = offset - ee
+    if eef_distance_xy_only:
+        ee_delta = ee_delta[:, :2]
+    ee_distance = torch.norm(ee_delta, dim=-1, p=2)
     wrist_y_distance = torch.abs(offset[:, 1] - wrist[:, 1])
     near_hand = ee_distance < eef_distance_threshold
     near_wrist = wrist_y_distance < 0.04

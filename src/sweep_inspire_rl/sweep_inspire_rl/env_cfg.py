@@ -271,3 +271,23 @@ class InspireShelfSweepEnvCfg_PLAY(InspireShelfSweepEnvCfg):
         super().__post_init__()
         self.scene.num_envs = 50
         self.observations.policy.enable_corruption = False
+
+
+@configclass
+class InspireShelfSweepV1EnvCfg(InspireShelfSweepEnvCfg):
+    """Reach through the object's XY center; use a 4 cm planar EEF gate."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.reaching.func = rewards.hand_reaching_object_center
+        self.rewards.reaching.params = {"z_offset": 0.12}
+        self.rewards.sweeping_object.params["eef_distance_threshold"] = 0.04
+        self.rewards.sweeping_object.params["eef_distance_xy_only"] = True
+
+
+@configclass
+class InspireShelfSweepV1EnvCfg_PLAY(InspireShelfSweepV1EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.observations.policy.enable_corruption = False

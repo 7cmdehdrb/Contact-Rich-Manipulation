@@ -63,6 +63,34 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 ## 실행
 
+### V1: 물체 중심 Reach와 XY 게이트
+
+`Isaac-Sweep-Inspire-Right-OSC-v1`은 V0 설정을 상속하고 아래 두 항목을 변경한다.
+
+- Reach 목표는 움직이는 물체의 현재 `(X, Y, Z + 0.12 m)`다. V0의 upstream
+  AABB 표면 대신 물체 X·Y 중심을 향해 실제 손바닥 표면을 이동시키도록 보상한다.
+- 밀기 EEF 게이트는 원본 offset에 대해 `norm(offset_xy - eef_xy) < 0.04 m`다.
+  Z는 EEF 게이트 거리에서 제외한다. 원본 offset의 X·Y와 wrist Y 거리 조건
+  `< 0.04 m`, 목표 근처 보상 분기 및 물체–목표 3D 거리는 그대로 사용한다.
+
+V1 전용 PPO 설정은 V0 PPO를 상속하며 experiment 이름은
+`UR5e_shelf_sweep_inspire_right_v1`이다. 학습·재생 스크립트의 `--task`로 버전을 선택한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v1 \
+  --num_envs 2048 --object-name cup_1 \
+  --run-name center_reach_xy_gate --headless
+
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v1 \
+  --checkpoint /path/to/v1/model.pt --num_envs 1 \
+  --object-name cup_1 --real-time
+```
+
+V1의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
+V0에서는 EEF의 3D 게이트 거리다. 손바닥 Reach 보상의 거리와 구분한다.
+
 ```bash
 # reset / OSC / 단일 물체 / RELATIVE 관측 / Hand 범위 / tactile / F/T 검사
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/smoke_env.py \
