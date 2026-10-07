@@ -239,7 +239,7 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         self.rewards.reaching.func = rewards.hand_reaching
         self.rewards.orientation.func = rewards.palm_alignment
         self.rewards.sweeping_object.func = rewards.pushing_target
-        self.rewards.sweeping_object.params["eef_distance_threshold"] = 0.052
+        self.rewards.sweeping_object.params["eef_distance_threshold"] = 0.09
         self.rewards.homing_after_sweep = None
         self.terminations.object_drop.params = {
             "height_condition": 1.04,

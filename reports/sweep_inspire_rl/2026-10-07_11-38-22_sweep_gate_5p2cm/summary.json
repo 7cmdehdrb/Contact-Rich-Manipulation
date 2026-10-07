@@ -1,0 +1,46 @@
+{
+  "run": "logs/2026-10-07_11-38-22_sweep_gate_5p2cm",
+  "checkpoint_iteration": 2350,
+  "window": [
+    2251,
+    2350
+  ],
+  "logged_eef_distance_threshold_m": 0.052,
+  "tail_mean": {
+    "Episode_Reward/action_rate": -0.046256856545805934,
+    "Episode_Reward/joint_vel": -0.0051936063403263686,
+    "Episode_Reward/shelf_collision": -0.042613512240350246,
+    "Episode_Reward/object_collision": 0.0,
+    "Episode_Reward/reaching": 2.7251068472862245,
+    "Episode_Reward/orientation": 1.94231449842453,
+    "Episode_Reward/sweeping_object": 5.67827328765702e-07,
+    "Curriculum/obj_collision": -0.5,
+    "Episode_Termination/time_out": 0.9630162286758422,
+    "Episode_Termination/object_drop": 0.0,
+    "Episode_Termination/push_fast": 0.0,
+    "Episode_Termination/shelf_collision": 6.78168402373558e-05,
+    "Episode_Termination/hand_velocity": 0.03698377868160605,
+    "Loss/value": 0.008112057667167391,
+    "Loss/surrogate": -0.0002941790994736948,
+    "Loss/entropy": -4.366106081008911,
+    "Loss/learning_rate": 0.00046640456093882676,
+    "Policy/mean_std": 0.33473525553941724,
+    "Perf/total_fps": 12293.07,
+    "Perf/collection_time": 5.847282366752625,
+    "Perf/learning_time": 0.15596060514450072,
+    "Train/mean_reward": 45.71922382354737,
+    "Train/mean_episode_length": 485.53170196533205
+  },
+  "geometry": {
+    "xz_minimum_distance_m": 0.04944006472487673,
+    "y_budget_at_0_052_m": 0.01611458966278693,
+    "ideal_reaching_peak_distance_formula": "sqrt(0.0396^2 + (upstream_surface_y_minus_object_y + 0.0973)^2 + 0.0296^2)",
+    "illustrative_distance_for_upstream_offset_minus_0_03_m": 0.0835081433154875,
+    "illustrative_distance_for_upstream_offset_minus_0_06_m": 0.061932301749571685
+  },
+  "recommendation": {
+    "provisional_eef_distance_threshold_m": 0.09,
+    "wrist_y_threshold_m": 0.04,
+    "caveat": "No live gate-distance trace or actual cup collision bounds in these logs. 9 cm is a geometry-based trial, not a measured necessary threshold. Nonzero/zero sweeping rewards do not directly measure gate activation."
+  }
+}

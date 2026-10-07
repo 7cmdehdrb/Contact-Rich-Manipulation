@@ -54,8 +54,8 @@ def palm_alignment(env):
     return 0.5 * (right * right.abs() + up * up.abs())
 
 
-def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.052):
-    """Sweep-Policy reward with a 5.2 cm EEF gate; sensors are observations only."""
+def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09):
+    """Sweep-Policy reward with a 9 cm EEF gate; sensors are observations only."""
     result = source_pushing_target(
         env, command_name=command_name, eef_distance_threshold=eef_distance_threshold
     )

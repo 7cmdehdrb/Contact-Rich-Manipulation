@@ -13,9 +13,9 @@
   선반 깊이 위치와 맞도록 X offset을 보정한다. Reaching 보상은 실제 palm 표면과
   물체 USD collider의 upstream 표면을 기준으로 계산한다.
   밀기 보상은 원본 `reward_random_sweep.pushing_target`을 직접 호출하며,
-  이 환경에서 EEF 거리 한계만 `0.052 m`로 지정한다. 원본 환경의 기본값은 `0.04 m`다.
+  이 환경에서 EEF 거리 한계만 `0.09 m`로 지정한다. 원본 환경의 기본값은 `0.04 m`다.
   원본 offset `(target_x - 0.02, target_y - width * sign(sweep_dir_y), target_z + 0.09)`에
-  대해 EEF 3D 거리 `< 0.052 m`, wrist Y 거리 `< 0.04 m`만으로 밀기 게이트를 계산한다.
+  대해 EEF 3D 거리 `< 0.09 m`, wrist Y 거리 `< 0.04 m`만으로 밀기 게이트를 계산한다.
   목표 거리 `< 0.03 m`에서는 게이트 없이 목표 근처 보상을 준다.
   속도 보정도 원본대로 `abs(v_y)`를 사용한다. Tactile·F/T는 관측이며,
   손바닥 접촉·자세 정렬·upstream AABB 조건은 밀기 게이트에 사용하지 않는다.
@@ -103,7 +103,7 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 | CSV 필드 | 해석 |
 |---|---|
-| `near_hand` / `reaching_distance_m` | 원본 offset과 `ee_frame` 첫 target 사이 3D 거리가 0.052 m 미만이어야 참 |
+| `near_hand` / `reaching_distance_m` | 원본 offset과 `ee_frame` 첫 target 사이 3D 거리가 0.09 m 미만이어야 참 |
 | `near_wrist` / `wrist_y_distance_m` | 원본 offset과 `wrist_frame` 첫 target 사이 Y 거리가 0.04 m 미만이어야 참 |
 | `gate` / `sweeping_raw` | 위 두 조건의 AND와 가중치·dt 적용 전 밀기 보상 |
 | `goal_region` / `goal_distance_m` | 목표 3D 거리 0.03 m 미만이면 게이트 없이 목표 근처 보상 지급 |

@@ -99,7 +99,7 @@ def test_source_gate_does_not_require_contact_or_alignment():
 def test_source_gate_requires_both_eef_and_wrist_near_offset(frame):
     env = _source_gate_pose(_env())
     assert reward["pushing_target"](env).item() > 0
-    env.scene[frame].data.target_pos_w[:, :, 1] += 0.06
+    env.scene[frame].data.target_pos_w[:, :, 1] += 0.10
     assert reward["pushing_target"](env).item() == 0
 
 
@@ -119,8 +119,8 @@ def test_source_speed_shaping_is_symmetric_in_y():
     assert right.item() > 0
 
 
-@pytest.mark.parametrize("distance,enabled", [(0.04, True), (0.0519, True), (0.0521, False)])
-def test_inspire_eef_gate_uses_5_2_cm(distance, enabled):
+@pytest.mark.parametrize("distance,enabled", [(0.0521, True), (0.0899, True), (0.0901, False)])
+def test_inspire_eef_gate_uses_9_cm(distance, enabled):
     env = _source_gate_pose(_env())
     env.scene["ee_frame"].data.target_pos_w[:, :, 2] += distance
     assert (reward["pushing_target"](env).item() > 0) == enabled
