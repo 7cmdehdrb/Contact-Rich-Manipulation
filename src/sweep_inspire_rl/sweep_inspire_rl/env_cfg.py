@@ -280,7 +280,7 @@ class InspireShelfSweepV1EnvCfg(InspireShelfSweepEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.rewards.reaching.func = rewards.hand_reaching_object_center
-        self.rewards.reaching.params = {"z_offset": 0.12}
+        self.rewards.reaching.params = {"z_offset": 0.09}
         self.rewards.sweeping_object.params["eef_distance_threshold"] = 0.04
         self.rewards.sweeping_object.params["eef_distance_xy_only"] = True
 

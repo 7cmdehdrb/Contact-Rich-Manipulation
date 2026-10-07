@@ -46,11 +46,12 @@ def hand_reaching(env):
     return torch.exp(-10.0 * torch.linalg.vector_norm(reaching_position(env) - hand, dim=-1))
 
 
-def hand_reaching_object_center(env, z_offset=0.12):
-    """V1: pull the palm toward the live object's XY center at the raised height."""
+def hand_reaching_object_center(env, z_offset=0.09):
+    """V1: center XY while preserving Sweep-Policy's EEF Z target and 3D kernel."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 2] += z_offset
-    return torch.exp(-10.0 * torch.linalg.vector_norm(target - palm_surface_position(env), dim=-1))
+    ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
 
 
 def palm_alignment(env):
