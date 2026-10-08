@@ -23,3 +23,8 @@ class InspireShelfSweepV2PPORunnerCfg(InspireShelfSweepPPORunnerCfg):
 @configclass
 class InspireShelfSweepV3PPORunnerCfg(InspireShelfSweepV2PPORunnerCfg):
     experiment_name = "UR5e_shelf_sweep_inspire_right_v3"
+
+
+@configclass
+class InspireShelfSweepV4PPORunnerCfg(InspireShelfSweepV2PPORunnerCfg):
+    experiment_name = "UR5e_shelf_sweep_inspire_right_v4"

@@ -403,3 +403,21 @@ class InspireShelfSweepV3EnvCfg_PLAY(InspireShelfSweepV3EnvCfg):
         super().__post_init__()
         self.scene.num_envs = 50
         self.observations.policy.enable_corruption = False
+
+
+@configclass
+class InspireShelfSweepV4EnvCfg(InspireShelfSweepV2EnvCfg):
+    """V2 with Reach and gate Y standoff reduced to 80% of object width."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.reaching.params["approach_width_scale"] = 0.8
+        self.rewards.sweeping_object.params["approach_width_scale"] = 0.8
+
+
+@configclass
+class InspireShelfSweepV4EnvCfg_PLAY(InspireShelfSweepV4EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.observations.policy.enable_corruption = False

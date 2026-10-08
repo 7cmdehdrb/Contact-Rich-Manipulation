@@ -16,7 +16,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID, TASK_V2_ID, TASK_V3_ID
+from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID, TASK_V2_ID, TASK_V3_ID, TASK_V4_ID
 OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
 
 from isaaclab.app import AppLauncher
@@ -24,7 +24,7 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", choices=TASK_IDS, default=TASK_ID)
-parser.add_argument("--object-name", choices=OBJECT_NAMES, default=None, help="Defaults to cup_1 for all three experiments.")
+parser.add_argument("--object-name", choices=OBJECT_NAMES, default=None, help="Defaults to cup_1 for all experiments.")
 parser.add_argument("--num_envs", "--num-envs", type=int, default=None)
 parser.add_argument("--max_iterations", "--max-iterations", type=int, default=None)
 parser.add_argument("--seed", type=int, default=None)
@@ -44,11 +44,11 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg 
 
 from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import (  # noqa: E402
     InspireShelfSweepV1PPORunnerCfg, InspireShelfSweepV2PPORunnerCfg,
-    InspireShelfSweepV3PPORunnerCfg,
+    InspireShelfSweepV3PPORunnerCfg, InspireShelfSweepV4PPORunnerCfg,
 )
 from sweep_inspire_rl.env_cfg import (  # noqa: E402
     InspireShelfSweepV1EnvCfg, InspireShelfSweepV2EnvCfg,
-    InspireShelfSweepV3EnvCfg,
+    InspireShelfSweepV3EnvCfg, InspireShelfSweepV4EnvCfg,
 )
 
 
@@ -67,6 +67,7 @@ def main() -> None:
         TASK_V1_ID: (InspireShelfSweepV1EnvCfg, InspireShelfSweepV1PPORunnerCfg),
         TASK_V2_ID: (InspireShelfSweepV2EnvCfg, InspireShelfSweepV2PPORunnerCfg),
         TASK_V3_ID: (InspireShelfSweepV3EnvCfg, InspireShelfSweepV3PPORunnerCfg),
+        TASK_V4_ID: (InspireShelfSweepV4EnvCfg, InspireShelfSweepV4PPORunnerCfg),
     }[args.task]
     env_cfg = env_cfg_type(**({"object_name": args.object_name} if args.object_name is not None else {}))
     agent_cfg = agent_cfg_type()

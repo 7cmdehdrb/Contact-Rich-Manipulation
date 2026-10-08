@@ -2,15 +2,16 @@
 
 `example/Sweep-Policy`의 선반 환경과 `hand_manipulation_rl`의
 UR5e–Axia80–Inspire Hand를 결합한 Isaac Lab 패키지다.
-현재 공개 환경은 아래 세 가지이며, 기존 V1/V2/V3의 실험 구성을 재정의한다.
+현재 공개 환경은 아래 네 가지이며, 기존 V1/V2/V3의 실험 구성에 V4를 추가한다.
 
 | 환경 ID | 실험 | Reach 목표 |
 |---|---|---|
 | `Isaac-Sweep-Inspire-Right-OSC-v1` | 물체 접촉: Reach 보상만 사용 | 현재 물체 XY, 시작 물체 Z +7.5 cm |
 | `Isaac-Sweep-Inspire-Right-OSC-v2` | example의 단일 물체 Sweeping 보상 로직 | 현재 물체 X −2 cm, Y −width×방향, Z +7.5 cm |
 | `Isaac-Sweep-Inspire-Right-OSC-v3` | V2의 Y 접근 offset을 0.5 cm로 축소 | 현재 물체 X −2 cm, Y −0.5 cm×방향, Z +7.5 cm |
+| `Isaac-Sweep-Inspire-Right-OSC-v4` | V2의 Y 접근 offset을 width의 80%로 축소 | 현재 물체 X −2 cm, Y −0.8×width×방향, Z +7.5 cm |
 
-세 환경의 기본 물체는 모두 `cup_1`이다. V3도 컵을 사용하며 실린더 실험이 아니다.
+네 환경의 기본 물체는 모두 `cup_1`이다. V3도 컵을 사용하며 실린더 실험이 아니다.
 `--object-name`으로 `bottle_1`, `cup_1`, `cup_2`, `mug_1`, `mug_2`, `can_1` 중 선택한다.
 물체는 실제 `RigidObjectCollection`에 하나만 생성한다.
 
@@ -37,10 +38,10 @@ UR5e–Axia80–Inspire Hand를 결합한 Isaac Lab 패키지다.
 - EEF, Finger, Wrist, 물체/목표 프레임 표시 scale은 기존 값의 **0.02배**다.
 - PPO는 Sweep-Policy의 `rsl_rl_ppo_cfg_02.UR5eSweepPPORunnerCfg`를 상속하며,
   기본 학습 횟수 `90000`을 포함한 하이퍼파라미터는 유지한다. 로그는 각 버전별
-  `UR5e_shelf_sweep_inspire_right_v1`, `_v2`, `_v3`에 저장한다.
+  `UR5e_shelf_sweep_inspire_right_v1`, `_v2`, `_v3`, `_v4`에 저장한다.
 
 이전 **71D 관측으로 학습한 체크포인트는 현재 48D 정책에 그대로 로딩할 수 없다.**
-현재 구성을 비교하려면 새로 학습한다. V0/V4/V5는 학습·재생 스크립트의 선택 대상이 아니다.
+현재 구성을 비교하려면 새로 학습한다. V0/V5는 학습·재생 스크립트의 선택 대상이 아니다.
 기본 task는 V2다.
 
 ## 보상 구성
@@ -123,6 +124,13 @@ X offset −2 cm, 현재 물체 Z +7.5 cm, 보상식·가중치와 XYZ/wrist 4 c
 Reach와 밀기 게이트는 같은 새 Y 목표를 사용한다.
 실제 물체 `width`와 reset 위치는 변경하지 않으며 접근 offset은 width와 분리한다.
 
+### V4: width의 80%까지 접근
+
+V2를 상속하고 Reach와 밀기 게이트의 Y 접근 offset을 모두 **`0.8 × width`**로 바꾼다.
+`cup_1`은 width 6 cm이므로 목표 Y는 물체 Y −4.8 cm이며, V2보다 1.2 cm 안쪽이다.
+X −2 cm, 현재 물체 Z +7.5 cm, XYZ/wrist 4 cm 게이트와 나머지 보상·제어 설정은 V2와 같다.
+Reset의 Y 위치는 공통 설정인 물체 Y −(width +6 cm)를 유지한다.
+
 ## 설치와 자산
 
 저장소 루트에서 Isaac Lab Python으로 세 패키지를 함께 editable install 한다.
@@ -178,6 +186,15 @@ V3 학습:
   --run-name close_sweep_0p5cm_no_sensors --headless
 ```
 
+V4 학습:
+
+```bash
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v4 \
+  --num_envs 2048 --object-name cup_1 \
+  --run-name sweep_0p8width_no_sensors --headless
+```
+
 재생은 학습한 버전의 ID와 해당 체크포인트를 지정한다.
 
 ```bash
@@ -192,7 +209,7 @@ V3 학습:
 
 ## Sweeping 지표와 게이트 진단
 
-V2/V3의 TensorBoard `Sweep/*`는 episode별 실제 관측 스텝 평균을 기록한다.
+V2/V3/V4의 TensorBoard `Sweep/*`는 episode별 실제 관측 스텝 평균을 기록한다.
 보상 가중치나 `dt`를 적용하지 않으며 종료 스텝도 reset 이전 상태를 포함한다.
 센서 값은 진단용으로 읽을 수 있지만 정책 관측에는 들어가지 않는다.
 
@@ -214,7 +231,7 @@ Pad 접촉률은 그리퍼 전체의 충돌을 모두 검출하지 않는다.
 `near_wrist_uncompensated_rate`와 보정 전 거리도 기존 진단 필드로 유지되며,
 현재 별도 wrist 보정은 0이므로 보정 후 값과 동일하다.
 
-V2/V3의 `--gate-log`는 각 제어 스텝의 조건과 위치·속도·기울기를 CSV에 기록한다.
+V2/V3/V4의 `--gate-log`는 각 제어 스텝의 조건과 위치·속도·기울기를 CSV에 기록한다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \

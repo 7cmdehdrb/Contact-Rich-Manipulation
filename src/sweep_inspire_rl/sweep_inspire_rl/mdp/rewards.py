@@ -56,11 +56,11 @@ def hand_reaching_object_center(env, z_offset=0.075):
 
 def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos",
                                approach_y_offset=None, approach_x_offset=-0.02,
-                               height_reference_initial=True):
+                               height_reference_initial=True, approach_width_scale=1.0):
     """Use source approach XY; choose episode-initial or live object target Z."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 0] += approach_x_offset
-    side_offset = env.target_width[:, 0] if approach_y_offset is None else approach_y_offset
+    side_offset = env.target_width[:, 0] * approach_width_scale if approach_y_offset is None else approach_y_offset
     target[:, 1] -= side_offset * torch.sign(env.sweep_dir[:, 1])
     if height_reference_initial:
         target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
@@ -102,7 +102,8 @@ def hand_up_alignment(env):
 
 
 def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy_only,
-                      pushing_z_offset, wrist_y_offset, approach_y_offset=None):
+                      pushing_z_offset, wrist_y_offset, approach_y_offset=None,
+                      approach_width_scale=1.0):
     """Shared gate geometry for reward, height penalty and diagnostics."""
     objects = env.scene["object_collection"]
     rows = torch.arange(env.num_envs, device=env.target_id.device)
@@ -111,7 +112,7 @@ def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy
     goal = env.command_manager.get_command(command_name)[:, :3]
     offset = target.clone()
     offset[:, 0] -= 0.02
-    side_offset = env.target_width[:, 0] if approach_y_offset is None else approach_y_offset
+    side_offset = env.target_width[:, 0] * approach_width_scale if approach_y_offset is None else approach_y_offset
     offset[:, 1] -= side_offset * torch.sign(env.sweep_dir[:, 1])
     offset[:, 2] += pushing_z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
@@ -140,11 +141,13 @@ def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy
 
 def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09,
                    eef_distance_xy_only=False, pushing_z_offset=0.09,
-                   height_reference_initial=False, wrist_y_offset=0.0, approach_y_offset=None):
+                   height_reference_initial=False, wrist_y_offset=0.0, approach_y_offset=None,
+                   approach_width_scale=1.0):
     """Keep source shaping, with an optional independent Y approach offset."""
     diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
     record_metrics = getattr(env, "_record_sweep_metrics", None)
-    if wrist_y_offset == 0.0 and approach_y_offset is None:
+    use_source_gate = wrist_y_offset == 0.0 and approach_y_offset is None and approach_width_scale == 1.0
+    if use_source_gate:
         result = source_pushing_target(
             env, command_name=command_name, eef_distance_threshold=eef_distance_threshold,
             eef_distance_xy_only=eef_distance_xy_only, pushing_z_offset=pushing_z_offset,
@@ -152,12 +155,13 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
         if diagnostic_env is None and record_metrics is None:
             return result
     state = _sweep_gate_state(env, command_name, eef_distance_threshold,
-                              eef_distance_xy_only, pushing_z_offset, wrist_y_offset, approach_y_offset)
+                              eef_distance_xy_only, pushing_z_offset, wrist_y_offset,
+                              approach_y_offset, approach_width_scale)
     objects = env.scene["object_collection"]
     rows, ids = state["rows"], state["ids"]
     target, goal = state["target"], state["goal"]
     velocity_y = objects.data.object_lin_vel_w[rows, ids, 1]
-    if wrist_y_offset != 0.0 or approach_y_offset is not None:
+    if not use_source_gate:
         # Identical source distance/velocity/goal-region shaping; only gate changes.
         speed = velocity_y.abs()
         velocity_reward = torch.where(speed > 0.05, torch.where(speed < 0.1, 0.5, -0.5), 0.0)
