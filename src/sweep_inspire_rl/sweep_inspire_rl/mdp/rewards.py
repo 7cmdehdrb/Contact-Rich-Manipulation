@@ -11,7 +11,7 @@ from .observations import palm_tactile_bits
 
 
 PALM_SURFACE_POINT_H = (0.0004, 0.0127, 0.1196)
-CONTROL_POINT_OFFSET_H = (0.0, 0.05, 0.10)
+CONTROL_POINT_OFFSET_H = (0.0, 0.0, 0.10)
 
 
 def palm_surface_position(env):
@@ -47,7 +47,7 @@ def hand_reaching(env):
 
 
 def hand_reaching_object_center(env, z_offset=0.075):
-    """V1/V3: follow live object XYZ with a raised EEF target."""
+    """Follow live object XYZ with a raised EEF target."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 2] += z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
@@ -55,13 +55,17 @@ def hand_reaching_object_center(env, z_offset=0.075):
 
 
 def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos",
-                               approach_y_offset=None):
-    """Use the shared approach XY offset with episode-fixed target Z."""
+                               approach_y_offset=None, approach_x_offset=-0.02,
+                               height_reference_initial=True):
+    """Use source approach XY; choose episode-initial or live object target Z."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
-    target[:, 0] -= 0.02
+    target[:, 0] += approach_x_offset
     side_offset = env.target_width[:, 0] if approach_y_offset is None else approach_y_offset
     target[:, 1] -= side_offset * torch.sign(env.sweep_dir[:, 1])
-    target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
+    if height_reference_initial:
+        target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
+    else:
+        target[:, 2] += z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
 
@@ -137,7 +141,7 @@ def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy
 def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09,
                    eef_distance_xy_only=False, pushing_z_offset=0.09,
                    height_reference_initial=False, wrist_y_offset=0.0, approach_y_offset=None):
-    """Keep source shaping; V2 compensates the wrist gate's geometric offset."""
+    """Keep source shaping, with an optional independent Y approach offset."""
     diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
     record_metrics = getattr(env, "_record_sweep_metrics", None)
     if wrist_y_offset == 0.0 and approach_y_offset is None:

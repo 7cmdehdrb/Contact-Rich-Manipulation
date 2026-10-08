@@ -15,15 +15,15 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID, TASK_V2_ID, TASK_V3_ID, TASK_V4_ID
-OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1", "weighted_cylinder")
+from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID, TASK_V2_ID, TASK_V3_ID
+OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
 
 from isaaclab.app import AppLauncher
 
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", choices=TASK_IDS, default=TASK_ID)
-parser.add_argument("--object-name", choices=OBJECT_NAMES, default=None, help="Defaults to cup_1; V3 uses weighted_cylinder.")
+parser.add_argument("--object-name", choices=OBJECT_NAMES, default=None, help="Defaults to cup_1 for all three experiments.")
 parser.add_argument("--num_envs", "--num-envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=None)
 parser.add_argument("--steps", type=int, default=0, help="Zero runs until the simulator closes.")
@@ -51,18 +51,20 @@ from isaaclab_rl.rsl_rl import (  # noqa: E402
 )
 
 from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import (  # noqa: E402
-    InspireShelfSweepPPORunnerCfg, InspireShelfSweepV1PPORunnerCfg,
-    InspireShelfSweepV2PPORunnerCfg, InspireShelfSweepV3PPORunnerCfg, InspireShelfSweepV4PPORunnerCfg,
+    InspireShelfSweepV1PPORunnerCfg, InspireShelfSweepV2PPORunnerCfg,
+    InspireShelfSweepV3PPORunnerCfg,
 )
 from sweep_inspire_rl.env_cfg import (  # noqa: E402
-    InspireShelfSweepEnvCfg_PLAY, InspireShelfSweepV1EnvCfg_PLAY,
-    InspireShelfSweepV2EnvCfg_PLAY, InspireShelfSweepV3EnvCfg_PLAY, InspireShelfSweepV4EnvCfg_PLAY,
+    InspireShelfSweepV1EnvCfg_PLAY, InspireShelfSweepV2EnvCfg_PLAY,
+    InspireShelfSweepV3EnvCfg_PLAY,
 )
 
 
 def main() -> None:
     if args.num_envs <= 0:
         raise ValueError("--num_envs must be positive")
+    if args.task == TASK_V1_ID and args.gate_log is not None:
+        raise ValueError("V1 has no sweeping gate; omit --gate-log.")
     if args.steps < 0:
         raise ValueError("--steps cannot be negative")
     if not 0 <= args.gate_log_env < args.num_envs:
@@ -72,11 +74,9 @@ def main() -> None:
         raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
 
     env_cfg_type, agent_cfg_type = {
-        TASK_ID: (InspireShelfSweepEnvCfg_PLAY, InspireShelfSweepPPORunnerCfg),
         TASK_V1_ID: (InspireShelfSweepV1EnvCfg_PLAY, InspireShelfSweepV1PPORunnerCfg),
         TASK_V2_ID: (InspireShelfSweepV2EnvCfg_PLAY, InspireShelfSweepV2PPORunnerCfg),
         TASK_V3_ID: (InspireShelfSweepV3EnvCfg_PLAY, InspireShelfSweepV3PPORunnerCfg),
-        TASK_V4_ID: (InspireShelfSweepV4EnvCfg_PLAY, InspireShelfSweepV4PPORunnerCfg),
     }[args.task]
     env_cfg = env_cfg_type(**({"object_name": args.object_name} if args.object_name is not None else {}))
     agent_cfg = agent_cfg_type()

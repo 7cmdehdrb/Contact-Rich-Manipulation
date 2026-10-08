@@ -16,15 +16,10 @@ class InspireShelfSweepV1PPORunnerCfg(InspireShelfSweepPPORunnerCfg):
 
 
 @configclass
-class InspireShelfSweepV2PPORunnerCfg(InspireShelfSweepV1PPORunnerCfg):
+class InspireShelfSweepV2PPORunnerCfg(InspireShelfSweepPPORunnerCfg):
     experiment_name = "UR5e_shelf_sweep_inspire_right_v2"
 
 
 @configclass
-class InspireShelfSweepV3PPORunnerCfg(InspireShelfSweepV1PPORunnerCfg):
+class InspireShelfSweepV3PPORunnerCfg(InspireShelfSweepV2PPORunnerCfg):
     experiment_name = "UR5e_shelf_sweep_inspire_right_v3"
-
-
-@configclass
-class InspireShelfSweepV4PPORunnerCfg(InspireShelfSweepV2PPORunnerCfg):
-    experiment_name = "UR5e_shelf_sweep_inspire_right_v4"

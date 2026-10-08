@@ -57,7 +57,7 @@ def palm_tactile_bits(env, sensor_name: str = "palm_tactile", threshold_n: float
 def wrist_wrench_c(
     env,
     asset_name: str = "robot",
-    c_offset_h: tuple[float, float, float] = (0.0, 0.05, 0.10),
+    c_offset_h: tuple[float, float, float] = (0.0, 0.0, 0.10),
 ) -> torch.Tensor:
     """Return [Fx,Fy,Fz,Mx,My,Mz] expressed in H and referenced at C.
 

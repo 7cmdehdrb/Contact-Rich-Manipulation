@@ -8,7 +8,6 @@ single-object, relative-frame, and rightward-sweep adaptations live here.
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg, RigidObjectCollectionCfg
@@ -20,6 +19,7 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.sensors import ContactSensorCfg, FrameTransformerCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
 from isaaclab.utils import configclass
@@ -44,9 +44,19 @@ from .mdp.events import initialize_right_palm_at_target, randomize_single_target
 from .mdp.observations import actual_hand_synergy, palm_tactile_bits, wrist_wrench_c
 from .mdp import rewards
 
-C_OFFSET_H = (0.0, 0.05, 0.10)
+# Extend along the wrist/hand local Z axis into the hand; no forward Y offset.
+C_OFFSET_H = (0.0, 0.0, 0.10)
 RIGHT_PALM_QUAT_W = (math.sqrt(0.5), 0.0, -math.sqrt(0.5), 0.0)
 POLICY_OBSERVATION_DIM = 71
+SENSORLESS_POLICY_OBSERVATION_DIM = 48
+
+
+def _small_frame_visualizer(name, template=None):
+    cfg = (FRAME_MARKER_CFG if template is None else template).copy()
+    cfg.prim_path = f"/Visuals/InspireSweep/{name}"
+    for marker in cfg.markers.values():
+        marker.scale = tuple(component * 0.02 for component in marker.scale)
+    return cfg
 
 
 @configclass
@@ -206,6 +216,7 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         self.scene.finger_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base_link",
             debug_vis=False,
+            visualizer_cfg=_small_frame_visualizer("finger"),
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
                     prim_path=f"{{ENV_REGEX_NS}}/Robot/{name}", name=name
@@ -227,6 +238,10 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         self.commands.target_goal_pos.asset_name = "object_collection"
         self.commands.target_goal_pos.asset_dict = {"target": target}
         self.commands.target_goal_pos.object_id_dict_rev = {"0": "target"}
+        for field, name in (("goal_pose_visualizer_cfg", "goal"),
+                            ("current_pose_visualizer_cfg", "object")):
+            visualizer = getattr(self.commands.target_goal_pos, field)
+            setattr(self.commands.target_goal_pos, field, _small_frame_visualizer(name, visualizer))
         self.events.object_spawn.params = {
             "pose_array": self._reset_pose_array(catalog),
             "object_width": float(catalog["width"][self.object_name]),
@@ -263,6 +278,7 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         return FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base_link",
             debug_vis=False,
+            visualizer_cfg=_small_frame_visualizer(name),
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
                     prim_path=f"{{ENV_REGEX_NS}}/Robot/{body}",
@@ -282,16 +298,41 @@ class InspireShelfSweepEnvCfg_PLAY(InspireShelfSweepEnvCfg):
 
 
 @configclass
-class InspireShelfSweepV1EnvCfg(InspireShelfSweepEnvCfg):
-    """Reach through the object's XY center; use a 4 cm planar EEF gate."""
+class InspireSweepExperimentEnvCfg(InspireShelfSweepEnvCfg):
+    """Shared experiment setup; keep sensors but omit their policy inputs."""
+
+    enable_sensor_observations: bool = False
 
     def __post_init__(self):
         super().__post_init__()
-        self.rewards.reaching.func = rewards.hand_reaching_object_center
-        self.rewards.reaching.params = {"z_offset": 0.075}
-        self.rewards.sweeping_object.params["eef_distance_threshold"] = 0.04
-        self.rewards.sweeping_object.params["eef_distance_xy_only"] = True
-        self.rewards.sweeping_object.params["pushing_z_offset"] = 0.075
+        if not self.enable_sensor_observations:
+            self.observations.policy.tactile = None
+            self.observations.policy.wrist_wrench = None
+
+
+@configclass
+class ReachOnlyRewardsCfg:
+    reaching = RewTerm(
+        func=rewards.hand_reaching_fixed_height,
+        weight=3.0,
+        params={
+            "z_offset": 0.075,
+            "command_name": "target_goal_pos",
+            "approach_x_offset": 0.0,
+            "approach_y_offset": 0.0,
+            "height_reference_initial": True,
+        },
+    )
+
+
+@configclass
+class InspireShelfSweepV1EnvCfg(InspireSweepExperimentEnvCfg):
+    """Contact experiment: only Reach reward, at the object's XY center."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards = ReachOnlyRewardsCfg()
+        self.curriculum.obj_collision = None
 
 
 @configclass
@@ -303,28 +344,27 @@ class InspireShelfSweepV1EnvCfg_PLAY(InspireShelfSweepV1EnvCfg):
 
 
 @configclass
-class InspireShelfSweepV2EnvCfg(InspireShelfSweepV1EnvCfg):
-    """Match Reach to the source gate XY offset, with fixed Z and a height penalty."""
+class InspireShelfSweepV2EnvCfg(InspireSweepExperimentEnvCfg):
+    """Example single-object sweep logic, with the lower 7.5 cm Z offset."""
 
     def __post_init__(self):
         super().__post_init__()
         self.rewards.reaching.func = rewards.hand_reaching_fixed_height
-        self.rewards.reaching.params = {"z_offset": 0.075, "command_name": "target_goal_pos"}
+        self.rewards.reaching.params = {
+            "z_offset": 0.075,
+            "command_name": "target_goal_pos",
+            "height_reference_initial": False,
+        }
+        # Adapt only the tool's up axis to Inspire's local X.
         self.rewards.orientation.func = rewards.hand_up_alignment
-        self.rewards.sweeping_object.params["height_reference_initial"] = True
-        # C is 5 cm ahead of the Axia80 origin in world Y at the fixed palm pose.
-        self.rewards.sweeping_object.params["wrist_y_offset"] = -C_OFFSET_H[1]
-        self.rewards.sweeping_height = RewTerm(
-            func=rewards.sweeping_height_error,
-            weight=-1.0,
-            params={
-                "z_offset": 0.075,
-                "height_scale": 0.015,
-                "eef_distance_threshold": 0.04,
-                "command_name": "target_goal_pos",
-                "wrist_y_offset": -C_OFFSET_H[1],
-            },
-        )
+        self.rewards.sweeping_object.params = {
+            "command_name": "target_goal_pos",
+            "eef_distance_threshold": 0.04,
+            "eef_distance_xy_only": False,
+            "pushing_z_offset": 0.075,
+            "height_reference_initial": False,
+            "wrist_y_offset": 0.0,
+        }
 
 
 @configclass
@@ -336,54 +376,17 @@ class InspireShelfSweepV2EnvCfg_PLAY(InspireShelfSweepV2EnvCfg):
 
 
 @configclass
-class InspireShelfSweepV3EnvCfg(InspireShelfSweepV1EnvCfg):
-    """Unmodified V1 rewards with a single low-COM, weighted cylinder."""
-
-    object_name: str = "weighted_cylinder"
+class InspireShelfSweepV3EnvCfg(InspireShelfSweepV2EnvCfg):
+    """V2 with a 0.5 cm Y approach offset instead of the catalog width."""
 
     def __post_init__(self):
-        if self.object_name != "weighted_cylinder":
-            raise ValueError("V3 uses only object_name='weighted_cylinder'")
         super().__post_init__()
-        # Preserve the mass, COM and inertia authored in the local cylinder USD.
-        self.scene.object_collection.rigid_objects["target"].spawn.mass_props = None
-
-    def _reset_pose_array(self, catalog):
-        return load_and_reshape_pose({
-            name: pose for name, pose in catalog["pose"].items() if name != "weighted_cylinder"
-        })
-
-    def _load_object_catalog(self):
-        catalog = super()._load_object_catalog()
-        asset = Path(__file__).resolve().parent / "assets" / "weighted_cylinder.usda"
-        catalog["objects"]["weighted_cylinder"] = str(asset)
-        catalog["pose"]["weighted_cylinder"] = list(catalog["pose"]["cup_1"])
-        # The source's width parameter is used as a lateral standoff; use the
-        # cylinder radius so the source XY gate overlaps its contact surface.
-        catalog["width"]["weighted_cylinder"] = 0.04
-        return catalog
+        self.rewards.reaching.params["approach_y_offset"] = 0.005
+        self.rewards.sweeping_object.params["approach_y_offset"] = 0.005
 
 
 @configclass
 class InspireShelfSweepV3EnvCfg_PLAY(InspireShelfSweepV3EnvCfg):
-    def __post_init__(self):
-        super().__post_init__()
-        self.scene.num_envs = 50
-        self.observations.policy.enable_corruption = False
-
-
-@configclass
-class InspireShelfSweepV4EnvCfg(InspireShelfSweepV2EnvCfg):
-    """V2 with a fixed 0.5 cm Y approach offset, independent of object width."""
-
-    def __post_init__(self):
-        super().__post_init__()
-        for term in (self.rewards.reaching, self.rewards.sweeping_object, self.rewards.sweeping_height):
-            term.params["approach_y_offset"] = 0.005
-
-
-@configclass
-class InspireShelfSweepV4EnvCfg_PLAY(InspireShelfSweepV4EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 50

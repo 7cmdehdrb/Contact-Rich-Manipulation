@@ -12,7 +12,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-TASK_ID = "Isaac-Sweep-Inspire-Right-OSC-v0"
+TASK_ID = "Isaac-Sweep-Inspire-Right-OSC-v2"
 OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
 
 from isaaclab.app import AppLauncher
@@ -37,7 +37,9 @@ import torch  # noqa: E402
 import isaaclab.utils.math as math_utils  # noqa: E402
 
 from sweep_inspire_rl import TASK_ID as REGISTERED_TASK_ID  # noqa: E402
-from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg, POLICY_OBSERVATION_DIM  # noqa: E402
+from sweep_inspire_rl.env_cfg import (
+    InspireShelfSweepV2EnvCfg, SENSORLESS_POLICY_OBSERVATION_DIM as POLICY_OBSERVATION_DIM,
+)  # noqa: E402
 from sweep_inspire_rl.mdp.actions import bounded_hand_openness  # noqa: E402
 from sweep_inspire_rl.mdp.observations import palm_tactile_bits, wrist_wrench_c  # noqa: E402
 
@@ -72,26 +74,26 @@ def _check_right_command(env) -> None:
     )
 
 
-def _check_sensor_observations(env, policy: torch.Tensor) -> None:
+def _check_sensor_data(env) -> None:
     tactile = palm_tactile_bits(env)
     wrench = wrist_wrench_c(env)
     if tactile.shape != (env.num_envs, 17) or wrench.shape != (env.num_envs, 6):
         raise RuntimeError(f"Unexpected tactile/F/T shapes: {tactile.shape}, {wrench.shape}")
     _finite("tactile", tactile)
     _finite("F/T", wrench)
-    torch.testing.assert_close(policy[:, 48:65], tactile)
-    torch.testing.assert_close(policy[:, 65:71], wrench)
 
 
 def main() -> None:
     if args.num_envs <= 0 or args.steps <= 0:
         raise ValueError("--num-envs and --steps must be positive")
-    cfg = InspireShelfSweepEnvCfg(object_name=args.object_name)
+    cfg = InspireShelfSweepV2EnvCfg(object_name=args.object_name)
     cfg.scene.num_envs = args.num_envs
     cfg.seed = args.seed
     if args.device is not None:
         cfg.sim.device = args.device
     cfg.observations.policy.enable_corruption = False
+    if cfg.observations.policy.tactile is not None or cfg.observations.policy.wrist_wrench is not None:
+        raise RuntimeError("Tactile and F/T must be absent from policy observations")
     cfg.commands.target_goal_pos.debug_vis = args.debug_vis
     osc_cfg = cfg.actions.arm_action.controller_cfg
     if osc_cfg.impedance_mode != "fixed" or tuple(osc_cfg.target_types) != ("pose_rel",):
@@ -132,7 +134,7 @@ def main() -> None:
         _finite("reset observation", policy)
         _check_right_command(env)
         _check_relative_observations(env, policy)
-        _check_sensor_observations(env, policy)
+        _check_sensor_data(env)
 
         eef_position = env.scene["ee_frame"].data.target_pos_w[:, 0, :]
         target_position = env.scene["object_collection"].data.object_state_w[:, 0, :3]
@@ -162,7 +164,7 @@ def main() -> None:
                 raise RuntimeError("Hand controller issued a target outside [0.8, 1.0]")
             _check_right_command(env)
             _check_relative_observations(env, policy)
-            _check_sensor_observations(env, policy)
+            _check_sensor_data(env)
             if terminated.dtype != torch.bool or truncated.dtype != torch.bool:
                 raise RuntimeError("Termination buffers must be boolean")
         env.reset()

@@ -19,7 +19,7 @@ from hand_manipulation_rl.assets.robot import ARM_JOINT_NAMES, HAND_BASE_BODY_NA
 
 
 RIGHT_PALM_QUAT_WXYZ = (math.sqrt(0.5), 0.0, -math.sqrt(0.5), 0.0)
-CONTROL_POINT_OFFSET_H = (0.0, 0.05, 0.10)
+CONTROL_POINT_OFFSET_H = (0.0, 0.0, 0.10)
 
 
 def sample_single_object_states(
