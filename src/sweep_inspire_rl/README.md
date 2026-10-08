@@ -53,7 +53,7 @@ UR5e–Axia80–Inspire Hand를 결합한 Isaac Lab 패키지다.
 
 ```text
 초기 X = 물체 X +0.0196 m
-초기 Y = 물체 Y −(width +0.04 m)
+초기 Y = 물체 Y −(width +0.06 m)
 초기 Z = 물체 Z +0.12 m
 ```
 
@@ -232,3 +232,19 @@ V1은 Sweeping 보상을 사용하지 않아 이 게이트 진단을 사용하�
 Reset 직후 접촉·F/T는 새 physics step이 생길 때까지 유효하지 않으므로
 `sensor_data_fresh`로 이전 에피소드의 센서 값을 마스킹한다.
 센서 구현과 실린더 USD 등 기존 자산은 이후 실험에서 재사용할 수 있도록 유지한다.
+
+
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v1 \
+  --checkpoint "/home/min/7cmdehdrb/grad/2026-10-08_20-30-33_center_reach_separate_reset/model_100.pt" \
+  --num_envs 1 --object-name cup_1 --real-time
+
+  ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v2 \
+  --checkpoint "<V2_CHECKPOINT_PATH>" \
+  --num_envs 1 --object-name cup_1 --real-time
+
+  ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v3 \
+  --checkpoint "<V3_CHECKPOINT_PATH>" \
+  --num_envs 1 --object-name cup_1 --real-time

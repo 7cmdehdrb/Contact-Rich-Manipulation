@@ -159,7 +159,7 @@ class EventsCfg:
             # Align the actual pad center with the object's shelf depth.
             "reaching_x_offset": 0.0196,
             "reaching_z_offset": 0.12,
-            "side_clearance": 0.04,
+            "side_clearance": 0.06,
             "position_noise": 0.002,
             "max_iterations": 160,
             "damping": 0.05,
@@ -337,7 +337,7 @@ class ReachOnlyRewardsCfg:
 class InspireShelfSweepV1EnvCfg(InspireSweepExperimentEnvCfg):
     """Start away from the object; reward reaching its XY center."""
 
-    # Keep the original pre-push reset pose: Y -(width + 4 cm), Z +12 cm.
+    # Start at the pre-push reset pose: Y -(width + 6 cm), Z +12 cm.
     # The zero XY offsets in ReachOnlyRewardsCfg apply only to the reward.
     events: EventsCfg = EventsCfg()
 
