@@ -55,8 +55,10 @@ def hand_reaching_object_center(env, z_offset=0.075):
 
 
 def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos"):
-    """V2: follow live object XY but hold episode-initial Z plus the offset."""
+    """V2: use Sweep-Policy's gate XY offset with episode-fixed target Z."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
+    target[:, 0] -= 0.02
+    target[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
     target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))

@@ -76,9 +76,12 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 ### V2: 고정 높이와 Sweeping 높이 페널티
 
-`Isaac-Sweep-Inspire-Right-OSC-v2`는 V1을 상속하고 마지막 높이 수정만 적용한다.
+`Isaac-Sweep-Inspire-Right-OSC-v2`는 V1을 상속하고 고정 높이/높이 페널티 및 Reach offset 정합을 적용한다.
 
-- Reach는 물체의 현재 XY를 추종하고, Z는 에피소드 시작 물체 Z +7.5 cm로 고정한다.
+- Reach 목표 XY는 밀기 게이트와 동일한 원본 offset
+  `(물체 현재 X - 2 cm, 물체 현재 Y - width * sign(sweep_dir_y))`다.
+  Z는 에피소드 시작 물체 Z +7.5 cm로 고정하고, XYZ 거리의 `exp(-10 * distance)`를
+  가중치 3으로 보상한다. 밀기 게이트는 기존 XY 4 cm 및 wrist Y 4 cm 조건을 유지한다.
 - `sweeping_height`는 XY/wrist 게이트가 열린 동안 높이 오차 제곱에 대한 페널티다.
   가중치 `-1.0`, 오차 scale `0.015 m`이며 기준 Z는 Reach와 같다.
   물체가 기울어도 기준 높이는 따라 올라가지 않는다. Z는 게이트 조건에 포함하지 않는다.

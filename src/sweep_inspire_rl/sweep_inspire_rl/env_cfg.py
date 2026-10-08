@@ -304,7 +304,7 @@ class InspireShelfSweepV1EnvCfg_PLAY(InspireShelfSweepV1EnvCfg):
 
 @configclass
 class InspireShelfSweepV2EnvCfg(InspireShelfSweepV1EnvCfg):
-    """V1 with episode-fixed height and a sweeping height penalty."""
+    """Match Reach to the source gate XY offset, with fixed Z and a height penalty."""
 
     def __post_init__(self):
         super().__post_init__()
