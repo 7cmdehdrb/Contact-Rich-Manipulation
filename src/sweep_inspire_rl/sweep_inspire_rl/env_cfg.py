@@ -251,12 +251,10 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         # Sweep's shelf geometry, timing, capacities, rewards/curriculum, and
         # thresholds otherwise stay in the source configuration.
 
-    @staticmethod
-    def _reset_pose_array(catalog):
+    def _reset_pose_array(self, catalog):
         return load_and_reshape_pose(catalog["pose"])
 
-    @staticmethod
-    def _load_object_catalog():
+    def _load_object_catalog(self):
         with open(ENVIRONMENT_YAML_PATH, encoding="utf-8") as stream:
             return yaml.safe_load(stream)
 
@@ -346,15 +344,13 @@ class InspireShelfSweepV3EnvCfg(InspireShelfSweepV1EnvCfg):
         # Preserve the mass, COM and inertia authored in the local cylinder USD.
         self.scene.object_collection.rigid_objects["target"].spawn.mass_props = None
 
-    @staticmethod
-    def _reset_pose_array(catalog):
+    def _reset_pose_array(self, catalog):
         return load_and_reshape_pose({
             name: pose for name, pose in catalog["pose"].items() if name != "weighted_cylinder"
         })
 
-    @staticmethod
-    def _load_object_catalog():
-        catalog = InspireShelfSweepEnvCfg._load_object_catalog()
+    def _load_object_catalog(self):
+        catalog = super()._load_object_catalog()
         asset = Path(__file__).resolve().parent / "assets" / "weighted_cylinder.usda"
         catalog["objects"]["weighted_cylinder"] = str(asset)
         catalog["pose"]["weighted_cylinder"] = list(catalog["pose"]["cup_1"])
