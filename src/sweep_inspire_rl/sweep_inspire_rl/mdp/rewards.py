@@ -54,11 +54,13 @@ def hand_reaching_object_center(env, z_offset=0.075):
     return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
 
 
-def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos"):
-    """V2: use Sweep-Policy's gate XY offset with episode-fixed target Z."""
+def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos",
+                               approach_y_offset=None):
+    """Use the shared approach XY offset with episode-fixed target Z."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 0] -= 0.02
-    target[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
+    side_offset = env.target_width[:, 0] if approach_y_offset is None else approach_y_offset
+    target[:, 1] -= side_offset * torch.sign(env.sweep_dir[:, 1])
     target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
@@ -66,13 +68,14 @@ def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_po
 
 def sweeping_height_error(env, z_offset=0.075, height_scale=0.015,
                           eef_distance_threshold=0.04, command_name="target_goal_pos",
-                          wrist_y_offset=0.0):
+                          wrist_y_offset=0.0, approach_y_offset=None):
     """Penalize height drift during planar sweeping, without adding a Z gate.
 
     The command Z is latched at reset, so tipping/lifting the cup cannot raise
     the target height. One height_scale of error returns one penalty unit.
     """
-    state = _sweep_gate_state(env, command_name, eef_distance_threshold, True, z_offset, wrist_y_offset)
+    state = _sweep_gate_state(env, command_name, eef_distance_threshold, True,
+                              z_offset, wrist_y_offset, approach_y_offset)
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     desired_z = env.command_manager.get_command(command_name)[:, 2] + z_offset
     return state["gate"].to(ee.dtype) * torch.square((ee[:, 2] - desired_z) / height_scale)
@@ -95,7 +98,7 @@ def hand_up_alignment(env):
 
 
 def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy_only,
-                      pushing_z_offset, wrist_y_offset):
+                      pushing_z_offset, wrist_y_offset, approach_y_offset=None):
     """Shared gate geometry for reward, height penalty and diagnostics."""
     objects = env.scene["object_collection"]
     rows = torch.arange(env.num_envs, device=env.target_id.device)
@@ -104,7 +107,8 @@ def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy
     goal = env.command_manager.get_command(command_name)[:, :3]
     offset = target.clone()
     offset[:, 0] -= 0.02
-    offset[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
+    side_offset = env.target_width[:, 0] if approach_y_offset is None else approach_y_offset
+    offset[:, 1] -= side_offset * torch.sign(env.sweep_dir[:, 1])
     offset[:, 2] += pushing_z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0]
@@ -132,11 +136,11 @@ def _sweep_gate_state(env, command_name, eef_distance_threshold, eef_distance_xy
 
 def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09,
                    eef_distance_xy_only=False, pushing_z_offset=0.09,
-                   height_reference_initial=False, wrist_y_offset=0.0):
+                   height_reference_initial=False, wrist_y_offset=0.0, approach_y_offset=None):
     """Keep source shaping; V2 compensates the wrist gate's geometric offset."""
     diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
     record_metrics = getattr(env, "_record_sweep_metrics", None)
-    if wrist_y_offset == 0.0:
+    if wrist_y_offset == 0.0 and approach_y_offset is None:
         result = source_pushing_target(
             env, command_name=command_name, eef_distance_threshold=eef_distance_threshold,
             eef_distance_xy_only=eef_distance_xy_only, pushing_z_offset=pushing_z_offset,
@@ -144,12 +148,12 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
         if diagnostic_env is None and record_metrics is None:
             return result
     state = _sweep_gate_state(env, command_name, eef_distance_threshold,
-                              eef_distance_xy_only, pushing_z_offset, wrist_y_offset)
+                              eef_distance_xy_only, pushing_z_offset, wrist_y_offset, approach_y_offset)
     objects = env.scene["object_collection"]
     rows, ids = state["rows"], state["ids"]
     target, goal = state["target"], state["goal"]
     velocity_y = objects.data.object_lin_vel_w[rows, ids, 1]
-    if wrist_y_offset != 0.0:
+    if wrist_y_offset != 0.0 or approach_y_offset is not None:
         # Identical source distance/velocity/goal-region shaping; only gate changes.
         speed = velocity_y.abs()
         velocity_reward = torch.where(speed > 0.05, torch.where(speed < 0.1, 0.5, -0.5), 0.0)

@@ -103,9 +103,26 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
   Reset 위치는 기존 선반 배치를 유지한다. 무게중심을 낮춰 기울기보다 미끄러짐을 유도하지만
   실제 밀기 동작은 학습 결과로 확인해야 한다.
 
+### V4: 물체 가까이 접근하는 V2
+
+`Isaac-Sweep-Inspire-Right-OSC-v4`는 현재 V2를 상속하고 Y 접근 offset만 2 cm로 바꾼다.
+
+- Reach 목표는 `(현재 물체 X -2 cm, 현재 물체 Y -방향×2 cm, 시작 물체 Z +7.5 cm)`다.
+- Reach, 밀기 게이트, 높이 페널티 게이트가 동일한 `approach_y_offset=0.02`를 사용한다.
+- wrist 목표 Y는 새 EEF offset Y -5 cm이고, EEF XY/wrist Y 거리 한계는 모두 4 cm다.
+- 실제 물체 `width`와 reset 위치, 손 자세 보상, 높이 페널티, Metrics 및 PPO 설정은 V2와 같다.
+- 전용 experiment 이름은 `UR5e_shelf_sweep_inspire_right_v4`다. 기본 물체는 `cup_1`이다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v4 \
+  --num_envs 2048 --object-name cup_1 \
+  --run-name close_reach_2cm --headless
+```
+
 학습·재생 스크립트의 `--task`로 버전을 선택한다. 버전별 PPO 설정은 동일하고,
 로그의 experiment 이름은 각각 `UR5e_shelf_sweep_inspire_right_v1`, `_v2`, `_v3`다.
-`--object-name`을 생략하면 V0/V1/V2는 `cup_1`, V3는 `weighted_cylinder`를 사용한다.
+`--object-name`을 생략하면 V0/V1/V2/V4는 `cup_1`, V3는 `weighted_cylinder`를 사용한다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
@@ -126,7 +143,7 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 V3 재생은 위 명령에서 task를 `Isaac-Sweep-Inspire-Right-OSC-v3`, object-name을
 `weighted_cylinder`로 바꾸고 해당 체크포인트를 지정한다.
-V1/V2/V3의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
+V1/V2/V3/V4의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
 V0에서는 EEF의 3D 게이트 거리다. Reach 보상의 거리와 구분한다.
 
 ### 학습 중 Sweep 지표
