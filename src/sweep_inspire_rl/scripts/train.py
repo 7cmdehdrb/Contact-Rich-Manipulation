@@ -9,6 +9,7 @@ import importlib.metadata
 from pathlib import Path
 import sys
 import time
+import traceback
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -109,5 +110,10 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except BaseException:
+        # Kit shutdown can terminate Python before an unhandled exception is printed.
+        traceback.print_exc()
+        sys.stderr.flush()
+        raise
     finally:
         simulation_app.close()
