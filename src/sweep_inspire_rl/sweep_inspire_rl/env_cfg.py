@@ -55,7 +55,14 @@ def _small_frame_visualizer(name, template=None):
     cfg = (FRAME_MARKER_CFG if template is None else template).copy()
     cfg.prim_path = f"/Visuals/InspireSweep/{name}"
     for marker in cfg.markers.values():
-        marker.scale = tuple(component * 0.02 for component in marker.scale)
+        if hasattr(marker, "scale"):
+            marker.scale = tuple(component * 0.02 for component in marker.scale)
+        else:
+            # Primitive markers (including the frame's connecting cylinder)
+            # specify dimensions directly instead of a USD scale.
+            for dimension in ("radius", "height"):
+                if hasattr(marker, dimension):
+                    setattr(marker, dimension, getattr(marker, dimension) * 0.02)
     return cfg
 
 
