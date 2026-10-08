@@ -140,6 +140,18 @@ def test_inspire_wrist_gate_keeps_original_4_cm_limit():
     assert reward["pushing_target"](env).item() == 0
 
 
+def test_v1_push_gate_uses_configured_z_offset():
+    env = _source_gate_pose(_env())
+    env.scene["ee_frame"].data.target_pos_w[:, :, 2] = 1.125
+    # A narrow gate distinguishes the V1 7.5 cm target from the default 9 cm.
+    assert reward["pushing_target"](
+        env, eef_distance_threshold=0.01, pushing_z_offset=0.075
+    ).item() > 0
+    assert reward["pushing_target"](
+        env, eef_distance_threshold=0.01
+    ).item() == 0
+
+
 def test_upstream_surface_uses_yawed_actual_collider_for_reaching():
     env = _env()
     env._target_collision_half_extent[0] = 0.06
