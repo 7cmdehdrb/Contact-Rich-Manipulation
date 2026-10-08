@@ -1,0 +1,38 @@
+--- git commit ---
+40a81ac1ec2916a4f54f0af4175214f550371271
+
+
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Last command done (1 command done):
+   pick a99f242 ?
+No commands remaining.
+You are currently editing a commit while rebasing branch 'main' on '06431a2'.
+  (use "git commit --amend" to amend the current commit)
+  (use "git rebase --continue" once you are satisfied with your changes)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   IsaacLab (new commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/
+	example/DFRobot_TactileSensor/
+	example/contact_rich_manipulation_task_learning/
+	example/pixi_ur_ros2/
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/IsaacLab b/IsaacLab
+index 929f0fe..4e06a8a 160000
+--- a/IsaacLab
++++ b/IsaacLab
+@@ -1 +1 @@
+-Subproject commit 929f0fe1e9c1699efebf31b2ad0ab723a7d6e7e9
++Subproject commit 4e06a8a516a291e9c948edf4eed6ef4c7242c927

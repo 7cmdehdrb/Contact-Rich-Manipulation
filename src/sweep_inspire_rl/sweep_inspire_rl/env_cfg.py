@@ -310,7 +310,10 @@ class InspireShelfSweepV2EnvCfg(InspireShelfSweepV1EnvCfg):
         super().__post_init__()
         self.rewards.reaching.func = rewards.hand_reaching_fixed_height
         self.rewards.reaching.params = {"z_offset": 0.075, "command_name": "target_goal_pos"}
+        self.rewards.orientation.func = rewards.hand_up_alignment
         self.rewards.sweeping_object.params["height_reference_initial"] = True
+        # C is 5 cm ahead of the Axia80 origin in world Y at the fixed palm pose.
+        self.rewards.sweeping_object.params["wrist_y_offset"] = -C_OFFSET_H[1]
         self.rewards.sweeping_height = RewTerm(
             func=rewards.sweeping_height_error,
             weight=-1.0,
@@ -319,6 +322,7 @@ class InspireShelfSweepV2EnvCfg(InspireShelfSweepV1EnvCfg):
                 "height_scale": 0.015,
                 "eef_distance_threshold": 0.04,
                 "command_name": "target_goal_pos",
+                "wrist_y_offset": -C_OFFSET_H[1],
             },
         )
 

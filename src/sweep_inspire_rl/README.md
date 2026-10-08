@@ -82,6 +82,11 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
   `(물체 현재 X - 2 cm, 물체 현재 Y - width * sign(sweep_dir_y))`다.
   Z는 에피소드 시작 물체 Z +7.5 cm로 고정하고, XYZ 거리의 `exp(-10 * distance)`를
   가중치 3으로 보상한다. 밀기 게이트는 기존 XY 4 cm 및 wrist Y 4 cm 조건을 유지한다.
+- V2의 wrist 목표 Y는 EEF offset Y -5 cm다. 고정 손 자세에서 control point가
+  Axia80 origin보다 +Y로 5 cm 앞에 있으므로 두 점에 서로 다른 목표를 적용한다.
+  밀기 보상, 높이 페널티, CSV 진단은 동일한 보정 게이트를 사용한다.
+- 손 자세 보상은 Inspire 로컬 +X축과 선반 초기 자세의 +Z축 내적 `a`에 대해
+  `sign(a) * a²`를 사용한다. 가중치 2는 유지하며 손바닥 방향 항은 포함하지 않는다.
 - `sweeping_height`는 XY/wrist 게이트가 열린 동안 높이 오차 제곱에 대한 페널티다.
   가중치 `-1.0`, 오차 scale `0.015 m`이며 기준 Z는 Reach와 같다.
   물체가 기울어도 기준 높이는 따라 올라가지 않는다. Z는 게이트 조건에 포함하지 않는다.
@@ -124,6 +129,30 @@ V3 재생은 위 명령에서 task를 `Isaac-Sweep-Inspire-Right-OSC-v3`, object
 V1/V2/V3의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
 V0에서는 EEF의 3D 게이트 거리다. Reach 보상의 거리와 구분한다.
 
+### 학습 중 Sweep 지표
+
+TensorBoard의 `Sweep/*`에 다음 지표를 자동 기록한다. 별도 CLI 옵션은 필요 없다.
+평균은 각 에피소드의 실제 관측 스텝으로 계산하며, reward 가중치나 dt를 적용하지 않는다.
+종료 스텝도 reset 이전 상태를 포함한다. 관측/action 차원 및 PPO 설정은 변경하지 않는다.
+
+| 지표 | 의미 |
+|---|---|
+| `near_hand_rate`, `near_wrist_rate`, `gate_rate` | EEF 조건, 보정 wrist 조건, 두 조건 AND의 스텝 비율 |
+| `near_wrist_uncompensated_rate` | 보정 전 wrist 조건 통과율; V2 보정 효과 비교 |
+| `wrist_blocked_given_near_hand_rate` | EEF 조건을 통과한 스텝 중 wrist 조건 실패 비율; EEF 통과가 없으면 0 |
+| `eef_gate_distance_m`, `wrist_y_distance_m`, `wrist_y_distance_uncompensated_m` | 게이트 거리와 보정 전후 wrist 거리 |
+| `eef_wrist_y_separation_m` | 실제 EEF Y - wrist Y; 고정 자세에서 약 0.05 m |
+| `palm_contact_rate`, `any_pad_contact_rate`, `gate_without_pad_contact_rate` | tactile 접촉 및 게이트만 열리고 pad 접촉은 없는 스텝 비율 |
+| `forward_velocity_m_s`, `forward_motion_rate`, `backward_motion_rate` | 목표 방향 속도와 ±0.005 m/s 기준 이동 비율 |
+| `final_progress_m`, `max_progress_m`, `goal_distance_m` | 종료 시 순이동, 에피소드 최대 전진량(0 이상), 평균 목표 3D 거리 |
+| `height_abs_error_m`, `object_tilt_deg`, `max_object_tilt_deg`, `hand_up_error_deg` | EEF 높이 오차, 물체 up-axis 기울기와 손 up-axis 오차 |
+| `gate_reached_rate`, `goal_region_reached_rate` | 한 번이라도 게이트/목표 3 cm 영역에 도달한 에피소드 비율 |
+
+진행량은 시작 물체 위치에 대한 목표 방향 Y 이동량이다. 물체 origin의 이동이므로
+기울기에 의한 이동도 포함한다. 목표 영역 도달률은 접촉/직립을 요구하는 성공률과 다르다.
+Pad 접촉률은 tactile pad만 측정하므로 Hand base의 접촉을 모두 검출하지는 못한다.
+`--gate-log` CSV에도 보정 전 거리, wrist 목표 Y, 진행량, 방향 속도, 기울기를 기록한다.
+
 ```bash
 # reset / OSC / 단일 물체 / RELATIVE 관측 / Hand 범위 / tactile / F/T 검사
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/smoke_env.py \
@@ -165,7 +194,7 @@ V0에서는 EEF의 3D 게이트 거리다. Reach 보상의 거리와 구분한�
 | CSV 필드 | 해석 |
 |---|---|
 | `near_hand` / `reaching_distance_m` | 원본 offset과 `ee_frame` 첫 target 사이 3D 거리가 0.09 m 미만이어야 참 |
-| `near_wrist` / `wrist_y_distance_m` | 원본 offset과 `wrist_frame` 첫 target 사이 Y 거리가 0.04 m 미만이어야 참 |
+| `near_wrist` / `wrist_y_distance_m` | wrist 목표와 `wrist_frame` 첫 target 사이 Y 거리가 0.04 m 미만이어야 참. V2의 wrist 목표는 offset Y -0.05 m |
 | `gate` / `sweeping_raw` | 위 두 조건의 AND와 가중치·dt 적용 전 밀기 보상 |
 | `goal_region` / `goal_distance_m` | 목표 3D 거리 0.03 m 미만이면 게이트 없이 목표 근처 보상 지급 |
 | `object_velocity_y_m_s` | 물체 +Y 속도. 원본 속도 보정은 절댓값 사용 |

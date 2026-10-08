@@ -141,7 +141,11 @@ def main() -> None:
                         f"[GATE] step={steps} active={row['gate']} "
                         f"reach={row['reaching_distance_m']:.4f}m "
                         f"wrist_y={row['wrist_y_distance_m']:.4f}m goal_region={row['goal_region']} "
+                        f"wrist_raw={row['wrist_y_distance_uncompensated_m']:.4f}m "
                         f"palm={row['palm_contact']} other_pad={row['other_pad_contact']} "
+                        f"progress={row['object_progress_m']:.3f}m "
+                        f"forward_v={row['object_forward_velocity_m_s']:.3f}m/s "
+                        f"tilt={row['object_tilt_deg']:.1f}deg "
                         f"sweep={row['sweeping_raw']:.3f}", flush=True,
                     )
             sleep_time = env.unwrapped.step_dt - (time.time() - started)
