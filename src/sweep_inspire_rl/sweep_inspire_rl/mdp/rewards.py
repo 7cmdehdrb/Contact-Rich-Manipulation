@@ -46,8 +46,8 @@ def hand_reaching(env):
     return torch.exp(-10.0 * torch.linalg.vector_norm(reaching_position(env) - hand, dim=-1))
 
 
-def hand_reaching_object_center(env, z_offset=0.09):
-    """V1: center XY while preserving Sweep-Policy's EEF Z target and 3D kernel."""
+def hand_reaching_object_center(env, z_offset=0.075):
+    """V1: center XY with a lowered EEF Z target and the full 3D kernel."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 2] += z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
@@ -62,11 +62,12 @@ def palm_alignment(env):
     return 0.5 * (right * right.abs() + up * up.abs())
 
 
-def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09, eef_distance_xy_only=False):
+def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09, eef_distance_xy_only=False, pushing_z_offset=0.09):
     """Sweep-Policy reward with a 9 cm EEF gate; sensors are observations only."""
     result = source_pushing_target(
         env, command_name=command_name, eef_distance_threshold=eef_distance_threshold,
         eef_distance_xy_only=eef_distance_xy_only,
+        pushing_z_offset=pushing_z_offset,
     )
     diagnostic_env = getattr(env, "sweep_gate_diagnostic_env", None)
     if diagnostic_env is None:
@@ -82,7 +83,7 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
     offset = target.clone()
     offset[:, 0] -= 0.02
     offset[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
-    offset[:, 2] += 0.09
+    offset[:, 2] += pushing_z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0]
     ee_delta = offset - ee

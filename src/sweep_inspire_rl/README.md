@@ -67,12 +67,13 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 `Isaac-Sweep-Inspire-Right-OSC-v1`은 V0 설정을 상속하고 아래 두 항목을 변경한다.
 
-- Reach 목표는 움직이는 물체의 현재 `(X, Y, Z + 0.09 m)`다. 원본 Sweep-Policy처럼
+- Reach 목표는 움직이는 물체의 현재 `(X, Y, Z + 0.075 m)`다. 원본 Sweep-Policy처럼
   EEF 기준 XYZ 전체 거리의 `exp(-10 * distance)`로 보상한다. X·Y 목표만 물체
-  중심으로 옮기고, 원본 EEF의 Z 목표를 유지한다. Reset은 기존처럼 Z +0.12 m에서
-  시작하므로 Reach 목표 높이까지 약 3 cm 하강하도록 유도한다.
+  중심으로 옮기며 EEF 목표 높이는 원본 +9 cm에서 1.5 cm 낮춘 +7.5 cm다.
+  Reset은 기존처럼 Z +0.12 m에서 시작하므로 목표까지 약 4.5 cm 하강하도록 유도한다.
 - 밀기 EEF 게이트는 원본 offset에 대해 `norm(offset_xy - eef_xy) < 0.04 m`다.
-  Z는 EEF 게이트 거리에서 제외한다. 원본 offset의 X·Y와 wrist Y 거리 조건
+  밀기 offset의 Z도 +7.5 cm로 낮춘다. Z는 EEF 게이트 거리에서 제외하며,
+  높이 정렬은 XYZ Reach 보상이 담당한다. 원본 offset의 X·Y와 wrist Y 거리 조건
   `< 0.04 m`, 목표 근처 보상 분기 및 물체–목표 3D 거리는 그대로 사용한다.
 
 V1 전용 PPO 설정은 V0 PPO를 상속하며 experiment 이름은
