@@ -241,7 +241,7 @@ Reset 직후 접촉·F/T는 새 physics step이 생길 때까지 유효하지 �
 
   ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
   --task Isaac-Sweep-Inspire-Right-OSC-v2 \
-  --checkpoint "<V2_CHECKPOINT_PATH>" \
+  --checkpoint "/home/min/7cmdehdrb/grad/2026-10-08_19-37-08_source_sweep_no_sensors/model_600.pt" \
   --num_envs 1 --object-name cup_1 --real-time
 
   ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
