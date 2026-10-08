@@ -47,11 +47,41 @@ def hand_reaching(env):
 
 
 def hand_reaching_object_center(env, z_offset=0.075):
-    """V1: center XY with a lowered EEF Z target and the full 3D kernel."""
+    """V1/V3: follow live object XYZ with a raised EEF target."""
     target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
     target[:, 2] += z_offset
     ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
     return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
+
+
+def hand_reaching_fixed_height(env, z_offset=0.075, command_name="target_goal_pos"):
+    """V2: follow live object XY but hold episode-initial Z plus the offset."""
+    target = env.scene["object_collection"].data.object_pos_w[:, 0].clone()
+    target[:, 2] = env.command_manager.get_command(command_name)[:, 2] + z_offset
+    ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    return torch.exp(-10.0 * torch.linalg.vector_norm(target - ee, dim=-1))
+
+
+def sweeping_height_error(env, z_offset=0.075, height_scale=0.015,
+                          eef_distance_threshold=0.04, command_name="target_goal_pos"):
+    """Penalize height drift during planar sweeping, without adding a Z gate.
+
+    The command Z is latched at reset, so tipping/lifting the cup cannot raise
+    the target height. One height_scale of error returns one penalty unit.
+    """
+    objects = env.scene["object_collection"]
+    rows = torch.arange(env.num_envs, device=env.target_id.device)
+    ids = env.target_id.squeeze(-1).long()
+    target = objects.data.object_pos_w[rows, ids]
+    offset_xy = target[:, :2].clone()
+    offset_xy[:, 0] -= 0.02
+    offset_xy[:, 1] -= env.target_width[:, 0] * torch.sign(env.sweep_dir[:, 1])
+    ee = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0]
+    gate = (torch.linalg.vector_norm(offset_xy - ee[:, :2], dim=-1) < eef_distance_threshold)
+    gate &= (torch.abs(offset_xy[:, 1] - wrist[:, 1]) < 0.04)
+    desired_z = env.command_manager.get_command(command_name)[:, 2] + z_offset
+    return gate.to(ee.dtype) * torch.square((ee[:, 2] - desired_z) / height_scale)
 
 
 def palm_alignment(env):
@@ -62,7 +92,7 @@ def palm_alignment(env):
     return 0.5 * (right * right.abs() + up * up.abs())
 
 
-def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09, eef_distance_xy_only=False, pushing_z_offset=0.09):
+def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0.09, eef_distance_xy_only=False, pushing_z_offset=0.09, height_reference_initial=False):
     """Sweep-Policy reward with a 9 cm EEF gate; sensors are observations only."""
     result = source_pushing_target(
         env, command_name=command_name, eef_distance_threshold=eef_distance_threshold,
@@ -96,6 +126,7 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
     distance = torch.norm(goal - target, dim=-1, p=2)
     tactile = palm_tactile_bits(env)
     hand = palm_surface_position(env)
+    desired_z = (goal[:, 2] if height_reference_initial else target[:, 2]) + pushing_z_offset
     values = {
         "episode_step": env.episode_length_buf,
         "reaching_distance_m": ee_distance,
@@ -110,6 +141,8 @@ def pushing_target(env, command_name="target_goal_pos", eef_distance_threshold=0
         "other_pad_contact": (tactile[:, 1:] > 0.5).any(dim=1),
         "alignment": palm_alignment(env),
         "sweeping_raw": result,
+        "desired_eef_z_w_m": desired_z,
+        "eef_height_error_m": ee[:, 2] - desired_z,
     }
     sensor = env.scene["palm_tactile"]
     pad_index = sensor.body_names.index("inspire_palm_force_sensor")

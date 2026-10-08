@@ -65,34 +65,61 @@ export SWEEP_POLICY_ASSET_ROOT=/path/to/Library/Shelf
 
 ### V1: 물체 중심 Reach와 XY 게이트
 
-`Isaac-Sweep-Inspire-Right-OSC-v1`은 V0 설정을 상속하고 아래 두 항목을 변경한다.
+`Isaac-Sweep-Inspire-Right-OSC-v1`은 높이 고정/페널티 추가 이전 상태다.
 
-- Reach 목표는 움직이는 물체의 현재 `(X, Y, Z + 0.075 m)`다. 원본 Sweep-Policy처럼
-  EEF 기준 XYZ 전체 거리의 `exp(-10 * distance)`로 보상한다. X·Y 목표만 물체
-  중심으로 옮기며 EEF 목표 높이는 원본 +9 cm에서 1.5 cm 낮춘 +7.5 cm다.
-  Reset은 기존처럼 Z +0.12 m에서 시작하므로 목표까지 약 4.5 cm 하강하도록 유도한다.
+- Reach 목표는 `(물체 현재 X, 물체 현재 Y, 물체 현재 Z + 0.075 m)`이며,
+  EEF의 XYZ 전체 거리로 `exp(-10 * distance)`를 계산한다.
 - 밀기 EEF 게이트는 원본 offset에 대해 `norm(offset_xy - eef_xy) < 0.04 m`다.
-  밀기 offset의 Z도 +7.5 cm로 낮춘다. Z는 EEF 게이트 거리에서 제외하며,
-  높이 정렬은 XYZ Reach 보상이 담당한다. 원본 offset의 X·Y와 wrist Y 거리 조건
-  `< 0.04 m`, 목표 근처 보상 분기 및 물체–목표 3D 거리는 그대로 사용한다.
+  wrist Y 거리 `< 0.04 m`, 목표 근처 보상 분기 및 물체–목표 3D 거리는 그대로다.
+  Z는 게이트 계산에서 제외한다. 밀기 offset의 Z는 +7.5 cm지만 XY 게이트에는 영향을 주지 않는다.
+- Reset은 기존처럼 물체 Z +12 cm에서 시작한다. 별도 높이 페널티는 없다.
 
-V1 전용 PPO 설정은 V0 PPO를 상속하며 experiment 이름은
-`UR5e_shelf_sweep_inspire_right_v1`이다. 학습·재생 스크립트의 `--task`로 버전을 선택한다.
+### V2: 고정 높이와 Sweeping 높이 페널티
+
+`Isaac-Sweep-Inspire-Right-OSC-v2`는 V1을 상속하고 마지막 높이 수정만 적용한다.
+
+- Reach는 물체의 현재 XY를 추종하고, Z는 에피소드 시작 물체 Z +7.5 cm로 고정한다.
+- `sweeping_height`는 XY/wrist 게이트가 열린 동안 높이 오차 제곱에 대한 페널티다.
+  가중치 `-1.0`, 오차 scale `0.015 m`이며 기준 Z는 Reach와 같다.
+  물체가 기울어도 기준 높이는 따라 올라가지 않는다. Z는 게이트 조건에 포함하지 않는다.
+
+### V3: V1 보상과 아래쪽이 무거운 실린더
+
+`Isaac-Sweep-Inspire-Right-OSC-v3`는 V1을 상속한다. V2의 높이 고정/페널티는 적용하지 않는다.
+
+- 물체는 패키지에 포함된 `assets/weighted_cylinder.usda` 하나만 사용한다.
+- 높이 12 cm, 지름 8 cm, 질량 0.8 kg이다. 아래 2 cm에 질량의 80%가 분포하는
+  모델에 맞춰 무게중심을 바닥에서 2.2 cm로, 관성도 함께 지정했다.
+- 정지/동마찰 계수는 0.25/0.20이다. 접촉 시 실제 마찰은 선반 재질과의 조합에 따른다.
+- 원본 밀기 offset에 쓰는 `width`는 측면 접근 거리이므로 반지름인 4 cm를 사용한다.
+  Reset 위치는 기존 선반 배치를 유지한다. 무게중심을 낮춰 기울기보다 미끄러짐을 유도하지만
+  실제 밀기 동작은 학습 결과로 확인해야 한다.
+
+학습·재생 스크립트의 `--task`로 버전을 선택한다. 버전별 PPO 설정은 동일하고,
+로그의 experiment 이름은 각각 `UR5e_shelf_sweep_inspire_right_v1`, `_v2`, `_v3`다.
+`--object-name`을 생략하면 V0/V1/V2는 `cup_1`, V3는 `weighted_cylinder`를 사용한다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
-  --task Isaac-Sweep-Inspire-Right-OSC-v1 \
+  --task Isaac-Sweep-Inspire-Right-OSC-v2 \
   --num_envs 2048 --object-name cup_1 \
-  --run-name center_reach_xy_gate --headless
+  --run-name fixed_height_penalty --headless
+
+./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/train.py \
+  --task Isaac-Sweep-Inspire-Right-OSC-v3 \
+  --num_envs 2048 --object-name weighted_cylinder \
+  --run-name weighted_cylinder --headless
 
 ./IsaacLab/isaaclab.sh -p src/sweep_inspire_rl/scripts/play.py \
-  --task Isaac-Sweep-Inspire-Right-OSC-v1 \
-  --checkpoint /path/to/v1/model.pt --num_envs 1 \
+  --task Isaac-Sweep-Inspire-Right-OSC-v2 \
+  --checkpoint /path/to/v2/model.pt --num_envs 1 \
   --object-name cup_1 --real-time
 ```
 
-V1의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
-V0에서는 EEF의 3D 게이트 거리다. 손바닥 Reach 보상의 거리와 구분한다.
+V3 재생은 위 명령에서 task를 `Isaac-Sweep-Inspire-Right-OSC-v3`, object-name을
+`weighted_cylinder`로 바꾸고 해당 체크포인트를 지정한다.
+V1/V2/V3의 `--gate-log`에서 `reaching_distance_m`은 EEF의 XY 게이트 거리이며,
+V0에서는 EEF의 3D 게이트 거리다. Reach 보상의 거리와 구분한다.
 
 ```bash
 # reset / OSC / 단일 물체 / RELATIVE 관측 / Hand 범위 / tactile / F/T 검사

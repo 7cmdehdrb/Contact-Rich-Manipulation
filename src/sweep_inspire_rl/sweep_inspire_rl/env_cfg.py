@@ -8,6 +8,7 @@ single-object, relative-frame, and rightward-sweep adaptations live here.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg, RigidObjectCollectionCfg
@@ -17,6 +18,7 @@ from isaaclab.envs.mdp.actions.actions_cfg import OperationalSpaceControllerActi
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensorCfg, FrameTransformerCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
@@ -170,8 +172,7 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.robot = make_robot_cfg()
-        with open(ENVIRONMENT_YAML_PATH, encoding="utf-8") as stream:
-            catalog = yaml.safe_load(stream)
+        catalog = self._load_object_catalog()
         if self.object_name not in catalog["objects"]:
             raise ValueError(
                 f"Unknown object_name {self.object_name!r}; choose {tuple(catalog['objects'])}"
@@ -227,7 +228,7 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         self.commands.target_goal_pos.asset_dict = {"target": target}
         self.commands.target_goal_pos.object_id_dict_rev = {"0": "target"}
         self.events.object_spawn.params = {
-            "pose_array": load_and_reshape_pose(catalog["pose"]),
+            "pose_array": self._reset_pose_array(catalog),
             "object_width": float(catalog["width"][self.object_name]),
         }
         self.rewards.joint_vel.func = lab_mdp.joint_vel_l2
@@ -249,6 +250,15 @@ class InspireShelfSweepEnvCfg(ShelfSweepRandomEnvCfg):
         self.terminations.hand_velocity.func = rewards.hand_velocity_limit
         # Sweep's shelf geometry, timing, capacities, rewards/curriculum, and
         # thresholds otherwise stay in the source configuration.
+
+    @staticmethod
+    def _reset_pose_array(catalog):
+        return load_and_reshape_pose(catalog["pose"])
+
+    @staticmethod
+    def _load_object_catalog():
+        with open(ENVIRONMENT_YAML_PATH, encoding="utf-8") as stream:
+            return yaml.safe_load(stream)
 
     @staticmethod
     def _frame(name, body, offset=(0.0, 0.0, 0.0)):
@@ -288,6 +298,74 @@ class InspireShelfSweepV1EnvCfg(InspireShelfSweepEnvCfg):
 
 @configclass
 class InspireShelfSweepV1EnvCfg_PLAY(InspireShelfSweepV1EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class InspireShelfSweepV2EnvCfg(InspireShelfSweepV1EnvCfg):
+    """V1 with episode-fixed height and a sweeping height penalty."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.reaching.func = rewards.hand_reaching_fixed_height
+        self.rewards.reaching.params = {"z_offset": 0.075, "command_name": "target_goal_pos"}
+        self.rewards.sweeping_object.params["height_reference_initial"] = True
+        self.rewards.sweeping_height = RewTerm(
+            func=rewards.sweeping_height_error,
+            weight=-1.0,
+            params={
+                "z_offset": 0.075,
+                "height_scale": 0.015,
+                "eef_distance_threshold": 0.04,
+                "command_name": "target_goal_pos",
+            },
+        )
+
+
+@configclass
+class InspireShelfSweepV2EnvCfg_PLAY(InspireShelfSweepV2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class InspireShelfSweepV3EnvCfg(InspireShelfSweepV1EnvCfg):
+    """Unmodified V1 rewards with a single low-COM, weighted cylinder."""
+
+    object_name: str = "weighted_cylinder"
+
+    def __post_init__(self):
+        if self.object_name != "weighted_cylinder":
+            raise ValueError("V3 uses only object_name='weighted_cylinder'")
+        super().__post_init__()
+        # Preserve the mass, COM and inertia authored in the local cylinder USD.
+        self.scene.object_collection.rigid_objects["target"].spawn.mass_props = None
+
+    @staticmethod
+    def _reset_pose_array(catalog):
+        return load_and_reshape_pose({
+            name: pose for name, pose in catalog["pose"].items() if name != "weighted_cylinder"
+        })
+
+    @staticmethod
+    def _load_object_catalog():
+        catalog = InspireShelfSweepEnvCfg._load_object_catalog()
+        asset = Path(__file__).resolve().parent / "assets" / "weighted_cylinder.usda"
+        catalog["objects"]["weighted_cylinder"] = str(asset)
+        catalog["pose"]["weighted_cylinder"] = list(catalog["pose"]["cup_1"])
+        # The source's width parameter is used as a lateral standoff; use the
+        # cylinder radius so the source XY gate overlaps its contact surface.
+        catalog["width"]["weighted_cylinder"] = 0.04
+        return catalog
+
+
+@configclass
+class InspireShelfSweepV3EnvCfg_PLAY(InspireShelfSweepV3EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 50

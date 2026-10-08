@@ -15,15 +15,15 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID
-OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1")
+from sweep_inspire_rl import TASK_ID, TASK_IDS, TASK_V1_ID, TASK_V2_ID, TASK_V3_ID
+OBJECT_NAMES = ("bottle_1", "cup_1", "cup_2", "mug_1", "mug_2", "can_1", "weighted_cylinder")
 
 from isaaclab.app import AppLauncher
 
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--task", choices=TASK_IDS, default=TASK_ID)
-parser.add_argument("--object-name", choices=OBJECT_NAMES, default="cup_1")
+parser.add_argument("--object-name", choices=OBJECT_NAMES, default=None, help="Defaults to cup_1; V3 uses weighted_cylinder.")
 parser.add_argument("--num_envs", "--num-envs", type=int, default=None)
 parser.add_argument("--max_iterations", "--max-iterations", type=int, default=None)
 parser.add_argument("--seed", type=int, default=None)
@@ -41,8 +41,14 @@ from rsl_rl.runners import OnPolicyRunner  # noqa: E402
 from isaaclab.utils.io import dump_yaml  # noqa: E402
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg  # noqa: E402
 
-from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import InspireShelfSweepPPORunnerCfg, InspireShelfSweepV1PPORunnerCfg  # noqa: E402
-from sweep_inspire_rl.env_cfg import InspireShelfSweepEnvCfg, InspireShelfSweepV1EnvCfg  # noqa: E402
+from sweep_inspire_rl.agents.rsl_rl_ppo_cfg import (  # noqa: E402
+    InspireShelfSweepPPORunnerCfg, InspireShelfSweepV1PPORunnerCfg,
+    InspireShelfSweepV2PPORunnerCfg, InspireShelfSweepV3PPORunnerCfg,
+)
+from sweep_inspire_rl.env_cfg import (  # noqa: E402
+    InspireShelfSweepEnvCfg, InspireShelfSweepV1EnvCfg,
+    InspireShelfSweepV2EnvCfg, InspireShelfSweepV3EnvCfg,
+)
 
 
 def main() -> None:
@@ -56,9 +62,13 @@ def main() -> None:
         if not checkpoint.is_file():
             raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
 
-    env_cfg_type = InspireShelfSweepV1EnvCfg if args.task == TASK_V1_ID else InspireShelfSweepEnvCfg
-    agent_cfg_type = InspireShelfSweepV1PPORunnerCfg if args.task == TASK_V1_ID else InspireShelfSweepPPORunnerCfg
-    env_cfg = env_cfg_type(object_name=args.object_name)
+    env_cfg_type, agent_cfg_type = {
+        TASK_ID: (InspireShelfSweepEnvCfg, InspireShelfSweepPPORunnerCfg),
+        TASK_V1_ID: (InspireShelfSweepV1EnvCfg, InspireShelfSweepV1PPORunnerCfg),
+        TASK_V2_ID: (InspireShelfSweepV2EnvCfg, InspireShelfSweepV2PPORunnerCfg),
+        TASK_V3_ID: (InspireShelfSweepV3EnvCfg, InspireShelfSweepV3PPORunnerCfg),
+    }[args.task]
+    env_cfg = env_cfg_type(**({"object_name": args.object_name} if args.object_name is not None else {}))
     agent_cfg = agent_cfg_type()
     if args.num_envs is not None:
         env_cfg.scene.num_envs = args.num_envs

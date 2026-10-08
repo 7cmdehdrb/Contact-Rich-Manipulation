@@ -9,6 +9,7 @@ setup(
     description="Right-only shelf sweeping with UR5e, Axia80 and Inspire Hand",
     packages=find_packages(),
     include_package_data=True,
+    package_data={"sweep_inspire_rl": ["assets/*.usda"]},
     install_requires=["sweeping-policy>=0.1.0", "hand-manipulation-rl>=0.1.0"],
     python_requires=">=3.10",
     zip_safe=False,

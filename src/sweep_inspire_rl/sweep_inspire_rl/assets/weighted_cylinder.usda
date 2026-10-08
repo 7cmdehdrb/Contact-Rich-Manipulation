@@ -1,0 +1,44 @@
+#usda 1.0
+(
+    defaultPrim = "Target"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+# One rigid cylinder, bottom-origin, with an analytically weighted mass model:
+# 0.64 kg in the bottom 2 cm and 0.16 kg in the remaining 10 cm.
+# This gives mass 0.8 kg, COM 2.2 cm above the bottom, and the inertia below.
+def Xform "Target" (
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    bool physics:rigidBodyEnabled = true
+    float physics:mass = 0.8
+    point3f physics:centerOfMass = (0, 0, 0.022)
+    float3 physics:diagonalInertia = (0.0009354667, 0.0009354667, 0.00064)
+    quatf physics:principalAxes = (1, 0, 0, 0)
+
+    def Cylinder "Body" (
+        prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double radius = 0.04
+        double height = 0.12
+        float3[] extent = [(-0.04, -0.04, -0.06), (0.04, 0.04, 0.06)]
+        double3 xformOp:translate = (0, 0, 0.06)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        color3f[] primvars:displayColor = [(0.18, 0.48, 0.72)]
+        bool physics:collisionEnabled = true
+        rel material:binding:physics = </Target/PhysicsMaterial>
+    }
+
+    def Material "PhysicsMaterial" (
+        prepend apiSchemas = ["PhysicsMaterialAPI"]
+    )
+    {
+        float physics:staticFriction = 0.25
+        float physics:dynamicFriction = 0.2
+        float physics:restitution = 0
+    }
+}
