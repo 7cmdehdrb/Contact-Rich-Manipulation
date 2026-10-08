@@ -374,12 +374,12 @@ class InspireShelfSweepV3EnvCfg_PLAY(InspireShelfSweepV3EnvCfg):
 
 @configclass
 class InspireShelfSweepV4EnvCfg(InspireShelfSweepV2EnvCfg):
-    """V2 with a fixed 2 cm Y approach offset, independent of object width."""
+    """V2 with a fixed 0.5 cm Y approach offset, independent of object width."""
 
     def __post_init__(self):
         super().__post_init__()
         for term in (self.rewards.reaching, self.rewards.sweeping_object, self.rewards.sweeping_height):
-            term.params["approach_y_offset"] = 0.02
+            term.params["approach_y_offset"] = 0.005
 
 
 @configclass
