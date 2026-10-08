@@ -319,6 +319,7 @@ class InspireSweepExperimentEnvCfg(InspireShelfSweepEnvCfg):
 
 @configclass
 class ReachOnlyRewardsCfg:
+    # This is the reward target, independent of the reset Event's standoff.
     reaching = RewTerm(
         func=rewards.hand_reaching_fixed_height,
         weight=3.0,
@@ -334,7 +335,11 @@ class ReachOnlyRewardsCfg:
 
 @configclass
 class InspireShelfSweepV1EnvCfg(InspireSweepExperimentEnvCfg):
-    """Contact experiment: only Reach reward, at the object's XY center."""
+    """Start away from the object; reward reaching its XY center."""
+
+    # Keep the original pre-push reset pose: Y -(width + 4 cm), Z +12 cm.
+    # The zero XY offsets in ReachOnlyRewardsCfg apply only to the reward.
+    events: EventsCfg = EventsCfg()
 
     def __post_init__(self):
         super().__post_init__()
