@@ -28,6 +28,9 @@ parser.add_argument("--num_envs", "--num-envs", type=int, default=1)
 parser.add_argument("--seed", type=int, default=None)
 parser.add_argument("--steps", type=int, default=0, help="Zero runs until the simulator closes.")
 parser.add_argument("--real-time", action="store_true")
+parser.add_argument("--video", action="store_true", help="Record one clip under the checkpoint's videos/play directory.")
+parser.add_argument("--video_length", "--video-length", type=int, default=500, help="Recorded policy steps.")
+parser.add_argument("--enable-sensor-observations", action="store_true", help="Use the legacy 71D policy input including tactile and F/T.")
 parser.add_argument("--disable-markers", action="store_true")
 parser.add_argument("--gate-log", type=Path, help="Write pre-reset sweep gate diagnostics to CSV each step.")
 parser.add_argument("--gate-log-env", type=int, default=0, help="Vector environment index to diagnose (default: 0).")
@@ -36,6 +39,8 @@ AppLauncher.add_app_launcher_args(parser)
 # can show all launcher options without requiring a checkpoint.
 parser.add_argument("--checkpoint", type=Path, required=True)
 args = parser.parse_args()
+if args.video:
+    args.enable_cameras = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
@@ -67,6 +72,10 @@ def main() -> None:
         raise ValueError("V1 has no sweeping gate; omit --gate-log.")
     if args.steps < 0:
         raise ValueError("--steps cannot be negative")
+    if args.video_length <= 0:
+        raise ValueError("--video_length must be positive")
+    if args.video and args.steps > 0 and args.steps < args.video_length:
+        raise ValueError("--steps must be at least --video_length when recording")
     if not 0 <= args.gate_log_env < args.num_envs:
         raise ValueError("--gate-log-env must be a valid environment index")
     checkpoint = args.checkpoint.expanduser().resolve()
@@ -79,7 +88,10 @@ def main() -> None:
         TASK_V3_ID: (InspireShelfSweepV3EnvCfg_PLAY, InspireShelfSweepV3PPORunnerCfg),
         TASK_V4_ID: (InspireShelfSweepV4EnvCfg_PLAY, InspireShelfSweepV4PPORunnerCfg),
     }[args.task]
-    env_cfg = env_cfg_type(**({"object_name": args.object_name} if args.object_name is not None else {}))
+    cfg_kwargs = {"object_name": args.object_name} if args.object_name is not None else {}
+    if args.enable_sensor_observations:
+        cfg_kwargs["enable_sensor_observations"] = True
+    env_cfg = env_cfg_type(**cfg_kwargs)
     agent_cfg = agent_cfg_type()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.commands.target_goal_pos.debug_vis = not args.disable_markers
@@ -96,9 +108,15 @@ def main() -> None:
     if agent_cfg.class_name != "OnPolicyRunner":
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
 
-    env = gym.make(args.task, cfg=env_cfg)
+    env = gym.make(args.task, cfg=env_cfg, render_mode="rgb_array" if args.video else None)
     gate_log = None
     try:
+        if args.video:
+            env = gym.wrappers.RecordVideo(
+                env, video_folder=str(checkpoint.parent / "videos" / "play"),
+                step_trigger=lambda step: step == 0,
+                video_length=args.video_length, disable_logger=True,
+            )
         if args.gate_log is not None:
             path = args.gate_log.expanduser().resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,6 +144,8 @@ def main() -> None:
                 elif hasattr(runner.alg, "policy"):
                     runner.alg.policy.reset(dones)
             steps += 1
+            if args.video and steps >= args.video_length:
+                break
             if gate_log is not None:
                 snapshot = env.unwrapped.sweep_gate_diagnostics
                 row = {"step": steps, "env_id": args.gate_log_env}
