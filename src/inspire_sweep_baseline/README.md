@@ -160,7 +160,7 @@ Friction Combine Mode: `Average`
 
 - 질량: 매 에피소드 `Normal(0.365, 0.0675²)` kg에서 샘플링한 뒤 `[0.230, 0.500]` kg으로 clipping한다. Spawn 기본 질량은 0.365 kg이다.
 - 반지름 4 cm, 높이 10 cm와 바닥 원점/COM +2 cm를 유지한다. 관성은 기존 질량 분포를 유지하면서 새 질량에 비례해 조정한다. 이전 에피소드의 관성을 다시 곱하지 않는다.
-- 아래 표의 정적·동적 마찰을 매 에피소드 독립 Gaussian으로 샘플링한다. 동적/정적의 평균 비율은 약 0.8이며, 각 샘플에 고정 비율을 강제하지 않는다.
+- 아래 표의 정적·동적 마찰 Gaussian 분포를 역할별 4096개 재질 풀로 근사한다. 에피소드마다 선반/물체/Hand가 각자 새 재질 ID를 선택한다. 동적/정적의 평균 비율은 약 0.8이며, 각 샘플에 고정 비율을 강제하지 않는다.
 - 마찰의 ±2σ는 예상 범위이며 clipping 범위가 아니다. 음수 샘플만 0으로 제한한다.
 
 | 접촉면 | 정적 평균 | 정적 σ | 동적 평균 | 동적 σ |
@@ -173,9 +173,9 @@ Friction Combine Mode: `Average`
 
 Friction Combine Mode는 양쪽 모두 `average`다. 정적 접촉 마찰은 선반↔물체 평균 0.315/약 95% 범위 0.250–0.380, 물체↔Hand 평균 0.450/약 95% 범위 0.300–0.600이다. 기존 restitution, restitution combine mode 및 compliant contact 값은 보존한다.
 
-환경마다 별도 physics material을 만들고, 이후 에피소드에서는 기존 material의 속성만 갱신한다. 따라서 연속 Gaussian 샘플링을 유지하면서 material 수가 에피소드 수에 따라 증가하지 않는다. 질량과 마찰을 정책 관측에 추가하지 않는다. 현재 적용된 값은 디버깅용 `env.unwrapped._realistic_physics`의 `mass`, `static_friction`, `dynamic_friction`에서 확인할 수 있다.
+생성 단계에서 선반/물체/Hand 충돌 형상에 Average 재질을 바인딩한다. 리셋에서는 PhysX Tensor API의 `set_material_properties()`로 역할별 마찰을 일괄 적용한다. 재질 풀은 Gaussian 분위값으로 평균·표준편차를 근사하며 정적/동적 값의 순서를 각각 조합한다. 풀 크기를 4096개로 제한해 PhysX의 고유 재질 수 제한을 피한다. 매 에피소드에 연속 Gaussian 값을 새로 작성하는 이전 방식과 달리, 마찰은 유한한 풀에서 재샘플링한다. 질량은 기존대로 연속 Gaussian 샘플링과 clipping을 유지한다. 질량과 마찰을 정책 관측에 추가하지 않는다. 현재 적용된 값은 디버깅용 `env.unwrapped._realistic_physics`의 `mass`, `static_friction`, `dynamic_friction`에서 확인할 수 있다.
 
-Material 생성·바인딩은 **PhysX 시작 전 `prestartup`**에서 완료한다. `startup`에서는 물리 view의 초기 질량·관성만 저장하고, 에피소드 리셋에서는 질량·관성 및 이미 만들어진 material의 마찰 값만 갱신한다. 실행 중 MaterialBindingAPI를 추가하거나 바인딩을 교체하면 인스턴스 충돌 형상의 shape 연결이 무효화될 수 있어 이 순서로 분리했다. Isaac Lab의 `prestartup` USD 수정 조건에 따라 이 환경과 이를 상속하는 환경은 `scene.replicate_physics=False`를 사용한다.
+Material 생성·바인딩은 **로봇·선반·물체 스포너에서, PhysX 시작 및 환경 복제 전에** 완료한다. `startup`에서는 물리 view의 질량·관성·마찰 버퍼와 Hand shape 인덱스를 한 번 저장한다. 리셋에서 USD 속성을 변경하거나 물성 버퍼 전체를 다시 읽지 않는다. 업데이트는 질량·관성 2회, 선반/물체/Hand 마찰 3회의 Tensor API 호출로 처리한다. `prestartup` 이벤트와 `replicate_physics=False` 설정을 제거해 Baseline의 physics replication을 사용한다. Initial-Privileged 상속 환경에도 같은 경로가 적용된다.
 
 학습:
 
@@ -199,7 +199,7 @@ Material 생성·바인딩은 **PhysX 시작 전 `prestartup`**에서 완료한�
 
 로그: `logs/rsl_rl/inspire_sweep_realistic_physics/<timestamp>_<run_name>`.
 
-설정: `inspire_sweep_baseline/realistic_physics_env_cfg.py`. 분포 및 reset 처리: `inspire_sweep_baseline/mdp/realistic_physics.py`. 재사용 material 바인딩: `inspire_sweep_baseline/assets/realistic_materials.py`.
+설정: `inspire_sweep_baseline/realistic_physics_env_cfg.py`. 분포 및 reset 처리: `inspire_sweep_baseline/mdp/realistic_physics.py`. 초기 material 바인딩: `inspire_sweep_baseline/assets/realistic_materials.py`. 생성 시 바인딩을 수행하는 스포너: `inspire_sweep_baseline/assets/realistic_spawners.py`.
 
 
 ## 초기 위치 Actor + 현재 상태 Critic 실험 환경

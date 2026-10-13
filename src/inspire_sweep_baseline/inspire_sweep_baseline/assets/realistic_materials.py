@@ -1,9 +1,7 @@
-"""Private, reusable physics materials for continuous episode randomization.
+"""Spawn-time Average materials, preserving restitution and compliance.
 
-Updating existing USD material attributes follows Isaac Sim PhysicsMaterial's
-set_static_friction/set_dynamic_friction behavior. Unlike allocating a fresh
-material for each continuous TensorAPI sample, this keeps the material count
-bounded across long training runs. Original restitution/compliance are kept.
+These USD bindings are completed before PhysX starts and before source assets
+are cloned. Episode randomization updates only Tensor API material buffers.
 """
 
 from pxr import Sdf, Usd, UsdPhysics, UsdShade
@@ -12,9 +10,8 @@ from pxr import Sdf, Usd, UsdPhysics, UsdShade
 def bind_role_materials(stage, body_paths, material_root, static_friction, defaults):
     """Bind a role's friction to its colliders, preserving other material data.
 
-    One private material is reused for colliders with the same non-friction
-    properties. Materials live outside the cloned environment hierarchy so
-    writing env_0's properties cannot propagate to the other environments.
+    One material is reused for colliders with the same non-friction properties.
+    Call this from a spawner, while no physical shapes have been created yet.
     """
     groups = {}
     for body_path in body_paths:

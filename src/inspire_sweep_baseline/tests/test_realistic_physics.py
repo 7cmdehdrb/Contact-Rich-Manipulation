@@ -1,7 +1,6 @@
 """Mass/friction distribution and reset isolation of the inherited experiment."""
 
 import ast
-from contextlib import nullcontext
 from types import SimpleNamespace
 import sys
 
@@ -37,139 +36,143 @@ def test_gaussian_properties_and_average_contact_pair_statistics(load_mdp):
     assert object_tool.std().item() == pytest.approx((0.040**2 + 0.145**2)**0.5 / 2, abs=0.001)
 
 
-def test_episode_resampling_updates_only_selected_envs_without_inertia_drift(load_mdp, monkeypatch):
+class FakeView:
+    def __init__(self, count, shapes):
+        self.max_shapes = shapes
+        self.mass = torch.full((count, 1), 0.365)
+        self.inertia = torch.tensor([0.000933333, 0, 0, 0, 0.000933333, 0, 0, 0, 0.0008]).expand(count, -1).clone() * 0.365
+        self.properties = torch.ones(count, shapes, 3)
+        self.properties[..., 2] = torch.arange(shapes) / 10
+        self.reads = {"mass": 0, "inertia": 0, "material": 0}
+        self.writes = {"mass": 0, "inertia": 0, "material": 0}
+
+    def get_masses(self):
+        self.reads["mass"] += 1
+        return self.mass
+
+    def get_inertias(self):
+        self.reads["inertia"] += 1
+        return self.inertia
+
+    def get_material_properties(self):
+        self.reads["material"] += 1
+        return self.properties
+
+    def set_masses(self, values, ids):
+        self.writes["mass"] += 1
+        self.mass[ids] = values[ids]
+
+    def set_inertias(self, values, ids):
+        self.writes["inertia"] += 1
+        self.inertia[ids] = values[ids]
+
+    def set_material_properties(self, values, ids):
+        self.writes["material"] += 1
+        self.properties[ids] = values[ids]
+
+
+def make_physics_env(physics, monkeypatch, count=3):
+    shelf, cylinder, robot = FakeView(count, 3), FakeView(count, 1), FakeView(count, 6)
+    env = SimpleNamespace(num_envs=count, scene={
+        "shelf": SimpleNamespace(root_physx_view=shelf),
+        "object_collection": SimpleNamespace(num_objects=1, root_physx_view=cylinder),
+        "robot": SimpleNamespace(root_physx_view=robot),
+    })
+    monkeypatch.setattr(physics, "hand_material_shape_ids", lambda robot: torch.tensor([1, 3, 4]))
+    return env, (shelf, cylinder, robot)
+
+
+def test_batched_reset_preserves_other_rows_arm_housing_and_restitution_without_readbacks(load_mdp, monkeypatch):
     physics = load_mdp("realistic_physics")
-    monkeypatch.setitem(sys.modules, "pxr", SimpleNamespace(Sdf=SimpleNamespace(ChangeBlock=nullcontext)))
+    # A runtime dependency on USD editing would fail this regression test.
+    monkeypatch.setitem(sys.modules, "pxr", None)
+    env, views = make_physics_env(physics, monkeypatch)
+    original_materials = [view.properties.clone() for view in views]
+    original_inertia = views[1].inertia.clone()
+    physics.initialize_realistic_materials(env)
+    initial_reads = [dict(view.reads) for view in views]
+    state = env._realistic_physics
+    buffers = [material.properties for material in state.materials]
+    physics.randomize_episode_physics(env, torch.tensor([1]))
+    first_mass = views[1].mass[1].clone()
+    physics.randomize_episode_physics(env, torch.tensor([1]))
+    assert not torch.equal(views[1].mass[1], first_mass)
+    assert torch.equal(views[1].mass[[0, 2]], torch.full((2, 1), 0.365))
+    assert torch.allclose(views[1].inertia[1], original_inertia[1] * (views[1].mass[1] / 0.365))
+    assert torch.equal(views[1].inertia[[0, 2]], original_inertia[[0, 2]])
+    for role, (view, original) in enumerate(zip(views, original_materials)):
+        assert torch.equal(view.properties[[0, 2]], original[[0, 2]])
+        assert torch.equal(view.properties[..., 2], original[..., 2])
+        shapes = state.materials[role].shape_ids
+        assert torch.all(view.properties[1, shapes, 0] == state.static_friction[1, role])
+        assert torch.all(view.properties[1, shapes, 1] == state.dynamic_friction[1, role])
+        assert state.materials[role].properties is buffers[role]
+        assert view.reads == initial_reads[role]
+        assert view.writes["material"] == 2
+    assert torch.equal(views[2].properties[:, [0, 2, 5]], original_materials[2][:, [0, 2, 5]])
 
-    class Attribute:
-        def __init__(self, value):
-            self.value = value
 
-        def Set(self, value):
-            self.value = value
+@pytest.mark.parametrize("count", [1, 2048])
+def test_reset_has_constant_number_of_physx_calls(load_mdp, monkeypatch, count):
+    physics = load_mdp("realistic_physics")
+    env, views = make_physics_env(physics, monkeypatch, count)
+    physics.initialize_realistic_materials(env)
+    physics.randomize_episode_physics(env, torch.arange(count))
+    assert [view.writes["material"] for view in views] == [1, 1, 1]
+    assert views[1].writes["mass"] == views[1].writes["inertia"] == 1
+    assert views[1].reads["mass"] == views[1].reads["inertia"] == 1
 
-    class View:
-        def __init__(self):
-            self.mass = torch.full((3, 1), 0.365)
-            self.inertia = torch.tensor([0.000933333, 0, 0, 0, 0.000933333, 0, 0, 0, 0.0008]).expand(3, -1).clone() * 0.365
 
-        def get_masses(self):
-            return self.mass
+def test_gaussian_bucket_pool_retains_marginals_and_bounds_material_count(load_mdp):
+    physics = load_mdp("realistic_physics")
+    torch.manual_seed(42)
+    pools = physics.make_friction_buckets()
+    assert pools.shape == (3, 4096, 2)
+    expected_means = torch.tensor([physics.STATIC_FRICTION_MEANS, physics.DYNAMIC_FRICTION_MEANS]).T
+    expected_stds = torch.tensor([physics.STATIC_FRICTION_STDS, physics.DYNAMIC_FRICTION_STDS]).T
+    assert torch.allclose(pools.mean(1), expected_means, atol=1e-6)
+    assert torch.allclose(pools.std(1), expected_stds, atol=0.0001)
+    for role in range(3):
+        assert abs(torch.corrcoef(pools[role].T)[0, 1]) < 0.08
+    mass, static, dynamic = physics.sample_episode_properties(20_000, pools)
+    assert mass.min() >= 0.23 and mass.max() <= 0.50
+    pairs = torch.stack((static, dynamic), dim=-1)
+    for role in range(3):
+        assert torch.unique(pairs[:, role], dim=0).shape[0] <= 4096
+    assert not torch.equal(dynamic, static * 0.8)
 
-        def get_inertias(self):
-            return self.inertia
 
-        def set_masses(self, values, ids):
-            self.mass[ids] = values[ids]
-
-        def set_inertias(self, values, ids):
-            self.inertia[ids] = values[ids]
-
-    view = View()
-    original_inertia = view.inertia.clone()
-    bindings = [[[(Attribute(mean), Attribute(mean * 0.8))] for mean in physics.STATIC_FRICTION_MEANS] for _ in range(3)]
-    state = physics.EpisodePhysicsState(
-        bindings, view.mass.clone(), original_inertia.clone(), torch.full((3,), 0.365),
-        torch.tensor(physics.STATIC_FRICTION_MEANS).expand(3, 3).clone(),
-        torch.tensor(physics.DYNAMIC_FRICTION_MEANS).expand(3, 3).clone(),
+def test_hand_shape_mapping_uses_body_names_and_excludes_arm_and_axia(load_mdp):
+    physics = load_mdp("realistic_physics")
+    from _baseline_cpu_pkg.assets.robot import HAND_CONTACT_BODY_NAMES
+    names = ["axia80_link", *reversed(HAND_CONTACT_BODY_NAMES), "wrist_3_link"]
+    sizes = [1, *([1] * 30), 2]
+    paths = [f"/Robot/{name}" for name in names]
+    size_by_path = dict(zip(paths, sizes))
+    robot = SimpleNamespace(
+        body_names=names,
+        root_physx_view=SimpleNamespace(link_paths=[paths], max_shapes=33),
+        _physics_sim_view=SimpleNamespace(create_rigid_body_view=lambda path: SimpleNamespace(max_shapes=size_by_path[path])),
     )
-    env = SimpleNamespace(num_envs=3, scene={"object_collection": SimpleNamespace(root_physx_view=view)}, _realistic_physics=state)
-    torch.manual_seed(1)
-    physics.randomize_episode_physics(env, torch.tensor([1]))
-    first_mass = view.mass[1].clone()
-    first_friction = state.static_friction[1].clone()
-    assert torch.equal(view.mass[[0, 2]], torch.full((2, 1), 0.365))
-    assert torch.equal(view.inertia[[0, 2]], original_inertia[[0, 2]])
-    assert torch.allclose(view.inertia[1], original_inertia[1] * (view.mass[1] / 0.365))
-    physics.randomize_episode_physics(env, torch.tensor([1]))
-    assert not torch.equal(view.mass[1], first_mass)
-    assert not torch.equal(state.static_friction[1], first_friction)
-    assert torch.allclose(view.inertia[1], original_inertia[1] * (view.mass[1] / 0.365))
-    for role, pairs in enumerate(bindings[1]):
-        assert pairs[0][0].value == pytest.approx(state.static_friction[1, role].item())
-        assert pairs[0][1].value == pytest.approx(state.dynamic_friction[1, role].item())
-    # No new material is allocated on repeated resets.
-    assert env._realistic_physics.materials is bindings
+    assert physics.hand_material_shape_ids(robot).tolist() == list(range(1, 31))
 
 
-def test_variant_changes_only_physics_events_object_mass_and_required_replication_mode():
+def test_variant_uses_replication_and_spawn_time_bindings_with_no_prestartup_edits():
     tree = ast.parse((MODULE_ROOT / "realistic_physics_env_cfg.py").read_text())
     cfg = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "InspireSweepRealisticPhysicsEnvCfg")
     assert [node.id for node in cfg.bases] == ["InspireSweepEnvCfg"]
-    assignments = [node for node in cfg.body if isinstance(node, ast.AnnAssign)]
-    assert [node.target.id for node in assignments] == ["events"]
-    post = next(node for node in cfg.body if isinstance(node, ast.FunctionDef))
-    writes = [node.targets[0] for node in post.body if isinstance(node, ast.Assign)]
-    assert len(writes) == 3
-    assert writes[0].attr == "replicate_physics"
-    replication = next(node for node in post.body if isinstance(node, ast.Assign) and node.targets[0] is writes[0])
-    assert ast.literal_eval(replication.value) is False
-    assert writes[2].attr == "mass_props"
+    assert [node.target.id for node in cfg.body if isinstance(node, ast.AnnAssign)] == ["events"]
+    assert "replicate_physics = False" not in ast.unparse(cfg)
+    assert "RealisticRobotSpawnerCfg" in ast.unparse(cfg)
+    assert "RealisticShelfSpawnerCfg" in ast.unparse(cfg)
+    assert "RealisticCylinderSpawnerCfg" in ast.unparse(cfg)
     events = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "RealisticPhysicsEventsCfg")
     assert [node.id for node in events.bases] == ["EventsCfg"]
     event_terms = {node.targets[0].id: node.value for node in events.body if isinstance(node, ast.Assign)}
-    assert list(event_terms) == ["physics_material_bindings", "physics_materials", "physics_randomization"]
+    assert list(event_terms) == ["physics_materials", "physics_randomization"]
     assert {name: ast.literal_eval(next(kw.value for kw in call.keywords if kw.arg == "mode"))
-            for name, call in event_terms.items()} == {
-        "physics_material_bindings": "prestartup", "physics_materials": "startup", "physics_randomization": "reset",
-    }
+            for name, call in event_terms.items()} == {"physics_materials": "startup", "physics_randomization": "reset"}
     runner = ast.parse((MODULE_ROOT / "agents/realistic_physics_ppo_cfg.py").read_text())
     runner = next(node for node in runner.body if isinstance(node, ast.ClassDef))
     assert runner.bases[0].id == "InspireSweepPPORunnerCfg"
     assert [node.targets[0].id for node in runner.body if isinstance(node, ast.Assign)] == ["experiment_name"]
-
-
-def test_material_binding_is_rejected_after_physics_starts(load_mdp):
-    physics = load_mdp("realistic_physics")
-    env = SimpleNamespace(sim=SimpleNamespace(is_playing=lambda: True))
-    with pytest.raises(RuntimeError, match="before simulation starts"):
-        physics.prepare_realistic_materials(env)
-
-
-def test_startup_without_prepared_materials_never_falls_back_to_usd_binding(load_mdp):
-    physics = load_mdp("realistic_physics")
-    env = SimpleNamespace()
-    with pytest.raises(RuntimeError, match="Missing prestartup material bindings"):
-        physics.initialize_realistic_materials(env)
-
-
-def test_prestartup_needs_no_physics_views_and_startup_only_caches_defaults(load_mdp, monkeypatch):
-    physics = load_mdp("realistic_physics")
-    stage = object()
-    binds = []
-    materials_module = SimpleNamespace(
-        material_defaults=lambda cfg: {},
-        bind_role_materials=lambda *args: binds.append(args) or [(object(), object())],
-    )
-    monkeypatch.setitem(sys.modules, "isaaclab.sim.utils", SimpleNamespace(get_current_stage=lambda: stage))
-    monkeypatch.setitem(sys.modules, "_baseline_cpu_pkg.assets.realistic_materials", materials_module)
-
-    class Scene(dict):
-        env_prim_paths = ["/World/envs/env_0", "/World/envs/env_1"]
-
-    # No asset/view is available before simulation starts.
-    env = SimpleNamespace(
-        sim=SimpleNamespace(is_playing=lambda: False),
-        scene=Scene(), num_envs=2,
-        cfg=SimpleNamespace(sim=SimpleNamespace(physics_material=object())),
-    )
-    physics.prepare_realistic_materials(env)
-    assert len(binds) == 6  # Two environments, three contact roles.
-    assert all(args[0] is stage for args in binds)
-    assert len(binds[2][1]) == 30
-    assert len(env._realistic_material_bindings) == 2
-
-    # When physics views become available, startup must not call binding again.
-    env.sim.is_playing = lambda: True
-    masses = torch.full((2, 1), 0.365)
-    inertias = torch.ones(2, 9)
-    env.scene["object_collection"] = SimpleNamespace(
-        num_objects=1,
-        root_physx_view=SimpleNamespace(get_masses=lambda: masses, get_inertias=lambda: inertias),
-    )
-    physics.initialize_realistic_materials(env)
-    assert len(binds) == 6
-    assert env._realistic_physics.materials is env._realistic_material_bindings
-    assert torch.equal(env._realistic_physics.default_mass, masses)
-    masses.fill_(0.5)
-    assert torch.equal(env._realistic_physics.default_mass, torch.full((2, 1), 0.365))
