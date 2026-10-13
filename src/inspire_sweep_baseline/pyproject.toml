@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inspire-sweep-baseline"
+version = "0.1.0"
+description = "Independent UR5e/Axia80/Inspire single-cylinder shelf sweep"
+requires-python = ">=3.10"
+dependencies = ["gymnasium", "torch"]
+
+[tool.setuptools.packages.find]
+include = ["inspire_sweep_baseline*"]
+
+[tool.setuptools.package-data]
+inspire_sweep_baseline = [
+  "assets/*.md", "assets/*.txt",
+  "assets/data/ur5e_inspire_usd/*.usd",
+  "assets/data/ur5e_inspire_usd/*.yaml",
+  "assets/data/ur5e_inspire_usd/configuration/*.usd",
+]
