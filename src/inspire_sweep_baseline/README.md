@@ -198,3 +198,49 @@ Friction Combine Mode는 양쪽 모두 `average`다. 정적 접촉 마찰은 선
 로그: `logs/rsl_rl/inspire_sweep_realistic_physics/<timestamp>_<run_name>`.
 
 설정: `inspire_sweep_baseline/realistic_physics_env_cfg.py`. 분포 및 reset 처리: `inspire_sweep_baseline/mdp/realistic_physics.py`. 재사용 material 바인딩: `inspire_sweep_baseline/assets/realistic_materials.py`.
+
+
+## 초기 위치 Actor + 현재 상태 Critic 실험 환경
+
+환경 ID: `Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0`
+
+`InspireSweepRealisticInitialPrivilegedEnvCfg`가 실제 질량·마찰 랜덤화 환경을 상속한다. 목적은 정책이 물체를 계속 추적하는 관측 없이, 초기 물체 위치와 로봇/접촉 관측으로 밀기를 수행할 수 있는지 확인하는 것이다. Critic에는 현재 물체 상태를 제공해 가치 추정을 돕는다.
+
+- `policy`의 4번째 항목, 물체 위치 3D를 **에피소드 초기 물체 위치**로 교체한다. 좌표계는 기존과 같은 로봇 root 기준이고, 물체 원점은 실린더 바닥이다.
+- 리셋 후 command가 저장한 초기 상태를 사용한다. 선택된 환경만 새 위치를 캡처하며, 에피소드 중에는 물체나 robot root가 움직여도 저장한 측정값을 바꾸지 않는다.
+- 기존 ±1 cm 위치 관측 오차도 리셋마다 1회 샘플링하고 유지한다. 다른 policy 관측과 노이즈 설정은 그대로 둔다.
+- `privileged`에는 예제처럼 현재 물체의 위치 3D, quaternion 4D, 선속도 3D, 각속도 3D를 넣는다. 모두 로봇 root 좌표계로 표현한 13D이며 관측 노이즈를 적용하지 않는다.
+- 리워드는 기존 함수대로 Scene의 현재 물체 정보를 읽는다. Actor의 고정 위치나 privileged 관측 벡터를 보상 입력으로 대체하지 않는다.
+- 질량·마찰 랜덤화, 크기·COM, 스폰 방향/위치, Arm/Hand 제어, 보상·게이트·종료 및 PPO 수치 설정을 상속한다.
+
+```python
+obs_groups = {"actor": ["policy"], "critic": ["policy", "privileged"]}
+```
+
+| 네트워크 | 입력 | 차원 |
+| --- | --- | ---: |
+| Actor | 초기 위치를 포함한 policy | 41 |
+| Critic | policy + privileged 현재 물체 상태 | 54 |
+| Action | 기존 Arm 6 + Hand 2 | 8 |
+
+학습:
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0 \
+  --num_envs 2048 \
+  --sweep-direction both \
+  --run_name realistic_initial_privileged \
+  --headless
+```
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0 \
+  --num_envs 1 \
+  --checkpoint "<checkpoint.pt>"
+```
+
+좌·우 방향 고정은 기존과 같이 `--sweep-direction left`/`right`를 사용한다. 로그는 `logs/rsl_rl/inspire_sweep_realistic_initial_privileged/<timestamp>_<run_name>`에 저장한다.
+
+설정: `inspire_sweep_baseline/initial_privileged_env_cfg.py`. 관측 처리: `inspire_sweep_baseline/mdp/asymmetric_observations.py`. PPO 입력 경로: `inspire_sweep_baseline/agents/initial_privileged_ppo_cfg.py`.
