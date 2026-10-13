@@ -111,3 +111,90 @@ PPO는 기존 설정을 유지한다: Actor/Critic MLP `[256, 128, 64]`, ELU, �
 - `inspire_sweep_baseline/agents/rsl_rl_ppo_cfg.py`: PPO 설정.
 - `scripts`: 복사한 Isaac Lab RSL-RL train/play와 CLI. 기존 프로젝트 import는 제거했다.
 - `tests`: CPU 동작 검증 및 USD 정적 검증.
+
+
+## 물체 질량
+
+| 항목                 | 설정값                |
+| ------------------ | ------------------ |
+| 질량 평균 (Mean)       | 0.365 kg (365 g)   |
+| Gaussian Noise (σ) | 0.0675 kg (67.5 g) |
+| 예상 95% 범위 (±2σ)    | 0.230 \~ 0.500 kg  |
+
+추천 설정
+
+\\[ \boxed{m\sim\mathcal{N}(0.365,\\;0.0675^2)\ \mathrm{kg}} \\]
+
+- Gaussian Noise는 Episode마다 샘플링
+- 약 95%의 샘플이 230\~500 g 범위에 포함
+- 범위를 절대 벗어나면 안 된다면 0.230\~0.500 kg으로 Clipping 적용
+
+## 마찰 계수
+
+Friction Combine Mode: `Average`
+
+| 오브젝트 | 정적 마찰 계수 (Mean) | Gaussian Noise (σ) | 동적 마찰 계수 (Mean) | Gaussian Noise (σ) |
+| ---- | --------------- | ------------------ | --------------- | ------------------ |
+| 바닥   | 0.315           | 0.051              | 0.252           | 0.041              |
+| 물건   | 0.315           | 0.040              | 0.252           | 0.032              |
+| Tool | 0.585           | 0.145              | 0.468           | 0.116              |
+
+설정 조건
+
+- 동적 마찰 계수의 평균은 정적 마찰 계수 평균의 약 0.8배. 샘플마다 고정 비율을 강제하지 않는다.
+- Gaussian Noise 범위: ±2σ ≈ 95%
+- Noise는 Episode별 샘플링
+
+접촉쌍별 결과
+
+| 접촉쌍       | 정적 마찰 평균 | 예상 95% 범위    |
+| --------- | -------- | ------------ |
+| 바닥 ↔ 물건   | 0.315    | 0.25 \~ 0.38 |
+| 물건 ↔ Tool | 0.450    | 0.30 \~ 0.60 |
+
+## 실제 질량·마찰 랜덤화 실험 환경
+
+환경 ID: `Isaac-Inspire-Sweep-Realistic-Physics-v0`
+
+`InspireSweepRealisticPhysicsEnvCfg`가 Baseline을 상속한다. 변경 사항은 물체 질량과 선반/물체/Hand의 마찰 및 이를 샘플링하는 Event다. Actor 41D, Action 8D, 초기 자세, 양방향 스폰, EEF/목표 높이, 보상, 게이트, 1 rad/s 종료와 PPO는 유지한다. 학습 로그 폴더만 실험 구분을 위해 분리한다.
+
+- 질량: 매 에피소드 `Normal(0.365, 0.0675²)` kg에서 샘플링한 뒤 `[0.230, 0.500]` kg으로 clipping한다. Spawn 기본 질량은 0.365 kg이다.
+- 반지름 4 cm, 높이 10 cm와 바닥 원점/COM +2 cm를 유지한다. 관성은 기존 질량 분포를 유지하면서 새 질량에 비례해 조정한다. 이전 에피소드의 관성을 다시 곱하지 않는다.
+- 아래 표의 정적·동적 마찰을 매 에피소드 독립 Gaussian으로 샘플링한다. 동적/정적의 평균 비율은 약 0.8이며, 각 샘플에 고정 비율을 강제하지 않는다.
+- 마찰의 ±2σ는 예상 범위이며 clipping 범위가 아니다. 음수 샘플만 0으로 제한한다.
+
+| 접촉면 | 정적 평균 | 정적 σ | 동적 평균 | 동적 σ |
+| --- | ---: | ---: | ---: | ---: |
+| 선반 | 0.315 | 0.051 | 0.252 | 0.041 |
+| 물체 | 0.315 | 0.040 | 0.252 | 0.032 |
+| Hand | 0.585 | 0.145 | 0.468 | 0.116 |
+
+선반은 물체를 지지하는 Shelf 충돌 형상에 적용한다. 전역 GroundPlane은 그대로 둔다. Hand는 손바닥 패드, 손가락 패드 및 Hand 링크의 충돌 형상에 적용한다. UR5e Arm 및 Axia80 하우징의 마찰은 유지한다.
+
+Friction Combine Mode는 양쪽 모두 `average`다. 정적 접촉 마찰은 선반↔물체 평균 0.315/약 95% 범위 0.250–0.380, 물체↔Hand 평균 0.450/약 95% 범위 0.300–0.600이다. 기존 restitution, restitution combine mode 및 compliant contact 값은 보존한다.
+
+환경마다 별도 physics material을 만들고, 이후 에피소드에서는 기존 material의 속성만 갱신한다. 따라서 연속 Gaussian 샘플링을 유지하면서 material 수가 에피소드 수에 따라 증가하지 않는다. 질량과 마찰을 정책 관측에 추가하지 않는다. 현재 적용된 값은 디버깅용 `env.unwrapped._realistic_physics`의 `mass`, `static_friction`, `dynamic_friction`에서 확인할 수 있다.
+
+학습:
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-v0 \
+  --num_envs 2048 \
+  --sweep-direction both \
+  --run_name realistic_mass_friction \
+  --headless
+```
+
+좌측/우측 전용 Event는 기존과 같이 `--sweep-direction left`/`right`로 선택한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-v0 \
+  --num_envs 1 \
+  --checkpoint "<checkpoint.pt>"
+```
+
+로그: `logs/rsl_rl/inspire_sweep_realistic_physics/<timestamp>_<run_name>`.
+
+설정: `inspire_sweep_baseline/realistic_physics_env_cfg.py`. 분포 및 reset 처리: `inspire_sweep_baseline/mdp/realistic_physics.py`. 재사용 material 바인딩: `inspire_sweep_baseline/assets/realistic_materials.py`.
