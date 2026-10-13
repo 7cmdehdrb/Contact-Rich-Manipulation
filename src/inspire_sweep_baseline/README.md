@@ -175,6 +175,8 @@ Friction Combine Mode는 양쪽 모두 `average`다. 정적 접촉 마찰은 선
 
 환경마다 별도 physics material을 만들고, 이후 에피소드에서는 기존 material의 속성만 갱신한다. 따라서 연속 Gaussian 샘플링을 유지하면서 material 수가 에피소드 수에 따라 증가하지 않는다. 질량과 마찰을 정책 관측에 추가하지 않는다. 현재 적용된 값은 디버깅용 `env.unwrapped._realistic_physics`의 `mass`, `static_friction`, `dynamic_friction`에서 확인할 수 있다.
 
+Material 생성·바인딩은 **PhysX 시작 전 `prestartup`**에서 완료한다. `startup`에서는 물리 view의 초기 질량·관성만 저장하고, 에피소드 리셋에서는 질량·관성 및 이미 만들어진 material의 마찰 값만 갱신한다. 실행 중 MaterialBindingAPI를 추가하거나 바인딩을 교체하면 인스턴스 충돌 형상의 shape 연결이 무효화될 수 있어 이 순서로 분리했다. Isaac Lab의 `prestartup` USD 수정 조건에 따라 이 환경과 이를 상속하는 환경은 `scene.replicate_physics=False`를 사용한다.
+
 학습:
 
 ```bash

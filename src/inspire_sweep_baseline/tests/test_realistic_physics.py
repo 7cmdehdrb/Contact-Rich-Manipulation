@@ -92,7 +92,7 @@ def test_episode_resampling_updates_only_selected_envs_without_inertia_drift(loa
     assert env._realistic_physics.materials is bindings
 
 
-def test_variant_inherits_everything_except_physics_events_and_object_mass():
+def test_variant_changes_only_physics_events_object_mass_and_required_replication_mode():
     tree = ast.parse((MODULE_ROOT / "realistic_physics_env_cfg.py").read_text())
     cfg = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "InspireSweepRealisticPhysicsEnvCfg")
     assert [node.id for node in cfg.bases] == ["InspireSweepEnvCfg"]
@@ -100,12 +100,76 @@ def test_variant_inherits_everything_except_physics_events_and_object_mass():
     assert [node.target.id for node in assignments] == ["events"]
     post = next(node for node in cfg.body if isinstance(node, ast.FunctionDef))
     writes = [node.targets[0] for node in post.body if isinstance(node, ast.Assign)]
-    assert len(writes) == 2
-    assert writes[1].attr == "mass_props"
+    assert len(writes) == 3
+    assert writes[0].attr == "replicate_physics"
+    replication = next(node for node in post.body if isinstance(node, ast.Assign) and node.targets[0] is writes[0])
+    assert ast.literal_eval(replication.value) is False
+    assert writes[2].attr == "mass_props"
     events = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "RealisticPhysicsEventsCfg")
     assert [node.id for node in events.bases] == ["EventsCfg"]
-    assert [node.targets[0].id for node in events.body if isinstance(node, ast.Assign)] == ["physics_materials", "physics_randomization"]
+    event_terms = {node.targets[0].id: node.value for node in events.body if isinstance(node, ast.Assign)}
+    assert list(event_terms) == ["physics_material_bindings", "physics_materials", "physics_randomization"]
+    assert {name: ast.literal_eval(next(kw.value for kw in call.keywords if kw.arg == "mode"))
+            for name, call in event_terms.items()} == {
+        "physics_material_bindings": "prestartup", "physics_materials": "startup", "physics_randomization": "reset",
+    }
     runner = ast.parse((MODULE_ROOT / "agents/realistic_physics_ppo_cfg.py").read_text())
     runner = next(node for node in runner.body if isinstance(node, ast.ClassDef))
     assert runner.bases[0].id == "InspireSweepPPORunnerCfg"
     assert [node.targets[0].id for node in runner.body if isinstance(node, ast.Assign)] == ["experiment_name"]
+
+
+def test_material_binding_is_rejected_after_physics_starts(load_mdp):
+    physics = load_mdp("realistic_physics")
+    env = SimpleNamespace(sim=SimpleNamespace(is_playing=lambda: True))
+    with pytest.raises(RuntimeError, match="before simulation starts"):
+        physics.prepare_realistic_materials(env)
+
+
+def test_startup_without_prepared_materials_never_falls_back_to_usd_binding(load_mdp):
+    physics = load_mdp("realistic_physics")
+    env = SimpleNamespace()
+    with pytest.raises(RuntimeError, match="Missing prestartup material bindings"):
+        physics.initialize_realistic_materials(env)
+
+
+def test_prestartup_needs_no_physics_views_and_startup_only_caches_defaults(load_mdp, monkeypatch):
+    physics = load_mdp("realistic_physics")
+    stage = object()
+    binds = []
+    materials_module = SimpleNamespace(
+        material_defaults=lambda cfg: {},
+        bind_role_materials=lambda *args: binds.append(args) or [(object(), object())],
+    )
+    monkeypatch.setitem(sys.modules, "isaaclab.sim.utils", SimpleNamespace(get_current_stage=lambda: stage))
+    monkeypatch.setitem(sys.modules, "_baseline_cpu_pkg.assets.realistic_materials", materials_module)
+
+    class Scene(dict):
+        env_prim_paths = ["/World/envs/env_0", "/World/envs/env_1"]
+
+    # No asset/view is available before simulation starts.
+    env = SimpleNamespace(
+        sim=SimpleNamespace(is_playing=lambda: False),
+        scene=Scene(), num_envs=2,
+        cfg=SimpleNamespace(sim=SimpleNamespace(physics_material=object())),
+    )
+    physics.prepare_realistic_materials(env)
+    assert len(binds) == 6  # Two environments, three contact roles.
+    assert all(args[0] is stage for args in binds)
+    assert len(binds[2][1]) == 30
+    assert len(env._realistic_material_bindings) == 2
+
+    # When physics views become available, startup must not call binding again.
+    env.sim.is_playing = lambda: True
+    masses = torch.full((2, 1), 0.365)
+    inertias = torch.ones(2, 9)
+    env.scene["object_collection"] = SimpleNamespace(
+        num_objects=1,
+        root_physx_view=SimpleNamespace(get_masses=lambda: masses, get_inertias=lambda: inertias),
+    )
+    physics.initialize_realistic_materials(env)
+    assert len(binds) == 6
+    assert env._realistic_physics.materials is env._realistic_material_bindings
+    assert torch.equal(env._realistic_physics.default_mass, masses)
+    masses.fill_(0.5)
+    assert torch.equal(env._realistic_physics.default_mass, torch.full((2, 1), 0.365))

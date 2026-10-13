@@ -36,18 +36,22 @@ class EpisodePhysicsState:
     dynamic_friction: torch.Tensor
 
 
-def initialize_realistic_materials(env, env_ids=None):
-    """Once at startup, bind private Average materials for each environment."""
+def prepare_realistic_materials(env, env_ids=None):
+    """Bind materials before PhysX creates shapes; never call while playing.
+
+    Applying MaterialBindingAPI to an instanceable collision ancestor after
+    physics starts can invalidate cloned shape attachments. This USD work must
+    remain in the prestartup event, separated from physics-view initialization.
+    """
     del env_ids
-    if hasattr(env, "_realistic_physics"):
+    if env.sim.is_playing():
+        raise RuntimeError("Realistic material bindings must be prepared before simulation starts")
+    if hasattr(env, "_realistic_material_bindings"):
         return
     from isaaclab.sim.utils import get_current_stage
     from ..assets.realistic_materials import bind_role_materials, material_defaults
     from ..assets.robot import HAND_CONTACT_BODY_NAMES
 
-    objects = env.scene["object_collection"]
-    if objects.num_objects != 1:
-        raise RuntimeError("Realistic physics requires exactly one cylinder")
     stage = get_current_stage()
     defaults = material_defaults(env.cfg.sim.physics_material)
     materials = []
@@ -63,6 +67,20 @@ def initialize_realistic_materials(env, env_ids=None):
                 stage, body_paths, f"/World/InspireSweepRealisticMaterials/env_{index}/{role}", mean, defaults,
             ))
         materials.append(role_materials)
+    env._realistic_material_bindings = materials
+
+
+def initialize_realistic_materials(env, env_ids=None):
+    """After physics starts, cache handles/defaults without authoring USD."""
+    del env_ids
+    if hasattr(env, "_realistic_physics"):
+        return
+    materials = getattr(env, "_realistic_material_bindings", None)
+    if materials is None:
+        raise RuntimeError("Missing prestartup material bindings; check RealisticPhysicsEventsCfg")
+    objects = env.scene["object_collection"]
+    if objects.num_objects != 1:
+        raise RuntimeError("Realistic physics requires exactly one cylinder")
     view = objects.root_physx_view
     env._realistic_physics = EpisodePhysicsState(
         materials=materials,
