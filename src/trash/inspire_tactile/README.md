@@ -236,8 +236,8 @@ ATI 손목 6축 F/T는 이 패키지에 포함하지 않는다.
 
 센서 의미와 제약은 [Isaac Lab 2.3 ContactSensor 구현](https://isaac-sim.github.io/IsaacLab/v2.3.1/_modules/isaaclab/sensors/contact_sensor/contact_sensor.html)과
 [PhysX contact tensor API](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/107.3/extensions/runtime/source/omni.physics.tensors/docs/api/python.html)를 참고한다.
-프로젝트 배경은 [인계 요약](../../example/Contact-Rich-Manipulation-Context/docs/00_HANDOFF_BRIEF.md)과
-[결정·미정 목록](../../example/Contact-Rich-Manipulation-Context/docs/03_DECISIONS_AND_OPEN_QUESTIONS.md)에 있다.
+프로젝트 배경은 [인계 요약](../../../example/Contact-Rich-Manipulation-Context/01_plan/00_HANDOFF_BRIEF.md)과
+[결정·미정 목록](../../../example/Contact-Rich-Manipulation-Context/01_plan/03_DECISIONS_AND_OPEN_QUESTIONS.md)에 있다.
 
 ## 대조 실험과 검증
 

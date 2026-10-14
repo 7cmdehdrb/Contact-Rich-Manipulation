@@ -10,11 +10,11 @@ UR5e–Axia80 F/T–Inspire Hand의 접촉 기반 조작을 개발하는 Isaac L
 
 | 목적 | 안내 |
 | --- | --- |
-| 프로젝트 범위와 현재 우선순위 이해 | [인계 브리프](example/Contact-Rich-Manipulation-Context/docs/00_HANDOFF_BRIEF.md) |
-| 전체 구조·패키지 역할·문서 위치 확인 | [Workspace 안내](example/Contact-Rich-Manipulation-Context/docs/10_WORKSPACE_GUIDE.md) |
-| 환경 상속·등록 ID·실행 명령 확인 | [활성 환경](example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md) |
-| Manager 기반 OOP와 개발 로그 작성 | [개발 지침](example/Contact-Rich-Manipulation-Context/docs/09_DEVELOPMENT_GUIDE.md) |
-| 연구·문헌·실험 기록 탐색 | [프로젝트 문서 색인](example/Contact-Rich-Manipulation-Context/docs/README.md) |
+| 프로젝트 범위와 현재 우선순위 이해 | [인계 브리프](example/Contact-Rich-Manipulation-Context/01_plan/00_HANDOFF_BRIEF.md) |
+| 전체 구조·패키지 역할·문서 위치 확인 | [Workspace 안내](example/Contact-Rich-Manipulation-Context/00_guidelines/10_WORKSPACE_GUIDE.md) |
+| 환경 상속·등록 ID·실행 명령 확인 | [활성 환경](example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) |
+| Manager 기반 OOP와 개발 로그 작성 | [개발 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md) |
+| 연구·문헌·실험 기록 탐색 | [프로젝트 문서 색인](example/Contact-Rich-Manipulation-Context/README.md) |
 | 과거 참고 Sweep 환경 확인 | [Sweep-Policy 환경 문서](example/Sweep-Policy/docs/README.md) |
 | SSH·VPN·ROS/Python 일반 지식 확인 | [일반 지식 색인](docs/README.md) |
 
@@ -73,7 +73,7 @@ UR Description의 현재 경로는 `src/trash/Universal_Robots_ROS2_Description`
 ## 활성 환경 실행
 
 저장소 루트에서 Isaac Lab 실행 환경을 사용한다. 아래 명령은 실행 예시이며
-전체 환경별 명령·상속 구조는 [활성 환경 안내](example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md)에 있다.
+전체 환경별 명령·상속 구조는 [활성 환경 안내](example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)에 있다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \

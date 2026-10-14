@@ -33,5 +33,5 @@ Axia80 실험은 보관된 UR Description의 xacro/mesh를 읽는다.
 참고용 Sweep-Policy의 일부 Inspire 환경도 보관된 `hand_manipulation_rl` 자산·센서를 읽는다.
 이 자산 참조는 패키지를 ROS 빌드나 활성 정책 등록에 포함하는 것과 구분한다.
 
-[전체 구조와 문서 안내](../../example/Contact-Rich-Manipulation-Context/docs/10_WORKSPACE_GUIDE.md)
+[전체 구조와 문서 안내](../../example/Contact-Rich-Manipulation-Context/00_guidelines/10_WORKSPACE_GUIDE.md)
 에서 현재 개발 흐름을 확인한다.
