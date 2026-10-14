@@ -121,7 +121,7 @@ def build_cantilever_model(root: Path, output: Path) -> tuple[Path, dict[str, ob
     root = root.resolve()
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    description = root / "src/Universal_Robots_ROS2_Description"
+    description = root / "src/trash/Universal_Robots_ROS2_Description"
     if not description.is_dir():
         raise FileNotFoundError(f"UR description directory does not exist: {description}")
 

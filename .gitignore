@@ -421,3 +421,44 @@ outputs/
 *.safetensor
 
 !/docs2/img/*.png
+
+# Build exclusion markers are part of the workspace layout.
+!/src/trash/COLCON_IGNORE
+!/src/trash/AMENT_IGNORE
+!/src/trash/CATKIN_IGNORE
+!/example/COLCON_IGNORE
+!/example/AMENT_IGNORE
+!/example/CATKIN_IGNORE
+
+# Generated output trees must not expose saved package sources to ROS builds.
+!/build/
+/build/*
+!/install/
+/install/*
+!/log/
+/log/*
+!/logs/
+/logs/*
+!/outputs/
+/outputs/*
+!/build/COLCON_IGNORE
+!/build/AMENT_IGNORE
+!/build/CATKIN_IGNORE
+!/install/COLCON_IGNORE
+!/install/AMENT_IGNORE
+!/install/CATKIN_IGNORE
+!/log/COLCON_IGNORE
+!/log/AMENT_IGNORE
+!/log/CATKIN_IGNORE
+!/logs/COLCON_IGNORE
+!/logs/AMENT_IGNORE
+!/logs/CATKIN_IGNORE
+!/outputs/COLCON_IGNORE
+!/outputs/AMENT_IGNORE
+!/outputs/CATKIN_IGNORE
+!/videos/COLCON_IGNORE
+!/videos/AMENT_IGNORE
+!/videos/CATKIN_IGNORE
+!/reports/COLCON_IGNORE
+!/reports/AMENT_IGNORE
+!/reports/CATKIN_IGNORE

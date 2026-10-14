@@ -11,6 +11,21 @@ from .assets.realistic_spawners import (
 from .mdp.realistic_physics import MASS_MEAN, initialize_realistic_materials, randomize_episode_physics
 
 
+def apply_realistic_physics(cfg: InspireSweepEnvCfg):
+    """Apply the existing mass and spawn-time friction setup to a baseline cfg.
+
+    Call after the baseline ``__post_init__`` and use
+    ``RealisticPhysicsEventsCfg`` (or a subclass) for episode randomization.
+    """
+    # No prestartup USD randomization: retain Baseline physics replication.
+    cylinder = cfg.scene.object_collection.rigid_objects["mass_cylinder"]
+    cylinder.spawn.mass_props = sim_utils.MassPropertiesCfg(mass=MASS_MEAN)
+    defaults = cfg.sim.physics_material
+    cfg.scene.robot.spawn = replace_friction_spawner(cfg.scene.robot.spawn, RealisticRobotSpawnerCfg, defaults)
+    cfg.scene.shelf.spawn = replace_friction_spawner(cfg.scene.shelf.spawn, RealisticShelfSpawnerCfg, defaults)
+    cylinder.spawn = replace_friction_spawner(cylinder.spawn, RealisticCylinderSpawnerCfg, defaults)
+
+
 @configclass
 class RealisticPhysicsEventsCfg(EventsCfg):
     # Source spawners already bind Average materials before physics cloning.
@@ -25,10 +40,4 @@ class InspireSweepRealisticPhysicsEnvCfg(InspireSweepEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-        # No prestartup USD randomization: retain Baseline physics replication.
-        cylinder = self.scene.object_collection.rigid_objects["mass_cylinder"]
-        cylinder.spawn.mass_props = sim_utils.MassPropertiesCfg(mass=MASS_MEAN)
-        defaults = self.sim.physics_material
-        self.scene.robot.spawn = replace_friction_spawner(self.scene.robot.spawn, RealisticRobotSpawnerCfg, defaults)
-        self.scene.shelf.spawn = replace_friction_spawner(self.scene.shelf.spawn, RealisticShelfSpawnerCfg, defaults)
-        cylinder.spawn = replace_friction_spawner(cylinder.spawn, RealisticCylinderSpawnerCfg, defaults)
+        apply_realistic_physics(self)

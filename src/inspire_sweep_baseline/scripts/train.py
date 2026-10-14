@@ -185,8 +185,7 @@ def main(
         else agent_cfg.max_iterations
     )
 
-    if args_cli.sweep_direction is not None:
-        env_cfg.events.object_spawn.params["sweep_direction"] = args_cli.sweep_direction
+    cli_args.apply_sweep_direction(env_cfg, args_cli.sweep_direction)
 
     # handle deprecated configurations
     agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)

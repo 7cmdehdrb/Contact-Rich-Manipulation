@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+[활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/docs/09_DEVELOPMENT_GUIDE.md)
+
 환경 ID: `Isaac-Inspire-Sweep-Baseline-v0`
 
 `Isaac-Sweep-Object-UR5e-Random-Single-Inspire-Open-v2-mass`의 구성을 독립 패키지로 옮긴 환경이다. 기존 프로젝트 패키지를 import하거나 상속하지 않는다. MDP 함수, 로봇 스포너, 실린더 스포너, PPO 설정, 실행 스크립트와 로봇 USD를 이 패키지에 포함한다. Isaac Lab, Isaac Sim, RSL-RL은 기존 설치를 사용한다.
@@ -246,3 +248,58 @@ obs_groups = {"actor": ["policy"], "critic": ["policy", "privileged"]}
 좌·우 방향 고정은 기존과 같이 `--sweep-direction left`/`right`를 사용한다. 로그는 `logs/rsl_rl/inspire_sweep_realistic_initial_privileged/<timestamp>_<run_name>`에 저장한다.
 
 설정: `inspire_sweep_baseline/initial_privileged_env_cfg.py`. 관측 처리: `inspire_sweep_baseline/mdp/asymmetric_observations.py`. PPO 입력 경로: `inspire_sweep_baseline/agents/initial_privileged_ppo_cfg.py`.
+
+## 전방향 목표 위치 실험 환경
+
+환경 ID: `Isaac-Inspire-Sweep-Omni-v0`
+
+Scene, Action, Event, Observation, Reward, Termination과 각 파라미터의 의미는 [Omni 환경 상세 구성](../../example/Contact-Rich-Manipulation-Context/docs/environments/OMNI_ENVIRONMENT.md)에 정리되어 있다.
+
+`InspireSweepOmniEnvCfg`가 `InspireSweepEnvCfg`를 직접 상속한다. 로봇·선반·실린더 형상, Initial Joint, Arm 6 + Hand 2 제어, 현재 물체 위치를 사용하는 policy 41D 관측과 노이즈, 50 Hz 제어 및 10초 제한은 Baseline을 사용한다. `InspireSweepPPORunnerCfg`도 동일 클래스를 그대로 등록한다. 질량·마찰은 `apply_realistic_physics()`와 `RealisticPhysicsEventsCfg`의 startup/reset 이벤트를 재사용하므로 Realistic Physics 환경과 동일하다.
+
+### 스폰과 목표
+
+- 물체 바닥 원점을 선반 상판 정중앙 `(-0.7, 0, 1.05)` 기준 **R=2 cm 원판**에서 면적에 대해 균일하게 샘플링한다. 현재 좌표계의 Z가 높이이며, 수평 평면은 XY다. 실린더 yaw는 무작위이고 높이는 상판에 고정한다.
+- 목표는 초기 물체 위치에서 **무작위 수평 방위로 15 cm** 이동한 점이다. 방위는 `[−π, π)` 전체에서 균일 샘플링한다. 에피소드 동안 목표와 초기 물체 위치는 고정된다.
+- 같은 선반 USD의 중간 상판 영역은 X `[-0.9, -0.5]`, Y `[-0.5, 0.5]`다. 목표에서는 실린더 반지름 4 cm에 여유 2 cm를 더해 가장자리와 간격을 확보한다. 목표가 이 안전 영역을 벗어나면 **방위와 스폰을 유지하고 목표 이동 거리만 줄인다**. 해당 값은 `events.object_spawn.params`에서 조정할 수 있다.
+
+### 보상과 종료
+
+[Omni 보상 제안 초안](../../example/Contact-Rich-Manipulation-Context/docs/environments/OMNI_REWARD_PLAN.md)의 식을 적용하며 다음 수치는 확인한 초기 시험값이다. 목표 비용에는 접근 게이트를 두지 않는다. 기존 EEF 방향 정렬, Y 속도 보상, Homing 보상과 단일 물체에서 0인 비대상 물체 보상을 제거한다.
+
+| 항목 | 초기 가중치 | 계산 |
+| --- | ---: | --- |
+| 목표 평면 거리 | +6.0 | `exp(-d / 0.10) - 1` |
+| 접근 진척 | +1.0 | 고정 `ee_frame`에서 초기 물체 바닥 원점까지의 새 최단 거리 진척. 근접 반경 10 cm, 에피소드 합계 최대 +1 |
+| Arm / Hand Action Rate | 각각 −0.03 | 각 그룹의 명령 변화량 정규화 제곱 평균. 정규화 스케일 1.0; Hand는 실제 적용되는 `[0, 1]` openness 사용 |
+| Arm / Hand Joint Velocity | 각각 −0.01 | 이름으로 선택한 Arm 6개 / 현재 제어하는 Hand 12개 실제 관절의 정규화 제곱 평균. 기준 속도 1 rad/s |
+| 물체 기울기 | −2.0 | 상판 법선과 물체 위쪽 축 사이 각도. 5° 이하 비용 0, 0.9 rad까지 정규화한 제곱 비용 |
+| 선반 페널티 | −0.5 | 기존 `ShelfCollisionPenalty` 계산 유지 |
+| 시간 비용 | −0.1 | 초당 비용 |
+| 성공 / 실패 이벤트 | +30 / −80 | 종료 전이에 한 번 지급. 여러 실패가 동시에 발생해도 −80 한 번 |
+
+목표 오차 **1 cm 미만**, 물체 평면 속도 **2 cm/s 미만**, 기울기 **10° 이하**, 상판 지지 상태와 실패 없음이 **0.3초** 연속 유지되면 성공 보상을 지급하고 종료한다. 지지 상태는 pose 기반 기하학적 추정으로, 바닥 최저점과 상판 높이 오차가 1 cm 이내이고 물체 원점이 반지름 여유를 적용한 상판 영역 안에 있는지 검사한다. 실제 접촉력을 검사하거나 기울어진 실린더 전체의 투영 영역을 계산하지 않는다. 손 자세와 Homing은 성공 조건에 포함하지 않는다.
+
+실패는 기존 Arm >1 rad/s, 물체 속도 norm >0.3 m/s, 물체 바닥 높이 <1.04 m 및 기존 선반 속도·finger/wrist 높이 검사를 유지한다. roll/pitch 검사는 상판 법선 기준 기울기 **≥0.9 rad**로 교체한다. 물체 바닥 원점의 수평 위치가 상판 영역을 벗어나거나 선반 위치가 초기 위치에서 **5 cm 초과** 이동해도 종료한다. 실패가 발생하면 성공 유지 시간을 초기화하고 성공 보상을 지급하지 않는다. 시간 제한만 도달한 경우에는 실패 이벤트 페널티를 지급하지 않는다.
+
+Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진척과 성공·실패 함수는 내부에서 이 곱셈을 상쇄한다. 나머지 항은 계획서의 `Δt / T_ref` (`T_ref=1초`)로 누적된다. 접근 기록과 성공 유지 카운터는 리셋된 환경만 초기화한다. PPO의 `gamma=0.98`도 그대로 유지하며, 보상 가중치와 종료 임계값은 새 Cfg에서 조정한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-v0 \
+  --num_envs 2048 \
+  --experiment_name inspire_sweep_omni \
+  --run_name centered_spawn_goal15cm \
+  --headless
+```
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-v0 \
+  --num_envs 1 \
+  --checkpoint "<checkpoint.pt>"
+```
+
+새 환경은 항상 전방향 목표를 생성하므로 `--sweep-direction`을 사용하지 않는다. PPO 클래스의 기본 로그 폴더는 Baseline과 같으며, 위 학습 명령처럼 `--experiment_name`으로 구분할 수 있다.
+
+설정: `inspire_sweep_baseline/omni_env_cfg.py`. 스폰·목표: `mdp/goal_events.py`. 보상: `mdp/goal_rewards.py`. 종료: `mdp/goal_terminations.py`.

@@ -162,10 +162,13 @@ def test_variant_uses_replication_and_spawn_time_bindings_with_no_prestartup_edi
     cfg = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "InspireSweepRealisticPhysicsEnvCfg")
     assert [node.id for node in cfg.bases] == ["InspireSweepEnvCfg"]
     assert [node.target.id for node in cfg.body if isinstance(node, ast.AnnAssign)] == ["events"]
-    assert "replicate_physics = False" not in ast.unparse(cfg)
-    assert "RealisticRobotSpawnerCfg" in ast.unparse(cfg)
-    assert "RealisticShelfSpawnerCfg" in ast.unparse(cfg)
-    assert "RealisticCylinderSpawnerCfg" in ast.unparse(cfg)
+    assert "replicate_physics = False" not in ast.unparse(tree)
+    assert "apply_realistic_physics(self)" in ast.unparse(cfg)
+    physics_setup = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                         and node.name == "apply_realistic_physics")
+    assert "RealisticRobotSpawnerCfg" in ast.unparse(physics_setup)
+    assert "RealisticShelfSpawnerCfg" in ast.unparse(physics_setup)
+    assert "RealisticCylinderSpawnerCfg" in ast.unparse(physics_setup)
     events = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "RealisticPhysicsEventsCfg")
     assert [node.id for node in events.bases] == ["EventsCfg"]
     event_terms = {node.targets[0].id: node.value for node in events.body if isinstance(node, ast.Assign)}

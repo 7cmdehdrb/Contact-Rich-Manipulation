@@ -13,6 +13,16 @@ if TYPE_CHECKING:
     from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg
 
 
+def apply_sweep_direction(env_cfg, direction):
+    """Apply the legacy direction option only to tasks exposing that parameter."""
+    if direction is None:
+        return
+    params = env_cfg.events.object_spawn.params
+    if "sweep_direction" not in params:
+        raise ValueError("This task samples every horizontal direction; omit --sweep-direction.")
+    params["sweep_direction"] = direction
+
+
 def add_rsl_rl_args(parser: argparse.ArgumentParser):
     """Add RSL-RL arguments to the parser.
 

@@ -1,7 +1,7 @@
 """Generate a local UR5e--Axia80--tool URDF without a Nucleus dependency.
 
 Only files below the caller-provided generated directory are written.  The
-Universal Robots description in ``src/Universal_Robots_ROS2_Description`` is
+Universal Robots description in ``src/trash/Universal_Robots_ROS2_Description`` is
 treated as read-only source material.
 """
 
@@ -58,7 +58,7 @@ ARM_POSE = dict(
 def repo_root() -> Path:
     """Locate this checkout from the installed or source package path."""
     for path in Path(__file__).resolve().parents:
-        if (path / "IsaacLab").is_dir() and (path / "src/Universal_Robots_ROS2_Description").is_dir():
+        if (path / "IsaacLab").is_dir() and (path / "src/trash/Universal_Robots_ROS2_Description").is_dir():
             return path
     raise FileNotFoundError("Cannot locate the grad checkout; pass --repo_root explicitly.")
 
@@ -296,7 +296,7 @@ def build_model(root: Path, output: Path) -> tuple[Path, dict[str, object]]:
     root = root.resolve()
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    description = root / "src/Universal_Robots_ROS2_Description"
+    description = root / "src/trash/Universal_Robots_ROS2_Description"
     if not description.is_dir():
         raise FileNotFoundError(f"UR description directory does not exist: {description}")
 

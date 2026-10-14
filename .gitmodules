@@ -3,7 +3,7 @@
     url = https://github.com/7cmdehdrb/IsaacLab.git
     branch = main
 [submodule "src/Universal_Robots_ROS2_Description"]
-	path = src/Universal_Robots_ROS2_Description
+	path = src/trash/Universal_Robots_ROS2_Description
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git
 [submodule "example/Sweep-Policy"]
 	path = example/Sweep-Policy

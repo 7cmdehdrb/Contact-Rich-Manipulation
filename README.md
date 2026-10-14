@@ -1,231 +1,117 @@
-# Vision–Tactile Sweep RL
+# Contact Rich Manipulation Workspace
 
-제한된 시각 및 촉각 관측을 활용해 목표 물체를 탐색하는 로봇 조작 프레임워크입니다. 상위 정책이 수행할 의미 단위 행동을 선택하고, 하위 정책이 이를 실제 로봇 명령으로 변환합니다.
+UR5e–Axia80 F/T–Inspire Hand의 접촉 기반 조작을 개발하는 Isaac Lab Workspace다.
+현재 개발 대상은 **`inspire_sweep_baseline`과 `axia80_feasibility` 두 패키지**다.
+전체 연구 흐름·결정·개발 기록은 코드 없는
+[Contact-Rich-Manipulation-Context](example/Contact-Rich-Manipulation-Context/README.md)
+서브모듈에서 관리한다. 기준일은 2026-10-14다.
 
-- **High-Level Action Policy**: 공간 및 센서 정보를 바탕으로 목표 물체 탐색 계획 수립
-- **Low-Level Action Policy**: 상위 정책이 선택한 Semantic Action을 로봇 동작으로 수행
+## 시작할 문서
 
-현재 구현은 Isaac Lab과 RSL-RL을 기반으로 UR5e의 OSC(Operational Space Control) Sweep 정책을 학습하고 검증하는 데 초점을 둡니다. 자세한 실행 방법은 [`src/sweep_rl/README.md`](src/sweep_rl/README.md), 전체 저장소 구성은 [프로젝트 디렉터리 구조](docs/file_directory.md)를 참고하세요.
+| 목적 | 안내 |
+| --- | --- |
+| 프로젝트 범위와 현재 우선순위 이해 | [인계 브리프](example/Contact-Rich-Manipulation-Context/docs/00_HANDOFF_BRIEF.md) |
+| 전체 구조·패키지 역할·문서 위치 확인 | [Workspace 안내](example/Contact-Rich-Manipulation-Context/docs/10_WORKSPACE_GUIDE.md) |
+| 환경 상속·등록 ID·실행 명령 확인 | [활성 환경](example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md) |
+| Manager 기반 OOP와 개발 로그 작성 | [개발 지침](example/Contact-Rich-Manipulation-Context/docs/09_DEVELOPMENT_GUIDE.md) |
+| 연구·문헌·실험 기록 탐색 | [프로젝트 문서 색인](example/Contact-Rich-Manipulation-Context/docs/README.md) |
+| 과거 참고 Sweep 환경 확인 | [Sweep-Policy 환경 문서](example/Sweep-Policy/docs/README.md) |
+| SSH·VPN·ROS/Python 일반 지식 확인 | [일반 지식 색인](docs/README.md) |
 
----
-
-## 설계 발전 과정
-
-아래 세 설계안은 프로젝트의 발전 과정을 나타냅니다. **3차 설계안**이 현재 구현의 기준이며, 앞선 설계안은 상위·하위 정책의 전체 구상을 설명하기 위해 보존합니다.
-
-## 1차 설계안: 계층형 정책
-
-| 레벨 | 이름 | 역할 |
-| --- | --- | --- |
-| Level 1 | Observation Level | 센서 데이터를 후처리하여 정책이 사용할 관측 정보로 변환 |
-| Level 2 | High-Level Action Policy | TPM/CPM 및 센서 정보를 바탕으로 호출할 Action 결정 |
-| Level 3 | Low-Level Action Policy | 상위 정책이 선택한 Action을 실제 로봇 명령으로 변환하여 수행 |
-
-![Framework1](docs/img/슬라이드4.PNG)
-![Framework2](docs/img/슬라이드5.PNG)
-
-### Level 1: Observation Level
-
-Raw Sensor Data를 상위 및 하위 정책이 사용할 수 있는 상태 표현으로 변환합니다.
-
-- RGB-D Image (Base- and Wrist-Mounted)
-- Joint Data (Position / Velocity / Effort)
-- F/T Sensor
-
-#### Level 1-1: Post-Processed Data
-
-> Level 1의 데이터를 가공하여 얻는 관측 데이터입니다.
-
-- Probability Map
-- Contact Point & Wrench
-
-### Level 2: High-Level Action Policy
-
-관측 정보를 바탕으로 목표 물체를 찾기 위해 호출할 Action을 결정합니다(MCP-like).
-
-- `grasp/remove`
-- `continuous sweep`
-- `re-observe`
-- `retrieve target`
-
-### Level 3: Low-Level Action Policy
-
-High-Level Policy가 선택한 Action을 실제 로봇에서 수행 가능한 Motion으로 변환합니다.
-
-#### 입력
-
-- High-Level Action Type
-- High-Level Action Parameter
-- Current Robot State
-- F/T Sensor
-
-#### 출력 예시
-
-- Joint Trajectory
-- Joint Velocity Command
-- Cartesian Velocity Command
-- Gripper Command
-- Force-Limited Motion Command
-- Emergency Stop / Abort Signal
-
-### 전체 흐름
+## 디렉터리 역할
 
 ```text
-Observation Level
-    └─ Map, Robot State, Sensor Summary 생성
-            ↓
-High-Level Action Policy
-    └─ 호출할 Action 결정
-            ↓
-Low-Level Action Policy / Action Model
-    └─ 선택된 Action을 실제 Robot Command로 변환
-            ↓
-Robot Execution
-            ↓
-Sensor Feedback
-            ↓
-Observation Level에서 Map 갱신
+grad/
+├── AGENTS.md                        에이전트의 작업 진입 지침
+├── src/
+│   ├── inspire_sweep_baseline/       활성 Manager 기반 Sweep RL
+│   ├── axia80_feasibility/           활성 F/T 정적 하중 검증
+│   └── trash/                       과거 패키지·자산·테스트 보관, 빌드 제외
+├── example/
+│   ├── Contact-Rich-Manipulation-Context/  문서 전용 프로젝트 서브모듈
+│   └── Sweep-Policy/                이전 Sweep RL 참고 코드 서브모듈
+├── docs/                            프로젝트 밖의 간단한 일반 지식
+├── IsaacLab/                        시뮬레이션·Manager 프레임워크 서브모듈
+├── scene_randomization/             시뮬레이터 없는 배치 기하 검증 도구
+├── tests/                           활성 Axia80 CPU·모델 테스트
+├── reports/                         과거 실행·진단 산출물
+├── logs/, outputs/, videos/         학습·검증·영상 산출물
+└── build/, install/, log/           기존 ROS 빌드 산출물
 ```
 
----
+| 활성 패키지 | 수행하는 역할 | 패키지 안내 |
+| --- | --- | --- |
+| `inspire_sweep_baseline` | 단일 물체 Sweep Baseline, 질량·마찰 랜덤화, 초기 위치 Actor/현재 상태 Critic, 전방향 목표 변형 | [README](src/inspire_sweep_baseline/README.md) |
+| `axia80_feasibility` | UR5e–Axia80–tool의 정적 하중, cantilever와 wrist 각도 실험 | [README](src/axia80_feasibility/README.md) |
 
-## 2차 설계안: Sweep RL 타당성 검증
+과거 패키지는 [보관 안내](src/trash/README.md)를 따른다. 활성 Axia80 실험은
+보관된 UR Description의 xacro/mesh를 읽기 전용으로 사용한다. Baseline 로봇 USD는
+패키지 내부에 포함하며 선반 USD 경로는 별도로 설정한다.
 
-### OSC 테스트
+## 문서를 저장하는 기준
 
-![OSC1](docs/img/슬라이드6.PNG)
-![OSC2](docs/img/슬라이드9.PNG)
+프로젝트 전체 Flow, 연구 결정, 개발 원칙, 환경 간 관계와 개발 로그는
+`example/Contact-Rich-Manipulation-Context`에 작성한다.
+`example/Sweep-Policy/docs`에는 그 참고 프로젝트의 환경·제어·관측·실행 설명을 작성한다.
+루트 `docs`에는 두 프로젝트와 무관한 일반 지식만 간략히 작성한다.
+패키지 README와 자산 출처 문서는 코드 옆에서 실행·자산 안내를 제공하고 전체 흐름 문서로 연결한다.
 
-OSC를 사용한 Cartesian Space 정책 학습 테스트입니다. 간단한 Reach 예제로 제어 방식을 검증합니다.
+## 서브모듈 준비
 
-#### 제어 공간 및 차원
-
-|  | Joint Space | IK Solver | OSC |
-| :---: | :---: | :---: | :---: |
-| **제어 차원** | **N차원** | **6차원** | **12차원** |
-| **구성** | Joint Space<br>(Delta) | Cartesian Space<br>(XYZRPY, Delta) | Cartesian Space (XYZRPY, 6차원)<br>+ Stiffness (6차원) |
-
-### Sweep RL Policy Framework
-
-목표 물체의 초기 Pose라는 제한된 시각 정보와 촉각 정보를 사용하는 Sweep RL Policy Framework입니다.
-
-![Framework3](docs/img/슬라이드8.PNG)
-
-### Domain Randomization
-
-다양한 물체로의 Zero-Shot 전이와 강건한 정책 학습을 위해 Domain Randomization을 적용합니다.
-
-- 물체의 질량
-- 물체와 바닥면의 마찰
-- 물체의 형태
-
-### 촉각 데이터
-
-다음 세 가지 방법을 고려합니다. 각 방법은 중복하여 사용할 수 있습니다.
-
-#### 1. Tactile Sensor
-
-- **획득 정보**: 그리퍼 옆면 또는 전용 도구에 그리드형 Tactile Sensor를 부착해 Grid 기반 Contact Map 획득
-- **장점**: 세 가지 방법 중 가장 높은 품질의 데이터 획득 가능
-- **한계**: 실제 하드웨어에서 동일한 관측을 재현하기 어려울 수 있음
-
-참고: [Robotiq Tactile Sensor Fingertips](https://robotiq.com/hs-fs/hubfs/Tactile_sensors_3d_render.png?width=2000&height=1125&name=Tactile_sensors_3d_render.png)
-
-#### 2. F/T Sensor
-
-- **획득 정보**: Wrist 3와 Gripper 사이에 고성능 F/T Sensor를 부착해 등가 힘과 모멘트 획득
-- **장점**: UR5e 내장 F/T Sensor 또는 각 Joint Effort 기반 추정보다 정확한 데이터 획득 가능
-- **한계**: 낮은 데이터 차원
-
-참고: [Robotiq F/T Sensor](https://robotiq.com/products/ft-300-force-torque-sensor)
-
-#### 3. Joint Effort
-
-- **획득 정보**: 매니퓰레이터에 내장된 Joint Effort를 기반으로 접촉 정보 추정
-- **장점**: 별도의 센서가 필요하지 않음
-- **한계**: 낮은 해상도
-- **검토 사항**: Universal Robots에서 최소한의 정확도를 확보할 수 있는지 확인 필요
-
-#### 관련 연구
-
-- Oh, S., Liu, J. J., Tao, T., Han, P., Shaw, K., Funabashi, S., ... & Pathak, D. (2026). FACTR 2: Learning External Force Sensing for Commodity Robot Arms Improves Policy Learning. *arXiv preprint arXiv:2606.12406*.
-- Ma, C., Yao, Y., Wei, Z., Li, R., Szafir, D., & Ding, M. (2026). Current as Touch: Proprioceptive Contact Feedback for Compliant Dexterous Manipulation. *arXiv preprint arXiv:2607.03529*.
-- Ge, H., Jia, Y., Li, Z., Li, Y., Chen, Z., Shi, L., ... & Zhou, G. (2025). FILIC: Dual-loop force-guided imitation learning with impedance torque control for contact-rich manipulation tasks. *arXiv preprint arXiv:2509.17053*.
-
-### 후처리 데이터
-
-- **시뮬레이션**: Isaac Lab 환경에서는 [Contact Sensor](https://isaac-sim.github.io/IsaacLab/main/source/overview/core-concepts/sensors/contact_sensor.html)를 기반으로 물체와 로봇의 접촉 여부 및 접촉 위치에 대한 Ground Truth를 획득할 수 있습니다.
-- **실제 환경**: 로봇 전체에 센서를 부착하지 않는 한 동일한 Ground Truth를 획득하기 어렵습니다.
-- **추정 방법**: 관측 가능한 센서 데이터와 Particle Filter를 활용하여 접촉 정보를 추정하는 연구가 존재합니다.
-- **적용 방안**: 학습 시에는 노이즈를 추가한 Contact Sensor Data를 사용하고, 실제 환경에서는 Particle Filter 기반으로 추론하는 방법을 고려합니다.
-
-#### 관련 연구
-
-- De Luca, A., & Mattone, R. (2005, April). Sensorless robot collision detection and hybrid force/motion control. In *Proceedings of the 2005 IEEE International Conference on Robotics and Automation* (pp. 999–1004). IEEE.
-- Manuelli, L., & Tedrake, R. (2016, October). Localizing external contact using proprioceptive sensors: The contact particle filter. In *2016 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)* (pp. 5062–5069). IEEE.
-
----
-
-## 3차 설계안: 현재 기준
-
-![Framework4](docs/img/슬라이드10.PNG)
-
-### Observation
-
-- Joint Data (Position / Velocity / Effort)
-- Contact Sensor (+PF의 정확도 기반 노이즈 추가 필요)
-- F/T Sensor (+현실 센서에 맞춘 노이즈 추가 필요)
-- User Command
-- Initial Target Pose
-- Last Action
-
-### Domain Randomization
-
-- Sensor Noise
-- Object Properties (Mass, Density, Inertia, etc.)
-- Physics Parameters (Gravity, Friction, etc.)
-- System Parameters (Control Parameters, Joint Parameters, etc.)
-
-### System Identification
-
-- Joint Parameters (Stiffness, Damping, etc.)
-- OSC Parameters
-
-OSC를 정책 학습에 포함하려면 실제 로봇과 Isaac Lab의 OSC가 유사하게 동작해야 합니다. 따라서 제어기 System Identification과 강건성 확보를 위한 Parameter Randomization이 필요합니다.
-
-### Action
-
-- OSC Target Pose (6D)
-- Stiffness Matrix (6D)
-
----
-
-## 관련 문서
-
-| 문서 | 설명 |
-|---|---|
-| [Sweep RL 구현 및 실행](src/sweep_rl/README.md) | 3차 설계안을 기반으로 한 Feasibility Test와 학습 환경 |
-| [프로젝트 문서 목차](docs/README.md) | 프로젝트 수준 문서의 진입점 |
-| [프로젝트 디렉터리 구조](docs/file_directory.md) | 주요 디렉터리와 파일의 역할 |
-| [Domain Randomization](docs/domain_randomization/README.md) | Randomization 대상과 구현 방법 |
-| [Environment Setup](docs/environment_setup/README.md) | UR5e, 센서, Asset 및 Shelf 환경 구성 |
-
-
-
----
+체크아웃에 기록된 커밋을 기준으로 준비한다.
 
 ```bash
-git submodule update --init --remote example/Sweep-Policy
-git submodule update --init --remote docs
+git submodule update --init --recursive
+git submodule status
 ```
 
+`Contact-Rich-Manipulation-Context`, `Sweep-Policy`, `IsaacLab`은 기존 등록을 유지한다.
+UR Description의 현재 경로는 `src/trash/Universal_Robots_ROS2_Description`이다.
+루트 `docs`는 일반 디렉터리이며 서브모듈이 아니다. 서브모듈에서 수정한 파일은 그 저장소의
+변경으로 관리하며, 공유할 때 내부 커밋과 상위 저장소의 참조를 함께 갱신한다.
 
+## 활성 환경 실행
 
-cd /home/min/7cmdehdrb/grad
-conda activate env_isaaclab
+저장소 루트에서 Isaac Lab 실행 환경을 사용한다. 아래 명령은 실행 예시이며
+전체 환경별 명령·상속 구조는 [활성 환경 안내](example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md)에 있다.
 
-python src/hand_manipulation_test/scripts/train.py \
-  --task Isaac-Hand-Manipulation-Push-v1 \
-  --num_envs 2048 \
-  --device cuda:0 \
-  --headless
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Baseline-v0 \
+  --num_envs 2048 --sweep-direction both --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Baseline-v0 \
+  --num_envs 1 --checkpoint "<checkpoint.pt>"
+```
+
+선반 자산은 접근 가능한 USD를 `INSPIRE_SWEEP_SHELF_USD_PATH`로 지정할 수 있다.
+체크포인트는 사용자가 선택한 학습 결과를 지정한다.
+Axia80의 실행 옵션과 판정 기준은 [패키지 안내](src/axia80_feasibility/README.md)에 있다.
+
+## 빌드와 테스트 탐색
+
+`src/trash`, 참고용 `example`과 빌드·로그·산출물 디렉터리에는 `COLCON_IGNORE`,
+`AMENT_IGNORE`, `CATKIN_IGNORE`를 두고 추적한다. 활성 두 패키지는 `pyproject.toml` 기반 Python/Isaac Lab
+패키지이므로 현재 `colcon list --base-paths src`의 결과는 비어 있다. ROS 패키지로 빌드하는
+구성이 아니며 위 Python 실행 명령을 사용한다.
+
+```bash
+colcon list --base-paths src
+```
+
+`build/`, `install/`, `log/`는 이전 빌드 산출물을 보존한 경로다. 소스를 옮겨도
+예전에 설치하거나 source한 ROS overlay가 제거되는 것은 아니다. 활성 실험은 Isaac Lab
+실행 환경으로 시작하고 이전 `install/setup.bash`를 자동 source하는 환경 설정은 별도로 확인한다.
+
+루트 `pytest.ini`는 활성 Axia80 테스트, Baseline 테스트와 Scene 기하 테스트를 탐색한다.
+ROS pytest 플러그인과 Python 경로 간섭을 제외한 이 Workspace의 CPU 검증 명령은 다음과 같다.
+
+```bash
+env -u PYTHONPATH -u ROS_PACKAGE_PATH -u AMENT_PREFIX_PATH \
+  PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
+  /home/min/miniconda3/envs/env_isaaclab/bin/python -B -m pytest -q -p no:cacheprovider
+```
+
+다른 컴퓨터에서는 해당 Isaac Lab Python 경로로 바꾼다. CPU·정적 자산 테스트와
+Isaac Sim에서의 실제 학습·재생 검증은 구분해 기록한다.

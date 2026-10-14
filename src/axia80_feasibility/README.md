@@ -47,9 +47,14 @@ tool의 넓은 면은 local XY 평면이며 local `+Z`가 위를 향하도록 UR
 위해 `0.001 kg`을 부여하지만 측정 joint의 상류에 있으므로 결과에는 포함되지 않는다.
 
 결합 URDF/USD는 실행할 때 로컬
-`src/Universal_Robots_ROS2_Description`에서 `generated/` 아래에 자동 생성한다. 외부
+`src/trash/Universal_Robots_ROS2_Description`에서 `generated/` 아래에 자동 생성한다. 외부
 Nucleus asset은 필요하지 않으며 `merge_fixed_joints=False`를 유지해야 측정 joint가
 사라지지 않는다.
+
+UR Description은 빌드에서 제외된 보관 서브모듈이며, 이 실험은 xacro와 mesh를
+읽기 전용 자산으로 사용한다. 경로가 바뀌기 전에 생성한 URDF/USD에 옛 mesh 경로가
+남아 있으면 `--force_conversion`으로 다시 생성한다. 프로젝트 내 역할과 실험 흐름은
+[활성 환경 안내](../../example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md)를 따른다.
 
 ## 실행
 
