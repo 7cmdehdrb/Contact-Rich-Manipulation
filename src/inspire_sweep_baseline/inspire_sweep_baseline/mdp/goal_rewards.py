@@ -45,8 +45,8 @@ def planar_goal_cost(env, command_name="target_goal_pos", sigma=0.10):
     return torch.expm1(-distance / sigma)
 
 
-def normalized_action_rate(env, action_group="arm", normalization_scale=1.0):
-    """Mean squared changes of normalized commands for the baseline 6+2 actions.
+def normalized_action_rate(env, action_group="arm", normalization_scale=1.0, reduction="mean"):
+    """Squared changes of normalized commands for the baseline 6+2 actions.
 
     Arm inputs already use the action term's normalized coordinates: their
     physical joint-target change is 0.5 times this value. Hand inputs are
@@ -64,14 +64,24 @@ def normalized_action_rate(env, action_group="arm", normalization_scale=1.0):
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
     scale = _scale_tensor(normalization_scale, current)
-    return ((current - previous) / scale).square().mean(dim=-1)
+    squared = ((current - previous) / scale).square()
+    if reduction == "sum":
+        return squared.sum(dim=-1)
+    if reduction == "mean":
+        return squared.mean(dim=-1)
+    raise ValueError("reduction must be 'sum' or 'mean'")
 
 
-def normalized_joint_velocity(env, asset_cfg=SceneEntityCfg("robot"), reference_velocity=1.0):
-    """Mean squared actual joint speeds, using the configured named joint group."""
+def normalized_joint_velocity(env, asset_cfg=SceneEntityCfg("robot"), reference_velocity=1.0, reduction="mean"):
+    """Squared actual joint speeds, using the configured named joint group."""
     velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
     scale = _scale_tensor(reference_velocity, velocity)
-    return (velocity / scale).square().mean(dim=-1)
+    squared = (velocity / scale).square()
+    if reduction == "sum":
+        return squared.sum(dim=-1)
+    if reduction == "mean":
+        return squared.mean(dim=-1)
+    raise ValueError("reduction must be 'sum' or 'mean'")
 
 
 class ReachProgress(ManagerTermBase):

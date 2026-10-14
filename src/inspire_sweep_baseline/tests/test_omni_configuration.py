@@ -184,6 +184,62 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     assert omni["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniEnvCfg"
     assert omni["kwargs"]["rsl_rl_cfg_entry_point"] == baseline["kwargs"]["rsl_rl_cfg_entry_point"]
     assert omni["kwargs"]["rsl_rl_cfg_entry_point"] == "inspire_sweep_baseline.agents.rsl_rl_ppo_cfg:InspireSweepPPORunnerCfg"
+    v1 = registrations[namespace["OMNI_V1_TASK_ID"]]
+    assert namespace["OMNI_V1_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v1"
+    assert v1["entry_point"] == omni["entry_point"]
+    assert v1["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV1EnvCfg"
+    assert v1["kwargs"]["rsl_rl_cfg_entry_point"] == omni["kwargs"]["rsl_rl_cfg_entry_point"]
+
+
+def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
+    v0 = omni_config.omni.InspireSweepOmniEnvCfg()
+    v1 = omni_config.omni.InspireSweepOmniV1EnvCfg()
+    another_v0 = omni_config.omni.InspireSweepOmniEnvCfg()
+    assert isinstance(v1, omni_config.omni.InspireSweepOmniEnvCfg)
+    assert v0.terminations.hand_velocity.params["threshold"] == 1.0
+    assert another_v0.terminations.hand_velocity.params["threshold"] == 1.0
+    assert v1.terminations.hand_velocity.params["threshold"] == 100.0
+    assert v1.terminations.hand_velocity.params is not v0.terminations.hand_velocity.params
+    # Evaluate the configured production callable with resolved, non-contiguous
+    # arm indices. Fast fingers must not trigger either version's arm cutoff.
+    env = make_env(4)
+    arm_ids = [1, 4, 7, 10, 13, 16]
+    env.scene["robot"].data.joint_vel[:, 0] = 1000.0
+    env.scene["robot"].data.joint_vel[:, 7] = torch.tensor([1.5, 100.0, 100.001, -100.001])
+    for cfg, expected in ((v0, [True] * 4), (v1, [False, False, True, True])):
+        term = cfg.terminations.hand_velocity
+        params = deepcopy(term.params)
+        params["asset_cfg"].joint_ids = arm_ids
+        assert term.func(env, **params).tolist() == expected
+
+
+def test_omni_arm_costs_match_baseline_and_exclude_hand(omni_config, make_env):
+    baseline = omni_config.baseline.InspireSweepEnvCfg()
+    env = make_env(2)
+    arm_ids = [1, 4, 7, 10, 13, 16]
+    env.scene["robot"].data.joint_vel[:, arm_ids] = torch.tensor([
+        [2.0, -1.0, 0.0, 0.5, -3.0, 1.5], [0.1, -0.2, 0.3, -0.4, 0.5, -0.6],
+    ])
+    env.action_manager.action[:, :6] = torch.tensor([
+        [1.0, -2.0, 0.5, 0.0, 3.0, -1.0], [0.2, 0.3, -0.5, 0.1, -0.4, 0.6],
+    ])
+    env.action_manager.prev_action[:, :6] = 0.25
+    velocity_params = deepcopy(baseline.rewards.joint_vel.params)
+    velocity_params["asset_cfg"].joint_ids = arm_ids
+    expected_velocity = baseline.rewards.joint_vel.func(env, **velocity_params) * baseline.rewards.joint_vel.weight
+    # Baseline sums all action channels: with Hand held fixed it is exactly
+    # the requested Arm component, independent of how Hand costs are defined.
+    expected_action = baseline.rewards.action_rate.func(env) * baseline.rewards.action_rate.weight
+    env.scene["robot"].data.joint_vel[:, 0] = 1000.0
+    env.action_manager.action[:, 6:] = 100.0
+    for cfg_class in (omni_config.omni.InspireSweepOmniEnvCfg, omni_config.omni.InspireSweepOmniV1EnvCfg):
+        cfg = cfg_class()
+        term = cfg.rewards.arm_joint_velocity
+        params = deepcopy(term.params)
+        params["asset_cfg"].joint_ids = arm_ids
+        assert torch.allclose(term.func(env, **params) * term.weight, expected_velocity)
+        term = cfg.rewards.arm_action_rate
+        assert torch.allclose(term.func(env, **term.params) * term.weight, expected_action)
 
 
 def test_omni_reward_set_has_complete_plan_and_no_old_shaping(omni_config):

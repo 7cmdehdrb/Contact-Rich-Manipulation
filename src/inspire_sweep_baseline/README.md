@@ -1,6 +1,6 @@
 # Inspire Sweep Baseline
 
-[활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/docs/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/docs/09_DEVELOPMENT_GUIDE.md)
+[활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)
 
 환경 ID: `Isaac-Inspire-Sweep-Baseline-v0`
 
@@ -271,8 +271,10 @@ Scene, Action, Event, Observation, Reward, Termination과 각 파라미터의 �
 | --- | ---: | --- |
 | 목표 평면 거리 | +6.0 | `exp(-d / 0.10) - 1` |
 | 접근 진척 | +1.0 | 고정 `ee_frame`에서 초기 물체 바닥 원점까지의 새 최단 거리 진척. 근접 반경 10 cm, 에피소드 합계 최대 +1 |
-| Arm / Hand Action Rate | 각각 −0.03 | 각 그룹의 명령 변화량 정규화 제곱 평균. 정규화 스케일 1.0; Hand는 실제 적용되는 `[0, 1]` openness 사용 |
-| Arm / Hand Joint Velocity | 각각 −0.01 | 이름으로 선택한 Arm 6개 / 현재 제어하는 Hand 12개 실제 관절의 정규화 제곱 평균. 기준 속도 1 rad/s |
+| Arm Action Rate | −0.03 | Arm 6개 명령 변화량의 제곱합. Baseline의 Arm 비용과 동일 |
+| Hand Action Rate | −0.03 | Hand 명령 변화량의 정규화 제곱 평균. `[0, 1]` openness 사용 |
+| Arm Joint Velocity | −0.03 | 이름으로 선택한 Arm 6개 실제 관절 속도의 제곱합. Baseline과 동일 |
+| Hand Joint Velocity | −0.01 | Hand 12개 실제 관절 속도의 정규화 제곱 평균. 기준 속도 1 rad/s |
 | 물체 기울기 | −2.0 | 상판 법선과 물체 위쪽 축 사이 각도. 5° 이하 비용 0, 0.9 rad까지 정규화한 제곱 비용 |
 | 선반 페널티 | −0.5 | 기존 `ShelfCollisionPenalty` 계산 유지 |
 | 시간 비용 | −0.1 | 초당 비용 |
@@ -303,3 +305,23 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 새 환경은 항상 전방향 목표를 생성하므로 `--sweep-direction`을 사용하지 않는다. PPO 클래스의 기본 로그 폴더는 Baseline과 같으며, 위 학습 명령처럼 `--experiment_name`으로 구분할 수 있다.
 
 설정: `inspire_sweep_baseline/omni_env_cfg.py`. 스폰·목표: `mdp/goal_events.py`. 보상: `mdp/goal_rewards.py`. 종료: `mdp/goal_terminations.py`.
+
+### Omni v1: Arm 속도 종료 기준 변형
+
+환경 ID: `Isaac-Inspire-Sweep-Omni-v1`. `InspireSweepOmniV1EnvCfg`는 `InspireSweepOmniEnvCfg`를 상속하며 `terminations.hand_velocity.params["threshold"]`를 변경한다. 최초 추가값은 2.0 rad/s였으며 사용자가 변경한 현재 값은 100.0 rad/s다. 이름이 `hand_velocity`인 종료 항목은 Arm 6개 관절을 검사한다. 절대 속도 100.0 rad/s는 허용하고, 초과하면 종료한다. v0는 1.0 rad/s를 유지한다.
+
+관측 41D, Action 8D, 스폰·목표·물성·보상·나머지 종료 조건과 PPO는 v0에서 상속한다. Arm 속도 보상의 `reference_velocity=1.0`과 actuator 속도 제한도 그대로다. v0 체크포인트를 지정해 v1에서 재생할 수 있지만, 변경한 종료 조건에서 성공하거나 첫 스텝 종료가 해결됐다는 뜻은 아니다.
+
+```bash
+# v1 새 학습
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-v1 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_v1 \
+  --run_name centered_spawn_goal15cm_arm2rad --headless
+
+# v0 체크포인트를 v1 조건으로 재생
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-v1 --num_envs 1 \
+  --checkpoint /home/min/7cmdehdrb/grad/logs/TEMP/2026-10-14_16-16-28_centered_spawn_goal15cm/model_4100.pt \
+  --real-time
+```
