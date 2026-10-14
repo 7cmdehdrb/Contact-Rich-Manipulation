@@ -1,0 +1,19 @@
+{
+  "zone_model": "wrist_downward_v2",
+  "obstacles": 6,
+  "gray_obstacles": 3,
+  "rear_obstacles": 1,
+  "distance_min": 5.0,
+  "distance_max": 20.0,
+  "finger_thickness": 2.0,
+  "gap_factor": 0.8,
+  "gray_radius": 14.0,
+  "rear_length": 16.0,
+  "rear_width": 22.0,
+  "max_per_cell": 3,
+  "density_radius": 18.0,
+  "max_neighbors": 3,
+  "angle_bins": 24,
+  "distance_bins": 8,
+  "chunk_size": 512
+}

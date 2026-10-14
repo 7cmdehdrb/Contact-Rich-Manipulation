@@ -1,25 +1,31 @@
-저장소 루트에서 실행하세요.
+화면에서 확인하도록 `--num_envs 1`로 설정했습니다. 각 `--checkpoint ""` 안에 체크포인트 경로를 입력하세요.
 
-Ubuntu 학습:
-
-```bash
-./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/train.py --task Isaac-Blind-Sweep-Inspire-Approach-v2 --headless --device cuda:0 --num_envs 2048
-```
-
-Ubuntu 재생:
+**Baseline**
 
 ```bash
-./IsaacLab/isaaclab.sh -p src/hand_manipulation_rl/scripts/play.py --task Isaac-Blind-Sweep-Inspire-Approach-v2 --device cuda:0 --num_envs 1 --checkpoint /home/min/7cmdehdrb/grad/logs/rsl_rl/UR5e_shelf_sweep_approach_v2/2026-09-28_02-45-16/model_3300.pt
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Baseline-v0 \
+  --num_envs 1 \
+  --sweep-direction both \
+  --checkpoint ""
 ```
 
-Windows 학습:
+**Realistic Physics**
 
-```powershell
-.\IsaacLab\isaaclab.bat -p src\hand_manipulation_rl\scripts\train.py --task Isaac-Blind-Sweep-Inspire-Approach-v2 --headless --device cuda:0 --num_envs 2048
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-v0 \
+  --num_envs 1 \
+  --sweep-direction both \
+  --checkpoint ""
 ```
 
-Windows 재생:
+**Realistic Physics Initial Privileged**
 
-```powershell
-.\IsaacLab\isaaclab.bat -p src\hand_manipulation_rl\scripts\play.py --task Isaac-Blind-Sweep-Inspire-Approach-v2 --device cuda:0 --num_envs 1 --checkpoint "C:\absolute\path\to\model.pt"
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0 \
+  --num_envs 1 \
+  --sweep-direction both \
+  --checkpoint ""
 ```
