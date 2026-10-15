@@ -316,7 +316,7 @@ def test_dex_changes_only_shaping_and_preserves_complete_v2_environment_contract
     assert dex.decimation == v2.decimation == 2
     assert dex.episode_length_s == v2.episode_length_s == 10.0
     assert dex.terminations.success is None
-    assert dex.terminations.hand_velocity.params["threshold"] == 3.0
+    assert dex.terminations.hand_velocity.params["threshold"] == v2.terminations.hand_velocity.params["threshold"]
     assert dex.terminations.shelf_collision.params["threshold"] == 0.1
     assert dex.terminations.shelf_displacement.params["threshold"] == 0.05
     assert set(vars(dex.rewards)) == set(vars(v2.rewards))
@@ -369,8 +369,22 @@ def test_omni_arm_costs_match_baseline_and_exclude_hand(omni_config, make_env):
     expected_action = baseline.rewards.action_rate.func(env) * baseline.rewards.action_rate.weight
     env.scene["robot"].data.joint_vel[:, 0] = 1000.0
     env.action_manager.action[:, 6:] = 100.0
-    for cfg_class in (omni_config.omni.InspireSweepOmniEnvCfg, omni_config.omni.InspireSweepOmniV1EnvCfg):
+    for cfg_class in (
+        omni_config.omni.InspireSweepOmniEnvCfg, omni_config.omni.InspireSweepOmniV1EnvCfg,
+        omni_config.omni.InspireSweepOmniV2EnvCfg, omni_config.omni.InspireSweepOmniV3EnvCfg,
+        omni_config.dex.InspireDexOmniEnvCfg,
+    ):
         cfg = cfg_class()
+        for name, group in (("arm_action_rate", "arm"), ("hand_action_rate", "hand")):
+            term = getattr(cfg.rewards, name)
+            assert term.func is omni_config.omni.goal_rewards.action_rate_l2
+            assert term.params == {"action_group": group}
+            assert term.weight == -0.03
+        for name, weight in (("arm_joint_velocity", -0.03), ("hand_joint_velocity", -0.01)):
+            term = getattr(cfg.rewards, name)
+            assert term.func is omni_config.omni.goal_rewards.joint_vel_l2
+            assert set(term.params) == {"asset_cfg"}
+            assert term.weight == weight
         term = cfg.rewards.arm_joint_velocity
         params = deepcopy(term.params)
         params["asset_cfg"].joint_ids = arm_ids

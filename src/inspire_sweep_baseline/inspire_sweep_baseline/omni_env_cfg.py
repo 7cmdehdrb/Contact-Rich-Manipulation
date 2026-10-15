@@ -66,30 +66,30 @@ class OmniRewardsCfg:
         func=goal_rewards.planar_goal_cost, weight=6.0, params={"sigma": 0.10}
     )
 
-    # Arm과 Hand의 Action 크기와 Velocity를 최소화하는 보상
+    # Mandatory Inspire-compatible squared sums; keep Arm/Hand costs separate.
+    # Raw action differences (not action magnitudes or clipped Hand commands).
     arm_action_rate = RewTerm(
-        func=goal_rewards.normalized_action_rate,
+        func=goal_rewards.action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "normalization_scale": 1.0, "reduction": "sum"},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
-        func=goal_rewards.normalized_action_rate,
+        func=goal_rewards.action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "normalization_scale": 1.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
-        func=goal_rewards.normalized_joint_velocity,
+        func=goal_rewards.joint_vel_l2,
         weight=-0.03,
-        params={"asset_cfg": _arm(), "reference_velocity": 1.0, "reduction": "sum"},
+        params={"asset_cfg": _arm()},
     )
     hand_joint_velocity = RewTerm(
-        func=goal_rewards.normalized_joint_velocity,
+        func=goal_rewards.joint_vel_l2,
         weight=-0.01,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot", joint_names=list(HAND_JOINT_NAMES), preserve_order=True
             ),
-            "reference_velocity": 1.0,
         },
     )
 
@@ -168,7 +168,7 @@ class InspireSweepOmniV1EnvCfg(InspireSweepOmniEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-        self.terminations.hand_velocity.params["threshold"] = 3.0
+        self.terminations.hand_velocity.params["threshold"] = 5.0
 
 
 @configclass

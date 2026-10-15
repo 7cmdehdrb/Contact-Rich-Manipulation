@@ -37,6 +37,42 @@ def test_goal_cost_is_live_planar_isotropic_and_zero_only_at_goal(load_mdp, make
         rewards.planar_goal_cost(env, sigma=0.0)
 
 
+def test_raw_action_squared_sums_match_reference_and_keep_groups_separate(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(3)
+    current, previous = env.action_manager.action, env.action_manager.prev_action
+    current[0, :6] = 2.0
+    current[1, 6:] = torch.tensor([2.0, -1.0])
+    previous[1, 6:] = torch.tensor([1.0, 0.0])
+    current[2, 6:] = torch.tensor([1.0, 0.0])
+    previous[2, 6:] = torch.tensor([0.0, 1.0])
+    arm = rewards.action_rate_l2(env, "arm")
+    hand = rewards.action_rate_l2(env, "hand")
+    assert torch.equal(arm, torch.tensor([24.0, 0.0, 0.0]))
+    # Raw commands outside [0, 1] still contribute, exactly as in Inspire.
+    assert torch.equal(hand, torch.tensor([0.0, 2.0, 2.0]))
+    assert torch.equal(arm + hand, (current - previous).square().sum(-1))
+    previous[:] = current
+    assert rewards.action_rate_l2(env, "arm").count_nonzero() == 0
+    assert rewards.action_rate_l2(env, "hand").count_nonzero() == 0
+    with pytest.raises(ValueError, match="action_group"):
+        rewards.action_rate_l2(env, "fingers")
+    env.action_manager.action = current[:, :7]
+    with pytest.raises(ValueError, match="six Arm and two Hand"):
+        rewards.action_rate_l2(env)
+
+
+def test_joint_speed_squared_sum_uses_only_named_group(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(2)
+    velocity = env.scene["robot"].data.joint_vel
+    velocity[:, 0] = 100.0
+    velocity[0, [2, 7]] = torch.tensor([1.0, -2.0])
+    velocity[1, [2, 7]] = torch.tensor([0.0, 2.0])
+    cfg = SimpleNamespace(name="robot", joint_ids=[2, 7])
+    assert torch.equal(rewards.joint_vel_l2(env, cfg), torch.tensor([5.0, 4.0]))
+
+
 def test_action_groups_use_independent_normalized_means_and_applied_hand_clipping(load_mdp, make_env):
     rewards = load_mdp("goal_rewards")
     env = make_env(3)

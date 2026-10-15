@@ -45,8 +45,38 @@ def planar_goal_cost(env, command_name="target_goal_pos", sigma=0.10):
     return torch.expm1(-distance / sigma)
 
 
+def action_rate_l2(env, action_group="arm"):
+    """Sum squared raw command changes for the selected Arm or Hand group.
+
+    Match the reference Inspire action-rate cost before action processing:
+    no clipping, scaling, averaging or division by the control timestep.
+    RewardManager applies the configured weight and step_dt once.
+    """
+    current = env.action_manager.action
+    previous = env.action_manager.prev_action
+    if current.shape[-1] != 8 or previous.shape != current.shape:
+        raise ValueError("Omni penalties require six Arm and two Hand actions")
+    if action_group == "arm":
+        selection = slice(0, 6)
+    elif action_group == "hand":
+        selection = slice(6, 8)
+    else:
+        raise ValueError("action_group must be 'arm' or 'hand'")
+    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1)
+
+
+def joint_vel_l2(env, asset_cfg=SceneEntityCfg("robot")):
+    """Sum squared actual joint speeds for an explicitly selected joint group.
+
+    Resolve Arm and Hand by name in the reward configuration instead of
+    assuming that the first six articulation DOFs are the Arm.
+    """
+    velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
+    return velocity.square().sum(dim=-1)
+
+
 def normalized_action_rate(env, action_group="arm", normalization_scale=1.0, reduction="mean"):
-    """Squared changes of normalized commands for the baseline 6+2 actions.
+    """Legacy cost retained for saved configurations; do not use in Omni.
 
     Arm inputs already use the action term's normalized coordinates: their
     physical joint-target change is 0.5 times this value. Hand inputs are
@@ -73,7 +103,7 @@ def normalized_action_rate(env, action_group="arm", normalization_scale=1.0, red
 
 
 def normalized_joint_velocity(env, asset_cfg=SceneEntityCfg("robot"), reference_velocity=1.0, reduction="mean"):
-    """Squared actual joint speeds, using the configured named joint group."""
+    """Legacy normalized cost for saved configs; Omni must use joint_vel_l2."""
     velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
     scale = _scale_tensor(reference_velocity, velocity)
     squared = (velocity / scale).square()
