@@ -1,7 +1,7 @@
 """Goal-task rewards, with event rewards independent of the control timestep.
 
 Isaac Lab's RewardManager multiplies every configured term by ``step_dt``.
-Only reaching progress and terminal events divide by that interval here; the
+Progress terms and terminal events divide by that interval here; the
 remaining functions are costs per second (the plan uses T_ref = 1 second).
 """
 
@@ -129,6 +129,65 @@ class ReachProgress(ManagerTermBase):
         progress = (self._best_distance - best) / self._initial_distance.clamp_min(epsilon)
         self._best_distance[:] = best
         return progress / env.step_dt
+
+
+class CurrentObjectReachProgress(ReachProgress):
+    """Episode-best approach to the live object, normalized by reset distance.
+
+    Keep the v0/v1 reset normalization and one-shot budget, but measure each
+    new distance against the current object bottom. Constant proximity while
+    sweeping earns nothing extra. Object motion toward the EEF can also count
+    as relative approach; this term does not infer which body caused it.
+    """
+
+    def __call__(self, env, near_radius=0.10, frame_name="ee_frame", epsilon=1.0e-6):
+        if not math.isfinite(epsilon) or epsilon <= 0.0:
+            raise ValueError("epsilon must be finite and positive")
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        distance = (
+            torch.linalg.vector_norm(reference - _target_state(env)[:, :3], dim=-1) - near_radius
+        ).clamp_min(0.0)
+        best = torch.minimum(self._best_distance, distance)
+        progress = (self._best_distance - best) / self._initial_distance.clamp_min(epsilon)
+        self._best_distance[:] = best
+        return progress / env.step_dt
+
+
+class PlanarGoalProgress(ManagerTermBase):
+    """One-shot budget for new episode-best object progress toward its XY goal.
+
+    Reset snapshots the object directly, since commands reset after rewards.
+    The first call uses the new command with that snapshot, preserving progress
+    on the first transition. Reaching the position tolerance exhausts the
+    budget; waiting, retreating and returning cannot collect it again.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._initial_position = torch.zeros((env.num_envs, 2), device=env.device)
+        self._best_progress = torch.zeros(env.num_envs, device=env.device)
+        self.reset()
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        self._initial_position[ids] = _target_state(self._env)[ids, :2]
+        self._best_progress[ids] = 0.0
+
+    def __call__(self, env, command_name="target_goal_pos", position_tolerance=0.01, epsilon=1.0e-6):
+        if not math.isfinite(position_tolerance) or position_tolerance < 0.0:
+            raise ValueError("position_tolerance must be finite and nonnegative")
+        if not math.isfinite(epsilon) or epsilon <= 0.0:
+            raise ValueError("epsilon must be finite and positive")
+        goal = env.command_manager.get_command(command_name)[:, :2]
+        initial = torch.linalg.vector_norm(self._initial_position - goal, dim=-1)
+        distance = torch.linalg.vector_norm(_target_state(env)[:, :2] - goal, dim=-1)
+        remaining = (initial - position_tolerance).clamp_min(0.0)
+        progress = ((initial - distance) / remaining.clamp_min(epsilon)).clamp(0.0, 1.0)
+        progress = torch.where(remaining > epsilon, progress, 0.0)
+        best = torch.maximum(self._best_progress, progress)
+        increment = best - self._best_progress
+        self._best_progress[:] = best
+        return increment / env.step_dt
 
 
 def object_tilt_angle(env):

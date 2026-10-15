@@ -54,15 +54,19 @@ class OmniEventsCfg(RealisticPhysicsEventsCfg):
 @configclass
 class OmniRewardsCfg:
     # Dense costs are per second: RewardManager applies step_dt (T_ref = 1 s).
-    goal_distance = RewTerm(
-        func=goal_rewards.planar_goal_cost, weight=6.0, params={"sigma": 0.10}
-    )
+    
+    # 물체 근처로 이동하는 Reaching 보상
     reaching = RewTerm(
         func=goal_rewards.ReachProgress,
         weight=1.0,
         params={"near_radius": 0.10, "frame_name": "ee_frame"},
     )
+    # 물체를 목표 위치로 이동시키는 Goal Distance 보상
+    goal_distance = RewTerm(
+        func=goal_rewards.planar_goal_cost, weight=6.0, params={"sigma": 0.10}
+    )
 
+    # Arm과 Hand의 Action 크기와 Velocity를 최소화하는 보상
     arm_action_rate = RewTerm(
         func=goal_rewards.normalized_action_rate,
         weight=-0.03,
@@ -89,14 +93,18 @@ class OmniRewardsCfg:
         },
     )
 
+    # 물체가 떨어지거나 기울어지는 것을 방지하는 보상
     object_tilt = RewTerm(
         func=goal_rewards.object_tilt_cost,
         weight=-2.0,
         params={"free_angle": math.radians(5.0), "fail_angle": 0.9},
     )
+    # 물체가 선반 밖으로 나가는 것을 방지하는 보상
     shelf_collision = RewTerm(func=mdp.ShelfCollisionPenalty, weight=-0.5)
 
+    # 물체를 목표 위치로 이동시키는 것을 성공으로 간주하는 보상
     time = RewTerm(func=goal_rewards.time_cost, weight=-0.1)
+    
     # Progress and terminal functions undo the manager's dt multiplication.
     success = RewTerm(func=goal_rewards.success_event, weight=30.0)
     failure = RewTerm(
@@ -156,8 +164,39 @@ class InspireSweepOmniEnvCfg(InspireSweepEnvCfg):
 
 @configclass
 class InspireSweepOmniV1EnvCfg(InspireSweepOmniEnvCfg):
-    """Omni variant with a 100 rad/s arm termination threshold."""
+    """Omni variant with a 3 rad/s arm termination threshold."""
 
     def __post_init__(self):
         super().__post_init__()
         self.terminations.hand_velocity.params["threshold"] = 3.0
+
+
+@configclass
+class OmniV2RewardsCfg(OmniRewardsCfg):
+    # Experimental budgets per episode, independent of dt and episode length.
+    # Before contact, reaching provides the main positive learning signal.
+    # After approach is exhausted, only object-goal progress pays task reward.
+    reaching = RewTerm(
+        func=goal_rewards.CurrentObjectReachProgress,
+        weight=30.0,
+        params={"near_radius": 0.10, "frame_name": "ee_frame"},
+    )
+    goal_distance = RewTerm(
+        func=goal_rewards.PlanarGoalProgress,
+        weight=40.0,
+        params={"position_tolerance": 0.01},
+    )
+    time = None
+    success = None
+    failure = None
+
+
+@configclass
+class InspireSweepOmniV2EnvCfg(InspireSweepOmniV1EnvCfg):
+    """Live-object approach and sweep progress without success termination."""
+
+    rewards: OmniV2RewardsCfg = OmniV2RewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.terminations.success = None

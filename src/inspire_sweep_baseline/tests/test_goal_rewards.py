@@ -217,3 +217,106 @@ def test_dense_costs_accumulate_per_second_without_extra_dt(load_mdp, make_env):
     env = make_env(1)
     for step_dt in (0.01, 0.02, 0.05):
         assert (rewards.time_cost(env) * -0.1 * step_dt * round(1.0 / step_dt)).item() == pytest.approx(-0.1)
+
+
+@pytest.mark.parametrize("step_dt", [0.01, 0.02, 0.05])
+def test_live_reach_tracks_object_without_repaying_constant_proximity(load_mdp, make_env, step_dt):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(1)
+    env.step_dt = step_dt
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.0])
+    cfg = SimpleNamespace(params={"near_radius": 0.1, "frame_name": "ee_frame"})
+    live = rewards.CurrentObjectReachProgress(cfg, env)
+    fixed = rewards.ReachProgress(cfg, env)
+    # Moving the object toward a stationary EEF is live relative approach.
+    position[:, 0] += 0.2
+    assert (live(env) * step_dt).item() == pytest.approx(0.4)
+    assert fixed(env).item() == 0.0
+    # Translating both together, waiting, and returning to the best distance
+    # provide no repeated reaching reward.
+    for offset in (0.3, -0.1):
+        position[:, 1] += offset
+        reference[:, 1] += offset
+        assert (live(env) * step_dt).item() == pytest.approx(0.0, abs=1e-6)
+    reference[:, 0] += 0.2
+    assert live(env).item() == 0.0
+    reference[:, 0] -= 0.2
+    assert (live(env) * step_dt).item() == pytest.approx(0.0, abs=1e-6)
+    reference[:] = position
+    assert (live(env) * step_dt).item() == pytest.approx(0.6)
+    assert live(env).item() == 0.0
+
+
+def test_live_reach_partial_reset_and_initially_near_object(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(2)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    reference[:] = position
+    cfg = SimpleNamespace(params={"near_radius": 0.1, "frame_name": "ee_frame"})
+    live = rewards.CurrentObjectReachProgress(cfg, env)
+    position[:, 0] += 0.5
+    assert torch.equal(live(env), torch.zeros(2))
+    live.reset(torch.tensor([1]))
+    reference[:, 0] += 0.2
+    assert (live(env) * env.step_dt).tolist() == pytest.approx([0.0, 0.5])
+
+
+@pytest.mark.parametrize("step_dt", [0.01, 0.02, 0.05])
+def test_goal_progress_budget_is_isotropic_dt_independent_and_not_paid_for_waiting(load_mdp, make_env, step_dt):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(3)
+    env.step_dt = step_dt
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    initial = position.clone()
+    directions = torch.tensor([[1.0, 0.0], [0.0, -1.0], [-0.6, 0.8]])
+    goal = initial.clone()
+    goal[:, :2] += directions * 0.15
+    env.command_manager.get_command = lambda name: goal
+    term = rewards.PlanarGoalProgress(SimpleNamespace(params={}), env)
+    assert torch.equal(term(env), torch.zeros(3))
+    total = torch.zeros(3)
+    for moved, expected in [(0.07, 0.5), (0.03, 0.0), (0.07, 0.0), (0.14, 0.5), (0.15, 0.0)]:
+        position[:, :2] = initial[:, :2] + directions * moved
+        position[:, 2] += 0.1  # XY shaping deliberately ignores height.
+        received = term(env) * step_dt
+        assert received.tolist() == pytest.approx([expected] * 3, abs=2e-6)
+        total += received
+    assert total.tolist() == pytest.approx([1.0] * 3, abs=2e-6)
+    assert torch.equal(term(env), torch.zeros(3))
+
+
+def test_goal_progress_partial_reset_uses_new_command_and_includes_first_step(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(2)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    goal = position.clone()
+    goal[:, 0] += 0.15
+    env.command_manager.get_command = lambda name: goal
+    term = rewards.PlanarGoalProgress(SimpleNamespace(params={}), env)
+    position[:, 0] += 0.07
+    assert (term(env) * env.step_dt).tolist() == pytest.approx([0.5, 0.5], abs=1e-6)
+    position[1] = torch.tensor([3.0, 4.0, 1.05])
+    term.reset(torch.tensor([1]))  # Old command is deliberately still active.
+    goal[1] = position[1] + torch.tensor([0.0, 0.15, 0.0])
+    position[1, 1] += 0.07
+    assert (term(env) * env.step_dt).tolist() == pytest.approx([0.0, 0.5], abs=2e-6)
+
+
+def test_goal_progress_has_no_budget_when_reset_is_already_at_goal(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(1)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    goal = position.clone()
+    env.command_manager.get_command = lambda name: goal
+    term = rewards.PlanarGoalProgress(SimpleNamespace(params={}), env)
+    for offset in (0.0, 0.2, 0.0):
+        position[:, 0] = goal[:, 0] + offset
+        assert term(env).item() == 0.0
+    with pytest.raises(ValueError, match="position_tolerance"):
+        term(env, position_tolerance=-0.01)

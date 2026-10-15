@@ -337,7 +337,7 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 
 ### Omni v1: Arm 속도 종료 기준 변형
 
-환경 ID: `Isaac-Inspire-Sweep-Omni-v1`. `InspireSweepOmniV1EnvCfg`는 `InspireSweepOmniEnvCfg`를 상속하며 `terminations.hand_velocity.params["threshold"]`를 변경한다. 최초 추가값은 2.0 rad/s였으며 사용자가 변경한 현재 값은 100.0 rad/s다. 이름이 `hand_velocity`인 종료 항목은 Arm 6개 관절을 검사한다. 절대 속도 100.0 rad/s는 허용하고, 초과하면 종료한다. v0는 1.0 rad/s를 유지한다.
+환경 ID: `Isaac-Inspire-Sweep-Omni-v1`. `InspireSweepOmniV1EnvCfg`는 `InspireSweepOmniEnvCfg`를 상속하며 `terminations.hand_velocity.params["threshold"]`를 변경한다. 현재 코드 값은 3.0 rad/s다. 이름이 `hand_velocity`인 종료 항목은 Arm 6개 관절을 검사한다. 절대 속도 3.0 rad/s는 허용하고, 초과하면 종료한다. v0는 1.0 rad/s를 유지한다.
 
 관측 41D, Action 8D, 스폰·목표·물성·보상·나머지 종료 조건과 PPO는 v0에서 상속한다. Arm 속도 보상의 `reference_velocity=1.0`과 actuator 속도 제한도 그대로다. v0 체크포인트를 지정해 v1에서 재생할 수 있지만, 변경한 종료 조건에서 성공하거나 첫 스텝 종료가 해결됐다는 뜻은 아니다.
 
@@ -354,3 +354,36 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
   --checkpoint /home/min/7cmdehdrb/grad/logs/TEMP/2026-10-14_16-16-28_centered_spawn_goal15cm/model_4100.pt \
   --real-time
 ```
+
+### Omni v2: 현재 물체 접근과 목표 이동 진전
+
+환경 ID: `Isaac-Inspire-Sweep-Omni-v2`. `InspireSweepOmniV2EnvCfg`는 v1을 상속한다. 기존 v0/v1의 동작은 유지한다. [활성 환경 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)와 [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/docs/logs/2026-10-15_omni_v2_rewards.md)에 계산식과 검증 범위를 기록했다.
+
+| 보상 | v2 계산과 기본값 |
+| --- | --- |
+| `reaching` | 현재 물체 바닥 중심과 EEF의 XYZ 거리에서 10cm를 뺀 거리가 episode 최소 기록을 갱신한 만큼 지급. Reset 거리로 정규화하고 누적 최대 +200 |
+| `goal_distance` | 물체의 XY 목표 거리를 새롭게 줄인 비율만 지급. Reset 시 목표 거리에서 허용 오차 1cm를 뺀 값으로 정규화하고 누적 최대 +400 |
+| Arm action rate / joint velocity | 각각 −0.03, 기존과 같은 sum 계산 |
+| Hand action rate / joint velocity | 각각 −0.03 / −0.01, 기존과 같은 mean 계산 |
+| `object_tilt` / `shelf_collision` | v1과 같은 −2 / −0.5 |
+| `time` / `success` / `failure` | 보상 설정을 `None`으로 제거 |
+
+두 진전 보상은 함수 내부에서 `step_dt`로 나눠 RewardManager의 시간 곱셈을 상쇄한다. 접근 전에는 Reaching이 주요 양의 신호이고, 접근 기록을 소진한 뒤에는 물체의 목표 접근이 추가 task 보상을 만든다. 가만히 기다리기, 같은 거리에서 함께 이동하기, 후퇴 후 기존 최고 기록으로 복귀하기에는 추가 진전 보상이 없다. 목표 보상은 v1의 음의 거리 비용과 의미가 다르므로 TensorBoard 값을 직접 비교하지 않는다.
+
+이 계수는 학습 성능을 검증하기 전의 실험 기본값이다. Reaching은 상대 거리만 검사하므로 물체가 EEF 쪽으로 움직여도 지급될 수 있고, 목표 이동 보상만으로 물체의 직립·접촉을 보장하지 않는다. 직립 비용은 유지한다. v2에서는 `terminations.success=None`으로 성공 종료도 제거하므로 목표 도달 후에도 episode가 계속된다. 시간 제한 10초, 실패 종료와 Arm 속도 임계값 3 rad/s는 v1과 같다. PPO·관측·action·물성은 변경하지 않는다.
+
+```bash
+# v2 새 학습: v1 체크포인트 resume 없이 보상 변경 효과 확인
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-v2 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_v2 \
+  --run_name live_reach200_sweep400 --headless
+
+# 생성된 v2 체크포인트 재생
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-v2 --num_envs 1 \
+  --experiment_name inspire_sweep_omni_v2 \
+  --checkpoint "<v2-checkpoint.pt>" --real-time
+```
+
+전방향 목표를 사용하므로 `--sweep-direction`은 지정하지 않는다. Runner 기본 클래스는 기존과 같으므로 위 `--experiment_name`으로 v2 로그와 체크포인트를 구분한다.

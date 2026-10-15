@@ -189,6 +189,11 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     assert v1["entry_point"] == omni["entry_point"]
     assert v1["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV1EnvCfg"
     assert v1["kwargs"]["rsl_rl_cfg_entry_point"] == omni["kwargs"]["rsl_rl_cfg_entry_point"]
+    v2 = registrations[namespace["OMNI_V2_TASK_ID"]]
+    assert namespace["OMNI_V2_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v2"
+    assert v2["entry_point"] == v1["entry_point"]
+    assert v2["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV2EnvCfg"
+    assert v2["kwargs"]["rsl_rl_cfg_entry_point"] == v1["kwargs"]["rsl_rl_cfg_entry_point"]
 
 
 def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
@@ -214,6 +219,64 @@ def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
         params = deepcopy(term.params)
         params["asset_cfg"].joint_ids = arm_ids
         assert term.func(env, **params).tolist() == expected
+
+
+def test_v2_disables_success_preserves_other_v1_terminations_and_isolates_mutations(omni_config):
+    before = omni_config.omni.InspireSweepOmniV1EnvCfg()
+    v2 = omni_config.omni.InspireSweepOmniV2EnvCfg()
+    assert isinstance(v2, type(before))
+    expected_terminations = before.terminations.to_dict()
+    expected_terminations["success"] = None
+    assert v2.terminations.to_dict() == expected_terminations
+    assert v2.terminations.success is None
+    assert before.terminations.success is not None
+    for name in ("scene", "actions", "commands", "observations", "events"):
+        assert getattr(v2, name).to_dict() == getattr(before, name).to_dict()
+    assert v2.episode_length_s == before.episode_length_s
+    assert v2.sim.dt == before.sim.dt and v2.decimation == before.decimation
+    assert all(getattr(v2.rewards, name) is None for name in ("time", "success", "failure"))
+    assert v2.rewards.reaching.func.__name__ == "CurrentObjectReachProgress"
+    assert v2.rewards.goal_distance.func.__name__ == "PlanarGoalProgress"
+    assert v2.rewards.reaching.weight == 200.0
+    assert v2.rewards.goal_distance.weight == 400.0
+    for name in ("arm_action_rate", "hand_action_rate", "arm_joint_velocity", "hand_joint_velocity"):
+        assert getattr(v2.rewards, name) == getattr(before.rewards, name)
+    assert v2.rewards.object_tilt == before.rewards.object_tilt
+    assert v2.rewards.shelf_collision == before.rewards.shelf_collision
+    v2.rewards.reaching.params["near_radius"] = 9.0
+    v2.terminations.hand_velocity.params["threshold"] = 99.0
+    assert omni_config.omni.InspireSweepOmniV1EnvCfg().to_dict() == before.to_dict()
+    assert omni_config.omni.InspireSweepOmniV2EnvCfg().rewards.reaching.params["near_radius"] == 0.10
+
+
+def test_v2_staged_approach_then_sweep_pays_separate_budgets(omni_config, make_env):
+    cfg = omni_config.omni.InspireSweepOmniV2EnvCfg()
+    env = make_env(1)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    initial = position.clone()
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.0])
+    goal = initial + torch.tensor([0.15, 0.0, 0.0])
+    env.command_manager.get_command = lambda name: goal
+    configs = [cfg.rewards.reaching, cfg.rewards.goal_distance]
+    terms = [term.func(term, env) for term in configs]
+
+    def reward():
+        return [(term(env, **config.params) * config.weight * env.step_dt).item()
+                for term, config in zip(terms, configs)]
+
+    assert reward() == [0.0, 0.0]
+    reference[:] = position
+    assert reward() == pytest.approx([200.0, 0.0])
+    assert reward() == [0.0, 0.0]  # Waiting beside the object does not pay.
+    position[:, 0] += 0.07
+    reference[:] = position
+    assert reward() == pytest.approx([0.0, 200.0], abs=2e-4)
+    position[:, 0] += 0.07
+    reference[:] = position
+    assert reward() == pytest.approx([0.0, 200.0], abs=2e-4)
+    assert reward() == [0.0, 0.0]
 
 
 def test_omni_arm_costs_match_baseline_and_exclude_hand(omni_config, make_env):
@@ -264,10 +327,13 @@ def test_omni_reward_set_has_complete_plan_and_no_old_shaping(omni_config):
     assert not set(arm) & set(hand)
 
 
-def test_every_configured_manager_parameter_binds_to_its_production_callable(omni_config):
-    cfg = omni_config.omni.InspireSweepOmniEnvCfg()
+@pytest.mark.parametrize("config_name", ["InspireSweepOmniEnvCfg", "InspireSweepOmniV2EnvCfg"])
+def test_every_configured_manager_parameter_binds_to_its_production_callable(omni_config, config_name):
+    cfg = getattr(omni_config.omni, config_name)()
     for group_name in ("events", "rewards", "terminations"):
         for name, term in vars(getattr(cfg, group_name)).items():
+            if term is None:
+                continue
             if inspect.isclass(term.func):
                 signature, positional = inspect.signature(term.func.__call__), (None, None)
             else:
