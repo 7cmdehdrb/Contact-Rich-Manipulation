@@ -282,7 +282,7 @@ obs_groups = {"actor": ["policy"], "critic": ["policy", "privileged"]}
 
 환경 ID: `Isaac-Inspire-Sweep-Omni-v0`
 
-Scene, Action, Event, Observation, Reward, Termination과 각 파라미터의 의미는 [Omni 환경 상세 구성](../../example/Contact-Rich-Manipulation-Context/docs/environments/OMNI_ENVIRONMENT.md)에 정리되어 있다.
+Scene, Action, Event, Observation, Reward, Termination과 각 파라미터의 의미는 [Omni 환경 상세 구성](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/OMNI_ENVIRONMENT.md)에 정리되어 있다.
 
 `InspireSweepOmniEnvCfg`가 `InspireSweepEnvCfg`를 직접 상속한다. 로봇·선반·실린더 형상, Initial Joint, Arm 6 + Hand 2 제어, 현재 물체 위치를 사용하는 policy 41D 관측과 노이즈, 50 Hz 제어 및 10초 제한은 Baseline을 사용한다. `InspireSweepPPORunnerCfg`도 동일 클래스를 그대로 등록한다. 질량·마찰은 `apply_realistic_physics()`와 `RealisticPhysicsEventsCfg`의 startup/reset 이벤트를 재사용하므로 Realistic Physics 환경과 동일하다.
 
@@ -294,7 +294,7 @@ Scene, Action, Event, Observation, Reward, Termination과 각 파라미터의 �
 
 ### 보상과 종료
 
-[Omni 보상 제안 초안](../../example/Contact-Rich-Manipulation-Context/docs/environments/OMNI_REWARD_PLAN.md)의 식을 적용하며 다음 수치는 확인한 초기 시험값이다. 목표 비용에는 접근 게이트를 두지 않는다. 기존 EEF 방향 정렬, Y 속도 보상, Homing 보상과 단일 물체에서 0인 비대상 물체 보상을 제거한다.
+[Omni 보상 제안 초안](../../example/Contact-Rich-Manipulation-Context/01_plan/environments/OMNI_REWARD_PLAN.md)의 식을 적용하며 다음 수치는 확인한 초기 시험값이다. 목표 비용에는 접근 게이트를 두지 않는다. 기존 EEF 방향 정렬, Y 속도 보상, Homing 보상과 단일 물체에서 0인 비대상 물체 보상을 제거한다.
 
 | 항목 | 초기 가중치 | 계산 |
 | --- | ---: | --- |
@@ -346,7 +346,7 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Sweep-Omni-v1 --num_envs 2048 \
   --experiment_name inspire_sweep_omni_v1 \
-  --run_name centered_spawn_goal15cm_arm2rad --headless
+  --run_name centered_spawn_goal15cm_arm3rad --headless
 
 # v0 체크포인트를 v1 조건으로 재생
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
@@ -359,10 +359,11 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 
 환경 ID: `Isaac-Inspire-Sweep-Omni-v2`. `InspireSweepOmniV2EnvCfg`는 v1을 상속한다. 기존 v0/v1의 동작은 유지한다. [활성 환경 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)와 [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v2_rewards.md)에 계산식과 검증 범위를 기록했다.
 
+
 | 보상 | v2 계산과 기본값 |
 | --- | --- |
-| `reaching` | 현재 물체 바닥 중심과 EEF의 XYZ 거리에서 10cm를 뺀 거리가 episode 최소 기록을 갱신한 만큼 지급. Reset 거리로 정규화하고 누적 최대 +200 |
-| `goal_distance` | 물체의 XY 목표 거리를 새롭게 줄인 비율만 지급. Reset 시 목표 거리에서 허용 오차 1cm를 뺀 값으로 정규화하고 누적 최대 +400 |
+| `reaching` | 현재 물체 바닥 중심과 EEF의 XYZ 거리에서 10cm를 뺀 거리가 episode 최소 기록을 갱신한 만큼 지급. Reset 거리로 정규화하고 누적 최대 +30 |
+| `goal_distance` | 물체의 XY 목표 거리를 새롭게 줄인 비율만 지급. Reset 시 목표 거리에서 허용 오차 1cm를 뺀 값으로 정규화하고 누적 최대 +40 |
 | Arm action rate / joint velocity | 각각 −0.03, 기존과 같은 sum 계산 |
 | Hand action rate / joint velocity | 각각 −0.03 / −0.01, 기존과 같은 mean 계산 |
 | `object_tilt` / `shelf_collision` | v1과 같은 −2 / −0.5 |
@@ -377,7 +378,7 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Sweep-Omni-v2 --num_envs 2048 \
   --experiment_name inspire_sweep_omni_v2 \
-  --run_name live_reach200_sweep400 --headless
+  --run_name live_reach30_sweep40 --headless
 
 # 생성된 v2 체크포인트 재생
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
@@ -410,3 +411,38 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
   --experiment_name inspire_sweep_omni_v3 \
   --checkpoint "<v3-checkpoint.pt>" --real-time
 ```
+
+### Dex Omni: 과거 최고 상태를 갱신한 거리만큼 보상
+
+환경 ID: `Isaac-Inspire-Dex-Omni-v0`. [InspireDexOmniEnvCfg](inspire_sweep_baseline/dex_omni_env_cfg.py)는 `InspireSweepOmniV2EnvCfg`를 상속하고, `DexOmniRewardsCfg(OmniV2RewardsCfg)`에서 접근·목표 이동 보상 두 항만 교체한다. Runtime은 `InspireSweepEnv`, PPO는 `InspireSweepPPORunnerCfg`를 그대로 사용한다.
+
+DexTouch 논문의 IV-B, 식 (1)과 식 (2)의 목표 거리 항(PDF 4쪽, 인쇄 페이지 10775)에서 **에피소드의 과거 최고 상태를 갱신할 때 그 개선량만 지급하는 구조**를 차용했다. 논문의 손가락별 접근 거리 대신 기존 고정 EEF 프레임과 현재 물체 바닥 원점 사이 거리를 사용하고, 목표 거리는 Sweeping의 XY 평면에서 계산한다. 논문의 grasp·lift·rotation 단계나 L1 관절 속도 비용은 추가하지 않는다. 출처와 구현·검증 범위는 [개발 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_dex_omni_rewards.md)에 기록한다.
+
+| 보상 | 남은 거리 `gap` | 계수 |
+| --- | --- | ---: |
+| `reaching` / `DexReachProgress` | `max(EEF–현재 물체 바닥 원점 XYZ 거리 − 0.10 m, 0)` | +30 reward/m |
+| `goal_distance` / `DexPlanarGoalProgress` | `max(물체–목표 XY 거리 − 0.01 m, 0)` | +300 reward/m |
+
+각 term의 보상 기준은 리셋 상태의 `gap`이다. Step마다 `max(직전 최소 gap − 현재 gap, 0)`만큼 개선량을 구하고 최소 기록을 갱신한다. 함수가 이 거리 차를 `step_dt`로 나누므로 RewardManager의 시간 곱셈 후 실제 지급값은 **계수 × 새롭게 줄인 거리(m)**다. 대기·후퇴·기존 최소 거리로의 복귀는 추가 보상이 없고, 목표 허용 오차 안에서도 추가 보상은 없다. 선택된 환경의 리셋마다 기록을 초기화한다.
+
+Omni v2도 과거 최고 기록을 사용하지만, 초기 거리로 정규화해 +30/+40의 에피소드 보상 예산을 갖는다. Dex Omni는 초기 거리로 나누지 않으므로 초기 거리에 관계없이 새로 1 cm를 줄일 때 접근 +0.3, 목표 이동 +3을 지급한다. **30/300은 논문에 제시된 계수가 아니라 이 환경의 실험 기본값**이며 학습 성능은 아직 검증하지 않았다.
+
+Arm action rate/velocity 비용은 각각 −0.03의 제곱합, Hand action rate/velocity 비용은 각각 −0.03/−0.01의 제곱평균으로 유지한다. 물체 기울기 −2, 선반 충돌 −0.5 비용도 상속한다. `time`, `success`, `failure` 보상과 `terminations.success`는 v2와 같이 `None`이다. 선반 이동·충돌을 포함한 모든 실패 종료, Arm 속도 3 rad/s 종료, 10초 시간 제한도 v2와 같다.
+
+Scene·스폰·목표 이벤트를 상속하므로 물체는 기존 반지름 4 cm·높이 10 cm의 단일 실린더이며, 선반 중앙 반지름 2 cm 원판 스폰과 최대 15 cm 전방향 목표를 사용한다. 질량·마찰 랜덤화, 현재 물체 위치를 포함한 Actor/Critic 41D, Action 8D, 제어 50 Hz도 동일하다. 접근 보상은 상대 거리만 보므로 물체가 EEF 쪽으로 움직여도 지급될 수 있으며, 보상 자체가 접촉이나 직립을 증명하지는 않는다.
+
+```bash
+# Workspace 루트에서 Dex Omni 학습
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Omni-v0 --num_envs 2048 \
+  --experiment_name inspire_dex_omni \
+  --run_name dex_best_distance --headless
+
+# 생성된 Dex Omni 체크포인트 재생
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Dex-Omni-v0 --num_envs 1 \
+  --experiment_name inspire_dex_omni \
+  --checkpoint "<dex-omni-checkpoint.pt>" --real-time
+```
+
+`--sweep-direction`은 생략한다. 기본 PPO 로그 이름은 Baseline과 같으므로 위 `--experiment_name`을 사용하면 `logs/rsl_rl/inspire_dex_omni`에 저장한다. 위 명령은 실행 안내이며, 이번 구현의 실제 train/play 수행이나 학습 성공 결과를 뜻하지 않는다.
