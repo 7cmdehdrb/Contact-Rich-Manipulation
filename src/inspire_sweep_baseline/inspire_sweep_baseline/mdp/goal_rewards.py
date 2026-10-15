@@ -45,6 +45,36 @@ def planar_goal_cost(env, command_name="target_goal_pos", sigma=0.10):
     return torch.expm1(-distance / sigma)
 
 
+def pushing_speed_cost(env, free_speed=0.3, reference_speed=0.5):
+    """Quadratic excess 3D object speed, one at reference_speed.
+
+    This is a dense cost: RewardManager applies weight and step_dt once.
+    Keep the speed definition identical to the push_fast termination.
+    """
+    if not (math.isfinite(free_speed) and math.isfinite(reference_speed)
+            and 0.0 <= free_speed < reference_speed):
+        raise ValueError("Speeds must satisfy 0 <= free_speed < reference_speed and be finite")
+    rows = torch.arange(env.num_envs, device=env.device)
+    targets = env.target_id[:, 0].long()
+    velocity = env.scene["object_collection"].data.object_lin_vel_w[rows, targets]
+    speed = torch.linalg.vector_norm(velocity, dim=-1)
+    return ((speed - free_speed).clamp_min(0.0) / (reference_speed - free_speed)).square()
+
+
+def joint_speed_cost(env, asset_cfg=SceneEntityCfg("robot"), free_speed=1.0, reference_speed=2.0):
+    """Quadratic excess of the largest absolute selected joint speed.
+
+    Like arm_velocity termination, any selected joint can trigger the cost.
+    RewardManager applies weight and step_dt once, as for pushing_speed_cost.
+    """
+    if not (math.isfinite(free_speed) and math.isfinite(reference_speed)
+            and 0.0 <= free_speed < reference_speed):
+        raise ValueError("Speeds must satisfy 0 <= free_speed < reference_speed and be finite")
+    velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
+    speed = velocity.abs().amax(dim=-1)
+    return ((speed - free_speed).clamp_min(0.0) / (reference_speed - free_speed)).square()
+
+
 def action_rate_l2(env, action_group="arm"):
     """Sum squared raw command changes for the selected Arm or Hand group.
 

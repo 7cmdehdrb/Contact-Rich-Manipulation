@@ -19,6 +19,43 @@ def _set_shelf_quaternion(env, quaternion=None):
     )
 
 
+def test_pushing_speed_cost_dead_zone_quadratic_growth_and_3d_norm(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(8)
+    env.scene["object_collection"].data.object_lin_vel_w[:, 0] = torch.tensor([
+        [0.0, 0.0, 0.0], [0.3, 0.0, 0.0], [0.35, 0.0, 0.0],
+        [0.4, 0.0, 0.0], [0.45, 0.0, 0.0], [0.5, 0.0, 0.0],
+        [0.0, 0.0, -0.5], [0.3, 0.4, 0.0],
+    ])
+    cost = rewards.pushing_speed_cost(env)
+    assert torch.allclose(cost, torch.tensor([0.0, 0.0, 0.0625, 0.25, 0.5625, 1.0, 1.0, 1.0]))
+    assert cost[3] - cost[2] < cost[4] - cost[3] < cost[5] - cost[4]
+    # Existing dense-cost timing: -0.05 weighted, -0.001 per 20 ms step.
+    assert (cost[5] * -0.05 * 0.02).item() == pytest.approx(-0.001)
+    for free, reference in ((-0.1, 0.5), (0.3, 0.3), (0.5, 0.3), (0.3, math.inf), (math.nan, 0.5)):
+        with pytest.raises(ValueError, match="Speeds"):
+            rewards.pushing_speed_cost(env, free_speed=free, reference_speed=reference)
+
+
+def test_joint_speed_cost_uses_arm_max_absolute_speed_and_quadratic_dead_zone(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(7)
+    arm_ids = [1, 4, 7, 10, 13, 16]
+    cfg = SimpleNamespace(name="robot", joint_ids=arm_ids)
+    velocity = env.scene["robot"].data.joint_vel
+    velocity[:, 0] = 100.0  # A non-Arm joint must not affect the cost.
+    velocity[:, 7] = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, -2.0, 3.0])
+    cost = rewards.joint_speed_cost(env, asset_cfg=cfg)
+    assert torch.allclose(cost, torch.tensor([0.0, 0.0, 0.0, 0.25, 1.0, 1.0, 4.0]))
+    assert (cost[4] * -0.03).item() == pytest.approx(-0.03)
+    assert (cost[4] * -0.03 * 0.02).item() == pytest.approx(-0.0006)
+    velocity[4, arm_ids] = 2.0
+    assert rewards.joint_speed_cost(env, asset_cfg=cfg)[4].item() == 1.0  # Max, not sum/norm.
+    for free, reference in ((-1.0, 2.0), (1.0, 1.0), (2.0, 1.0), (math.nan, 2.0), (1.0, math.inf)):
+        with pytest.raises(ValueError, match="Speeds"):
+            rewards.joint_speed_cost(env, asset_cfg=cfg, free_speed=free, reference_speed=reference)
+
+
 def test_goal_cost_is_live_planar_isotropic_and_zero_only_at_goal(load_mdp, make_env):
     rewards = load_mdp("goal_rewards")
     env = make_env(4)

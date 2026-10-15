@@ -448,3 +448,127 @@ Scene·스폰·목표 이벤트를 상속하므로 물체는 기존 반지름 4 
 `--sweep-direction`은 생략한다. 기본 PPO 로그 이름은 Baseline과 같으므로 위 `--experiment_name`을 사용하면 `logs/rsl_rl/inspire_dex_omni`에 저장한다. 위 명령은 실행 안내이며, 이번 구현의 실제 train/play 수행이나 학습 성공 결과를 뜻하지 않는다.
 
 Omni 베이스와 모든 파생 환경(Dex Omni 포함)은 로컬 `mdp/goal_rewards.py`의 `action_rate_l2`·`joint_vel_l2` 네 항을 반드시 상속한다. raw Action 변화량과 이름으로 선택한 실제 관절 속도를 제곱합하며, 보상 내부 clamp·평균·정규화는 사용하지 않는다. 계수와 필수 사용 규칙은 [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)을 따른다.
+
+## Omni v4: 종료 기준 완화와 pushing 속도 비용
+
+`Isaac-Inspire-Sweep-Omni-v4`는 `InspireSweepOmniV4EnvCfg(InspireSweepOmniV3EnvCfg)`로 등록한다. Runtime은 `InspireSweepEnv`, PPO는 `InspireSweepPPORunnerCfg`다. V3의 41D Actor/Critic 관측, 8D Joint Position/Hand action, 높이 조건부 XY reaching(+30), 목표 진행(+40), 물체·목표 스폰, 질량·마찰 및 0.02 s 정책 주기를 상속한다.
+
+| 설정 | V4 값 |
+| --- | --- |
+| `hand_velocity` | Arm 6개 중 절대 관절속도 **5.0 rad/s 초과** 시 종료. 이름과 달리 Arm 대상 |
+| `object_outside_shelf` | `None`, 비활성 |
+| `success` | `None`, 비활성 |
+| `push_fast` | 대상 물체 3D 선속도 norm **0.5 m/s 초과** 시 종료 |
+| `rewards.pushing_speed` | `goal_rewards.pushing_speed_cost`, weight **−0.05**, `free_speed=0.3`, `reference_speed=0.5` |
+
+`object_drop`, 선반 충돌·선반 이동·timeout 종료는 유지한다. 선반 외곽 종료를 제거해도 물체 낙하·전도에 대한 종료는 남는다. 이벤트의 안전 목표 영역과 스폰은 그대로다. Arm/Hand action 변화와 실제 관절속도 네 비용은 기존 함수·계수(−0.03/−0.03/−0.03/−0.01)를 유지한다.
+
+2026-10-15 후속 요청으로 `2026-10-15_16-53-58_height_gated_xy_reach/params/env.yaml`의 공통 파라미터를 대조해 Arm 속도 threshold **5.0**을 코드에 적용했다. 기존 관측·action·actuator·접근/목표 보상·물성 설정은 저장 run과 같아 상속을 유지한다. V4 전용 물체 속도 0.5·외곽/성공 종료 비활성·속도 비용은 유지한다. [적용·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v4_saved_parameters.md).
+
+물체 속도 `v`는 `push_fast`와 같은 월드 선속도 **3D norm(m/s)**이다. 새 비용 함수는 `max(v−0.3, 0)² / (0.5−0.3)²`를 반환한다. 가중치 적용 후 값은 다음과 같다.
+
+```math
+c(v)=-0.05\left(\frac{\max(v-0.3,0)}{0.2}\right)^2.
+```
+
+0.3 m/s 이하는 비용이 없고 초과 구간에서는 제곱으로 증가한다. 함수는 상한 clamp를 두지 않으므로 종료 threshold를 넘는 transition도 실제 속도의 비용을 받는다. 요청의 −0.05는 **weight 적용 후, RewardManager의 시간 곱셈 전**으로 해석했다. 기존 dense 비용과 같이 `/step_dt`로 상쇄하지 않아 실제 step 기여는 `c(v) × step_dt`다.
+
+| 속도(m/s) | 가중치 적용 후 `c(v)` | 기본 0.02 s step 기여 |
+| --- | --- | --- |
+| 0.30 이하 | 0 | 0 |
+| 0.35 | −0.003125 | −0.0000625 |
+| 0.40 | −0.0125 | −0.00025 |
+| 0.45 | −0.028125 | −0.0005625 |
+| 0.50 | **−0.05** | **−0.001** |
+
+Workspace 루트에서 실행한다. Omni에는 `--sweep-direction`을 지정하지 않는다. 다음은 실행 안내이며 이번 구현에서 train/play를 수행한 것은 아니다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-v4 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_v4 \
+  --run_name quadratic_push_speed --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-v4 --num_envs 1 \
+  --experiment_name inspire_sweep_omni_v4 \
+  --checkpoint "<v4-checkpoint.pt>" --real-time
+```
+
+상속·등록·CPU 검증과 미실행 범위는 [V4 개발 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v4_speed_penalty.md)에 기록했다.
+
+### 추가 Arm 속도 페널티: `arm_speed_excess`
+
+V4는 기존 `joint_vel_l2` 등 모든 비용을 유지하면서 `goal_rewards.joint_speed_cost`를 추가한다. `terminations.hand_velocity`와 같은 Arm 6개 관절의 실제 절대속도를 검사하며, 어느 관절이든 빠르면 비용이 발생하도록 **최대 절대속도**를 사용한다. Hand 관절은 검사 대상이 아니다.
+
+```math
+v_{\max}=\max_{j\in\mathrm{Arm}}|\dot{q}_j|,\qquad c=-0.03\left(\frac{\max(v_{\max}-1.0,0)}{2.0-1.0}\right)^2.
+```
+
+설정은 `rewards.arm_speed_excess`, weight **−0.03**, `free_speed=1.0`, `reference_speed=2.0`, `asset_cfg=_arm()`이다. 1.0 rad/s 이하는 비용 0이며 초과 구간에서 제곱으로 증가한다. 음수 속도도 절댓값으로 처리하고, 2.0 이후에도 상한 없이 증가한다.
+
+| Arm 최대 절대속도(rad/s) | 가중치 적용 값 | 기본 0.02 s step 기여 |
+| --- | --- | --- |
+| 1.0 이하 | 0 | 0 |
+| 1.5 | −0.0075 | −0.00015 |
+| 2.0 | **−0.03** | **−0.0006** |
+| 3.0 | −0.12 | −0.0024 |
+| 5.0 | −0.48 | −0.0096 |
+
+`pushing_speed_cost`와 같이 dense 비용이므로 RewardManager의 시간 곱셈을 상쇄하지 않는다. 위 −0.03은 **weight 적용 후, 시간 곱셈 전**이다. 기존 `arm_joint_velocity`는 Arm 속도 전체의 제곱합에 비용을 주고, 이 새 항은 가장 빠른 관절의 1.0 초과 구간에 추가 비용을 준다. 두 항은 함께 적용된다. 종료 기준은 기존 **5.0 rad/s 초과**로 유지하며 이 새 항 자체는 종료시키지 않는다.
+
+[추가·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v4_arm_speed_excess.md).
+
+## Omni Renewal 환경
+
+현재 V4의 기능을 기존 로컬 MDP 함수로 명시적으로 재구성했다. 새 계산 함수나 물리 모델을 추가하지 않았다.
+
+| Gym ID | 환경 설정 | 보상 설정 |
+| --- | --- | --- |
+| `Isaac-Inspire-Sweep-Omni-Renewal-v0` | `InspireSweepOmniRenewalEnvCfg` | `OmniRenewalRewardsCfg` |
+| `Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0` | `InspireDexSweepOmniRenewalEnvCfg` | `DexOmniRenewalRewardsCfg` |
+
+환경 상속은 `InspireSweepEnvCfg → InspireSweepOmniRenewalEnvCfg → InspireDexSweepOmniRenewalEnvCfg`다. Renewal은 Baseline 장면·관측·action·command·주기 위에 `OmniRenewalEventsCfg`, `OmniRenewalRewardsCfg`, `OmniRenewalTerminationsCfg`를 구성하며, V1→V2→V3→V4의 설정 변경 체인을 상속하지 않는다. 선반 기하 상수와 기존 로컬 함수, `RealisticPhysicsEventsCfg` 및 `apply_realistic_physics`를 재사용한다. Dex Renewal은 Renewal을 직접 상속하고 보상 설정의 두 항만 덮어쓴다.
+
+두 환경의 runtime은 `InspireSweepEnv`, PPO는 `InspireSweepPPORunnerCfg`다. Actor/Critic은 현재 물체 GT를 포함하는 같은 41D, action은 Arm Joint Position 6D + Hand 2D, 정책 주기는 0.02 s, episode 제한은 10 s다. 물체·목표 스폰과 질량·마찰, 센서·초기 상태는 현재 V4와 동일하다.
+
+| 보상·종료 | Sweep Renewal | Dex Sweep Renewal |
+| --- | --- | --- |
+| `reaching` | `HeightGatedPlanarReachProgress`, +30; XY·초기 거리 정규화·Z +9 cm / ±2 cm gate | `DexReachProgress`, +30 reward/m; 3D 실제 기록 개선 거리, 높이 gate 없음 |
+| `goal_distance` | `PlanarGoalProgress`, +40; 초기 목표 거리 정규화 | `DexPlanarGoalProgress`, +300 reward/m; 실제 XY 기록 개선 거리 |
+| 네 필수 운동 비용 | Arm/Hand raw action 변화 제곱합 −0.03/−0.03, 실제 관절속도 제곱합 −0.03/−0.01 | 동일 |
+| `object_tilt`, `shelf_collision` | 기존 함수·계수 −2.0 / −0.5 | 동일 |
+| `pushing_speed` | 0.3 m/s부터 제곱 증가, 0.5에서 weighted −0.05 | 동일 |
+| `arm_speed_excess` | 최대 Arm 절대속도 1.0 rad/s부터 제곱 증가, 2.0에서 weighted −0.03 | 동일 |
+| Arm 속도 종료 | 최대 절대속도 5.0 rad/s 초과 | 동일 |
+| 물체 속도 종료 | 3D 선속도 0.5 m/s 초과 | 동일 |
+| 외곽·성공 종료 | 비활성 | 동일 |
+| 기타 종료 | 물체 낙하·전도, 선반 충돌·변위, timeout 유지 | 동일 |
+
+두 환경은 활성 reward 10개를 사용한다. 시간 비용·성공/실패 terminal reward는 비활성이다. Dense 비용에는 RewardManager가 `weight × step_dt`를 적용하며, 진행 보상 함수는 기존 구현대로 시간 곱셈을 상쇄한다. Dex Renewal의 접근·목표 두 항은 `DexOmniRewardsCfg`의 함수·가중치·params와 동일하다. 이후 부모의 `__post_init__`가 이 두 항을 높이 gate 보상으로 다시 바꾸지 않는 구조다.
+
+Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본 PPO 로그 폴더를 공유하므로 명령의 `--experiment_name`으로 구분한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-Renewal-v0 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_renewal --run_name renewal_v0 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-Renewal-v0 --num_envs 1 \
+  --experiment_name inspire_sweep_omni_renewal \
+  --checkpoint "<renewal-checkpoint.pt>" --real-time
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 2048 \
+  --experiment_name inspire_dex_sweep_omni_renewal --run_name dex_renewal_v0 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 1 \
+  --experiment_name inspire_dex_sweep_omni_renewal \
+  --checkpoint "<dex-renewal-checkpoint.pt>" --real-time
+```
+
+위 명령은 실행 안내이며 이번 추가 작업에서 새 학습·재생을 수행하지 않았다.
+
+코드: [Renewal 설정](inspire_sweep_baseline/omni_renewal_env_cfg.py), [Dex Renewal 설정](inspire_sweep_baseline/dex_omni_renewal_env_cfg.py). [구현·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_renewal_environments.md).

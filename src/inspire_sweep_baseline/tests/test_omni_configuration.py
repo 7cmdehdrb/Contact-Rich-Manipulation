@@ -177,7 +177,32 @@ def omni_config(load_mdp, monkeypatch):
     )
     monkeypatch.setitem(sys.modules, dex_module.__name__, dex_module)
     dex = _execute_definitions(MODULE_ROOT / "dex_omni_env_cfg.py", dex_module.__dict__)
-    return SimpleNamespace(baseline=baseline, realistic=realistic, omni=omni, dex=dex, terms=terms, mdp=mdp)
+    renewal_module = types.ModuleType("_omni_cpu_renewal_cfg")
+    renewal_module.__dict__.update(
+        configclass=configclass, math=math, mdp=mdp,
+        EventTerm=terms.EventTermCfg, RewTerm=terms.RewardTermCfg,
+        DoneTerm=terms.TerminationTermCfg, SceneEntityCfg=scene_module.SceneEntityCfg,
+        HAND_JOINT_NAMES=robot_constants["HAND_JOINT_NAMES"],
+        InspireSweepEnvCfg=baseline.InspireSweepEnvCfg, TerminationsCfg=baseline.TerminationsCfg, _arm=baseline._arm,
+        goal_rewards=omni.goal_rewards, goal_terminations=omni.goal_terminations,
+        randomize_goal_object_scene=omni.randomize_goal_object_scene,
+        OBJECT_RADIUS=omni.OBJECT_RADIUS, SHELF_HALF_EXTENTS=omni.SHELF_HALF_EXTENTS,
+        SHELF_SURFACE_HEIGHT=omni.SHELF_SURFACE_HEIGHT,
+        RealisticPhysicsEventsCfg=realistic.RealisticPhysicsEventsCfg,
+        apply_realistic_physics=realistic.apply_realistic_physics,
+    )
+    monkeypatch.setitem(sys.modules, renewal_module.__name__, renewal_module)
+    renewal = _execute_definitions(MODULE_ROOT / "omni_renewal_env_cfg.py", renewal_module.__dict__)
+    dex_renewal_module = types.ModuleType("_omni_cpu_dex_renewal_cfg")
+    dex_renewal_module.__dict__.update(
+        configclass=configclass, RewTerm=terms.RewardTermCfg, dex_rewards=dex.dex_rewards,
+        InspireSweepOmniRenewalEnvCfg=renewal.InspireSweepOmniRenewalEnvCfg,
+        OmniRenewalRewardsCfg=renewal.OmniRenewalRewardsCfg,
+    )
+    monkeypatch.setitem(sys.modules, dex_renewal_module.__name__, dex_renewal_module)
+    dex_renewal = _execute_definitions(MODULE_ROOT / "dex_omni_renewal_env_cfg.py", dex_renewal_module.__dict__)
+    return SimpleNamespace(baseline=baseline, realistic=realistic, omni=omni, dex=dex,
+                           renewal=renewal, dex_renewal=dex_renewal, terms=terms, mdp=mdp)
 
 
 def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo():
@@ -208,6 +233,12 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     assert v3["entry_point"] == v2["entry_point"]
     assert v3["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV3EnvCfg"
     assert v3["kwargs"]["rsl_rl_cfg_entry_point"] == v2["kwargs"]["rsl_rl_cfg_entry_point"]
+    v4 = registrations[namespace["OMNI_V4_TASK_ID"]]
+    assert namespace["OMNI_V4_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v4"
+    assert "OMNI_V4_TASK_ID" in namespace["__all__"]
+    assert v4["entry_point"] == v3["entry_point"]
+    assert v4["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV4EnvCfg"
+    assert v4["kwargs"]["rsl_rl_cfg_entry_point"] == v3["kwargs"]["rsl_rl_cfg_entry_point"]
     dex = registrations[namespace["DEX_OMNI_TASK_ID"]]
     assert namespace["DEX_OMNI_TASK_ID"] == "Isaac-Inspire-Dex-Omni-v0"
     assert "DEX_OMNI_TASK_ID" in namespace["__all__"]
@@ -215,6 +246,19 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     assert dex["disable_env_checker"] == baseline["disable_env_checker"]
     assert dex["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.dex_omni_env_cfg:InspireDexOmniEnvCfg"
     assert dex["kwargs"]["rsl_rl_cfg_entry_point"] == baseline["kwargs"]["rsl_rl_cfg_entry_point"]
+    for constant, task_id, entry in (
+        ("OMNI_RENEWAL_TASK_ID", "Isaac-Inspire-Sweep-Omni-Renewal-v0",
+         "omni_renewal_env_cfg:InspireSweepOmniRenewalEnvCfg"),
+        ("DEX_OMNI_RENEWAL_TASK_ID", "Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0",
+         "dex_omni_renewal_env_cfg:InspireDexSweepOmniRenewalEnvCfg"),
+    ):
+        assert namespace[constant] == task_id
+        assert constant in namespace["__all__"]
+        registered = registrations[task_id]
+        assert registered["entry_point"] == baseline["entry_point"]
+        assert registered["disable_env_checker"] == baseline["disable_env_checker"]
+        assert registered["kwargs"]["env_cfg_entry_point"] == f"inspire_sweep_baseline.{entry}"
+        assert registered["kwargs"]["rsl_rl_cfg_entry_point"] == baseline["kwargs"]["rsl_rl_cfg_entry_point"]
 
 
 def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
@@ -372,6 +416,9 @@ def test_omni_arm_costs_match_baseline_and_exclude_hand(omni_config, make_env):
     for cfg_class in (
         omni_config.omni.InspireSweepOmniEnvCfg, omni_config.omni.InspireSweepOmniV1EnvCfg,
         omni_config.omni.InspireSweepOmniV2EnvCfg, omni_config.omni.InspireSweepOmniV3EnvCfg,
+        omni_config.omni.InspireSweepOmniV4EnvCfg,
+        omni_config.renewal.InspireSweepOmniRenewalEnvCfg,
+        omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg,
         omni_config.dex.InspireDexOmniEnvCfg,
     ):
         cfg = cfg_class()
@@ -416,7 +463,10 @@ def test_omni_reward_set_has_complete_plan_and_no_old_shaping(omni_config):
     ("omni", "InspireSweepOmniEnvCfg"),
     ("omni", "InspireSweepOmniV2EnvCfg"),
     ("omni", "InspireSweepOmniV3EnvCfg"),
+    ("omni", "InspireSweepOmniV4EnvCfg"),
     ("dex", "InspireDexOmniEnvCfg"),
+    ("renewal", "InspireSweepOmniRenewalEnvCfg"),
+    ("dex_renewal", "InspireDexSweepOmniRenewalEnvCfg"),
 ])
 def test_every_configured_manager_parameter_binds_to_its_production_callable(omni_config, namespace, config_name):
     cfg = getattr(getattr(omni_config, namespace), config_name)()
@@ -539,3 +589,82 @@ def test_v3_only_changes_reaching_geometry_and_preserves_v2(omni_config):
     another_v3.rewards.reaching.params["near_radius"] = 9.0
     assert v2.to_dict() == before
     assert omni_config.omni.InspireSweepOmniV2EnvCfg().to_dict() == before
+
+
+def test_v4_preserves_v3_except_speed_cost_and_requested_terminations(omni_config, make_env):
+    v3 = omni_config.omni.InspireSweepOmniV3EnvCfg()
+    before = v3.to_dict()
+    v4 = omni_config.omni.InspireSweepOmniV4EnvCfg()
+    assert isinstance(v4, type(v3))
+    assert v4.terminations.object_outside_shelf is None
+    assert v4.terminations.success is None
+    assert v4.terminations.hand_velocity.params["threshold"] == 5.0
+    assert v4.terminations.push_fast.params["speed_condition"] == 0.5
+    cost = v4.rewards.pushing_speed
+    assert cost.weight == -0.05
+    env = make_env(3)
+    env.scene["object_collection"].data.object_lin_vel_w[:, 0, 0] = torch.tensor([0.3, 0.5, 0.501])
+    assert torch.allclose(cost.func(env, **cost.params) * cost.weight,
+                          torch.tensor([0.0, -0.05, -0.05050125]))
+    term = v4.terminations.push_fast
+    assert term.func(env, **term.params).tolist() == [False, False, True]
+    # Match the saved run boundary; fast fingers remain outside this Arm term.
+    arm_ids = [1, 4, 7, 10, 13, 16]
+    env.scene["robot"].data.joint_vel[:, 0] = 100.0
+    env.scene["robot"].data.joint_vel[:, 7] = torch.tensor([4.0, 5.0, 5.001])
+    term = v4.terminations.hand_velocity
+    params = deepcopy(term.params)
+    params["asset_cfg"].joint_ids = arm_ids
+    assert term.func(env, **params).tolist() == [False, False, True]
+    excess = v4.rewards.arm_speed_excess
+    assert excess.weight == -0.03
+    assert excess.params["asset_cfg"].joint_names == term.params["asset_cfg"].joint_names
+    params = deepcopy(excess.params)
+    params["asset_cfg"].joint_ids = arm_ids
+    env.scene["robot"].data.joint_vel[:, 7] = torch.tensor([1.0, 1.5, -2.0])
+    assert torch.allclose(excess.func(env, **params) * excess.weight, torch.tensor([0.0, -0.0075, -0.03]))
+    # Restoring just the requested differences must recover the complete V3.
+    del v4.rewards.pushing_speed
+    del v4.rewards.arm_speed_excess
+    v4.terminations = deepcopy(v3.terminations)
+    assert v4.to_dict() == before
+    assert v3.to_dict() == before
+    assert omni_config.omni.InspireSweepOmniV3EnvCfg().to_dict() == before
+    another_v4 = omni_config.omni.InspireSweepOmniV4EnvCfg()
+    another_v4.rewards.pushing_speed.params["free_speed"] = 0.1
+    assert omni_config.omni.InspireSweepOmniV4EnvCfg().rewards.pushing_speed.params["free_speed"] == 0.3
+
+
+def test_renewal_composes_complete_v4_behavior_without_v4_inheritance(omni_config):
+    v4 = omni_config.omni.InspireSweepOmniV4EnvCfg()
+    renewal = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
+    assert renewal.__class__.__bases__ == (omni_config.baseline.InspireSweepEnvCfg,)
+    assert renewal.to_dict() == v4.to_dict()
+    for group in ("events", "rewards", "terminations"):
+        assert list(vars(getattr(renewal, group))) == list(vars(getattr(v4, group)))
+    renewal.rewards.reaching.params["z_offset"] = 99.0
+    renewal.terminations.hand_velocity.params["threshold"] = 99.0
+    renewal.events.object_spawn.params["spawn_radius"] = 99.0
+    assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == v4.to_dict()
+
+
+def test_dex_renewal_changes_exactly_the_two_dex_reward_terms(omni_config):
+    renewal = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
+    before = renewal.to_dict()
+    dex_renewal = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
+    assert isinstance(dex_renewal, type(renewal))
+    old_dex = omni_config.dex.InspireDexOmniEnvCfg()
+    for name in ("reaching", "goal_distance"):
+        assert getattr(dex_renewal.rewards, name).to_dict() == getattr(old_dex.rewards, name).to_dict()
+        setattr(dex_renewal.rewards, name, deepcopy(getattr(renewal.rewards, name)))
+    assert dex_renewal.to_dict() == before
+    assert renewal.to_dict() == before
+    another = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
+    another.rewards.arm_speed_excess.weight = -99.0
+    another.rewards.reaching.params["near_radius"] = 99.0
+    another.terminations.hand_velocity.params["threshold"] = 99.0
+    fresh = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
+    assert fresh.rewards.arm_speed_excess.weight == -0.03
+    assert fresh.rewards.reaching.params["near_radius"] == 0.10
+    assert fresh.terminations.hand_velocity.params["threshold"] == 5.0
+    assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == before

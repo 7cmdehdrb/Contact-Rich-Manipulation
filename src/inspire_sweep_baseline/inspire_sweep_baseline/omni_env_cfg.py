@@ -210,3 +210,32 @@ class InspireSweepOmniV3EnvCfg(InspireSweepOmniV2EnvCfg):
         super().__post_init__()
         self.rewards.reaching.func = goal_rewards.HeightGatedPlanarReachProgress
         self.rewards.reaching.params.update(z_offset=0.09, z_tolerance=0.02)
+
+
+@configclass
+class OmniV4RewardsCfg(OmniV2RewardsCfg):
+    pushing_speed = RewTerm(
+        func=goal_rewards.pushing_speed_cost,
+        weight=-0.05,
+        params={"free_speed": 0.3, "reference_speed": 0.5},
+    )
+    arm_speed_excess = RewTerm(
+        func=goal_rewards.joint_speed_cost,
+        weight=-0.03,
+        params={"asset_cfg": _arm(), "free_speed": 1.0, "reference_speed": 2.0},
+    )
+
+
+@configclass
+class InspireSweepOmniV4EnvCfg(InspireSweepOmniV3EnvCfg):
+    """V3 with relaxed failure limits and object/Arm excess-speed costs."""
+
+    rewards: OmniV4RewardsCfg = OmniV4RewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Match the saved V3 run 2026-10-15_16-53-58_height_gated_xy_reach.
+        self.terminations.hand_velocity.params["threshold"] = 5.0
+        self.terminations.object_outside_shelf = None
+        self.terminations.success = None
+        self.terminations.push_fast.params["speed_condition"] = 0.5
