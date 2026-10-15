@@ -214,12 +214,16 @@ class CurrentObjectReachProgress(ReachProgress):
 
 
 class HeightGatedPlanarReachProgress(ReachProgress):
-    """New best live-object XY approach, paid only within the target Z band.
+    """Reward new best XY approach and penalize departure from that best.
 
-    As in ReachProgress, the reset distance normalizes a one-shot budget.
+    Distances within near_radius are equivalent to zero. Positive progress
+    requires the target Z band; regression is penalized at any height on every
+    step. The target is the live object's bottom-origin link, so z_offset=0.09
+    places the EEF 4 cm above this 10 cm cylinder's geometric center.
     XY records advance even outside the height band: unsafe approach cannot
     be banked and cashed out later by changing only Z. Height-band re-entry
-    and waiting never repay an existing XY record.
+    and waiting never repay an existing XY record. Reset distance normalizes
+    the term; initially-near episodes use near_radius to avoid a zero scale.
     """
 
     def reset(self, env_ids=None):
@@ -246,11 +250,15 @@ class HeightGatedPlanarReachProgress(ReachProgress):
         distance = (
             torch.linalg.vector_norm(reference[:, :2] - position[:, :2], dim=-1) - near_radius
         ).clamp_min(0.0)
-        best = torch.minimum(self._best_distance, distance)
-        progress = (self._best_distance - best) / self._initial_distance.clamp_min(epsilon)
-        self._best_distance[:] = best
+        scale = torch.where(
+            self._initial_distance > epsilon,
+            self._initial_distance,
+            torch.full_like(self._initial_distance, max(near_radius, epsilon)),
+        )
+        progress = (self._best_distance - distance) / scale
+        self._best_distance[:] = torch.minimum(self._best_distance, distance)
         height_ok = (reference[:, 2] - (position[:, 2] + z_offset)).abs() <= z_tolerance
-        return torch.where(height_ok, progress, 0.0) / env.step_dt
+        return torch.where(height_ok | (progress < 0.0), progress, 0.0) / env.step_dt
 
 
 class PlanarGoalProgress(ManagerTermBase):

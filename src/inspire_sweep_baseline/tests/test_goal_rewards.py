@@ -412,8 +412,8 @@ def test_height_gated_xy_reach_does_not_bank_unsafe_approach_or_repay_z_entry(lo
                   (0.3, 0.09), (0.2, 0.09), (0.1, 0.09), (0.1, 0.0), (0.1, 0.09)]:
         reference[:] = position + torch.tensor([xy, 0.0, z])
         received.append((term(env, **params) * step_dt).item())
-    assert received == pytest.approx([0.4, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.0, 0.0], abs=1e-6)
-    assert sum(received) == pytest.approx(0.8)
+    assert received == pytest.approx([0.4, 0.0, 0.0, -0.2, 0.0, 0.2, 0.2, 0.0, 0.0], abs=1e-6)
+    assert sum(received) == pytest.approx(0.6)
 
 
 def test_height_gate_uses_live_object_z_and_xy_with_symmetric_height_band(load_mdp, make_env):
@@ -444,9 +444,32 @@ def test_height_gated_xy_reset_is_planar_partial_and_handles_initially_near(load
     reference[2, :2] = position[2, :2]
     term = rewards.HeightGatedPlanarReachProgress(SimpleNamespace(params=params), env)
     reference[:] = position + torch.tensor([0.4, 0.0, 0.09])
-    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.4, 0.4, 0.0], abs=1e-6)
+    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.4, 0.4, -3.0], abs=1e-6)
     position[1] += torch.tensor([2.0, -3.0, 0.5])
     reference[1] = position[1] + torch.tensor([0.0, 1.1, 0.9])
     term.reset(torch.tensor([1]))
     reference[1] = position[1] + torch.tensor([0.0, 0.9, 0.09])
-    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.0, 0.2, 0.0], abs=1e-6)
+    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.0, 0.2, -3.0], abs=1e-6)
+
+
+@pytest.mark.parametrize("step_dt", [0.01, 0.02, 0.05])
+def test_height_gated_reach_near_plateau_and_live_object_retreat(load_mdp, make_env, step_dt):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(1)
+    env.step_dt = step_dt
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.09])
+    term = rewards.HeightGatedPlanarReachProgress(SimpleNamespace(params={}), env)
+    reference[:, 0] = position[:, 0] + 0.1
+    assert (term(env) * step_dt).item() == pytest.approx(1.0)
+    for xy in (0.05, 0.09, 0.0):
+        reference[:, 0] = position[:, 0] + xy
+        assert (term(env) * step_dt).item() == pytest.approx(0.0, abs=1e-6)
+    # Stationary EEF, moving target: regression persists, even outside Z gate.
+    position[:, 0] += 0.2
+    for z in (0.09, 0.0, 0.09):
+        reference[:, 2] = position[:, 2] + z
+        assert (term(env) * step_dt).item() == pytest.approx(-0.2)
+    position[:, 0] -= 0.2
+    assert (term(env) * step_dt).item() == pytest.approx(0.0, abs=1e-6)

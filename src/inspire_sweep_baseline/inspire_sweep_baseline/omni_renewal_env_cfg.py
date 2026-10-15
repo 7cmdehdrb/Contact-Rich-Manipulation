@@ -91,7 +91,7 @@ class OmniRenewalRewardsCfg:
     pushing_speed = RewTerm(
         func=goal_rewards.pushing_speed_cost,
         weight=-5.0,
-        params={"free_speed": 0.2, "reference_speed": 0.4},
+        params={"free_speed": 0.3, "reference_speed": 0.4},
     )
     arm_speed_excess = RewTerm(
         func=goal_rewards.joint_speed_cost,
@@ -106,10 +106,14 @@ class OmniRenewalTerminationsCfg(TerminationsCfg):
         func=goal_terminations.object_fall_or_tilt,
         params={"height_condition": 1.04, "fail_angle": 0.9},
     )
-    push_fast = DoneTerm(func=mdp.push_fast, params={"speed_condition": 0.5})
+
+    # 실제로는 0.3 이상부터 Termination이 발생해야 하지만, 0.3은 페널티로서 부여하고, 학습 안정성을 위해 0.8로 대폭 상향
+    push_fast = DoneTerm(func=mdp.push_fast, params={"speed_condition": 0.8})
+    # 실제로는 1.0 이상부터 Termination이 발생해야 하지만, 1.0은 페널티로서 부여하고, 학습 안정성을 위해 5.0으로 대폭 상향
     hand_velocity = DoneTerm(
         func=mdp.arm_velocity, params={"asset_cfg": _arm(), "threshold": 5.0}
     )
+
     object_outside_shelf = None
     shelf_displacement = DoneTerm(
         func=goal_terminations.shelf_displacement, params={"threshold": 0.05}

@@ -557,7 +557,7 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
   --task Isaac-Inspire-Sweep-Omni-Renewal-v0 --num_envs 1 \
   --experiment_name inspire_sweep_omni_renewal \
-  --checkpoint "<renewal-checkpoint.pt>" --real-time
+  --checkpoint "/home/min/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_omni_renewal/2026-10-15_21-29-46_renewal_v0/model_350.pt" --real-time
 
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 2048 \
@@ -572,3 +572,9 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 위 명령은 실행 안내이며 이번 추가 작업에서 새 학습·재생을 수행하지 않았다.
 
 코드: [Renewal 설정](inspire_sweep_baseline/omni_renewal_env_cfg.py), [Dex Renewal 설정](inspire_sweep_baseline/dex_omni_renewal_env_cfg.py). [구현·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_renewal_environments.md).
+
+### Reaching 이탈 페널티 정정 (2026-10-15)
+
+`HeightGatedPlanarReachProgress`는 현재 물체와 EEF의 XY 거리에서 10cm를 뺀 비음수 거리를 이전 episode 최소 기록과 비교한다. 새 기록에는 높이 gate 안에서 보상, 기록보다 먼 상태에는 높이와 관계없이 매 step 페널티를 적용한다. 10cm 이내 이동과 과거 기록 복귀에는 재보상이 없다. 물체 이동으로 인한 이탈도 포함한다. 초기 남은 거리로 정규화하되 초기부터 반경 안이면 10cm로 나눈다. RewardManager의 dt 곱셈은 함수 내 나눗셈으로 상쇄된다.
+
+물체 link 원점은 바닥 중심이며 Z +9cm가 맞다(직립한 높이 10cm 물체의 기하 중심 +4cm). 이 변경은 공통 함수를 쓰는 Omni v3/v4/Sweep Renewal에 적용되고 Dex reaching에는 적용되지 않는다.
