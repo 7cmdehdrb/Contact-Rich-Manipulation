@@ -62,6 +62,7 @@ class OmniRewardsCfg:
         weight=1.0,
         params={"near_radius": 0.10, "frame_name": "ee_frame"},
     )
+
     arm_action_rate = RewTerm(
         func=goal_rewards.normalized_action_rate,
         weight=-0.03,
@@ -87,12 +88,14 @@ class OmniRewardsCfg:
             "reference_velocity": 1.0,
         },
     )
+
     object_tilt = RewTerm(
         func=goal_rewards.object_tilt_cost,
         weight=-2.0,
         params={"free_angle": math.radians(5.0), "fail_angle": 0.9},
     )
     shelf_collision = RewTerm(func=mdp.ShelfCollisionPenalty, weight=-0.5)
+
     time = RewTerm(func=goal_rewards.time_cost, weight=-0.1)
     # Progress and terminal functions undo the manager's dt multiplication.
     success = RewTerm(func=goal_rewards.success_event, weight=30.0)

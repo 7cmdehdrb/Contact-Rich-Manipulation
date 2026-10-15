@@ -120,6 +120,8 @@ PPO는 기존 설정을 유지한다: Actor/Critic MLP `[256, 128, 64]`, ELU, �
 
 기존 Hand의 실제 센서 영역 17개(palm 1, thumb 4, 나머지 네 손가락 각 3)를 각각 0/1로 읽는다. 일부 패드가 부모 링크의 convexHull 안쪽에 가려져 있으므로, 직접 패드 힘과 함께 실제 부모 접촉점을 원래 센서 mesh의 XY 영역에 분류한 값을 사용한다. 서로 다른 영역의 힘을 통합하거나 부모 전체의 힘을 모든 패드에 복제하지 않는다.
 
+2026-10-15 GPU 필터 수정: 부모 접촉점 분류는 GPU에서 지원되는 `mass_cylinder`만 대상으로 한다. 선반·바닥의 미지원 GPU 필터를 제거했으며, 17개 직접 pad 센서는 unfiltered 상태를 유지한다. 따라서 직접 pad의 선반 접촉은 읽지만, 가려진 pad의 선반·바닥 접촉을 부모 접촉점으로 복원하지는 않는다. Tactile 환경의 EEF 좌표축 디버그 표시만 끄고 frame 계산과 F/T 관측은 유지한다.
+
 원본 USD·URDF·mesh, collider 수, 형상·접촉 파라미터·질량·관성·관절·제어·보상·종료 조건은 Baseline과 같다. 새 환경의 Scene에 관측용 ContactSensor view만 추가하며 기존 환경은 1D tactile/41D 관측을 유지한다. 새 환경은 tactile 17D를 포함한 Actor/Critic `policy` **57D**, Action **8D**다. 이 57D는 발표의 OSC 설계와 별개인 Joint Position 기준선이다. 기존 41D checkpoint와 입력 크기가 다르므로 새 정책을 학습한다.
 
 ```bash

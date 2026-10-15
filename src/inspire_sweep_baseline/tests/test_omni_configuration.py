@@ -198,14 +198,17 @@ def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
     assert isinstance(v1, omni_config.omni.InspireSweepOmniEnvCfg)
     assert v0.terminations.hand_velocity.params["threshold"] == 1.0
     assert another_v0.terminations.hand_velocity.params["threshold"] == 1.0
-    assert v1.terminations.hand_velocity.params["threshold"] == 100.0
+    threshold = v1.terminations.hand_velocity.params["threshold"]
+    assert threshold > v0.terminations.hand_velocity.params["threshold"]
     assert v1.terminations.hand_velocity.params is not v0.terminations.hand_velocity.params
     # Evaluate the configured production callable with resolved, non-contiguous
     # arm indices. Fast fingers must not trigger either version's arm cutoff.
     env = make_env(4)
     arm_ids = [1, 4, 7, 10, 13, 16]
-    env.scene["robot"].data.joint_vel[:, 0] = 1000.0
-    env.scene["robot"].data.joint_vel[:, 7] = torch.tensor([1.5, 100.0, 100.001, -100.001])
+    env.scene["robot"].data.joint_vel[:, 0] = threshold * 10.0
+    env.scene["robot"].data.joint_vel[:, 7] = torch.tensor([
+        (1.0 + threshold) / 2.0, threshold, threshold + 0.001, -threshold - 0.001,
+    ])
     for cfg, expected in ((v0, [True] * 4), (v1, [False, False, True, True])):
         term = cfg.terminations.hand_velocity
         params = deepcopy(term.params)

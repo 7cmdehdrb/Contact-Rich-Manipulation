@@ -147,9 +147,10 @@ def unpack_contact_points(raw, fresh, num_envs, total_contacts=None):
 class ProjectedTactileContactBits(TactileContactBits):
     """Direct pad forces plus localized parent contacts, without physics edits.
 
-    Parent contacts are filtered to the task's object, shelf and ground. Points
-    outside all pad footprints never activate a channel. Unfiltered direct pad
-    contacts remain supported, independently of the projection filters.
+    Parent contacts are filtered to the task's primitive cylinder. Imported
+    shelf/static ground filters are unsupported on the GPU tensor backend.
+    Points outside all pad footprints never activate a channel. Unfiltered
+    direct pad contacts remain supported for every collision counterpart.
     """
 
     def __init__(self, cfg, env):

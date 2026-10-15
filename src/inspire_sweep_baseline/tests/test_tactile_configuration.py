@@ -97,8 +97,8 @@ def _add_live_sensor_data(env, pad_names, geometry):
             assert dt == env.physics_dt
             return (
                 torch.zeros(0, 1), torch.zeros(0, 3), torch.zeros(0, 3), torch.zeros(0, 1),
-                torch.zeros(env.num_envs, 3, dtype=torch.int32),
-                torch.zeros(env.num_envs, 3, dtype=torch.int32),
+                torch.zeros(env.num_envs, 1, dtype=torch.int32),
+                torch.zeros(env.num_envs, 1, dtype=torch.int32),
             )
 
     for parent in geometry.TACTILE_PARENT_BODY_NAMES:
@@ -106,7 +106,7 @@ def _add_live_sensor_data(env, pad_names, geometry):
             body_names=[parent], contact_physx_view=EmptyContactView(),
             data=SimpleNamespace(
                 net_forces_w=torch.zeros(env.num_envs, 1, 3),
-                force_matrix_w=torch.zeros(env.num_envs, 1, 3, 3),
+                force_matrix_w=torch.zeros(env.num_envs, 1, 1, 3),
             ),
         )
 
@@ -151,9 +151,7 @@ def test_tactile_scene_selects_exactly_seventeen_existing_pad_bodies(tactile_con
     for parent in tactile_config.geometry.TACTILE_PARENT_BODY_NAMES:
         observer = getattr(cfg.scene, tactile_config.geometry.parent_sensor_name(parent))
         assert observer.prim_path == "{ENV_REGEX_NS}/Robot/" + parent
-        assert observer.filter_prim_paths_expr == [
-            "{ENV_REGEX_NS}/mass_cylinder", "{ENV_REGEX_NS}/Shelf.*", "/World/ground/.*",
-        ]
+        assert observer.filter_prim_paths_expr == ["{ENV_REGEX_NS}/mass_cylinder"]
         assert observer.history_length == 0 and observer.update_period == 0.0
         assert observer.max_contact_data_count_per_prim == 16
 
@@ -177,7 +175,15 @@ def test_tactile_changes_only_sensor_observation_and_preserves_baseline_physics(
         assert vars(left) == vars(right)
     for name, value in vars(baseline.scene).items():
         if name != "palm_tactile":
-            assert getattr(cfg.scene, name) == value
+            if name == "ee_frame":
+                # Only its optional marker display is disabled; frames still
+                # produce exactly the same observation transforms.
+                expected = value.copy()
+                expected.debug_vis = False
+                assert getattr(cfg.scene, name) == expected
+                assert value.debug_vis is True
+            else:
+                assert getattr(cfg.scene, name) == value
     assert cfg.decimation == baseline.decimation
     assert cfg.episode_length_s == baseline.episode_length_s
     # Mutations stay local to the new environment instance.
@@ -233,8 +239,8 @@ def test_configured_reader_combines_buried_palm_region_and_direct_pad_with_parti
             normals[0] = torch.tensor(proof["parent_surface_outward_normal_local"])
             return (
                 torch.tensor([[0.08], [torch.nan], [torch.nan]]), points, normals,
-                torch.zeros(3, 1), torch.tensor([[1, 0, 0], [1, 0, 0]], dtype=torch.int32),
-                torch.tensor([[0, 0, 0], [1, 0, 0]], dtype=torch.int32),
+                torch.zeros(3, 1), torch.tensor([[1], [1]], dtype=torch.int32),
+                torch.tensor([[0], [1]], dtype=torch.int32),
             )
 
     observer = env.scene[tactile_config.geometry.parent_sensor_name(palm["parent_name"])]
@@ -245,6 +251,49 @@ def test_configured_reader_combines_buried_palm_region_and_direct_pad_with_parti
     expected = torch.zeros(2, 17)
     expected[0, 0], expected[0, -1] = 1.0, 1.0
     assert torch.equal(bits, expected)
+
+
+def test_supported_single_object_filter_preserves_all_seventeen_projected_channels(tactile_config, make_env):
+    env = make_env(17)
+    names = tactile_config.tactile.PALM_SENSOR_BODY_NAMES
+    _add_live_sensor_data(env, names, tactile_config.geometry)
+    robot = env.scene["robot"]
+    positions = robot.data.body_link_pos_w
+    # Give each sensor a distinct frame. The separate USD test checks the
+    # actual neighboring frames; this checks the live one-filter reader path.
+    for channel, name in enumerate(names):
+        positions[:, robot.body_names.index(name), 0] = channel * 0.2
+
+    class ObjectContactView:
+        def __init__(self, parent):
+            points, counts, starts = [], torch.zeros(17, 1, dtype=torch.uint32), torch.zeros(17, 1, dtype=torch.uint32)
+            for channel, region in enumerate(tactile_config.geometry.TACTILE_REGIONS):
+                if region["parent_name"] != parent:
+                    continue
+                starts[channel, 0] = len(points)
+                counts[channel, 0] = 1
+                point = torch.tensor(region["verification"]["parent_surface_point_local_m"])
+                points.append(point + positions[channel, robot.body_names.index(region["name"])])
+            capacity = len(points) + 1
+            self.points = torch.zeros(capacity, 3)
+            if points:
+                self.points[:len(points)] = torch.stack(points)
+            self.normals = torch.tensor([0., 0., -1.]).expand(capacity, 3).clone()
+            self.counts, self.starts = counts, starts
+
+        def get_contact_data(self, dt):
+            assert dt == env.physics_dt
+            count = len(self.points)
+            return torch.full((count, 1), 0.1), self.points, self.normals, torch.zeros(count, 1), self.counts, self.starts
+
+    for parent in tactile_config.geometry.TACTILE_PARENT_BODY_NAMES:
+        observer = env.scene[tactile_config.geometry.parent_sensor_name(parent)]
+        observer.contact_physx_view = ObjectContactView(parent)
+    cfg = tactile_config.cfg.InspireSweepTactileEnvCfg()
+    term = cfg.observations.policy.tactile
+    bits = term.func(term, env)(env, **term.params)
+    assert bits.shape == (17, 17)
+    assert torch.equal(bits, torch.eye(17))
 
 
 def test_configured_reader_does_not_read_direct_or_parent_physics_handles_after_reset(tactile_config, make_env):
