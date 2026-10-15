@@ -18,4 +18,5 @@ inspire_sweep_baseline = [
   "assets/data/ur5e_inspire_usd/*.usd",
   "assets/data/ur5e_inspire_usd/*.yaml",
   "assets/data/ur5e_inspire_usd/configuration/*.usd",
+  "assets/data/*.json",
 ]

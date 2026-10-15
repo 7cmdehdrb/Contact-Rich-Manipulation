@@ -157,4 +157,4 @@ class InspireSweepOmniV1EnvCfg(InspireSweepOmniEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-        self.terminations.hand_velocity.params["threshold"] = 100.0
+        self.terminations.hand_velocity.params["threshold"] = 3.0

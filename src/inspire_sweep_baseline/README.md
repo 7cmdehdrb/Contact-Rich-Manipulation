@@ -114,6 +114,33 @@ PPO는 기존 설정을 유지한다: Actor/Critic MLP `[256, 128, 64]`, ELU, �
 - `scripts`: 복사한 Isaac Lab RSL-RL train/play와 CLI. 기존 프로젝트 import는 제거했다.
 - `tests`: CPU 동작 검증 및 USD 정적 검증.
 
+## Baseline에서 파생한 17채널 Tactile 환경
+
+환경 ID: `Isaac-Inspire-Sweep-Baseline-Tactile-v0`. `InspireSweepTactileEnvCfg`가 `InspireSweepEnvCfg`를 직접 상속한다. [센서 구성·순서·검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/TACTILE_ENVIRONMENT.md)를 참고한다.
+
+기존 Hand의 실제 센서 영역 17개(palm 1, thumb 4, 나머지 네 손가락 각 3)를 각각 0/1로 읽는다. 일부 패드가 부모 링크의 convexHull 안쪽에 가려져 있으므로, 직접 패드 힘과 함께 실제 부모 접촉점을 원래 센서 mesh의 XY 영역에 분류한 값을 사용한다. 서로 다른 영역의 힘을 통합하거나 부모 전체의 힘을 모든 패드에 복제하지 않는다.
+
+원본 USD·URDF·mesh, collider 수, 형상·접촉 파라미터·질량·관성·관절·제어·보상·종료 조건은 Baseline과 같다. 새 환경의 Scene에 관측용 ContactSensor view만 추가하며 기존 환경은 1D tactile/41D 관측을 유지한다. 새 환경은 tactile 17D를 포함한 Actor/Critic `policy` **57D**, Action **8D**다. 이 57D는 발표의 OSC 설계와 별개인 Joint Position 기준선이다. 기존 41D checkpoint와 입력 크기가 다르므로 새 정책을 학습한다.
+
+```bash
+# Workspace 루트, Isaac Lab 환경에서 새 학습
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Baseline-Tactile-v0 \
+  --num_envs 2048 --sweep-direction both \
+  --run_name tactile17 --headless
+
+# 새 57D checkpoint 재생
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Baseline-Tactile-v0 \
+  --num_envs 1 --checkpoint "<57D_tactile_checkpoint.pt>" --real-time
+
+# 원본 USD와 관측용 영역 metadata를 읽기 전용으로 검사
+/home/min/miniconda3/envs/newton/bin/python -B \
+  src/inspire_sweep_baseline/scripts/build_tactile_regions.py --check
+```
+
+기본 로그 폴더는 `logs/rsl_rl/inspire_sweep_tactile`다. 접촉 Binary의 임계값은 `observations.policy.tactile.params["threshold_n"] = 0.05` N이다. CPU·USD 검사와 GPU 접촉·성능 검증은 구분하며, 실제 GPU 응답과 속도는 아직 측정하지 않았다.
+
 
 ## 물체 질량
 
