@@ -357,7 +357,7 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 
 ### Omni v2: 현재 물체 접근과 목표 이동 진전
 
-환경 ID: `Isaac-Inspire-Sweep-Omni-v2`. `InspireSweepOmniV2EnvCfg`는 v1을 상속한다. 기존 v0/v1의 동작은 유지한다. [활성 환경 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)와 [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/docs/logs/2026-10-15_omni_v2_rewards.md)에 계산식과 검증 범위를 기록했다.
+환경 ID: `Isaac-Inspire-Sweep-Omni-v2`. `InspireSweepOmniV2EnvCfg`는 v1을 상속한다. 기존 v0/v1의 동작은 유지한다. [활성 환경 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)와 [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v2_rewards.md)에 계산식과 검증 범위를 기록했다.
 
 | 보상 | v2 계산과 기본값 |
 | --- | --- |
@@ -387,3 +387,26 @@ Isaac Lab `RewardManager`가 모든 항에 `step_dt`를 곱하므로 접근 진�
 ```
 
 전방향 목표를 사용하므로 `--sweep-direction`은 지정하지 않는다. Runner 기본 클래스는 기존과 같으므로 위 `--experiment_name`으로 v2 로그와 체크포인트를 구분한다.
+
+### Omni v3: 높이 조건을 만족하는 XY 접근
+
+`Isaac-Inspire-Sweep-Omni-v3`의 `InspireSweepOmniV3EnvCfg`는 현재 v2를 상속하고 Reaching의 함수와 높이 파라미터만 변경한다. 이번 작업 시 코드의 가중치는 Reaching 30, Goal 40이며 그대로 상속한다. 다른 보상·종료·관측·action·PPO 설정은 v2와 같다.
+
+- 목표 높이: **현재 물체 바닥 Z + 0.09m**. `example/Sweep-Policy/sweeping_policy/mdp/reward_random_sweep.py`의 기본 Reaching 목표 높이를 따른다.
+- 지급 조건: EEF의 목표 높이 오차가 **±0.02m 이내**이면서, 현재 물체와의 XY 거리가 episode 최소 기록을 갱신할 때. 2cm는 v3에 추가한 실험 허용 오차다.
+- 거리: `max(XY 거리 − 0.10m, 0)`. Reset 시 같은 XY 거리로 정규화하며 기존의 일회성 진전 보상 구조와 `step_dt` 상쇄를 유지한다.
+- 높이 조건 밖에서도 XY 최소 기록은 갱신한다. 따라서 낮은 높이에서 접근한 뒤 Z만 조정해 누적 진전을 보상받거나, 높이 범위 출입으로 반복 보상받을 수 없다. 높이 밖에서 소진한 접근 진전은 다시 지급하지 않는다.
+
+참고 코드의 원래 Reaching은 Z 오프셋을 둔 3D 지수 보상이며, 위 hard gate와 2cm 허용 오차는 이번 요청에 맞춰 추가했다. EEF 높이 조건이 손 전체의 선반 충돌 방지를 보장하는 것은 아니며, 실제 학습·재생 검증은 별도다. [v3 개발 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-15_omni_v3_height_gated_reaching.md).
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-v3 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_v3 \
+  --run_name height_gated_xy_reach --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-v3 --num_envs 1 \
+  --experiment_name inspire_sweep_omni_v3 \
+  --checkpoint "<v3-checkpoint.pt>" --real-time
+```

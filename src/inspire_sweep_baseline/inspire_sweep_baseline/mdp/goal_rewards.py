@@ -153,6 +153,46 @@ class CurrentObjectReachProgress(ReachProgress):
         return progress / env.step_dt
 
 
+class HeightGatedPlanarReachProgress(ReachProgress):
+    """New best live-object XY approach, paid only within the target Z band.
+
+    As in ReachProgress, the reset distance normalizes a one-shot budget.
+    XY records advance even outside the height band: unsafe approach cannot
+    be banked and cashed out later by changing only Z. Height-band re-entry
+    and waiting never repay an existing XY record.
+    """
+
+    def reset(self, env_ids=None):
+        super().reset(env_ids)
+        ids = slice(None) if env_ids is None else env_ids
+        near_radius = self.cfg.params.get("near_radius", 0.10)
+        frame_name = self.cfg.params.get("frame_name", "ee_frame")
+        reference = self._env.scene[frame_name].data.target_pos_w[ids, 0, :2]
+        position = self._initial_object_position[ids, :2]
+        distance = (torch.linalg.vector_norm(reference - position, dim=-1) - near_radius).clamp_min(0.0)
+        self._initial_distance[ids] = distance
+        self._best_distance[ids] = distance
+
+    def __call__(self, env, near_radius=0.10, frame_name="ee_frame",
+                 z_offset=0.09, z_tolerance=0.02, epsilon=1.0e-6):
+        if not math.isfinite(epsilon) or epsilon <= 0.0:
+            raise ValueError("epsilon must be finite and positive")
+        if not math.isfinite(z_offset):
+            raise ValueError("z_offset must be finite")
+        if not math.isfinite(z_tolerance) or z_tolerance <= 0.0:
+            raise ValueError("z_tolerance must be finite and positive")
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        position = _target_state(env)[:, :3]
+        distance = (
+            torch.linalg.vector_norm(reference[:, :2] - position[:, :2], dim=-1) - near_radius
+        ).clamp_min(0.0)
+        best = torch.minimum(self._best_distance, distance)
+        progress = (self._best_distance - best) / self._initial_distance.clamp_min(epsilon)
+        self._best_distance[:] = best
+        height_ok = (reference[:, 2] - (position[:, 2] + z_offset)).abs() <= z_tolerance
+        return torch.where(height_ok, progress, 0.0) / env.step_dt
+
+
 class PlanarGoalProgress(ManagerTermBase):
     """One-shot budget for new episode-best object progress toward its XY goal.
 

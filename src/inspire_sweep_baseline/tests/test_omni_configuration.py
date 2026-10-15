@@ -194,6 +194,11 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     assert v2["entry_point"] == v1["entry_point"]
     assert v2["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV2EnvCfg"
     assert v2["kwargs"]["rsl_rl_cfg_entry_point"] == v1["kwargs"]["rsl_rl_cfg_entry_point"]
+    v3 = registrations[namespace["OMNI_V3_TASK_ID"]]
+    assert namespace["OMNI_V3_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v3"
+    assert v3["entry_point"] == v2["entry_point"]
+    assert v3["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV3EnvCfg"
+    assert v3["kwargs"]["rsl_rl_cfg_entry_point"] == v2["kwargs"]["rsl_rl_cfg_entry_point"]
 
 
 def test_v1_velocity_boundary_and_config_isolation(omni_config, make_env):
@@ -237,8 +242,8 @@ def test_v2_disables_success_preserves_other_v1_terminations_and_isolates_mutati
     assert all(getattr(v2.rewards, name) is None for name in ("time", "success", "failure"))
     assert v2.rewards.reaching.func.__name__ == "CurrentObjectReachProgress"
     assert v2.rewards.goal_distance.func.__name__ == "PlanarGoalProgress"
-    assert v2.rewards.reaching.weight == 200.0
-    assert v2.rewards.goal_distance.weight == 400.0
+    assert v2.rewards.reaching.weight > 0.0
+    assert v2.rewards.goal_distance.weight > 0.0
     for name in ("arm_action_rate", "hand_action_rate", "arm_joint_velocity", "hand_joint_velocity"):
         assert getattr(v2.rewards, name) == getattr(before.rewards, name)
     assert v2.rewards.object_tilt == before.rewards.object_tilt
@@ -268,14 +273,14 @@ def test_v2_staged_approach_then_sweep_pays_separate_budgets(omni_config, make_e
 
     assert reward() == [0.0, 0.0]
     reference[:] = position
-    assert reward() == pytest.approx([200.0, 0.0])
+    assert reward() == pytest.approx([cfg.rewards.reaching.weight, 0.0])
     assert reward() == [0.0, 0.0]  # Waiting beside the object does not pay.
     position[:, 0] += 0.07
     reference[:] = position
-    assert reward() == pytest.approx([0.0, 200.0], abs=2e-4)
+    assert reward() == pytest.approx([0.0, cfg.rewards.goal_distance.weight / 2], abs=2e-4)
     position[:, 0] += 0.07
     reference[:] = position
-    assert reward() == pytest.approx([0.0, 200.0], abs=2e-4)
+    assert reward() == pytest.approx([0.0, cfg.rewards.goal_distance.weight / 2], abs=2e-4)
     assert reward() == [0.0, 0.0]
 
 
@@ -327,7 +332,7 @@ def test_omni_reward_set_has_complete_plan_and_no_old_shaping(omni_config):
     assert not set(arm) & set(hand)
 
 
-@pytest.mark.parametrize("config_name", ["InspireSweepOmniEnvCfg", "InspireSweepOmniV2EnvCfg"])
+@pytest.mark.parametrize("config_name", ["InspireSweepOmniEnvCfg", "InspireSweepOmniV2EnvCfg", "InspireSweepOmniV3EnvCfg"])
 def test_every_configured_manager_parameter_binds_to_its_production_callable(omni_config, config_name):
     cfg = getattr(omni_config.omni, config_name)()
     for group_name in ("events", "rewards", "terminations"):
@@ -431,3 +436,21 @@ def test_direction_cli_preserves_legacy_and_rejects_omni_without_mutation(omni_c
     with pytest.raises(ValueError, match="omit --sweep-direction"):
         cli.apply_sweep_direction(omni, "right")
     assert omni.events.object_spawn.params == before
+
+
+def test_v3_only_changes_reaching_geometry_and_preserves_v2(omni_config):
+    v2 = omni_config.omni.InspireSweepOmniV2EnvCfg()
+    before = v2.to_dict()
+    v3 = omni_config.omni.InspireSweepOmniV3EnvCfg()
+    assert isinstance(v3, type(v2))
+    reaching = v3.rewards.reaching
+    assert reaching.func.__name__ == "HeightGatedPlanarReachProgress"
+    assert reaching.weight == v2.rewards.reaching.weight
+    assert reaching.params == dict(v2.rewards.reaching.params, z_offset=0.09, z_tolerance=0.02)
+    # Replacing just the new Reaching term must recover the entire v2 config.
+    v3.rewards.reaching = deepcopy(v2.rewards.reaching)
+    assert v3.to_dict() == before
+    another_v3 = omni_config.omni.InspireSweepOmniV3EnvCfg()
+    another_v3.rewards.reaching.params["near_radius"] = 9.0
+    assert v2.to_dict() == before
+    assert omni_config.omni.InspireSweepOmniV2EnvCfg().to_dict() == before

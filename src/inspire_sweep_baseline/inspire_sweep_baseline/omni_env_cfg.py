@@ -200,3 +200,13 @@ class InspireSweepOmniV2EnvCfg(InspireSweepOmniV1EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.terminations.success = None
+
+
+@configclass
+class InspireSweepOmniV3EnvCfg(InspireSweepOmniV2EnvCfg):
+    """V2 with height-gated XY reaching; all other settings are inherited."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.reaching.func = goal_rewards.HeightGatedPlanarReachProgress
+        self.rewards.reaching.params.update(z_offset=0.09, z_tolerance=0.02)

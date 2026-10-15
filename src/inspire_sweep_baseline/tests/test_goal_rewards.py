@@ -320,3 +320,60 @@ def test_goal_progress_has_no_budget_when_reset_is_already_at_goal(load_mdp, mak
         assert term(env).item() == 0.0
     with pytest.raises(ValueError, match="position_tolerance"):
         term(env, position_tolerance=-0.01)
+
+
+@pytest.mark.parametrize("step_dt", [0.01, 0.02, 0.05])
+def test_height_gated_xy_reach_does_not_bank_unsafe_approach_or_repay_z_entry(load_mdp, make_env, step_dt):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(1)
+    env.step_dt = step_dt
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    params = dict(near_radius=0.1, frame_name="ee_frame", z_offset=0.09, z_tolerance=0.02)
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.09])
+    term = rewards.HeightGatedPlanarReachProgress(SimpleNamespace(params=params), env)
+    assert term(env, **params).item() == 0.0
+    received = []
+    # New XY records outside the Z band earn nothing and cannot be cashed later.
+    for xy, z in [(0.4, 0.09), (0.3, 0.0), (0.3, 0.09), (0.4, 0.09),
+                  (0.3, 0.09), (0.2, 0.09), (0.1, 0.09), (0.1, 0.0), (0.1, 0.09)]:
+        reference[:] = position + torch.tensor([xy, 0.0, z])
+        received.append((term(env, **params) * step_dt).item())
+    assert received == pytest.approx([0.4, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.0, 0.0], abs=1e-6)
+    assert sum(received) == pytest.approx(0.8)
+
+
+def test_height_gate_uses_live_object_z_and_xy_with_symmetric_height_band(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(5)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    params = dict(near_radius=0.1, frame_name="ee_frame", z_offset=0.09, z_tolerance=0.02)
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.09])
+    term = rewards.HeightGatedPlanarReachProgress(SimpleNamespace(params=params), env)
+    # Object moves closer to a stationary EEF; both object coordinates are live.
+    position[:, 0] += 0.2
+    position[:, 2] += torch.tensor([0.0, 0.019, -0.019, 0.021, -0.021])
+    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.4, 0.4, 0.4, 0.0, 0.0], abs=1e-6)
+    with pytest.raises(ValueError, match="z_tolerance"):
+        term(env, z_tolerance=0.0)
+
+
+def test_height_gated_xy_reset_is_planar_partial_and_handles_initially_near(load_mdp, make_env):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(3)
+    env.step_dt = 0.02
+    position = env.scene["object_collection"].data.object_pos_w[:, 0]
+    reference = env.scene["ee_frame"].data.target_pos_w[:, 0]
+    params = dict(near_radius=0.1, frame_name="ee_frame", z_offset=0.09, z_tolerance=0.02)
+    reference[:] = position + torch.tensor([0.6, 0.0, 0.8])
+    reference[2, :2] = position[2, :2]
+    term = rewards.HeightGatedPlanarReachProgress(SimpleNamespace(params=params), env)
+    reference[:] = position + torch.tensor([0.4, 0.0, 0.09])
+    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.4, 0.4, 0.0], abs=1e-6)
+    position[1] += torch.tensor([2.0, -3.0, 0.5])
+    reference[1] = position[1] + torch.tensor([0.0, 1.1, 0.9])
+    term.reset(torch.tensor([1]))
+    reference[1] = position[1] + torch.tensor([0.0, 0.9, 0.09])
+    assert (term(env, **params) * env.step_dt).tolist() == pytest.approx([0.0, 0.2, 0.0], abs=1e-6)

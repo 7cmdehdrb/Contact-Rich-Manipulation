@@ -8,6 +8,7 @@ INITIAL_PRIVILEGED_TASK_ID = "Isaac-Inspire-Sweep-Realistic-Physics-Initial-Priv
 OMNI_TASK_ID = "Isaac-Inspire-Sweep-Omni-v0"
 OMNI_V1_TASK_ID = "Isaac-Inspire-Sweep-Omni-v1"
 OMNI_V2_TASK_ID = "Isaac-Inspire-Sweep-Omni-v2"
+OMNI_V3_TASK_ID = "Isaac-Inspire-Sweep-Omni-v3"
 TACTILE_TASK_ID = "Isaac-Inspire-Sweep-Baseline-Tactile-v0"
 
 if TASK_ID not in gym.registry:
@@ -76,6 +77,17 @@ if OMNI_V2_TASK_ID not in gym.registry:
         },
     )
 
+if OMNI_V3_TASK_ID not in gym.registry:
+    gym.register(
+        id=OMNI_V3_TASK_ID,
+        entry_point="inspire_sweep_baseline.env:InspireSweepEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV3EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agents.rsl_rl_ppo_cfg:InspireSweepPPORunnerCfg",
+        },
+    )
+
 if TACTILE_TASK_ID not in gym.registry:
     gym.register(
         id=TACTILE_TASK_ID,
@@ -87,4 +99,4 @@ if TACTILE_TASK_ID not in gym.registry:
         },
     )
 
-__all__ = ["TASK_ID", "REALISTIC_PHYSICS_TASK_ID", "INITIAL_PRIVILEGED_TASK_ID", "OMNI_TASK_ID", "OMNI_V1_TASK_ID", "OMNI_V2_TASK_ID", "TACTILE_TASK_ID"]
+__all__ = ["TASK_ID", "REALISTIC_PHYSICS_TASK_ID", "INITIAL_PRIVILEGED_TASK_ID", "OMNI_TASK_ID", "OMNI_V1_TASK_ID", "OMNI_V2_TASK_ID", "OMNI_V3_TASK_ID", "TACTILE_TASK_ID"]
