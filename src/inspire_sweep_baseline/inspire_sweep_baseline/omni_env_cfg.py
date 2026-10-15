@@ -54,7 +54,7 @@ class OmniEventsCfg(RealisticPhysicsEventsCfg):
 @configclass
 class OmniRewardsCfg:
     # Dense costs are per second: RewardManager applies step_dt (T_ref = 1 s).
-    
+
     # 물체 근처로 이동하는 Reaching 보상
     reaching = RewTerm(
         func=goal_rewards.ReachProgress,
@@ -104,7 +104,7 @@ class OmniRewardsCfg:
 
     # 물체를 목표 위치로 이동시키는 것을 성공으로 간주하는 보상
     time = RewTerm(func=goal_rewards.time_cost, weight=-0.1)
-    
+
     # Progress and terminal functions undo the manager's dt multiplication.
     success = RewTerm(func=goal_rewards.success_event, weight=30.0)
     failure = RewTerm(
@@ -168,7 +168,7 @@ class InspireSweepOmniV1EnvCfg(InspireSweepOmniEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-        self.terminations.hand_velocity.params["threshold"] = 5.0
+        self.terminations.hand_velocity.params["threshold"] = 1.5
 
 
 @configclass
