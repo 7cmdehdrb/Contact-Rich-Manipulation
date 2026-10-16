@@ -566,7 +566,7 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
   --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 1 \
   --experiment_name inspire_dex_sweep_omni_renewal \
-  --checkpoint "/home/min/7cmdehdrb/grad/2026-10-15_22-04-26_dex_renewal_v0/model_30600.pt" --real-time
+  --checkpoint "/home/min/7cmdehdrb/grad/logs/TEMP2/2026-10-15_22-04-26_dex_renewal_v0/model_30600.pt" --real-time
 ```
 
 위 명령은 실행 안내이며 이번 추가 작업에서 새 학습·재생을 수행하지 않았다.
@@ -613,3 +613,30 @@ Joint Position 정책과 action 의미가 달라 새 정책으로 학습한다. 
 `OmniRenewalTerminationsCfg`에서 `terminations.shelf_collision.params["check_fingers"] = False`를 설정한다. Renewal과 OSC·Dex Renewal을 포함한 모든 파생 환경에 적용된다. 선반 root 6D 속도 norm > 0.1 또는 손목 frame Z가 선반 root Z +1.05m 기준 7cm 미만이면 종료한다. 손가락 frame 높이는 종료에 사용하지 않는다. Renewal 계열 밖의 환경은 기본값 True로 기존 판정을 유지하며 선반 보상 항은 변경하지 않았다.
 
 Renewal 부모의 `commands.target_goal_pos.debug_vis=True`를 모든 파생 환경이 상속하여 현재 목표 월드 위치에 반지름 2.5cm 초록색 구형 마커를 표시한다. reset 이후 command 위치를 따라 갱신되며 충돌용 형상이 아니다. 현재 사용자 설정인 OSC 위치/회전 scale 1.0/1.0은 유지했다.
+
+### Renewal 17채널 Tactile 환경 (2026-10-16)
+
+각 부모를 직접 상속하며 Scene의 센서 view와 tactile 관측만 교체한다. Arm/Hand 제어, 물성·중력, 보상·종료·이벤트, 나머지 관측과 노이즈는 부모 설정을 유지한다.
+
+| 새 Gym task ID | 부모 Cfg | 새 Cfg | 기본 실험 폴더 |
+| --- | --- | --- | --- |
+| `Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0` | `InspireSweepOmniRenewalEnvCfg` | `InspireTactileSweepOmniRenewalEnvCfg` | `logs/rsl_rl/inspire_tactile_sweep_omni_renewal` |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0` | `InspireDexSweepOmniRenewalEnvCfg` | `InspireDexTactileSweepOmniRenewalEnvCfg` | `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal` |
+
+Standalone `run_probe_test.py --pad-layout original`과 같은 원본 Hand 패드와 `ProjectedTactileContactBits`를 사용한다. 직접 패드 접촉의 NetForce 크기 또는 센서 영역에 매핑한 부모 링크 접촉력의 벡터합 크기가 **0.01 N 이상**이면 `1.0`, 아니면 `0.0`이다. 두 경로의 판정은 OR로 결합한다. 센서 간 힘을 합산하지 않으며, reset 직후 아직 갱신되지 않은 행은 0이다. 직접 경로는 모든 충돌 상대, 부모 영역 투영은 기존 GPU 지원 방식에 따라 `mass_cylinder` 접촉을 읽는다.
+
+채널 순서는 손바닥 1개 → 엄지 1–4 → 검지·중지·약지·소지 각각 1–3으로 **17개**다. 기존 policy의 촉각 위치에 1D 대신 17D를 넣으므로 Actor/Critic 관측은 `34 + 17 + 6 = 57D`, Action은 **8D**다. 기존 41D 정책은 입력 크기가 다르므로 새 정책으로 학습한다. 패드를 옮기는 `exposed` 검증 배치나 standalone의 무중력·고정 자세는 적용하지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0 \
+  --num_envs 2048 --run_name tactile_renewal_v0 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0 \
+  --num_envs 2048 --run_name dex_tactile_renewal_v0 --headless
+```
+
+PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task 모두 GPU 8개 환경에서 1 iteration 학습을 완료해 57D 입력과 8D 출력을 확인했다. 장시간 학습 성능과 2048개 환경 처리 속도는 미검증이다.
+
+[환경 설정](inspire_sweep_baseline/tactile_omni_renewal_env_cfg.py) · [PPO 설정](inspire_sweep_baseline/agents/tactile_omni_renewal_ppo_cfg.py) · [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_tactile_renewal_environments.md).

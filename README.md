@@ -1,7 +1,7 @@
 # Contact Rich Manipulation Workspace
 
 UR5e–Axia80 F/T–Inspire Hand의 접촉 기반 조작을 개발하는 Isaac Lab Workspace다.
-현재 개발 대상은 **`inspire_sweep_baseline`과 `axia80_feasibility` 두 패키지**다.
+현재 개발 대상은 **`inspire_sweep_baseline`, `axia80_feasibility`, `inspire_tactile_validation` 세 패키지**다.
 전체 연구 흐름·결정·개발 기록은 코드 없는
 [Contact-Rich-Manipulation-Context](example/Contact-Rich-Manipulation-Context/README.md)
 서브모듈에서 관리한다. 기준일은 2026-10-14다.
@@ -25,6 +25,7 @@ grad/
 ├── AGENTS.md                        에이전트의 작업 진입 지침
 ├── src/
 │   ├── inspire_sweep_baseline/       활성 Manager 기반 Sweep RL
+│   ├── inspire_tactile_validation/   Hand 촉각 벡터 접촉 검증
 │   ├── axia80_feasibility/           활성 F/T 정적 하중 검증
 │   └── trash/                       과거 패키지·자산·테스트 보관, 빌드 제외
 ├── example/
@@ -42,6 +43,7 @@ grad/
 | 활성 패키지 | 수행하는 역할 | 패키지 안내 |
 | --- | --- | --- |
 | `inspire_sweep_baseline` | 단일 물체 Sweep Baseline, 질량·마찰 랜덤화, 초기 위치 Actor/현재 상태 Critic, 전방향 목표 변형 | [README](src/inspire_sweep_baseline/README.md) |
+| `inspire_tactile_validation` | 고정 palm-up Hand의 17개 촉각 영역을 중앙·네 모서리에서 벡터화해 누르는 standalone 검증 | [README](src/inspire_tactile_validation/README.md) |
 | `axia80_feasibility` | UR5e–Axia80–tool의 정적 하중, cantilever와 wrist 각도 실험 | [README](src/axia80_feasibility/README.md) |
 
 과거 패키지는 [보관 안내](src/trash/README.md)를 따른다. 활성 Axia80 실험은
