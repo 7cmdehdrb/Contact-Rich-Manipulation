@@ -55,6 +55,7 @@ class OmniRenewalRewardsCfg:
         weight=40.0,
         params={"position_tolerance": 0.01},
     )
+
     arm_action_rate = RewTerm(
         func=goal_rewards.action_rate_l2,
         weight=-0.03,
@@ -65,6 +66,7 @@ class OmniRenewalRewardsCfg:
         weight=-0.03,
         params={"action_group": "hand"},
     )
+
     arm_joint_velocity = RewTerm(
         func=goal_rewards.joint_vel_l2,
         weight=-0.03,
@@ -79,15 +81,14 @@ class OmniRenewalRewardsCfg:
             )
         },
     )
+
     object_tilt = RewTerm(
         func=goal_rewards.object_tilt_cost,
         weight=-2.0,
         params={"free_angle": math.radians(5.0), "fail_angle": 0.9},
     )
     shelf_collision = RewTerm(func=mdp.ShelfCollisionPenalty, weight=-0.5)
-    time = None
-    success = None
-    failure = None
+
     pushing_speed = RewTerm(
         func=goal_rewards.pushing_speed_cost,
         weight=-5.0,
@@ -99,9 +100,16 @@ class OmniRenewalRewardsCfg:
         params={"asset_cfg": _arm(), "free_speed": 1.0, "reference_speed": 2.0},
     )
 
+    # time = None
+    # success = None
+    # failure = None
+
 
 @configclass
 class OmniRenewalTerminationsCfg(TerminationsCfg):
+    shelf_collision = DoneTerm(
+        func=mdp.shelf_collision, params={"threshold": 0.1, "check_fingers": False}
+    )
     object_drop = DoneTerm(
         func=goal_terminations.object_fall_or_tilt,
         params={"height_condition": 1.04, "fail_angle": 0.9},
@@ -118,7 +126,8 @@ class OmniRenewalTerminationsCfg(TerminationsCfg):
     shelf_displacement = DoneTerm(
         func=goal_terminations.shelf_displacement, params={"threshold": 0.05}
     )
-    success = None
+
+    # success = None
 
 
 @configclass
@@ -131,6 +140,7 @@ class InspireSweepOmniRenewalEnvCfg(InspireSweepEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        self.commands.target_goal_pos.debug_vis = True
         apply_realistic_physics(self)
         self.scene.object_collection.rigid_objects["mass_cylinder"].init_state.pos = (
             -0.7,

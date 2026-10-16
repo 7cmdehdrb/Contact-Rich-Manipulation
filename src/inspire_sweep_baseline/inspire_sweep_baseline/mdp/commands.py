@@ -36,6 +36,26 @@ class SweepGoalCommand(CommandTerm):
     def _update_command(self):
         pass
 
+    def _set_debug_vis_impl(self, debug_vis):
+        if debug_vis and not hasattr(self, "_goal_marker"):
+            # Lazy imports keep non-visual command use independent of markers.
+            import isaaclab.sim as sim_utils
+            from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+
+            self._goal_marker = VisualizationMarkers(VisualizationMarkersCfg(
+                prim_path="/Visuals/InspireSweepBaseline/target_goal",
+                markers={"goal": sim_utils.SphereCfg(
+                    radius=0.025,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.1, 1.0, 0.2)),
+                )},
+            ))
+        if hasattr(self, "_goal_marker"):
+            self._goal_marker.set_visibility(debug_vis)
+
+    def _debug_vis_callback(self, event):
+        if hasattr(self, "pos_command_w"):
+            self._goal_marker.visualize(translations=self.pos_command_w)
+
 
 @configclass
 class SweepGoalCommandCfg(CommandTermCfg):

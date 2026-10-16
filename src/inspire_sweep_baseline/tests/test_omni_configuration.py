@@ -668,3 +668,83 @@ def test_dex_renewal_changes_exactly_the_two_dex_reward_terms(omni_config):
     assert fresh.rewards.reaching.params["near_radius"] == 0.10
     assert fresh.terminations.hand_velocity.params["threshold"] == 5.0
     assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == before
+
+
+def test_renewal_osc_changes_only_arm_control_and_matches_eef(omni_config):
+    configclass = omni_config.baseline.configclass
+    controllers = _execute_definitions(
+        PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/controllers/operational_space_cfg.py",
+        dict(configclass=configclass, MISSING=MISSING, OperationalSpaceController=object),
+        {"OperationalSpaceControllerCfg"},
+    )
+
+    @configclass
+    class ActionTermCfg:
+        asset_name: str = "robot"
+
+    actions = _execute_definitions(
+        PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/actions_cfg.py",
+        dict(configclass=configclass, MISSING=MISSING, ActionTermCfg=ActionTermCfg,
+             task_space_actions=SimpleNamespace(OperationalSpaceControllerAction=object)),
+        {"OperationalSpaceControllerActionCfg"},
+    )
+    module = _execute_definitions(
+        MODULE_ROOT / "omni_renewal_osc_env_cfg.py",
+        dict(configclass=configclass,
+             OperationalSpaceControllerCfg=controllers.OperationalSpaceControllerCfg,
+             OperationalSpaceControllerActionCfg=actions.OperationalSpaceControllerActionCfg,
+             ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES,
+             InspireSweepOmniRenewalEnvCfg=omni_config.renewal.InspireSweepOmniRenewalEnvCfg),
+    )
+    parent = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
+    child = module.InspireSweepOmniRenewalOSCEnvCfg()
+    action = child.actions.arm_action
+    eef = child.scene.ee_frame.target_frames[0]
+    assert action.body_name == "axia80_link"
+    assert action.body_offset.pos == eef.offset.pos
+    assert action.body_offset.rot == eef.offset.rot
+    assert action.joint_names == list(omni_config.baseline.ARM_JOINT_NAMES)
+    assert action.controller_cfg.target_types == ["pose_rel"]
+    assert action.controller_cfg.impedance_mode == "fixed"
+    assert action.controller_cfg.motion_stiffness_task == 200.0
+    assert action.controller_cfg.motion_damping_ratio_task == 1.0
+    assert action.controller_cfg.gravity_compensation
+    assert action.controller_cfg.inertial_dynamics_decoupling
+    assert action.position_scale == 1.0
+    assert action.orientation_scale == 1.0
+    assert child.scene.robot.actuators["arm"].stiffness == 0.0
+    assert child.scene.robot.actuators["arm"].damping == 0.0
+    assert child.terminations.shelf_collision.params["check_fingers"] is False
+    assert child.commands.target_goal_pos.debug_vis is True
+    assert parent.terminations.shelf_collision.params["check_fingers"] is False
+    assert parent.commands.target_goal_pos.debug_vis is True
+    # Undo the requested overrides: every other task setting must match.
+    child.actions.arm_action = deepcopy(parent.actions.arm_action)
+    child.scene.robot.actuators["arm"] = deepcopy(parent.scene.robot.actuators["arm"])
+    assert child.to_dict() == parent.to_dict()
+    assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == parent.to_dict()
+
+
+def test_renewal_osc_registration():
+    registrations = {}
+    gym = SimpleNamespace(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
+    _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
+    child = registrations["Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"]
+    parent = registrations["Isaac-Inspire-Sweep-Omni-Renewal-v0"]
+    assert child["entry_point"] == parent["entry_point"]
+    assert child["kwargs"]["rsl_rl_cfg_entry_point"] == parent["kwargs"]["rsl_rl_cfg_entry_point"]
+    assert child["kwargs"]["env_cfg_entry_point"] == (
+        "inspire_sweep_baseline.omni_renewal_osc_env_cfg:InspireSweepOmniRenewalOSCEnvCfg"
+    )
+
+
+def test_renewal_family_inherits_wrist_only_shelf_check_and_visible_goal(omni_config):
+    for cls in (omni_config.renewal.InspireSweepOmniRenewalEnvCfg,
+                omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg):
+        cfg = cls()
+        assert cfg.terminations.shelf_collision.params == {"threshold": 0.1, "check_fingers": False}
+        assert cfg.commands.target_goal_pos.debug_vis is True
+    baseline = omni_config.baseline.InspireSweepEnvCfg()
+    assert baseline.terminations.shelf_collision.params == {"threshold": 0.1}
+    assert baseline.commands.target_goal_pos.debug_vis is False

@@ -557,7 +557,7 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
   --task Isaac-Inspire-Sweep-Omni-Renewal-v0 --num_envs 1 \
   --experiment_name inspire_sweep_omni_renewal \
-  --checkpoint "/home/min/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_omni_renewal/2026-10-15_21-29-46_renewal_v0/model_350.pt" --real-time
+  --checkpoint "/home/min/7cmdehdrb/grad/2026-10-15_22-04-03_renewal_v0/model_24000.pt" --real-time
 
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 2048 \
@@ -566,7 +566,7 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
   --task Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0 --num_envs 1 \
   --experiment_name inspire_dex_sweep_omni_renewal \
-  --checkpoint "<dex-renewal-checkpoint.pt>" --real-time
+  --checkpoint "/home/min/7cmdehdrb/grad/2026-10-15_22-04-26_dex_renewal_v0/model_30600.pt" --real-time
 ```
 
 위 명령은 실행 안내이며 이번 추가 작업에서 새 학습·재생을 수행하지 않았다.
@@ -578,3 +578,38 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 `HeightGatedPlanarReachProgress`는 현재 물체와 EEF의 XY 거리에서 10cm를 뺀 비음수 거리를 이전 episode 최소 기록과 비교한다. 새 기록에는 높이 gate 안에서 보상, 기록보다 먼 상태에는 높이와 관계없이 매 step 페널티를 적용한다. 10cm 이내 이동과 과거 기록 복귀에는 재보상이 없다. 물체 이동으로 인한 이탈도 포함한다. 초기 남은 거리로 정규화하되 초기부터 반경 안이면 10cm로 나눈다. RewardManager의 dt 곱셈은 함수 내 나눗셈으로 상쇄된다.
 
 물체 link 원점은 바닥 중심이며 Z +9cm가 맞다(직립한 높이 10cm 물체의 기하 중심 +4cm). 이 변경은 공통 함수를 쓰는 Omni v3/v4/Sweep Renewal에 적용되고 Dex reaching에는 적용되지 않는다.
+
+## Renewal OSC 환경
+
+`Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0`는 `InspireSweepOmniRenewalOSCEnvCfg(InspireSweepOmniRenewalEnvCfg)`다. Arm만 Isaac Lab `OperationalSpaceControllerActionCfg`로 교체한다. 제어점은 `scene.ee_frame`의 첫 target과 같은 body(`axia80_link`), 위치 및 quaternion offset을 사용한다.
+
+- Arm action: relative pose 6D (`pose_rel`), fixed impedance. 위치 scale 0.05m, axis-angle 회전 scale 0.1rad. task frame 미지정으로 robot root 좌표계를 사용한다.
+- OSC: 모든 6축 stiffness 200, damping ratio 1, 관성 보정 및 중력 보상 사용.
+- 토크 출력과 중복되지 않도록 Arm implicit actuator stiffness/damping은 0. 노력·속도 제한은 부모 설정을 상속한다.
+- Hand 2D와 관측 41D, reward/termination/event, 물성, reset, PPO는 부모와 같다. raw Arm action 페널티는 Cartesian 6D 입력 변화량에 적용된다.
+
+Workspace 루트에서 실행:
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0 --num_envs 2048 \
+  --experiment_name inspire_sweep_omni_renewal_osc --run_name renewal_osc_v0 --headless
+
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0 --num_envs 1 \
+  --experiment_name inspire_sweep_omni_renewal_osc \
+  --checkpoint "/home/min/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_omni_renewal_osc/2026-10-15_22-12-35_renewal_osc_v0/model_6300.pt" --real-time
+```
+
+Joint Position 정책과 action 의미가 달라 새 정책으로 학습한다. CPU 설정 검증은 완료했으며 실제 Isaac Sim OSC 동작·학습 성능은 미검증이다.
+
+### 재생 배속
+
+`play.py --real-time --playback-speed 0.25`는 물리 dt와 제어 주기를 유지하고 step 사이 대기만 늘려 1/4 속도로 재생한다. `--playback-speed` 기본값은 1.0이며 양의 유한수만 허용한다. `--real-time` 없이 실행하면 기존처럼 최대 처리 속도로 실행한다. 배속은 실시간 화면 pacing에 적용되며 녹화 영상 FPS를 변경하지 않는다.
+
+### Renewal 계열 선반 종료와 목표 시각화 (2026-10-16)
+
+`OmniRenewalTerminationsCfg`에서 `terminations.shelf_collision.params["check_fingers"] = False`를 설정한다. Renewal과 OSC·Dex Renewal을 포함한 모든 파생 환경에 적용된다. 선반 root 6D 속도 norm > 0.1 또는 손목 frame Z가 선반 root Z +1.05m 기준 7cm 미만이면 종료한다. 손가락 frame 높이는 종료에 사용하지 않는다. Renewal 계열 밖의 환경은 기본값 True로 기존 판정을 유지하며 선반 보상 항은 변경하지 않았다.
+
+Renewal 부모의 `commands.target_goal_pos.debug_vis=True`를 모든 파생 환경이 상속하여 현재 목표 월드 위치에 반지름 2.5cm 초록색 구형 마커를 표시한다. reset 이후 command 위치를 따라 갱신되며 충돌용 형상이 아니다. 현재 사용자 설정인 OSC 위치/회전 scale 1.0/1.0은 유지했다.

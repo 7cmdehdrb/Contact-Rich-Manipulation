@@ -62,12 +62,20 @@ parser.add_argument(
     default=False,
     help="Run in real-time, if possible.",
 )
+parser.add_argument(
+    "--playback-speed",
+    type=float,
+    default=1.0,
+    help="Playback speed with --real-time: 1.0 is real-time, 0.25 is quarter speed. Physics dt is unchanged.",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
+if not (0.0 < args_cli.playback_speed < float("inf")):
+    parser.error("--playback-speed must be finite and greater than zero")
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
@@ -259,7 +267,7 @@ def main(
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
-        start_time = time.time()
+        start_time = time.perf_counter()
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
@@ -278,7 +286,7 @@ def main(
                 break
 
         # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
+        sleep_time = dt / args_cli.playback_speed - (time.perf_counter() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
 

@@ -27,16 +27,18 @@ def push_fast(env, speed_condition=0.3):
     return torch.linalg.vector_norm(velocity, dim=-1) > speed_condition
 
 
-def shelf_collision(env, threshold=0.1):
+def shelf_collision(env, threshold=0.1, check_fingers=True):
     shelf = env.scene["shelf"].data
     height = shelf.root_pos_w[:, 2] + 1.05
-    fingers = env.scene["finger_frame"].data.target_pos_w[:, :2, 2] - height[:, None]
     wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0, 2] - height
-    return (
+    terminated = (
         (torch.linalg.vector_norm(shelf.root_vel_w, dim=-1) > threshold)
-        | torch.any(fingers < 0.01, dim=1)
         | (wrist < 0.07)
     )
+    if check_fingers:
+        fingers = env.scene["finger_frame"].data.target_pos_w[:, :2, 2] - height[:, None]
+        terminated |= torch.any(fingers < 0.01, dim=1)
+    return terminated
 
 
 def arm_velocity(env, asset_cfg=SceneEntityCfg("robot"), threshold=1.0):

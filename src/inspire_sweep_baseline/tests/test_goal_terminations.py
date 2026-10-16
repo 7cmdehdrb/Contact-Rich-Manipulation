@@ -215,3 +215,18 @@ def test_object_outside_shelf_uses_live_translation_rotation_and_board_bounds(lo
     # Moving just the shelf updates the containment result immediately.
     shelf.root_pos_w[5, 1] += 0.30
     assert terminations.object_outside_shelf(env)[5]
+
+
+def test_shelf_collision_optional_fingers_keeps_wrist_and_motion(load_mdp, make_env):
+    terminations = load_mdp("terminations")
+    env, _ = _goal_env(make_env, 4)
+    env.scene["wrist_frame"].data.target_pos_w[:, 0, 2] = 1.2
+    env.scene["finger_frame"] = SimpleNamespace(data=SimpleNamespace(
+        target_pos_w=torch.zeros(4, 2, 3)))
+    env.scene["wrist_frame"].data.target_pos_w[1, 0, 2] = 1.10
+    env.scene["shelf"].data.root_vel_w[2, 0] = 0.101
+    env.scene["shelf"].data.root_vel_w[3, 5] = 0.101
+    assert terminations.shelf_collision(env).tolist() == [True, True, True, True]
+    assert terminations.shelf_collision(env, check_fingers=False).tolist() == [False, True, True, True]
+    del env.scene["finger_frame"]
+    assert terminations.shelf_collision(env, check_fingers=False).tolist() == [False, True, True, True]
