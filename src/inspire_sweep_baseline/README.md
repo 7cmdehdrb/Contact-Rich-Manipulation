@@ -654,8 +654,27 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 
 두 양의 비용 함수는 `expm1(2 * max(x - t, 0)) / 2`를 반환하며 weight는 모두 -1.0이다. 물체 항은 대상 물체의 3D 선속도 norm과 임계값 0.3m/s, Arm 항은 6개 Arm 관절의 최대 절대 속도와 임계값 1.0rad/s를 사용한다. 임계값 이하에서 0이고 초과하면 지수적으로 감소한다. reference_speed 정규화나 상한은 없으며 RewardManager의 step_dt 곱셈을 유지한다.
 
-두 Tactile v1 환경은 중복이므로 등록·Cfg·전용 PPO를 삭제했다. 위의 v0 실행 명령을 사용한다. 촉각 관측 57D, 행동 8D, 센서·제어·물성·이벤트·나머지 보상과 종료는 유지한다. 종료 기준은 물체 속도 >0.8m/s, Arm 관절 절대 속도 >5.0rad/s다. 기존 제곱 함수는 보존하지만 일반 Sweep Renewal v0도 지수 속도 비용을 사용한다.
+당시 두 Tactile v1 환경은 중복이므로 등록·Cfg·전용 PPO를 삭제했다. 이후 아래 변경을 갖는 Dex Tactile v1을 새로 추가했다. 위의 v0 실행 명령을 사용한다. 촉각 관측 57D, 행동 8D, 센서·제어·물성·이벤트·나머지 보상과 종료는 유지한다. 종료 기준은 물체 속도 >0.8m/s, Arm 관절 절대 속도 >5.0rad/s다. 기존 제곱 함수는 보존하지만 일반 Sweep Renewal v0도 지수 속도 비용을 사용한다.
 
 [촉각 v0 설정](inspire_sweep_baseline/tactile_omni_renewal_env_cfg.py) · [공통 rewards](inspire_sweep_baseline/omni_renewal_env_cfg.py) · [새 비용 함수](inspire_sweep_baseline/mdp/goal_rewards.py) · [정리·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_tactile_v0_exponential_cleanup.md).
 
 [Renewal 계열 속도 초과 비용의 exp 통일·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_renewal_only_exponential.md). `joint_vel_l2` 등 별도 운동 제곱합 페널티는 기존 규칙대로 유지한다.
+
+
+### Dex Tactile Renewal v1
+
+이후 파생 작업의 기준 환경은 사용자 지정 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0`다. 이번 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1`은 해당 v0를 직접 상속한다.
+
+- 물체·Arm 지수 속도 비용에 각각 `_limit` 함수를 사용하고 반환 비용을 최대 100으로 제한한다. weight −1.0에서 시간 곱셈 전 −100, 0.02 s 스텝의 항별 기여 하한은 −2다. 지수 계산 전에 포화시켜 overflow를 방지한다.
+- `shelf_collision`의 손목 상대 높이 기준을 0.07 m에서 0.03 m로 낮춰 더 가까운 접근을 허용한다. 선반 속도·변위 검사는 유지한다.
+- 목표 방향은 선반 로컬 ±X 각각 ±15°를 제외하고 나머지 300°에서 균등 샘플링한다. 기존 좌·우 ±Y 방향은 허용한다.
+
+57D/8D 관측·행동과 센서, Dex 진행 보상, 네 필수 운동 비용·계수 및 나머지 설정은 상속한다. 기본 로그 폴더는 `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal_v1`다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1 \
+  --num_envs 2048 --headless
+```
+
+[v1 환경 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v1_env_cfg.py) · [활성 환경 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_dex_tactile_renewal_v1.md).

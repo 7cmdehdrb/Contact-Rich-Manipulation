@@ -230,3 +230,20 @@ def test_shelf_collision_optional_fingers_keeps_wrist_and_motion(load_mdp, make_
     assert terminations.shelf_collision(env, check_fingers=False).tolist() == [False, True, True, True]
     del env.scene["finger_frame"]
     assert terminations.shelf_collision(env, check_fingers=False).tolist() == [False, True, True, True]
+
+
+def test_wrist_clearance_can_be_lowered_without_disabling_shelf_motion(load_mdp, make_env):
+    terminations = load_mdp("terminations")
+    env, _ = _goal_env(make_env, 6)
+    shelf = env.scene["shelf"].data
+    shelf.root_pos_w[:, 2] = torch.arange(6.0)
+    env.scene["wrist_frame"].data.target_pos_w[:, 0, 2] = (
+        shelf.root_pos_w[:, 2] + 1.05 + torch.tensor([0.029, 0.031, 0.05, 0.071, 0.10, 0.10])
+    )
+    shelf.root_vel_w[4, 0] = 0.101
+    shelf.root_vel_w[5, 5] = 0.101
+    assert terminations.shelf_collision(env, check_fingers=False).tolist() == [True, True, True, False, True, True]
+    assert terminations.shelf_collision(env, check_fingers=False, wrist_clearance=0.03).tolist() == [True, False, False, False, True, True]
+    # Strict '<' at equality, using the exact representable measured clearance.
+    clearance = (env.scene["wrist_frame"].data.target_pos_w[1, 0, 2] - (shelf.root_pos_w[1, 2] + 1.05)).item()
+    assert not terminations.shelf_collision(env, check_fingers=False, wrist_clearance=clearance)[1]

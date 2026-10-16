@@ -27,13 +27,14 @@ def push_fast(env, speed_condition=0.3):
     return torch.linalg.vector_norm(velocity, dim=-1) > speed_condition
 
 
-def shelf_collision(env, threshold=0.1, check_fingers=True):
+def shelf_collision(env, threshold=0.1, check_fingers=True, wrist_clearance=0.07):
+    """Terminate on shelf motion or wrist clearance below the supplied meters."""
     shelf = env.scene["shelf"].data
     height = shelf.root_pos_w[:, 2] + 1.05
     wrist = env.scene["wrist_frame"].data.target_pos_w[:, 0, 2] - height
     terminated = (
         (torch.linalg.vector_norm(shelf.root_vel_w, dim=-1) > threshold)
-        | (wrist < 0.07)
+        | (wrist < wrist_clearance)
     )
     if check_fingers:
         fingers = env.scene["finger_frame"].data.target_pos_w[:, :2, 2] - height[:, None]

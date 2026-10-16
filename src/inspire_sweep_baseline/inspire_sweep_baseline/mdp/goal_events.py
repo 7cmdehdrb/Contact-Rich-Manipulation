@@ -14,8 +14,15 @@ def _sample_uniform_disk(count, radius, device):
     return radial_distance[:, None] * torch.stack((angle.cos(), angle.sin()), dim=-1)
 
 
-def _sample_planar_unit_vectors(count, device):
-    angle = torch.empty(count, device=device).uniform_(-math.pi, math.pi)
+def _sample_planar_unit_vectors(count, device, excluded_x_half_angle=0.0):
+    """Uniform azimuth, optionally excluding cones around shelf-local +/-X."""
+    if excluded_x_half_angle == 0.0:
+        angle = torch.empty(count, device=device).uniform_(-math.pi, math.pi)
+    else:
+        # Two equal allowed arcs: [a, pi-a) and [pi+a, 2*pi-a).
+        width = math.pi - 2.0 * excluded_x_half_angle
+        sample = torch.empty(count, device=device).uniform_(0.0, 2.0 * width)
+        angle = excluded_x_half_angle + sample + (sample >= width) * (2.0 * excluded_x_half_angle)
     return torch.stack((angle.cos(), angle.sin()), dim=-1)
 
 
@@ -39,21 +46,26 @@ def randomize_goal_object_scene(
     edge_clearance=0.02,
     shelf_half_extents=(0.20, 0.50),
     shelf_surface_height=1.05,
+    excluded_x_half_angle=0.0,
 ):
     """Reset one cylinder on the shelf and choose an episode-fixed XY goal.
 
     Sample uniformly by area from a disk centered on the shelf's active board.
-    Independently sample every azimuth uniformly. The requested goal distance
+    Independently sample allowed azimuths uniformly, excluding cones around
+    shelf-local +/-X when excluded_x_half_angle (radians) is positive.
+    The requested goal distance
     is shortened where necessary to retain the cylinder radius plus the
     additional edge clearance. The spawn radius and sampled direction stay
     unchanged. All geometry is expressed in the shelf's current local frame.
     """
     values = (spawn_radius, goal_distance, object_radius, edge_clearance,
-              shelf_surface_height, *shelf_half_extents)
+              shelf_surface_height, excluded_x_half_angle, *shelf_half_extents)
     if len(shelf_half_extents) != 2 or not all(math.isfinite(value) for value in values):
         raise ValueError("Shelf geometry and sampling parameters must be finite; shelf_half_extents must have two axes")
     if spawn_radius < 0.0 or goal_distance <= 0.0 or object_radius <= 0.0 or edge_clearance < 0.0:
         raise ValueError("spawn_radius and edge_clearance must be nonnegative; goal_distance and object_radius must be positive")
+    if not 0.0 <= excluded_x_half_angle < math.pi / 2.0:
+        raise ValueError("excluded_x_half_angle must be in [0, pi/2) radians")
     safe_half_extents = tuple(half - object_radius - edge_clearance for half in shelf_half_extents)
     if min(safe_half_extents) <= 0.0 or spawn_radius > min(safe_half_extents):
         raise ValueError("The complete spawn disk must fit inside the shelf with object radius and edge clearance")
@@ -70,7 +82,10 @@ def randomize_goal_object_scene(
         raise RuntimeError("The goal sweep requires exactly one cylinder in object_collection")
 
     spawn_xy = _sample_uniform_disk(count, spawn_radius, env.device)
-    direction_xy = _sample_planar_unit_vectors(count, env.device)
+    direction_xy = (
+        _sample_planar_unit_vectors(count, env.device, excluded_x_half_angle)
+        if excluded_x_half_angle > 0.0 else _sample_planar_unit_vectors(count, env.device)
+    )
     distance = _goal_ray_distance(spawn_xy, direction_xy, goal_distance, safe_half_extents)
     spawn_local = torch.cat((spawn_xy, torch.full((count, 1), shelf_surface_height, device=env.device)), dim=-1)
     displacement_local = torch.cat((direction_xy * distance[:, None], torch.zeros((count, 1), device=env.device)), dim=-1)

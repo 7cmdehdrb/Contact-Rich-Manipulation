@@ -105,6 +105,35 @@ def exponential_joint_speed_cost(env, asset_cfg=SceneEntityCfg("robot"), free_sp
     return _exponential_speed_excess(velocity.abs().amax(dim=-1), free_speed)
 
 
+def _exponential_speed_excess_limit(speed, free_speed, max_cost):
+    """Cap the exponent before evaluation so even extreme speeds stay finite."""
+    if not math.isfinite(free_speed) or free_speed < 0.0:
+        raise ValueError("free_speed must be finite and nonnegative")
+    if not math.isfinite(max_cost) or max_cost <= 0.0:
+        raise ValueError("max_cost must be finite and positive")
+    max_excess = 0.5 * (math.log(max_cost) + math.log(2.0 + 1.0 / max_cost))
+    excess = (speed - free_speed).clamp(min=0.0, max=max_excess)
+    return (0.5 * torch.expm1(2.0 * excess)).clamp(max=max_cost)
+
+
+def exponential_pushing_speed_cost_limit(env, free_speed=0.3, max_cost=100.0):
+    """Bounded 3D object-speed cost; RewardManager applies weight and dt."""
+    rows = torch.arange(env.num_envs, device=env.device)
+    targets = env.target_id[:, 0].long()
+    velocity = env.scene["object_collection"].data.object_lin_vel_w[rows, targets]
+    return _exponential_speed_excess_limit(
+        torch.linalg.vector_norm(velocity, dim=-1), free_speed, max_cost
+    )
+
+
+def exponential_joint_speed_cost_limit(
+    env, asset_cfg=SceneEntityCfg("robot"), free_speed=1.0, max_cost=100.0
+):
+    """Bounded excess of the largest absolute selected joint speed."""
+    velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
+    return _exponential_speed_excess_limit(velocity.abs().amax(dim=-1), free_speed, max_cost)
+
+
 def action_rate_l2(env, action_group="arm"):
     """Sum squared raw command changes for the selected Arm or Hand group.
 

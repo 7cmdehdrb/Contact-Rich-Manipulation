@@ -473,3 +473,37 @@ def test_height_gated_reach_near_plateau_and_live_object_retreat(load_mdp, make_
         assert (term(env) * step_dt).item() == pytest.approx(-0.2)
     position[:, 0] -= 0.2
     assert (term(env) * step_dt).item() == pytest.approx(0.0, abs=1e-6)
+
+
+@pytest.mark.parametrize("kind,free_speed", [("pushing", 0.3), ("joint", 1.0)])
+def test_limited_speed_cost_matches_original_then_saturates_without_overflow(load_mdp, make_env, kind, free_speed):
+    rewards = load_mdp("goal_rewards")
+    env = make_env(9)
+    cap_speed = free_speed + 0.5 * math.log1p(200.0)
+    speeds = torch.tensor([0.0, free_speed, free_speed + 0.1, free_speed + 1.0,
+                           cap_speed - 0.001, cap_speed + 0.001, 100.0, 1.0e30, torch.inf])
+    if kind == "pushing":
+        env.scene["object_collection"].data.object_lin_vel_w[:, 0, 2] = -speeds
+        original = rewards.exponential_pushing_speed_cost
+        limited = rewards.exponential_pushing_speed_cost_limit
+        params = {}
+    else:
+        env.scene["robot"].data.joint_vel[:, 7] = -speeds
+        env.scene["robot"].data.joint_vel[:, 0] = 1.0e30  # Unselected joint.
+        original = rewards.exponential_joint_speed_cost
+        limited = rewards.exponential_joint_speed_cost_limit
+        params = {"asset_cfg": SimpleNamespace(name="robot", joint_ids=[1, 4, 7, 10, 13, 16])}
+    cost = limited(env, **params)
+    assert torch.isfinite(cost).all()
+    assert torch.allclose(cost[:5], original(env, **params)[:5])
+    assert cost[:2].tolist() == [0.0, 0.0]
+    assert cost[5:].tolist() == pytest.approx([100.0] * 4)
+    assert ((cost * -1.0) >= -100.0).all()
+    assert (cost[-1] * -1.0 * 0.02).item() == pytest.approx(-2.0)
+    assert limited(env, max_cost=3.0, **params)[-1].item() == pytest.approx(3.0)
+    for cap in (0.0, -1.0, math.inf, math.nan):
+        with pytest.raises(ValueError, match="max_cost"):
+            limited(env, max_cost=cap, **params)
+    for free in (-1.0, math.inf, math.nan):
+        with pytest.raises(ValueError, match="free_speed"):
+            limited(env, free_speed=free, **params)

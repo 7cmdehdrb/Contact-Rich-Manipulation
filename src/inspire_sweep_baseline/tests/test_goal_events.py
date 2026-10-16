@@ -123,3 +123,47 @@ def test_empty_reset_and_multiple_objects(load_mdp, make_env):
     env.scene["object_collection"].num_objects = 2
     with pytest.raises(RuntimeError, match="exactly one cylinder"):
         events.randomize_goal_object_scene(env, [0])
+
+
+def test_excluded_x_goal_cones_are_uniform_in_shelf_frame_after_rotation(load_mdp, make_env, tensor_math):
+    import math
+
+    events = load_mdp("goal_events")
+    count = 20_000
+    env = make_env(count + 1)
+    rotation = tensor_math.quat_from_euler_xyz(
+        torch.full((count + 1,), 0.1), torch.zeros(count + 1), torch.full((count + 1,), 1.2)
+    )
+    _set_shelf_pose(env, rotation=rotation)
+    before = env.scene["object_collection"].data.object_link_state_w[0].clone()
+    before_dir = env.sweep_dir[0].clone()
+    torch.manual_seed(871)
+    alpha = math.radians(15.0)
+    ids = torch.arange(1, count + 1)
+    events.randomize_goal_object_scene(env, ids, excluded_x_half_angle=alpha)
+    assert torch.equal(env.scene["object_collection"].data.object_link_state_w[0], before)
+    assert torch.equal(env.sweep_dir[0], before_dir)
+    displacement = tensor_math.quat_apply_inverse(rotation[ids], env.sweep_dir[ids])
+    angle = torch.atan2(displacement[:, 1], displacement[:, 0]).remainder(2.0 * math.pi)
+    assert torch.all((angle >= alpha - 1e-6) & (angle <= 2 * math.pi - alpha + 1e-6))
+    assert torch.all((angle - math.pi).abs() >= alpha - 1e-6)
+    # Map the allowed two arcs to one contiguous interval to test uniformity.
+    width = math.pi - 2.0 * alpha
+    coordinate = angle - alpha - (angle > math.pi) * (2.0 * alpha)
+    histogram = torch.histc(coordinate, bins=12, min=0.0, max=2.0 * width)
+    assert torch.all((histogram - count / 12).abs() < 150)
+    position = env.scene["object_collection"].data.object_link_state_w[ids, 0, :3]
+    spawn = tensor_math.quat_apply_inverse(rotation[ids], position - env.scene["shelf"].data.root_pos_w[ids])
+    assert torch.all(torch.linalg.vector_norm(spawn[:, :2], dim=-1) <= 0.020001)
+    assert torch.all((spawn[:, :2] + displacement[:, :2]).abs() <= torch.tensor([0.14, 0.44]) + 1e-6)
+    assert torch.allclose(displacement[:, 2], torch.zeros(count), atol=1e-6)
+
+
+@pytest.mark.parametrize("angle", [-0.01, torch.pi / 2, torch.inf, torch.nan])
+def test_invalid_exclusion_angle_does_not_modify_scene(load_mdp, make_env, angle):
+    events = load_mdp("goal_events")
+    env = make_env()
+    before = env.scene["object_collection"].data.object_link_state_w.clone()
+    with pytest.raises(ValueError):
+        events.randomize_goal_object_scene(env, None, excluded_x_half_angle=angle)
+    assert torch.equal(env.scene["object_collection"].data.object_link_state_w, before)

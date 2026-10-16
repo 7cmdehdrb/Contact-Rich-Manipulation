@@ -1,5 +1,6 @@
 """Tactile Renewal inheritance, real observation assembly and force boundaries."""
 
+import math
 import sys
 import types
 from types import SimpleNamespace
@@ -149,7 +150,7 @@ def test_registration_and_ppo_preserve_parent_settings(renewal_tactile, prefix, 
     assert runner.to_dict() == expected
 
 
-def test_tactile_v1_tasks_removed_and_v0_descendants_inherit_exponential_costs(renewal_tactile):
+def test_v0_descendants_inherit_original_exponential_costs(renewal_tactile):
     registrations = {}
     gym = SimpleNamespace(registry=registrations)
     gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
@@ -157,9 +158,8 @@ def test_tactile_v1_tasks_removed_and_v0_descendants_inherit_exponential_costs(r
     _execute_definitions(MODULE_ROOT / "__init__.py", namespace)
     for prefix in ("Isaac-Inspire-", "Isaac-Inspire-Dex-"):
         assert prefix + "Tactile-Sweep-Omni-Renewal-v0" in registrations
-        assert prefix + "Tactile-Sweep-Omni-Renewal-v1" not in registrations
+    assert "Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v1" not in registrations
     assert "TACTILE_OMNI_RENEWAL_V1_TASK_ID" not in namespace
-    assert "DEX_TACTILE_OMNI_RENEWAL_V1_TASK_ID" not in namespace
     module = renewal_tactile.cfg
     shared = module.OmniRenewalRewardsCfg()
     for parent in (module.InspireTactileSweepOmniRenewalEnvCfg, module.InspireDexTactileSweepOmniRenewalEnvCfg):
@@ -192,3 +192,55 @@ def test_renewal_base_and_registered_descendants_use_base_exponential_rewards(re
         cfg = cfg_type()
         for name in ("pushing_speed", "arm_speed_excess"):
             assert getattr(cfg.rewards, name).to_dict() == getattr(base, name).to_dict()
+
+
+def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_runner(renewal_tactile, omni_config, monkeypatch):
+    parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
+    module = types.ModuleType("_dex_tactile_v1_cpu_cfg")
+    module.__dict__.update(
+        math=math, configclass=renewal_tactile.old.baseline.configclass,
+        goal_rewards=omni_config.omni.goal_rewards,
+        InspireDexTactileSweepOmniRenewalEnvCfg=parent_type,
+    )
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    cfg = _execute_definitions(MODULE_ROOT / "dex_tactile_omni_renewal_v1_env_cfg.py", module.__dict__)
+    parent = parent_type()
+    snapshot = parent.to_dict()
+    child = cfg.InspireDexTactileSweepOmniRenewalV1EnvCfg()
+    assert isinstance(child, parent_type)
+    expected = parent.to_dict()
+    rewards = omni_config.omni.goal_rewards
+    assert child.rewards.pushing_speed.func is rewards.exponential_pushing_speed_cost_limit
+    expected["rewards"]["pushing_speed"]["func"] = (
+        f"{rewards.__name__}:exponential_pushing_speed_cost_limit"
+    )
+    assert child.rewards.arm_speed_excess.func is rewards.exponential_joint_speed_cost_limit
+    expected["rewards"]["arm_speed_excess"]["func"] = (
+        f"{rewards.__name__}:exponential_joint_speed_cost_limit"
+    )
+    for name in ("pushing_speed", "arm_speed_excess"):
+        expected["rewards"][name]["params"]["max_cost"] = 100.0
+        assert getattr(child.rewards, name).weight == -1.0
+    expected["terminations"]["shelf_collision"]["params"]["wrist_clearance"] = 0.03
+    expected["events"]["object_spawn"]["params"]["excluded_x_half_angle"] = math.radians(15)
+    assert child.to_dict() == expected
+    child.events.object_spawn.params["goal_distance"] = 999.0
+    child.rewards.arm_action_rate.weight = -99.0
+    assert parent.to_dict() == snapshot
+    assert parent_type().to_dict() == snapshot
+
+    registrations = {}
+    gym = SimpleNamespace(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
+    _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
+    registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1"]
+    assert registration["kwargs"]["env_cfg_entry_point"] == (
+        "inspire_sweep_baseline.dex_tactile_omni_renewal_v1_env_cfg:InspireDexTactileSweepOmniRenewalV1EnvCfg"
+    )
+    assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
+        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV1PPORunnerCfg"
+    )
+    runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg()
+    expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalPPORunnerCfg().to_dict()
+    expected_runner["experiment_name"] = "inspire_dex_tactile_sweep_omni_renewal_v1"
+    assert runner.to_dict() == expected_runner
