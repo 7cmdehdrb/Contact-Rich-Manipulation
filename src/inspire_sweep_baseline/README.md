@@ -521,14 +521,14 @@ v_{\max}=\max_{j\in\mathrm{Arm}}|\dot{q}_j|,\qquad c=-0.03\left(\frac{\max(v_{\m
 
 ## Omni Renewal 환경
 
-현재 V4의 기능을 기존 로컬 MDP 함수로 명시적으로 재구성했다. 새 계산 함수나 물리 모델을 추가하지 않았다.
+Renewal은 Baseline 위에 장면·보상·종료·이벤트를 구성하고 현재 지수 속도 비용을 사용한다. V4와 환경 상속 체인은 별개다.
 
 | Gym ID | 환경 설정 | 보상 설정 |
 | --- | --- | --- |
 | `Isaac-Inspire-Sweep-Omni-Renewal-v0` | `InspireSweepOmniRenewalEnvCfg` | `OmniRenewalRewardsCfg` |
 | `Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0` | `InspireDexSweepOmniRenewalEnvCfg` | `DexOmniRenewalRewardsCfg` |
 
-환경 상속은 `InspireSweepEnvCfg → InspireSweepOmniRenewalEnvCfg → InspireDexSweepOmniRenewalEnvCfg`다. Renewal은 Baseline 장면·관측·action·command·주기 위에 `OmniRenewalEventsCfg`, `OmniRenewalRewardsCfg`, `OmniRenewalTerminationsCfg`를 구성하며, V1→V2→V3→V4의 설정 변경 체인을 상속하지 않는다. 선반 기하 상수와 기존 로컬 함수, `RealisticPhysicsEventsCfg` 및 `apply_realistic_physics`를 재사용한다. Dex Renewal은 Renewal을 직접 상속하고 보상 설정의 두 항만 덮어쓴다.
+환경 상속은 `InspireSweepEnvCfg → InspireSweepOmniRenewalEnvCfg → InspireDexSweepOmniRenewalEnvCfg`다. Renewal은 Baseline 장면·관측·action·command·주기 위에 `OmniRenewalEventsCfg`, `OmniRenewalRewardsCfg`, `OmniRenewalTerminationsCfg`를 구성하며, V1→V2→V3→V4의 설정 변경 체인을 상속하지 않는다. 선반 기하 상수와 기존 로컬 함수, `RealisticPhysicsEventsCfg` 및 `apply_realistic_physics`를 재사용한다. Dex Renewal은 Renewal을 직접 상속하며 Dex 접근·목표 보상과 공통 지수 속도 비용 두 항을 사용한다. 보상 Cfg 상속은 `OmniRenewalRewardsCfg → DexOmniRenewalRewardsCfg`다.
 
 두 환경의 runtime은 `InspireSweepEnv`, PPO는 `InspireSweepPPORunnerCfg`다. Actor/Critic은 현재 물체 GT를 포함하는 같은 41D, action은 Arm Joint Position 6D + Hand 2D, 정책 주기는 0.02 s, episode 제한은 10 s다. 물체·목표 스폰과 질량·마찰, 센서·초기 상태는 현재 V4와 동일하다.
 
@@ -538,10 +538,10 @@ v_{\max}=\max_{j\in\mathrm{Arm}}|\dot{q}_j|,\qquad c=-0.03\left(\frac{\max(v_{\m
 | `goal_distance` | `PlanarGoalProgress`, +40; 초기 목표 거리 정규화 | `DexPlanarGoalProgress`, +300 reward/m; 실제 XY 기록 개선 거리 |
 | 네 필수 운동 비용 | Arm/Hand raw action 변화 제곱합 −0.03/−0.03, 실제 관절속도 제곱합 −0.03/−0.01 | 동일 |
 | `object_tilt`, `shelf_collision` | 기존 함수·계수 −2.0 / −0.5 | 동일 |
-| `pushing_speed` | 0.3 m/s부터 제곱 증가, 0.5에서 weighted −0.05 | 동일 |
-| `arm_speed_excess` | 최대 Arm 절대속도 1.0 rad/s부터 제곱 증가, 2.0에서 weighted −0.03 | 동일 |
+| `pushing_speed` | free_speed 0.3의 지수 비용, weight −1.0 | 동일 |
+| `arm_speed_excess` | 최대 Arm 절대속도, free_speed 1.0의 지수 비용, weight −1.0 | 동일 |
 | Arm 속도 종료 | 최대 절대속도 5.0 rad/s 초과 | 동일 |
-| 물체 속도 종료 | 3D 선속도 0.5 m/s 초과 | 동일 |
+| 물체 속도 종료 | 3D 선속도 0.8 m/s 초과 | 동일 |
 | 외곽·성공 종료 | 비활성 | 동일 |
 | 기타 종료 | 물체 낙하·전도, 선반 충돌·변위, timeout 유지 | 동일 |
 
@@ -581,12 +581,12 @@ Workspace 루트에서 실행한다. `--sweep-direction`은 생략한다. 기본
 
 ## Renewal OSC 환경
 
-`Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0`는 `InspireSweepOmniRenewalOSCEnvCfg(InspireSweepOmniRenewalEnvCfg)`다. Arm만 Isaac Lab `OperationalSpaceControllerActionCfg`로 교체한다. 제어점은 `scene.ee_frame`의 첫 target과 같은 body(`axia80_link`), 위치 및 quaternion offset을 사용한다.
+`Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0`는 `InspireSweepOmniRenewalOSCEnvCfg(InspireSweepOmniRenewalEnvCfg)`다. Arm을 Isaac Lab `OperationalSpaceControllerActionCfg`로 교체하고 부모 `OmniRenewalRewardsCfg`의 지수 속도 비용 두 항을 상속한다. 제어점은 `scene.ee_frame`의 첫 target과 같은 body(`axia80_link`), 위치 및 quaternion offset을 사용한다.
 
 - Arm action: relative pose 6D (`pose_rel`), fixed impedance. 위치 scale 0.05m, axis-angle 회전 scale 0.1rad. task frame 미지정으로 robot root 좌표계를 사용한다.
 - OSC: 모든 6축 stiffness 200, damping ratio 1, 관성 보정 및 중력 보상 사용.
 - 토크 출력과 중복되지 않도록 Arm implicit actuator stiffness/damping은 0. 노력·속도 제한은 부모 설정을 상속한다.
-- Hand 2D와 관측 41D, reward/termination/event, 물성, reset, PPO는 부모와 같다. raw Arm action 페널티는 Cartesian 6D 입력 변화량에 적용된다.
+- Hand 2D와 관측 41D, 속도 비용 두 항 외 reward, termination/event, 물성, reset, PPO는 부모와 같다. raw Arm action 페널티는 Cartesian 6D 입력 변화량에 적용된다.
 
 Workspace 루트에서 실행:
 
@@ -602,7 +602,7 @@ Workspace 루트에서 실행:
   --checkpoint "/home/min/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_omni_renewal_osc/2026-10-15_22-12-35_renewal_osc_v0/model_6300.pt" --real-time
 ```
 
-Joint Position 정책과 action 의미가 달라 새 정책으로 학습한다. CPU 설정 검증은 완료했으며 실제 Isaac Sim OSC 동작·학습 성능은 미검증이다.
+Joint Position 정책과 action 의미가 달라 새 정책으로 학습한다. 현재 지수 비용 적용과 상속을 CPU에서 검증했으며 실제 실행 및 장시간 학습 검증 범위는 최신 개발 로그를 따른다.
 
 ### 재생 배속
 
@@ -616,7 +616,7 @@ Renewal 부모의 `commands.target_goal_pos.debug_vis=True`를 모든 파생 환
 
 ### Renewal 17채널 Tactile 환경 (2026-10-16)
 
-각 부모를 직접 상속하며 Scene의 센서 view와 tactile 관측만 교체한다. Arm/Hand 제어, 물성·중력, 보상·종료·이벤트, 나머지 관측과 노이즈는 부모 설정을 유지한다.
+각 부모를 직접 상속하며 Scene의 센서 view와 tactile 관측을 교체하고 공통 지수 속도 비용 두 항을 사용한다. Arm/Hand 제어, 물성·중력, 다른 보상·종료·이벤트, 나머지 관측과 노이즈는 부모 설정을 유지한다.
 
 | 새 Gym task ID | 부모 Cfg | 새 Cfg | 기본 실험 폴더 |
 | --- | --- | --- | --- |
@@ -640,3 +640,22 @@ Standalone `run_probe_test.py --pad-layout original`과 같은 원본 Hand 패�
 PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task 모두 GPU 8개 환경에서 1 iteration 학습을 완료해 57D 입력과 8D 출력을 확인했다. 장시간 학습 성능과 2048개 환경 처리 속도는 미검증이다.
 
 [환경 설정](inspire_sweep_baseline/tactile_omni_renewal_env_cfg.py) · [PPO 설정](inspire_sweep_baseline/agents/tactile_omni_renewal_ppo_cfg.py) · [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_tactile_renewal_environments.md).
+
+### Renewal 네 환경의 공통 지수 속도 페널티
+
+현재 아래 네 환경 모두 `pushing_speed`, `arm_speed_excess`에 Renewal 부모의 지수 비용을 적용한다. OSC를 포함한 Renewal 계열의 해당 두 비용은 exp다. Renewal 밖의 Omni v4는 기존 제곱 속도 비용을 유지한다.
+
+| Gym task ID | 적용 |
+| --- | --- |
+| `Isaac-Inspire-Sweep-Omni-Renewal-v0` | Renewal 기본 지수 rewards |
+| `Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0` | Dex rewards가 공통 지수 rewards 상속 |
+| `Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0` | Renewal 부모에서 상속 |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0` | Dex 부모에서 상속 |
+
+두 양의 비용 함수는 `expm1(2 * max(x - t, 0)) / 2`를 반환하며 weight는 모두 -1.0이다. 물체 항은 대상 물체의 3D 선속도 norm과 임계값 0.3m/s, Arm 항은 6개 Arm 관절의 최대 절대 속도와 임계값 1.0rad/s를 사용한다. 임계값 이하에서 0이고 초과하면 지수적으로 감소한다. reference_speed 정규화나 상한은 없으며 RewardManager의 step_dt 곱셈을 유지한다.
+
+두 Tactile v1 환경은 중복이므로 등록·Cfg·전용 PPO를 삭제했다. 위의 v0 실행 명령을 사용한다. 촉각 관측 57D, 행동 8D, 센서·제어·물성·이벤트·나머지 보상과 종료는 유지한다. 종료 기준은 물체 속도 >0.8m/s, Arm 관절 절대 속도 >5.0rad/s다. 기존 제곱 함수는 보존하지만 일반 Sweep Renewal v0도 지수 속도 비용을 사용한다.
+
+[촉각 v0 설정](inspire_sweep_baseline/tactile_omni_renewal_env_cfg.py) · [공통 rewards](inspire_sweep_baseline/omni_renewal_env_cfg.py) · [새 비용 함수](inspire_sweep_baseline/mdp/goal_rewards.py) · [정리·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_tactile_v0_exponential_cleanup.md).
+
+[Renewal 계열 속도 초과 비용의 exp 통일·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_renewal_only_exponential.md). `joint_vel_l2` 등 별도 운동 제곱합 페널티는 기존 규칙대로 유지한다.

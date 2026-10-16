@@ -75,6 +75,36 @@ def joint_speed_cost(env, asset_cfg=SceneEntityCfg("robot"), free_speed=1.0, ref
     return ((speed - free_speed).clamp_min(0.0) / (reference_speed - free_speed)).square()
 
 
+def _exponential_speed_excess(speed, free_speed):
+    """Positive cost (exp(2 * max(speed - free_speed, 0)) - 1) / 2.
+
+    RewardManager supplies the negative coefficient and step_dt once. Use
+    expm1 for accuracy just above the threshold; no reference normalization
+    or upper saturation is applied.
+    """
+    if not math.isfinite(free_speed) or free_speed < 0.0:
+        raise ValueError("free_speed must be finite and nonnegative")
+    return 0.5 * torch.expm1(2.0 * (speed - free_speed).clamp_min(0.0))
+
+
+def exponential_pushing_speed_cost(env, free_speed=0.3):
+    """Exponential cost of the target object's 3D linear speed above free_speed."""
+    rows = torch.arange(env.num_envs, device=env.device)
+    targets = env.target_id[:, 0].long()
+    velocity = env.scene["object_collection"].data.object_lin_vel_w[rows, targets]
+    return _exponential_speed_excess(torch.linalg.vector_norm(velocity, dim=-1), free_speed)
+
+
+def exponential_joint_speed_cost(env, asset_cfg=SceneEntityCfg("robot"), free_speed=1.0):
+    """Exponential cost of the maximum absolute selected joint velocity.
+
+    The same selected-joint speed as arm_velocity termination is used, so
+    negative rotation and any single overspeed joint are treated equally.
+    """
+    velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
+    return _exponential_speed_excess(velocity.abs().amax(dim=-1), free_speed)
+
+
 def action_rate_l2(env, action_group="arm"):
     """Sum squared raw command changes for the selected Arm or Hand group.
 

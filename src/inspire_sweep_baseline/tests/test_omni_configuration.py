@@ -601,6 +601,7 @@ def test_v4_preserves_v3_except_speed_cost_and_requested_terminations(omni_confi
     assert v4.terminations.hand_velocity.params["threshold"] == 5.0
     assert v4.terminations.push_fast.params["speed_condition"] == 0.5
     cost = v4.rewards.pushing_speed
+    assert cost.func is omni_config.omni.goal_rewards.pushing_speed_cost
     assert cost.weight == -0.05
     env = make_env(3)
     env.scene["object_collection"].data.object_lin_vel_w[:, 0, 0] = torch.tensor([0.3, 0.5, 0.501])
@@ -617,6 +618,7 @@ def test_v4_preserves_v3_except_speed_cost_and_requested_terminations(omni_confi
     params["asset_cfg"].joint_ids = arm_ids
     assert term.func(env, **params).tolist() == [False, False, True]
     excess = v4.rewards.arm_speed_excess
+    assert excess.func is omni_config.omni.goal_rewards.joint_speed_cost
     assert excess.weight == -0.03
     assert excess.params["asset_cfg"].joint_names == term.params["asset_cfg"].joint_names
     params = deepcopy(excess.params)
@@ -635,20 +637,33 @@ def test_v4_preserves_v3_except_speed_cost_and_requested_terminations(omni_confi
     assert omni_config.omni.InspireSweepOmniV4EnvCfg().rewards.pushing_speed.params["free_speed"] == 0.3
 
 
-def test_renewal_composes_complete_v4_behavior_without_v4_inheritance(omni_config):
+def test_renewal_composes_v4_with_exponential_costs_and_current_overrides(omni_config):
     v4 = omni_config.omni.InspireSweepOmniV4EnvCfg()
     renewal = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
     assert renewal.__class__.__bases__ == (omni_config.baseline.InspireSweepEnvCfg,)
-    assert renewal.to_dict() == v4.to_dict()
+    expected = v4.to_dict()
+    shared = omni_config.renewal.OmniRenewalRewardsCfg().to_dict()
+    for name in ("pushing_speed", "arm_speed_excess"):
+        expected["rewards"][name] = shared[name]
+    expected["commands"]["target_goal_pos"]["debug_vis"] = True
+    expected["terminations"]["shelf_collision"]["params"]["check_fingers"] = False
+    expected["terminations"]["push_fast"]["params"]["speed_condition"] = 0.8
+    # Renewal omits these disabled fields rather than declaring None terms.
+    for name in ("time", "success", "failure"):
+        assert expected["rewards"].pop(name) is None
+    assert expected["terminations"].pop("success") is None
+    assert renewal.to_dict() == expected
     for group in ("events", "rewards", "terminations"):
-        assert list(vars(getattr(renewal, group))) == list(vars(getattr(v4, group)))
+        assert [name for name, value in vars(getattr(renewal, group)).items() if value is not None] == [
+            name for name, value in vars(getattr(v4, group)).items() if value is not None
+        ]
     renewal.rewards.reaching.params["z_offset"] = 99.0
     renewal.terminations.hand_velocity.params["threshold"] = 99.0
     renewal.events.object_spawn.params["spawn_radius"] = 99.0
-    assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == v4.to_dict()
+    assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == expected
 
 
-def test_dex_renewal_changes_exactly_the_two_dex_reward_terms(omni_config):
+def test_dex_renewal_changes_distance_rewards_and_inherits_exponential_speed_costs(omni_config):
     renewal = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
     before = renewal.to_dict()
     dex_renewal = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
@@ -657,6 +672,10 @@ def test_dex_renewal_changes_exactly_the_two_dex_reward_terms(omni_config):
     for name in ("reaching", "goal_distance"):
         assert getattr(dex_renewal.rewards, name).to_dict() == getattr(old_dex.rewards, name).to_dict()
         setattr(dex_renewal.rewards, name, deepcopy(getattr(renewal.rewards, name)))
+    shared = omni_config.renewal.OmniRenewalRewardsCfg()
+    for name in ("pushing_speed", "arm_speed_excess"):
+        assert getattr(dex_renewal.rewards, name).to_dict() == getattr(shared, name).to_dict()
+        setattr(dex_renewal.rewards, name, deepcopy(getattr(renewal.rewards, name)))
     assert dex_renewal.to_dict() == before
     assert renewal.to_dict() == before
     another = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
@@ -664,13 +683,13 @@ def test_dex_renewal_changes_exactly_the_two_dex_reward_terms(omni_config):
     another.rewards.reaching.params["near_radius"] = 99.0
     another.terminations.hand_velocity.params["threshold"] = 99.0
     fresh = omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg()
-    assert fresh.rewards.arm_speed_excess.weight == -0.03
+    assert fresh.rewards.arm_speed_excess.weight == -1.0
     assert fresh.rewards.reaching.params["near_radius"] == 0.10
     assert fresh.terminations.hand_velocity.params["threshold"] == 5.0
     assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == before
 
 
-def test_renewal_osc_changes_only_arm_control_and_matches_eef(omni_config):
+def test_renewal_osc_changes_arm_control_and_speed_costs_and_matches_eef(omni_config):
     configclass = omni_config.baseline.configclass
     controllers = _execute_definitions(
         PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/controllers/operational_space_cfg.py",
@@ -694,6 +713,7 @@ def test_renewal_osc_changes_only_arm_control_and_matches_eef(omni_config):
              OperationalSpaceControllerCfg=controllers.OperationalSpaceControllerCfg,
              OperationalSpaceControllerActionCfg=actions.OperationalSpaceControllerActionCfg,
              ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES,
+             OmniRenewalRewardsCfg=omni_config.renewal.OmniRenewalRewardsCfg,
              InspireSweepOmniRenewalEnvCfg=omni_config.renewal.InspireSweepOmniRenewalEnvCfg),
     )
     parent = omni_config.renewal.InspireSweepOmniRenewalEnvCfg()
@@ -718,11 +738,25 @@ def test_renewal_osc_changes_only_arm_control_and_matches_eef(omni_config):
     assert child.commands.target_goal_pos.debug_vis is True
     assert parent.terminations.shelf_collision.params["check_fingers"] is False
     assert parent.commands.target_goal_pos.debug_vis is True
+    shared = omni_config.renewal.OmniRenewalRewardsCfg()
+    for name in ("pushing_speed", "arm_speed_excess"):
+        assert getattr(child.rewards, name).to_dict() == getattr(shared, name).to_dict()
+        setattr(child.rewards, name, deepcopy(getattr(parent.rewards, name)))
     # Undo the requested overrides: every other task setting must match.
     child.actions.arm_action = deepcopy(parent.actions.arm_action)
     child.scene.robot.actuators["arm"] = deepcopy(parent.scene.robot.actuators["arm"])
     assert child.to_dict() == parent.to_dict()
     assert omni_config.renewal.InspireSweepOmniRenewalEnvCfg().to_dict() == parent.to_dict()
+
+    @configclass
+    class OSCDescendant(module.InspireSweepOmniRenewalOSCEnvCfg):
+        pass
+
+    descendant = OSCDescendant()
+    for name in ("pushing_speed", "arm_speed_excess"):
+        assert getattr(descendant.rewards, name).to_dict() == getattr(shared, name).to_dict()
+    descendant.rewards.pushing_speed.weight = -99.0
+    assert module.InspireSweepOmniRenewalOSCEnvCfg().rewards.pushing_speed.weight == -1.0
 
 
 def test_renewal_osc_registration():

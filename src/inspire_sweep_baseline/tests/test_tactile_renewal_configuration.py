@@ -24,6 +24,7 @@ def renewal_tactile(tactile_config, omni_config, monkeypatch):
         ProjectedTactileContactBits=tactile_config.tactile.ProjectedTactileContactBits,
         InspireSweepOmniRenewalEnvCfg=omni_config.renewal.InspireSweepOmniRenewalEnvCfg,
         InspireDexSweepOmniRenewalEnvCfg=omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg,
+        OmniRenewalRewardsCfg=omni_config.renewal.OmniRenewalRewardsCfg,
     )
     monkeypatch.setitem(sys.modules, module.__name__, module)
     cfg = _execute_definitions(MODULE_ROOT / "tactile_omni_renewal_env_cfg.py", module.__dict__)
@@ -38,7 +39,7 @@ def renewal_tactile(tactile_config, omni_config, monkeypatch):
 
 
 @pytest.mark.parametrize("dex", [False, True])
-def test_only_sensor_and_tactile_observation_change(renewal_tactile, dex):
+def test_sensor_tactile_and_exponential_costs_preserve_other_settings(renewal_tactile, dex):
     module = renewal_tactile.cfg
     parent_type = module.InspireDexSweepOmniRenewalEnvCfg if dex else module.InspireSweepOmniRenewalEnvCfg
     child_type = module.InspireDexTactileSweepOmniRenewalEnvCfg if dex else module.InspireTactileSweepOmniRenewalEnvCfg
@@ -46,8 +47,14 @@ def test_only_sensor_and_tactile_observation_change(renewal_tactile, dex):
     snapshot = parent.to_dict()
     assert isinstance(child, parent_type)
     for name, value in snapshot.items():
-        if name not in ("scene", "observations"):
+        if name not in ("scene", "observations", "rewards"):
             assert child.to_dict()[name] == value, name
+    for name, value in snapshot["rewards"].items():
+        if dex or name not in ("pushing_speed", "arm_speed_excess"):
+            assert child.to_dict()["rewards"][name] == value, name
+    shared = module.OmniRenewalRewardsCfg()
+    for name in ("pushing_speed", "arm_speed_excess"):
+        assert getattr(child.rewards, name).to_dict() == getattr(shared, name).to_dict()
     for name, value in parent.scene.to_dict().items():
         if name != "palm_tactile":
             assert child.scene.to_dict()[name] == value, name
@@ -140,3 +147,48 @@ def test_registration_and_ppo_preserve_parent_settings(renewal_tactile, prefix, 
     expected = renewal_tactile.old.baseline_runner.InspireSweepPPORunnerCfg().to_dict()
     expected["experiment_name"] = experiment
     assert runner.to_dict() == expected
+
+
+def test_tactile_v1_tasks_removed_and_v0_descendants_inherit_exponential_costs(renewal_tactile):
+    registrations = {}
+    gym = SimpleNamespace(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
+    namespace = {"gym": gym}
+    _execute_definitions(MODULE_ROOT / "__init__.py", namespace)
+    for prefix in ("Isaac-Inspire-", "Isaac-Inspire-Dex-"):
+        assert prefix + "Tactile-Sweep-Omni-Renewal-v0" in registrations
+        assert prefix + "Tactile-Sweep-Omni-Renewal-v1" not in registrations
+    assert "TACTILE_OMNI_RENEWAL_V1_TASK_ID" not in namespace
+    assert "DEX_TACTILE_OMNI_RENEWAL_V1_TASK_ID" not in namespace
+    module = renewal_tactile.cfg
+    shared = module.OmniRenewalRewardsCfg()
+    for parent in (module.InspireTactileSweepOmniRenewalEnvCfg, module.InspireDexTactileSweepOmniRenewalEnvCfg):
+        @renewal_tactile.old.baseline.configclass
+        class Descendant(parent):
+            pass
+
+        child = Descendant()
+        for name in ("pushing_speed", "arm_speed_excess"):
+            assert getattr(child.rewards, name).to_dict() == getattr(shared, name).to_dict()
+        child.rewards.pushing_speed.weight = -99.0
+        assert parent().rewards.pushing_speed.weight == -1.0
+
+
+def test_renewal_base_and_registered_descendants_use_base_exponential_rewards(renewal_tactile, omni_config):
+    module = renewal_tactile.cfg
+    base = omni_config.renewal.OmniRenewalRewardsCfg()
+    functions = omni_config.omni.goal_rewards
+    assert base.pushing_speed.func is functions.exponential_pushing_speed_cost
+    assert base.pushing_speed.params == {"free_speed": 0.3}
+    assert base.arm_speed_excess.func is functions.exponential_joint_speed_cost
+    assert base.arm_speed_excess.params["free_speed"] == 1.0
+    assert base.pushing_speed.weight == base.arm_speed_excess.weight == -1.0
+    for cfg_type in (
+        omni_config.renewal.InspireSweepOmniRenewalEnvCfg,
+        omni_config.dex_renewal.InspireDexSweepOmniRenewalEnvCfg,
+        module.InspireTactileSweepOmniRenewalEnvCfg,
+        module.InspireDexTactileSweepOmniRenewalEnvCfg,
+    ):
+        cfg = cfg_type()
+        for name in ("pushing_speed", "arm_speed_excess"):
+            assert getattr(cfg.rewards, name).to_dict() == getattr(base, name).to_dict()

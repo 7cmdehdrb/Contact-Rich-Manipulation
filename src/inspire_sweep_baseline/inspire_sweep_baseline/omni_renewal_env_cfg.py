@@ -1,4 +1,4 @@
-"""Explicit V4-equivalent composition using the existing local MDP functions."""
+"""Renewal composition with shared exponential excess-speed penalties."""
 
 import math
 
@@ -90,14 +90,14 @@ class OmniRenewalRewardsCfg:
     shelf_collision = RewTerm(func=mdp.ShelfCollisionPenalty, weight=-0.5)
 
     pushing_speed = RewTerm(
-        func=goal_rewards.pushing_speed_cost,
-        weight=-5.0,
-        params={"free_speed": 0.3, "reference_speed": 0.4},
+        func=goal_rewards.exponential_pushing_speed_cost,
+        weight=-1.0,
+        params={"free_speed": 0.3},
     )
     arm_speed_excess = RewTerm(
-        func=goal_rewards.joint_speed_cost,
-        weight=-0.1,
-        params={"asset_cfg": _arm(), "free_speed": 1.0, "reference_speed": 2.0},
+        func=goal_rewards.exponential_joint_speed_cost,
+        weight=-1.0,
+        params={"asset_cfg": _arm(), "free_speed": 1.0},
     )
 
     # time = None
@@ -132,7 +132,7 @@ class OmniRenewalTerminationsCfg(TerminationsCfg):
 
 @configclass
 class InspireSweepOmniRenewalEnvCfg(InspireSweepEnvCfg):
-    """Compose current V4 behavior directly on the baseline mechanics."""
+    """Compose Renewal mechanics and exponential speed costs on the baseline."""
 
     events: OmniRenewalEventsCfg = OmniRenewalEventsCfg()
     rewards: OmniRenewalRewardsCfg = OmniRenewalRewardsCfg()

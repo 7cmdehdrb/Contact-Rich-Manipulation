@@ -1,4 +1,4 @@
-"""Renewal mechanics with only the two Dex distance-progress rewards replaced."""
+"""Renewal mechanics with Dex distance rewards and exponential speed costs."""
 
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils import configclass

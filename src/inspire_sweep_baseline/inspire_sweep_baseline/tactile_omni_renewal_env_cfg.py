@@ -1,4 +1,4 @@
-"""Renewal variants changing only the tactile sensor views and observation."""
+"""Renewal variants with 17 tactile observations and shared exponential costs."""
 
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.utils import configclass

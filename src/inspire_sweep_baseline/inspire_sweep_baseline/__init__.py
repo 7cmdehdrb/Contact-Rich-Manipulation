@@ -4,19 +4,29 @@ import gymnasium as gym
 
 TASK_ID = "Isaac-Inspire-Sweep-Baseline-v0"
 REALISTIC_PHYSICS_TASK_ID = "Isaac-Inspire-Sweep-Realistic-Physics-v0"
-INITIAL_PRIVILEGED_TASK_ID = "Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0"
+INITIAL_PRIVILEGED_TASK_ID = (
+    "Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0"
+)
 OMNI_TASK_ID = "Isaac-Inspire-Sweep-Omni-v0"
 OMNI_V1_TASK_ID = "Isaac-Inspire-Sweep-Omni-v1"
 OMNI_V2_TASK_ID = "Isaac-Inspire-Sweep-Omni-v2"
 OMNI_V3_TASK_ID = "Isaac-Inspire-Sweep-Omni-v3"
 OMNI_V4_TASK_ID = "Isaac-Inspire-Sweep-Omni-v4"
+
+TACTILE_TASK_ID = "Isaac-Inspire-Sweep-Baseline-Tactile-v0"
+
+DEX_OMNI_TASK_ID = "Isaac-Inspire-Dex-Omni-v0"
+
+# ============== Renewal Envs ==============
+
 OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-v0"
-OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
 DEX_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0"
+
 TACTILE_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0"
 DEX_TACTILE_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0"
-DEX_OMNI_TASK_ID = "Isaac-Inspire-Dex-Omni-v0"
-TACTILE_TASK_ID = "Isaac-Inspire-Sweep-Baseline-Tactile-v0"
+
+OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
+
 
 if TASK_ID not in gym.registry:
     gym.register(
@@ -183,4 +193,20 @@ if DEX_TACTILE_OMNI_RENEWAL_TASK_ID not in gym.registry:
         },
     )
 
-__all__ = ["TASK_ID", "REALISTIC_PHYSICS_TASK_ID", "INITIAL_PRIVILEGED_TASK_ID", "OMNI_TASK_ID", "OMNI_V1_TASK_ID", "OMNI_V2_TASK_ID", "OMNI_V3_TASK_ID", "OMNI_V4_TASK_ID", "OMNI_RENEWAL_TASK_ID", "OMNI_RENEWAL_OSC_TASK_ID", "DEX_OMNI_RENEWAL_TASK_ID", "DEX_OMNI_TASK_ID", "TACTILE_TASK_ID", "TACTILE_OMNI_RENEWAL_TASK_ID", "DEX_TACTILE_OMNI_RENEWAL_TASK_ID"]
+__all__ = [
+    "TASK_ID",
+    "REALISTIC_PHYSICS_TASK_ID",
+    "INITIAL_PRIVILEGED_TASK_ID",
+    "OMNI_TASK_ID",
+    "OMNI_V1_TASK_ID",
+    "OMNI_V2_TASK_ID",
+    "OMNI_V3_TASK_ID",
+    "OMNI_V4_TASK_ID",
+    "OMNI_RENEWAL_TASK_ID",
+    "OMNI_RENEWAL_OSC_TASK_ID",
+    "DEX_OMNI_RENEWAL_TASK_ID",
+    "DEX_OMNI_TASK_ID",
+    "TACTILE_TASK_ID",
+    "TACTILE_OMNI_RENEWAL_TASK_ID",
+    "DEX_TACTILE_OMNI_RENEWAL_TASK_ID",
+]

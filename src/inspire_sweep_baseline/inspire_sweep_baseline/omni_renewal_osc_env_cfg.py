@@ -10,7 +10,7 @@ from .omni_renewal_env_cfg import InspireSweepOmniRenewalEnvCfg
 
 @configclass
 class InspireSweepOmniRenewalOSCEnvCfg(InspireSweepOmniRenewalEnvCfg):
-    """Replace Arm control; inherit Renewal termination and goal visualization."""
+    """OSC Arm control and exponential speed costs; inherit Renewal terminations."""
 
     def __post_init__(self):
         super().__post_init__()
