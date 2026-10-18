@@ -246,7 +246,8 @@ def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_r
     assert runner.to_dict() == expected_runner
 
 
-def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tactile, omni_config, monkeypatch):
+@pytest.fixture
+def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch):
     parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     module = types.ModuleType("_dex_tactile_v2_cpu_cfg")
     module.__dict__.update(
@@ -264,6 +265,12 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
     )
     monkeypatch.setitem(sys.modules, module.__name__, module)
     cfg = _execute_definitions(MODULE_ROOT / "dex_tactile_omni_renewal_v2_env_cfg.py", module.__dict__)
+    return cfg
+
+
+def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tactile_v2, renewal_tactile, omni_config):
+    cfg = renewal_tactile_v2
+    parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     parent = parent_type()
     snapshot = parent.to_dict()
     child = cfg.InspireDexTactileSweepOmniRenewalV2EnvCfg()
@@ -286,11 +293,11 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
     assert success.params["upright_angle"] == math.radians(10)
     # Only active failures are consulted, and each is evaluated before success.
     ordered = list(vars(child.terminations))
-    assert set(module.FAILURE_TERMS) == {
+    assert set(cfg.FAILURE_TERMS) == {
         key for key, term in vars(parent.terminations).items()
         if term is not None and not term.time_out
     }
-    assert all(ordered.index(key) < ordered.index("success") for key in module.FAILURE_TERMS)
+    assert all(ordered.index(key) < ordered.index("success") for key in cfg.FAILURE_TERMS)
     assert not success.time_out
     child.terminations.success.params["hold_time"] = 9.0
     child.rewards.arm_action_rate.weight = -99.0

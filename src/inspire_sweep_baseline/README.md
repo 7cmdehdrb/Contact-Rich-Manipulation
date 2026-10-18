@@ -700,3 +700,24 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 ```
 
 [v2 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v2_env_cfg.py) · [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_goal_hold.md).
+
+### Dex Tactile Renewal OSC v2
+
+`Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2`는 v2를 직접 상속하고 Arm 제어만 OSC로 바꾼다. Hand 제어, 57D 관측·8D 행동 크기, 센서·물성·스폰·기존 비용·종료, +100 성공 보너스·증가하는 유지 보상은 v2에서 상속한다. 기존 Arm 속도 종료 기준 5.0 rad/s는 유지하며 1.5 rad/s는 명령 범위 선택의 대략적인 목표다.
+
+- 기준은 `omni_renewal_osc_env_cfg.py`의 fixed-impedance `pose_rel` OSC다. 제어점은 기존 EEF와 같은 `axia80_link` 및 pose offset이고 로봇 root 좌표계를 사용한다. 중력 보상·관성 decoupling·damping ratio 1.0을 유지한다.
+- `motion_stiffness_task=100.0`으로 낮춘다. OSC effort와 경쟁하지 않도록 기존 OSC처럼 Arm implicit PD의 stiffness/damping만 0으로 바꾼다.
+- Arm raw 6D는 위치 scale 0.005 m, 회전 scale 0.025 rad를 곱한 뒤 **이동 벡터 norm ≤0.005 m, 회전 벡터 norm ≤0.025 rad**로 각각 제한한다. 각 성분별 제한이 아니며 방향을 보존한다. 큰 Gaussian 출력에도 실제 명령의 상한이 적용된다. Hand나 raw Action 제곱합 보상 입력은 이 제한으로 바꾸지 않는다.
+- 현재 pose를 기준으로 매 0.02초 정책 스텝에 새 상대 목표를 생성한다. 한 명령당 증분 제한이며 누적 가동 범위를 제한하지 않는다. 관절 속도 보장은 아니며 자세·접촉과 controller 동역학에 따라 달라진다. upstream OSC에서 실제 적용되지 않는 `clip` 필드에 의존하지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2 \
+  --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2 \
+  --num_envs 1 --checkpoint "<osc-v2-checkpoint.pt>" --real-time
+```
+
+기본 로그 폴더는 `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal_v2_osc`다. Joint Position v2와 action 의미가 다르므로 OSC 정책으로 학습·평가한다. 초기 0.1초의 명령 응답은 낮아졌지만, 이후에는 0 명령 대조군에서도 과속이 발생했다. 짧은 실행을 장시간 안정성이나 학습 성공으로 해석하지 않는다. [OSC v2 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v2_osc_env_cfg.py) · [명령 제한 구현](inspire_sweep_baseline/mdp/osc_actions.py) · [실측 속도·검증 및 한계](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_osc.md).

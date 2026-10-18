@@ -23,3 +23,8 @@ class InspireDexTactileSweepOmniRenewalV1PPORunnerCfg(InspireDexTactileSweepOmni
 @configclass
 class InspireDexTactileSweepOmniRenewalV2PPORunnerCfg(InspireDexTactileSweepOmniRenewalPPORunnerCfg):
     experiment_name = "inspire_dex_tactile_sweep_omni_renewal_v2"
+
+
+@configclass
+class InspireDexTactileSweepOmniRenewalV2OSCPPORunnerCfg(InspireDexTactileSweepOmniRenewalV2PPORunnerCfg):
+    experiment_name = "inspire_dex_tactile_sweep_omni_renewal_v2_osc"
