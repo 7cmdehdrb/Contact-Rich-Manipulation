@@ -386,6 +386,20 @@ def success_event(env, termination_name="success"):
     return env.termination_manager.get_term(termination_name).float() / env.step_dt
 
 
+def stable_goal_hold(env, termination_name="success"):
+    """Positive reward rate ramping with the success term's eligible hold time.
+
+    Read the StableGoalSuccess instance already evaluated by the termination
+    manager. The same position, speed, support and failure gates therefore
+    govern both rewards. RewardManager applies weight and step_dt once.
+    """
+    cfg = env.termination_manager.get_term_cfg(termination_name)
+    hold_time = cfg.params["hold_time"]
+    if not math.isfinite(hold_time) or hold_time <= 0.0:
+        raise ValueError("stable_goal_hold requires a positive finite success hold_time")
+    return (cfg.func.hold_duration_s / hold_time).clamp(0.0, 1.0)
+
+
 def failure_event(env, failure_terms):
     """One failure penalty per terminal transition, even if several failures fire."""
     failed = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)

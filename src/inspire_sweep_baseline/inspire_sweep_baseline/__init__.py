@@ -25,6 +25,7 @@ DEX_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0"
 TACTILE_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0"
 DEX_TACTILE_OMNI_RENEWAL_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0"
 DEX_TACTILE_OMNI_RENEWAL_V1_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1"
+DEX_TACTILE_OMNI_RENEWAL_V2_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2"
 
 OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
 
@@ -205,6 +206,17 @@ if DEX_TACTILE_OMNI_RENEWAL_V1_TASK_ID not in gym.registry:
         },
     )
 
+if DEX_TACTILE_OMNI_RENEWAL_V2_TASK_ID not in gym.registry:
+    gym.register(
+        id=DEX_TACTILE_OMNI_RENEWAL_V2_TASK_ID,
+        entry_point="inspire_sweep_baseline.env:InspireSweepEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.dex_tactile_omni_renewal_v2_env_cfg:InspireDexTactileSweepOmniRenewalV2EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2PPORunnerCfg",
+        },
+    )
+
 __all__ = [
     "TASK_ID",
     "REALISTIC_PHYSICS_TASK_ID",
@@ -222,4 +234,5 @@ __all__ = [
     "TACTILE_OMNI_RENEWAL_TASK_ID",
     "DEX_TACTILE_OMNI_RENEWAL_TASK_ID",
     "DEX_TACTILE_OMNI_RENEWAL_V1_TASK_ID",
+    "DEX_TACTILE_OMNI_RENEWAL_V2_TASK_ID",
 ]

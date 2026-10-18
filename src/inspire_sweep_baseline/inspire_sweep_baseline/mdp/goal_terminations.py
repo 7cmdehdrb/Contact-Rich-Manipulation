@@ -55,6 +55,15 @@ class StableGoalSuccess(ManagerTermBase):
     def reset(self, env_ids=None):
         self._hold_steps[slice(None) if env_ids is None else env_ids] = 0
 
+    @property
+    def hold_duration_s(self):
+        """Current consecutive eligible time, updated once by terminations.
+
+        Rewards may read this after termination computation without advancing
+        the counter a second time. Partial resets clear only the reset rows.
+        """
+        return self._hold_steps * self._env.step_dt
+
     def __call__(
         self, env, command_name="target_goal_pos", position_tolerance=0.01,
         speed_tolerance=0.02, upright_angle=math.radians(10.0), hold_time=0.3,

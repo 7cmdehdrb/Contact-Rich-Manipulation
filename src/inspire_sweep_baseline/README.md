@@ -678,3 +678,25 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 ```
 
 [v1 환경 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v1_env_cfg.py) · [활성 환경 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_dex_tactile_renewal_v1.md).
+
+### Dex Tactile Renewal v2: 목표 유지와 성공 보너스
+
+`Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2`는 **v0를 직접 상속**한다. v1의 비용 상한·손목 높이·방향 제한은 적용하지 않는다. 기존 57D Actor/Critic 관측(현재 물체 GT 포함), 8D Joint Position/Hand 행동·센서·물성·reset·보상·실패 종료를 유지하고 다음 양의 보상 두 항과 성공 종료를 추가한다. 새 속도·위치 오차 비용과 액션 제한은 없다.
+
+- `success`: 목표 XY 오차 <1 cm, 물체 XY 속도 <0.02 m/s, 선반 법선 대비 기울기 ≤10°, 물체 바닥의 선반면 오차 ≤1 cm, 물체 반경을 고려한 선반 내부 지지를 **0.5초 연속** 만족하면 성공한다. 기존 실패 조건이 동시에 발생하면 성공하지 않는다. 50 Hz에서는 25스텝이며 성공 시 에피소드가 종료된다.
+- 성공 보상: 성공 종료 스텝에 **+100 한 번** 지급한다. `success_event`가 dt를 상쇄하므로 제어 주기에 따라 보너스가 달라지지 않는다.
+- `goal_hold`: 성공 조건을 만족한 연속 시간을 `h`라 할 때 보상률은 `20 × min(h / 0.5, 1)`/초다. 첫 스텝부터 증가하며 조건이 깨지면 0으로 초기화된다. 성공 판정이 갱신한 카운터를 읽으므로 별도의 중복 타이머가 없다. 0.02초 주기에서는 스텝당 +0.016부터 +0.4까지 증가하며 성공까지 합계 **+5.2**다. 성공 후 추가 체류 보상은 에피소드 종료로 발생하지 않는다.
+
++100과 초당 최대 +20은 이번 구현의 초기 실험값이며 학습 성능으로 튜닝한 값은 아니다. 기본 로그 폴더는 `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal_v2`다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2 \
+  --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2 \
+  --num_envs 1 --checkpoint "<v2-checkpoint.pt>" --real-time
+```
+
+[v2 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v2_env_cfg.py) · [개발·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_goal_hold.md).
