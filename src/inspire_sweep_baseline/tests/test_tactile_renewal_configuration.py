@@ -247,7 +247,7 @@ def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_r
 
 
 @pytest.fixture
-def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch):
+def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch, load_mdp):
     parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     module = types.ModuleType("_dex_tactile_v2_cpu_cfg")
     module.__dict__.update(
@@ -258,6 +258,7 @@ def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch):
         OmniRenewalTerminationsCfg=omni_config.renewal.OmniRenewalTerminationsCfg,
         goal_rewards=omni_config.omni.goal_rewards,
         goal_terminations=omni_config.omni.goal_terminations,
+        StableGoalAchievement=load_mdp("goal_hold_rewards").StableGoalAchievement,
         OBJECT_RADIUS=omni_config.omni.OBJECT_RADIUS,
         SHELF_HALF_EXTENTS=omni_config.omni.SHELF_HALF_EXTENTS,
         SHELF_SURFACE_HEIGHT=omni_config.omni.SHELF_SURFACE_HEIGHT,
@@ -283,26 +284,25 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
     assert child.to_dict() == expected
     assert child.rewards.goal_hold.func is omni_config.omni.goal_rewards.stable_goal_hold
     assert child.rewards.goal_hold.weight == 20.0
-    assert child.rewards.success.func is omni_config.omni.goal_rewards.success_event
+    assert child.rewards.success.func is cfg.StableGoalAchievement
     assert child.rewards.success.weight == 100.0
-    success = child.terminations.success
-    assert success.func is omni_config.omni.goal_terminations.StableGoalSuccess
+    success = child.rewards.success
     assert success.params["position_tolerance"] == 0.01
     assert success.params["speed_tolerance"] == 0.02
     assert success.params["hold_time"] == 0.5
     assert success.params["upright_angle"] == math.radians(10)
-    # Only active failures are consulted, and each is evaluated before success.
-    ordered = list(vars(child.terminations))
+    assert child.terminations.success is None
+    # The bonus advances the timer before the occupancy reward reads it.
+    ordered = list(vars(child.rewards))
+    assert ordered.index("success") < ordered.index("goal_hold")
     assert set(cfg.FAILURE_TERMS) == {
         key for key, term in vars(parent.terminations).items()
         if term is not None and not term.time_out
     }
-    assert all(ordered.index(key) < ordered.index("success") for key in cfg.FAILURE_TERMS)
-    assert not success.time_out
-    child.terminations.success.params["hold_time"] = 9.0
+    child.rewards.success.params["hold_time"] = 9.0
     child.rewards.arm_action_rate.weight = -99.0
     assert parent_type().to_dict() == snapshot
-    assert cfg.InspireDexTactileSweepOmniRenewalV2EnvCfg().terminations.success.params["hold_time"] == 0.5
+    assert cfg.InspireDexTactileSweepOmniRenewalV2EnvCfg().rewards.success.params["hold_time"] == 0.5
 
     registrations = {}
     gym = SimpleNamespace(registry=registrations)

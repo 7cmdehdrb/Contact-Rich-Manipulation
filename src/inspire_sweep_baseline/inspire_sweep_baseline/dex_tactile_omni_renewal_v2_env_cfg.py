@@ -1,12 +1,13 @@
-"""Dex Tactile v0 with a stable-goal hold reward and one terminal bonus."""
+"""Dex Tactile v0 with goal occupancy rewards continuing until timeout."""
 
 import math
 
-from isaaclab.managers import RewardTermCfg as RewTerm, TerminationTermCfg as DoneTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils import configclass
 
 from .dex_omni_renewal_env_cfg import DexOmniRenewalRewardsCfg
-from .mdp import goal_rewards, goal_terminations
+from .mdp import goal_rewards
+from .mdp.goal_hold_rewards import StableGoalAchievement
 from .omni_env_cfg import OBJECT_RADIUS, SHELF_HALF_EXTENTS, SHELF_SURFACE_HEIGHT
 from .omni_renewal_env_cfg import OmniRenewalTerminationsCfg
 from .tactile_omni_renewal_env_cfg import InspireDexTactileSweepOmniRenewalEnvCfg
@@ -20,16 +21,10 @@ FAILURE_TERMS = (
 
 @configclass
 class DexTactileOmniRenewalV2RewardsCfg(DexOmniRenewalRewardsCfg):
-    goal_hold = RewTerm(func=goal_rewards.stable_goal_hold, weight=20.0)
-    # success_event cancels dt: +100 once, on the successful terminal step.
-    success = RewTerm(func=goal_rewards.success_event, weight=100.0)
-
-
-@configclass
-class DexTactileOmniRenewalV2TerminationsCfg(OmniRenewalTerminationsCfg):
-    # Keep this last: all failure flags must be computed before eligibility.
-    success = DoneTerm(
-        func=goal_terminations.StableGoalSuccess,
+    # Evaluate the shared timer first; latch +100 without resetting the env.
+    success = RewTerm(
+        func=StableGoalAchievement,
+        weight=100.0,
         params={
             "position_tolerance": 0.01,
             "speed_tolerance": 0.02,
@@ -42,11 +37,18 @@ class DexTactileOmniRenewalV2TerminationsCfg(OmniRenewalTerminationsCfg):
             "failure_terms": FAILURE_TERMS,
         },
     )
+    goal_hold = RewTerm(func=goal_rewards.stable_goal_hold, weight=20.0)
+
+
+@configclass
+class DexTactileOmniRenewalV2TerminationsCfg(OmniRenewalTerminationsCfg):
+    # Achievement is a reward event. Only inherited failures/timeout end runs.
+    success = None
 
 
 @configclass
 class InspireDexTactileSweepOmniRenewalV2EnvCfg(InspireDexTactileSweepOmniRenewalEnvCfg):
-    """Direct v0 descendant; add only positive rewards and stable success."""
+    """Direct v0 descendant; reward stable occupancy until failure/timeout."""
 
     rewards: DexTactileOmniRenewalV2RewardsCfg = DexTactileOmniRenewalV2RewardsCfg()
     terminations: DexTactileOmniRenewalV2TerminationsCfg = DexTactileOmniRenewalV2TerminationsCfg()

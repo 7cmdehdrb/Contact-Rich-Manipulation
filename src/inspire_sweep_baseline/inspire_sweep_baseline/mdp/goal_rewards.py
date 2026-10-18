@@ -386,14 +386,14 @@ def success_event(env, termination_name="success"):
     return env.termination_manager.get_term(termination_name).float() / env.step_dt
 
 
-def stable_goal_hold(env, termination_name="success"):
-    """Positive reward rate ramping with the success term's eligible hold time.
+def stable_goal_hold(env, achievement_name="success"):
+    """Reward stable occupancy continuously, including after achievement.
 
-    Read the StableGoalSuccess instance already evaluated by the termination
-    manager. The same position, speed, support and failure gates therefore
-    govern both rewards. RewardManager applies weight and step_dt once.
+    Read the StableGoalAchievement reward evaluated earlier in this step.
+    This does not advance its timer or re-pay its episode-level bonus.
+    RewardManager applies weight and step_dt once.
     """
-    cfg = env.termination_manager.get_term_cfg(termination_name)
+    cfg = env.reward_manager.get_term_cfg(achievement_name)
     hold_time = cfg.params["hold_time"]
     if not math.isfinite(hold_time) or hold_time <= 0.0:
         raise ValueError("stable_goal_hold requires a positive finite success hold_time")

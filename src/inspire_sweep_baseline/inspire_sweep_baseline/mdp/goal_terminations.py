@@ -57,10 +57,10 @@ class StableGoalSuccess(ManagerTermBase):
 
     @property
     def hold_duration_s(self):
-        """Current consecutive eligible time, updated once by terminations.
+        """Current consecutive eligible time, updated once by the owning term.
 
-        Rewards may read this after termination computation without advancing
-        the counter a second time. Partial resets clear only the reset rows.
+        Other terms may read this without advancing the counter a second time.
+        Partial resets clear only the reset rows.
         """
         return self._hold_steps * self._env.step_dt
 
