@@ -194,7 +194,8 @@ def test_renewal_base_and_registered_descendants_use_base_exponential_rewards(re
             assert getattr(cfg.rewards, name).to_dict() == getattr(base, name).to_dict()
 
 
-def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_runner(renewal_tactile, omni_config, monkeypatch):
+@pytest.fixture
+def renewal_tactile_v1(renewal_tactile, omni_config, monkeypatch):
     parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     module = types.ModuleType("_dex_tactile_v1_cpu_cfg")
     module.__dict__.update(
@@ -204,6 +205,12 @@ def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_r
     )
     monkeypatch.setitem(sys.modules, module.__name__, module)
     cfg = _execute_definitions(MODULE_ROOT / "dex_tactile_omni_renewal_v1_env_cfg.py", module.__dict__)
+    return cfg
+
+
+def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_runner(renewal_tactile_v1, renewal_tactile, omni_config):
+    cfg = renewal_tactile_v1
+    parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     parent = parent_type()
     snapshot = parent.to_dict()
     child = cfg.InspireDexTactileSweepOmniRenewalV1EnvCfg()
@@ -247,8 +254,8 @@ def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_r
 
 
 @pytest.fixture
-def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch, load_mdp):
-    parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
+def renewal_tactile_v2(renewal_tactile_v1, renewal_tactile, omni_config, monkeypatch, load_mdp):
+    parent_type = renewal_tactile_v1.InspireDexTactileSweepOmniRenewalV1EnvCfg
     module = types.ModuleType("_dex_tactile_v2_cpu_cfg")
     module.__dict__.update(
         math=math, configclass=renewal_tactile.old.baseline.configclass,
@@ -262,16 +269,16 @@ def renewal_tactile_v2(renewal_tactile, omni_config, monkeypatch, load_mdp):
         OBJECT_RADIUS=omni_config.omni.OBJECT_RADIUS,
         SHELF_HALF_EXTENTS=omni_config.omni.SHELF_HALF_EXTENTS,
         SHELF_SURFACE_HEIGHT=omni_config.omni.SHELF_SURFACE_HEIGHT,
-        InspireDexTactileSweepOmniRenewalEnvCfg=parent_type,
+        InspireDexTactileSweepOmniRenewalV1EnvCfg=parent_type,
     )
     monkeypatch.setitem(sys.modules, module.__name__, module)
     cfg = _execute_definitions(MODULE_ROOT / "dex_tactile_omni_renewal_v2_env_cfg.py", module.__dict__)
     return cfg
 
 
-def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tactile_v2, renewal_tactile, omni_config):
+def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tactile_v2, renewal_tactile_v1, renewal_tactile, omni_config):
     cfg = renewal_tactile_v2
-    parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
+    parent_type = renewal_tactile_v1.InspireDexTactileSweepOmniRenewalV1EnvCfg
     parent = parent_type()
     snapshot = parent.to_dict()
     child = cfg.InspireDexTactileSweepOmniRenewalV2EnvCfg()
@@ -282,6 +289,12 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
     })
     expected["terminations"]["success"] = child.to_dict()["terminations"]["success"]
     assert child.to_dict() == expected
+    assert child.rewards.pushing_speed.func is omni_config.omni.goal_rewards.exponential_pushing_speed_cost_limit
+    assert child.rewards.arm_speed_excess.func is omni_config.omni.goal_rewards.exponential_joint_speed_cost_limit
+    assert child.rewards.pushing_speed.params["max_cost"] == 100.0
+    assert child.rewards.arm_speed_excess.params["max_cost"] == 100.0
+    assert child.terminations.shelf_collision.params["wrist_clearance"] == 0.03
+    assert child.events.object_spawn.params["excluded_x_half_angle"] == math.radians(15)
     assert child.rewards.goal_hold.func is omni_config.omni.goal_rewards.stable_goal_hold
     assert child.rewards.goal_hold.weight == 20.0
     assert child.rewards.success.func is cfg.StableGoalAchievement
@@ -316,6 +329,7 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
         "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2PPORunnerCfg"
     )
     runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV2PPORunnerCfg()
-    expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalPPORunnerCfg().to_dict()
+    assert isinstance(runner, renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg)
+    expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg().to_dict()
     expected_runner["experiment_name"] = "inspire_dex_tactile_sweep_omni_renewal_v2"
     assert runner.to_dict() == expected_runner

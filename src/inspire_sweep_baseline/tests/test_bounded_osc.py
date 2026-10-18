@@ -14,7 +14,7 @@ import torch
 from conftest import MODULE_ROOT, PROJECT_ROOT
 from test_omni_configuration import _execute_definitions, omni_config
 from test_tactile_configuration import tactile_config
-from test_tactile_renewal_configuration import renewal_tactile, renewal_tactile_v2
+from test_tactile_renewal_configuration import renewal_tactile, renewal_tactile_v1, renewal_tactile_v2
 
 
 @pytest.fixture
@@ -125,6 +125,13 @@ def test_v2_osc_changes_only_arm_control_and_keeps_v2_rewards_and_terminations(
     snapshot = parent.to_dict()
     child = cfg.InspireDexTactileSweepOmniRenewalV2OSCEnvCfg()
     assert isinstance(child, parent_type)
+    assert child.rewards.pushing_speed.params["max_cost"] == 100.0
+    assert child.rewards.arm_speed_excess.params["max_cost"] == 100.0
+    assert child.terminations.shelf_collision.params["wrist_clearance"] == 0.03
+    assert child.events.object_spawn.params["excluded_x_half_angle"] == math.radians(15)
+    assert child.terminations.success is None
+    assert child.rewards.success.weight == 100.0
+    assert child.rewards.goal_hold.weight == 20.0
     action = child.actions.arm_action
     assert action.class_type is bounded_osc.local.BoundedOperationalSpaceControllerAction
     assert action.position_scale == action.position_command_limit == 0.005

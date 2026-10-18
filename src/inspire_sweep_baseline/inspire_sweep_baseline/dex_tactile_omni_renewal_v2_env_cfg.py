@@ -1,4 +1,4 @@
-"""Dex Tactile v0 with goal occupancy rewards continuing until timeout."""
+"""Dex Tactile v1 with goal occupancy rewards continuing until timeout."""
 
 import math
 
@@ -6,14 +6,14 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils import configclass
 
 from .dex_omni_renewal_env_cfg import DexOmniRenewalRewardsCfg
+from .dex_tactile_omni_renewal_v1_env_cfg import InspireDexTactileSweepOmniRenewalV1EnvCfg
 from .mdp import goal_rewards
 from .mdp.goal_hold_rewards import StableGoalAchievement
 from .omni_env_cfg import OBJECT_RADIUS, SHELF_HALF_EXTENTS, SHELF_SURFACE_HEIGHT
 from .omni_renewal_env_cfg import OmniRenewalTerminationsCfg
-from .tactile_omni_renewal_env_cfg import InspireDexTactileSweepOmniRenewalEnvCfg
 
 
-# Only active failures inherited from v0; object_outside_shelf is disabled.
+# Only active failures inherited from v1; object_outside_shelf is disabled.
 FAILURE_TERMS = (
     "object_drop", "push_fast", "shelf_collision", "hand_velocity", "shelf_displacement",
 )
@@ -47,8 +47,8 @@ class DexTactileOmniRenewalV2TerminationsCfg(OmniRenewalTerminationsCfg):
 
 
 @configclass
-class InspireDexTactileSweepOmniRenewalV2EnvCfg(InspireDexTactileSweepOmniRenewalEnvCfg):
-    """Direct v0 descendant; reward stable occupancy until failure/timeout."""
+class InspireDexTactileSweepOmniRenewalV2EnvCfg(InspireDexTactileSweepOmniRenewalV1EnvCfg):
+    """Inherit v1 mechanics and reward stable occupancy until failure/timeout."""
 
     rewards: DexTactileOmniRenewalV2RewardsCfg = DexTactileOmniRenewalV2RewardsCfg()
     terminations: DexTactileOmniRenewalV2TerminationsCfg = DexTactileOmniRenewalV2TerminationsCfg()

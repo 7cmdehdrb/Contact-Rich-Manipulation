@@ -683,7 +683,7 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 
 ### Dex Tactile Renewal v2: 목표 유지와 성공 보너스
 
-`Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2`는 **v0를 직접 상속**한다. v1의 비용 상한·손목 높이·방향 제한은 적용하지 않는다. 기존 57D Actor/Critic 관측(현재 물체 GT 포함), 8D Joint Position/Hand 행동·센서·물성·reset·보상·실패 종료를 유지하고 다음 양의 보상 두 항을 추가한다. **성공으로 종료하지 않으며 기존 실패 또는 10초 timeout까지 유지한다.** 새 속도·위치 오차 비용과 액션 제한은 없다.
+`Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2`는 **v1을 직접 상속**한다. v1의 지수 물체/Arm 속도 비용 상한 100·손목 높이 종료 기준 3 cm·선반 로컬 ±X 각각 ±15° 목표 방향 제외를 적용한다. 물체 위치의 반경 2 cm 분포는 그대로이며 v1의 스폰 관련 변경은 목표 방향 제한이다. 기존 57D Actor/Critic 관측(현재 물체 GT 포함), 8D Joint Position/Hand 행동·센서·물성·reset·보상·실패 종료 위에 다음 양의 보상 두 항을 추가한다. **성공으로 종료하지 않으며 기존 실패 또는 10초 timeout까지 유지한다.** 별도의 새 속도·위치 오차 비용과 Joint Position 액션 제한은 없다.
 
 - `success`: 목표 XY 오차 <1 cm, 물체 XY 속도 <0.02 m/s, 선반 법선 대비 기울기 ≤10°, 물체 바닥의 선반면 오차 ≤1 cm, 물체 반경을 고려한 선반 내부 지지를 **0.5초 연속** 만족하면 달성 보상을 지급한다. 기존 실패 조건이 동시에 발생하면 지급하지 않는다. 성공 termination은 비활성이다.
 - 성공 보상: `StableGoalAchievement`가 최초 달성을 기억해 **에피소드당 +100 한 번** 지급한다. 목표 이탈·재진입으로 다시 지급하지 않으며 실제 episode reset에서만 재지급 가능해진다. dt를 상쇄하므로 제어 주기에 따라 보너스가 달라지지 않는다.
@@ -702,6 +702,8 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 ```
 
 [v2 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v2_env_cfg.py) · [초기 구현 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_goal_hold.md) · [성공 후 timeout까지 유지하도록 수정](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_v2_goal_hold_until_timeout.md).
+
+현행 상속은 `v0 → v1 → v2 → OSC v2`이며 PPO runner도 같은 버전 상속을 따른다. 환경 ID·실행 명령·보너스 계수는 그대로다. [v1 상속 전환·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_v2_inherits_v1.md).
 
 ### Dex Tactile Renewal OSC v2
 
