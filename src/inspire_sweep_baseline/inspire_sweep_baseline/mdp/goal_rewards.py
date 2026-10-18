@@ -134,13 +134,16 @@ def exponential_joint_speed_cost_limit(
     return _exponential_speed_excess_limit(velocity.abs().amax(dim=-1), free_speed, max_cost)
 
 
-def action_rate_l2(env, action_group="arm"):
-    """Sum squared raw command changes for the selected Arm or Hand group.
+def action_rate_l2(env, action_group="arm", max_cost=100.0):
+    """Sum squared raw command changes, capped at max_cost after summation.
 
     Match the reference Inspire action-rate cost before action processing:
-    no clipping, scaling, averaging or division by the control timestep.
+    no input clipping, scaling, averaging or division by the control timestep.
+    The cost is nonnegative, so only its upper bound is applied.
     RewardManager applies the configured weight and step_dt once.
     """
+    if not math.isfinite(max_cost) or max_cost < 0.0:
+        raise ValueError("max_cost must be finite and nonnegative")
     current = env.action_manager.action
     previous = env.action_manager.prev_action
     if current.shape[-1] != 8 or previous.shape != current.shape:
@@ -151,17 +154,19 @@ def action_rate_l2(env, action_group="arm"):
         selection = slice(6, 8)
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
-    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1)
+    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1).clamp_max(max_cost)
 
 
-def joint_vel_l2(env, asset_cfg=SceneEntityCfg("robot")):
-    """Sum squared actual joint speeds for an explicitly selected joint group.
+def joint_vel_l2(env, asset_cfg=SceneEntityCfg("robot"), max_cost=100.0):
+    """Nonnegative joint-speed squared sum, capped at max_cost after summation.
 
     Resolve Arm and Hand by name in the reward configuration instead of
     assuming that the first six articulation DOFs are the Arm.
     """
+    if not math.isfinite(max_cost) or max_cost < 0.0:
+        raise ValueError("max_cost must be finite and nonnegative")
     velocity = env.scene[asset_cfg.name].data.joint_vel[:, asset_cfg.joint_ids]
-    return velocity.square().sum(dim=-1)
+    return velocity.square().sum(dim=-1).clamp_max(max_cost)
 
 
 def normalized_action_rate(env, action_group="arm", normalization_scale=1.0, reduction="mean"):

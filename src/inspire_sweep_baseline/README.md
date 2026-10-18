@@ -2,6 +2,8 @@
 
 [활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)
 
+2026-10-18 공통 보상 변경: Omni 계열에서 사용하는 `mdp/goal_rewards.py`의 `action_rate_l2`·`joint_vel_l2`는 raw 입력의 제곱합을 계산한 뒤 `max_cost=100.0`으로 출력 상한을 적용한다. 두 함수의 반환 범위는 [0, 100]이며 음의 보상 가중치와 dt는 이후 RewardManager에서 적용한다. 입력·가중치는 바꾸지 않는다. [변경·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_omni_squared_cost_caps.md).
+
 환경 ID: `Isaac-Inspire-Sweep-Baseline-v0`
 
 `Isaac-Sweep-Object-UR5e-Random-Single-Inspire-Open-v2-mass`의 구성을 독립 패키지로 옮긴 환경이다. 기존 프로젝트 패키지를 import하거나 상속하지 않는다. MDP 함수, 로봇 스포너, 실린더 스포너, PPO 설정, 실행 스크립트와 로봇 USD를 이 패키지에 포함한다. Isaac Lab, Isaac Sim, RSL-RL은 기존 설치를 사용한다.
