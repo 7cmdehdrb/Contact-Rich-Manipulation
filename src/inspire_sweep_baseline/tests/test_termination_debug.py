@@ -1,0 +1,46 @@
+"""Commented termination diagnostics must leave reset silent and intact."""
+
+from types import SimpleNamespace
+
+import torch
+
+from conftest import MODULE_ROOT
+from test_omni_configuration import _execute_definitions
+
+
+def test_termination_diagnostics_are_silent_even_when_all_terms_fire(capsys):
+    names = ("time_out", "object_drop", "push_fast", "shelf_collision", "hand_velocity", "shelf_displacement")
+    flags = {name: torch.tensor([True, False, True]) for name in names}
+
+    class Base:
+        def _reset_idx(self, env_ids):
+            for flag in flags.values():
+                flag[env_ids] = False
+            self.episode_length_buf[env_ids] = 0
+
+    module = _execute_definitions(
+        MODULE_ROOT / "env.py", {"ManagerBasedRLEnv": Base, "torch": torch},
+    )
+    env = module.InspireSweepEnv.__new__(module.InspireSweepEnv)
+    env.sensor_data_fresh = torch.ones(3, dtype=torch.bool)
+    env.action_manager = SimpleNamespace(_action=torch.zeros(3, 8), _prev_action=torch.zeros(3, 8))
+    env.episode_length_buf = torch.tensor([1, 2, 500])
+    env.termination_manager = SimpleNamespace(
+        active_terms=names, get_term=lambda name: flags[name],
+        get_term_cfg=lambda name: SimpleNamespace(func=lambda env: None, time_out=name == "time_out"),
+    )
+    env._reset_idx(torch.tensor([0, 2]))
+    assert capsys.readouterr().out == ""
+    assert env.episode_length_buf.tolist() == [0, 2, 0]
+    env._reset_idx(torch.tensor([0, 2]))
+    assert capsys.readouterr().out == ""
+
+
+def test_all_tasks_use_common_runtime():
+    registrations = {}
+    gym = SimpleNamespace(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
+    _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
+    assert registrations
+    for registration in registrations.values():
+        assert registration["entry_point"] == "inspire_sweep_baseline.env:InspireSweepEnv"

@@ -201,6 +201,7 @@ def renewal_tactile_v1(renewal_tactile, omni_config, monkeypatch):
     module.__dict__.update(
         math=math, configclass=renewal_tactile.old.baseline.configclass,
         goal_rewards=omni_config.omni.goal_rewards,
+        ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES,
         InspireDexTactileSweepOmniRenewalEnvCfg=parent_type,
     )
     monkeypatch.setitem(sys.modules, module.__name__, module)
@@ -208,7 +209,7 @@ def renewal_tactile_v1(renewal_tactile, omni_config, monkeypatch):
     return cfg
 
 
-def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_runner(renewal_tactile_v1, renewal_tactile, omni_config):
+def test_dex_tactile_v1_requested_settings_and_separate_runner(renewal_tactile_v1, renewal_tactile, omni_config):
     cfg = renewal_tactile_v1
     parent_type = renewal_tactile.cfg.InspireDexTactileSweepOmniRenewalEnvCfg
     parent = parent_type()
@@ -216,6 +217,10 @@ def test_dex_tactile_v1_changes_only_three_requested_settings_and_has_separate_r
     child = cfg.InspireDexTactileSweepOmniRenewalV1EnvCfg()
     assert isinstance(child, parent_type)
     expected = parent.to_dict()
+    expected["scene"]["robot"]["actuators"]["arm"]["velocity_limit_sim"] = dict(
+        zip(omni_config.baseline.ARM_JOINT_NAMES, (2.0, 2.0, 2.0, 4.0, 4.0, 4.0))
+    )
+    assert child.terminations.hand_velocity.params["threshold"] == 5.0
     rewards = omni_config.omni.goal_rewards
     assert child.rewards.pushing_speed.func is rewards.exponential_pushing_speed_cost_limit
     expected["rewards"]["pushing_speed"]["func"] = (

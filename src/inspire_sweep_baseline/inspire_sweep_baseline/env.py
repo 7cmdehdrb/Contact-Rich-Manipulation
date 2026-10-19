@@ -15,6 +15,19 @@ class InspireSweepEnv(ManagerBasedRLEnv):
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
 
     def _reset_idx(self, env_ids):
+        # manager = getattr(self, "termination_manager", None)
+        # if manager is not None:
+        #     for name in manager.active_terms:
+        #         fired_ids = env_ids[manager.get_term(name)[env_ids]]
+        #         if fired_ids.numel():
+        #             cfg = manager.get_term_cfg(name)
+        #             function = getattr(cfg.func, "__name__", type(cfg.func).__name__)
+        #             print(
+        #                 f"[TERMINATION] term={name} function={function} timeout={cfg.time_out} "
+        #                 f"env_ids={fired_ids.tolist()} "
+        #                 f"episode_steps={self.episode_length_buf[fired_ids].tolist()}",
+        #                 flush=True,
+        #             )
         self.sensor_data_fresh[env_ids] = False
         super()._reset_idx(env_ids)
         # Arm history remains zero; the last two absolute commands mean OPEN.

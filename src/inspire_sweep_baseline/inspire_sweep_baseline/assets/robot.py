@@ -26,7 +26,6 @@ from isaaclab.sim.spawners.spawner_cfg import RigidObjectSpawnerCfg
 from isaaclab.sim.utils import clone, get_current_stage
 from isaaclab.utils import configclass
 
-
 ARM_JOINT_NAMES = (
     "shoulder_pan_joint",
     "shoulder_lift_joint",
@@ -104,7 +103,11 @@ ARM_BODY_NAMES = (
 HAND_LINK_BODY_NAMES = (
     "inspire_base_link",
     *(f"inspire_left_thumb_{index}" for index in range(1, 5)),
-    *(f"inspire_left_{finger}_{index}" for finger in ("index", "middle", "ring", "little") for index in range(1, 3)),
+    *(
+        f"inspire_left_{finger}_{index}"
+        for finger in ("index", "middle", "ring", "little")
+        for index in range(1, 3)
+    ),
 )
 
 HAND_CONTACT_BODY_NAMES = (*HAND_LINK_BODY_NAMES, *PALM_SENSOR_BODY_NAMES)
@@ -140,14 +143,21 @@ def _offset_matrix(translation: tuple[float, float, float]) -> Gf.Matrix4d:
     return matrix
 
 
-def _matrix_to_pose(matrix: Gf.Matrix4d) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
+def _matrix_to_pose(
+    matrix: Gf.Matrix4d,
+) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
     transform = Gf.Transform(matrix)
     translation = transform.GetTranslation()
     quaternion = transform.GetRotation().GetQuat().GetNormalized()
     imaginary = quaternion.GetImaginary()
     return (
         (float(translation[0]), float(translation[1]), float(translation[2])),
-        (float(quaternion.GetReal()), float(imaginary[0]), float(imaginary[1]), float(imaginary[2])),
+        (
+            float(quaternion.GetReal()),
+            float(imaginary[0]),
+            float(imaginary[1]),
+            float(imaginary[2]),
+        ),
     )
 
 
@@ -181,7 +191,9 @@ def _create_fixed_joint(
     joint.CreateCollisionEnabledAttr().Set(False)
 
 
-def _move_hand_rigid_bodies(stage: Usd.Stage, robot_path: str, desired_base_world: Gf.Matrix4d) -> Usd.Prim:
+def _move_hand_rigid_bodies(
+    stage: Usd.Stage, robot_path: str, desired_base_world: Gf.Matrix4d
+) -> Usd.Prim:
     hand_base = stage.GetPrimAtPath(f"{robot_path}/{HAND_BASE_BODY_NAME}")
     if not hand_base.IsValid() or not hand_base.HasAPI(UsdPhysics.RigidBodyAPI):
         raise RuntimeError(f"Missing hand base rigid body: {hand_base.GetPath()}")
@@ -189,7 +201,8 @@ def _move_hand_rigid_bodies(stage: Usd.Stage, robot_path: str, desired_base_worl
     bodies = [
         prim
         for prim in Usd.PrimRange(stage.GetPrimAtPath(robot_path))
-        if prim.GetName().startswith("inspire_") and prim.HasAPI(UsdPhysics.RigidBodyAPI)
+        if prim.GetName().startswith("inspire_")
+        and prim.HasAPI(UsdPhysics.RigidBodyAPI)
     ]
     old_world = {prim.GetPath(): _world_transform(prim) for prim in bodies}
     for prim in bodies:
@@ -225,11 +238,20 @@ def spawn_ur5e_axia80_inspire(
     wrist_body = stage.GetPrimAtPath(f"{prim_path}/{WRIST_BODY_NAME}")
     hand_base = stage.GetPrimAtPath(f"{prim_path}/{HAND_BASE_BODY_NAME}")
     old_mount = stage.GetPrimAtPath(f"{prim_path}/joints/{ORIGINAL_MOUNT_JOINT_NAME}")
-    if not robot_root.IsValid() or not wrist_body.IsValid() or not hand_base.IsValid() or not old_mount.IsValid():
-        raise RuntimeError("The package-local USD does not match the expected UR5e/Inspire topology.")
+    if (
+        not robot_root.IsValid()
+        or not wrist_body.IsValid()
+        or not hand_base.IsValid()
+        or not old_mount.IsValid()
+    ):
+        raise RuntimeError(
+            "The package-local USD does not match the expected UR5e/Inspire topology."
+        )
 
     mount_world = _world_transform(hand_base)
-    desired_hand_base_world = _offset_matrix((0.0, 0.0, cfg.sensor_height)) * mount_world
+    desired_hand_base_world = (
+        _offset_matrix((0.0, 0.0, cfg.sensor_height)) * mount_world
+    )
     hand_base = _move_hand_rigid_bodies(stage, prim_path, desired_hand_base_world)
 
     old_joint = UsdPhysics.Joint(old_mount)
@@ -237,7 +259,9 @@ def spawn_ur5e_axia80_inspire(
     old_mount.SetActive(False)
 
     sensor_world = _offset_matrix((0.0, 0.0, 0.5 * cfg.sensor_height)) * mount_world
-    sensor_pos, sensor_rot = _matrix_to_pose(sensor_world * _world_transform(robot_root).GetInverse())
+    sensor_pos, sensor_rot = _matrix_to_pose(
+        sensor_world * _world_transform(robot_root).GetInverse()
+    )
     sensor_cfg = sim_utils.CylinderCfg(
         radius=cfg.sensor_radius,
         height=cfg.sensor_height,
@@ -296,14 +320,16 @@ class Ur5eAxia80InspireSpawnerCfg(RigidObjectSpawnerCfg):
         disable_gravity=False,
         max_depenetration_velocity=5.0,
     )
-    articulation_props: sim_utils.ArticulationRootPropertiesCfg = sim_utils.ArticulationRootPropertiesCfg(
-        # The source Inspire collision meshes overlap at several adjacent
-        # knuckles in valid open postures.  PhysX cannot express the required
-        # adjacent-pair exclusions through ArticulationCfg, so follow the
-        # validated source-hand setup and keep articulation self-collision off.
-        enabled_self_collisions=False,
-        # Leave solver counts at the authored USD values (32 position / 1
-        # velocity), matching the v2-mass factory's explicit spawn overrides.
+    articulation_props: sim_utils.ArticulationRootPropertiesCfg = (
+        sim_utils.ArticulationRootPropertiesCfg(
+            # The source Inspire collision meshes overlap at several adjacent
+            # knuckles in valid open postures.  PhysX cannot express the required
+            # adjacent-pair exclusions through ArticulationCfg, so follow the
+            # validated source-hand setup and keep articulation self-collision off.
+            enabled_self_collisions=False,
+            # Leave solver counts at the authored USD values (32 position / 1
+            # velocity), matching the v2-mass factory's explicit spawn overrides.
+        )
     )
     sensor_radius: float = SENSOR_RADIUS
     sensor_height: float = SENSOR_HEIGHT
@@ -331,10 +357,21 @@ def make_robot_cfg() -> ArticulationCfg:
         actuators={
             "arm": ImplicitActuatorCfg(
                 joint_names_expr=list(ARM_JOINT_NAMES),
-                effort_limit_sim=dict(zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0))),
-                velocity_limit_sim=dict(zip(ARM_JOINT_NAMES, (3.14, 3.14, 3.14, 6.28, 6.28, 6.28))),
-                stiffness=dict(zip(ARM_JOINT_NAMES, (3328.7, 4989.4, 2394.2, 3500.2, 3174.8, 3032.4))),
-                damping=dict(zip(ARM_JOINT_NAMES, (368.8, 561.2, 274.1, 396.2, 363.1, 345.0))),
+                effort_limit_sim=dict(
+                    zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0))
+                ),
+                velocity_limit_sim=dict(
+                    zip(ARM_JOINT_NAMES, (3.14, 3.14, 3.14, 6.28, 6.28, 6.28))
+                ),
+                stiffness=dict(
+                    zip(
+                        ARM_JOINT_NAMES,
+                        (3328.7, 4989.4, 2394.2, 3500.2, 3174.8, 3032.4),
+                    )
+                ),
+                damping=dict(
+                    zip(ARM_JOINT_NAMES, (368.8, 561.2, 274.1, 396.2, 363.1, 345.0))
+                ),
             ),
             "hand": ImplicitActuatorCfg(
                 joint_names_expr=list(HAND_JOINT_NAMES),
@@ -385,4 +422,3 @@ __all__ = [
     "Ur5eAxia80InspireSpawnerCfg",
     "make_robot_cfg",
 ]
-

@@ -665,6 +665,12 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 
 ### Dex Tactile Renewal v1
 
+2026-10-19: Arm actuator의 `velocity_limit_sim`을 shoulder pan/lift·elbow는 2.0 rad/s, wrist 1/2/3는 4.0 rad/s로 설정했다. v2·OSC v2도 상속한다. 관절 위치 범위는 유지하며 Arm 과속 종료 기준은 >5.0 rad/s 그대로다. PhysX가 적용하는 속도 제한으로, 순간 초과를 완전히 보장하는 상태 clamp는 아니다. [변경·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-19_v1_arm_velocity_limits.md).
+
+2026-10-19 후속 요청으로 아래 종료 진단 블록은 전체 주석 처리했다. 현재 v1·v2·OSC를 포함한 모든 환경에서 종료 진단 print가 비활성화되어 있다.
+
+2026-10-19 종료 진단: 공통 `InspireSweepEnv`가 reset 직전에 발생한 모든 종료 항목을 `[TERMINATION]`으로 print한다. 출력은 종료 이름·함수·timeout 여부·환경 번호·episode step이며, 동시 발생도 각각 표시한다. v1·v2·OSC 등 모든 파생 환경에 기존 명령으로 새로 실행하면 적용된다. [종료 출력 구현](inspire_sweep_baseline/env.py) · [변경·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-19_v1_termination_prints.md).
+
 이후 파생 작업의 기준 환경은 사용자 지정 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0`다. 이번 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1`은 해당 v0를 직접 상속한다.
 
 - 물체·Arm 지수 속도 비용에 각각 `_limit` 함수를 사용하고 반환 비용을 최대 100으로 제한한다. weight −1.0에서 시간 곱셈 전 −100, 0.02 s 스텝의 항별 기여 하한은 −2다. 지수 계산 전에 포화시켜 overflow를 방지한다.

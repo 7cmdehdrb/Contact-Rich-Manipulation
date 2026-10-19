@@ -4,6 +4,7 @@ import math
 
 from isaaclab.utils import configclass
 
+from .assets.robot import ARM_JOINT_NAMES
 from .mdp import goal_rewards
 from .tactile_omni_renewal_env_cfg import InspireDexTactileSweepOmniRenewalEnvCfg
 
@@ -14,6 +15,10 @@ class InspireDexTactileSweepOmniRenewalV1EnvCfg(InspireDexTactileSweepOmniRenewa
 
     def __post_init__(self):
         super().__post_init__()
+        # PhysX joint speed limits in rad/s, below the 5 rad/s failure cutoff.
+        self.scene.robot.actuators["arm"].velocity_limit_sim = dict(
+            zip(ARM_JOINT_NAMES, (2.0, 2.0, 2.0, 4.0, 4.0, 4.0))
+        )
         self.rewards.pushing_speed.func = goal_rewards.exponential_pushing_speed_cost_limit
         self.rewards.pushing_speed.params["max_cost"] = 100.0
         self.rewards.arm_speed_excess.func = goal_rewards.exponential_joint_speed_cost_limit
