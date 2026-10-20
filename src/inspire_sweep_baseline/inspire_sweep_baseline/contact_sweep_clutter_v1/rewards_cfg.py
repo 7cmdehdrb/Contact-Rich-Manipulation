@@ -4,7 +4,13 @@ from isaaclab.managers import RewardTermCfg
 from isaaclab.utils import configclass
 
 from ..contact_sweep_clutter.rewards_cfg import ContactSweepClutterRewardsCfg
-from .mdp import contact_any, contact_count, goal_hold_xy, obstacle_displacement_l2, shelf_failure
+from .mdp import (
+    contact_any,
+    contact_count,
+    goal_hold_xy,
+    obstacle_displacement_l2,
+    shelf_failure,
+)
 
 
 @configclass
@@ -36,5 +42,5 @@ class ContactSweepClutterV1RewardsCfg(ContactSweepClutterRewardsCfg):
         super().__post_init__()
         self.reaching.weight = 30.0
         self.goal_distance.weight = 100.0
-        # self.pushing_speed.params["free_speed"] = 1.0
-        # self.arm_speed_excess.params["free_speed"] = 0.5
+        self.pushing_speed.params["free_speed"] = 0.1
+        # self.arm_speed_excess.params["free_speed"] = 0.7

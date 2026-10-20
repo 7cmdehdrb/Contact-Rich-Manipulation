@@ -12,6 +12,8 @@ from conftest import MODULE_ROOT
 from test_omni_configuration import _execute_definitions, omni_config
 from test_tactile_configuration import tactile_config, _add_live_sensor_data, _assemble_policy
 from test_tactile_renewal_configuration import renewal_tactile, renewal_tactile_v1
+from test_clutter_v1_rewards import v1_mdp
+from test_contact_sweep_clutter_mdp import clutter_modules
 
 
 @pytest.fixture
@@ -149,3 +151,38 @@ def test_reference_runtime_resets_sensor_freshness_and_hand_history():
     env.sensor_data_fresh[:] = False
     fresh, _ = env.step(torch.zeros(3, 8))
     assert fresh.tolist() == [True, False, True]
+
+
+def test_curriculum_rewards_inherit_current_v1_and_isolate_config_instances(
+    contact_config, v1_mdp, clutter_modules, monkeypatch,
+):
+    module = types.ModuleType("_contact_curriculum_config")
+    module.__dict__.update(contact_config.new)
+    module.__dict__.update(vars(v1_mdp.mdp))
+    module.__dict__.update(
+        __name__=module.__name__,
+        all_object_tilt_cost=clutter_modules.mdp.all_object_tilt_cost,
+        RewardTermCfg=contact_config.new["RewTerm"],
+    )
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    for path in (
+        "contact_sweep_clutter/rewards_cfg.py",
+        "contact_sweep_clutter_v1/rewards_cfg.py",
+        "contact_sweep_clutter_v1_curriculum/rewards_cfg.py",
+    ):
+        _execute_definitions(MODULE_ROOT / path, module.__dict__)
+    parent = module.ContactSweepClutterV1RewardsCfg()
+    child = module.ContactSweepClutterV1CurriculumRewardsCfg()
+    before = parent.to_dict()
+    expected = parent.to_dict()
+    expected["pushing_speed"]["params"]["free_speed"] = .1
+    expected["arm_speed_excess"]["params"]["free_speed"] = 1.
+    expected["arm_action_rate"]["weight"] = -.03
+    expected["arm_joint_velocity"]["weight"] = -.03
+    assert child.to_dict() == expected
+    assert child.arm_action_rate.func is parent.arm_action_rate.func
+    assert child.arm_joint_velocity.func is parent.arm_joint_velocity.func
+    child.arm_action_rate.weight = -.06
+    child.arm_speed_excess.params["free_speed"] = .8
+    assert parent.to_dict() == before
+    assert module.ContactSweepClutterV1CurriculumRewardsCfg().to_dict() == expected

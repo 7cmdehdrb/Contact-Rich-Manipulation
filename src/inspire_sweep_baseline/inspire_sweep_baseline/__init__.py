@@ -6,6 +6,7 @@ TASK_ID = "Isaac-Inspire-Sweep-Baseline-v0"
 CONTACT_SWEEP_TASK_ID = "Isaac-Inspire-Contact-Sweep-v0"
 CONTACT_SWEEP_CLUTTER_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v0"
 CONTACT_SWEEP_CLUTTER_V1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v1"
+CONTACT_SWEEP_CLUTTER_V1_CURRICULUM_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1"
 CONTACT_SWEEP_CLUTTER_V2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v2"
 REALISTIC_PHYSICS_TASK_ID = "Isaac-Inspire-Sweep-Realistic-Physics-v0"
 INITIAL_PRIVILEGED_TASK_ID = (
@@ -35,6 +36,17 @@ DEX_TACTILE_OMNI_RENEWAL_V2_OSC_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-
 
 OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
 
+
+if CONTACT_SWEEP_CLUTTER_V1_CURRICULUM_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_V1_CURRICULUM_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_v1_curriculum.env:ContactSweepClutterV1CurriculumEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_v1_curriculum.env_cfg:ContactSweepClutterV1CurriculumEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_v1_curriculum.ppo_cfg:ContactSweepClutterV1CurriculumPPORunnerCfg",
+        },
+    )
 
 if CONTACT_SWEEP_CLUTTER_V2_TASK_ID not in gym.registry:
     gym.register(

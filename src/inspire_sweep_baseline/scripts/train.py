@@ -278,6 +278,12 @@ def main(
         runner = OnPolicyRunner(
             env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device
         )
+    elif agent_cfg.class_name == "CurriculumOnPolicyRunner":
+        from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
+
+        runner = CurriculumOnPolicyRunner(
+            env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device
+        )
     elif agent_cfg.class_name == "DistillationRunner":
         runner = DistillationRunner(
             env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device

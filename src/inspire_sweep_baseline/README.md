@@ -775,6 +775,38 @@ python src/inspire_sweep_baseline/scripts/analyze_clutter_rewards.py \
 
 분석 스크립트는 TensorBoard가 설치된 Python으로 실행한다. `--last-n 0` 또는 생략 시 전체 iteration을 사용한다. `--log-dir`를 새 v1 run으로 바꾸면 기존 가정치와 실제 신규 보상 그룹 비중을 함께 확인할 수 있다. 저장된 `params/env.yaml`의 계수를 읽으며 simulator를 시작하지 않는다. 재생은 관측 의미와 Critic 차원이 맞는 v1 checkpoint를 사용한다. [개발·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_clutter_v1.md)에 계산 근거와 실제 검증 범위를 기록한다.
 
+### Contact Sweep Clutter Curriculum v1 — Learning iteration 기반 보상
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1`는 현재 Clutter v1의 Env·Cfg·보상·PPO 설정을 상속한다. 구현은 [`contact_sweep_clutter_v1_curriculum/`](inspire_sweep_baseline/contact_sweep_clutter_v1_curriculum), 일정은 [`curriculum_cfg.py`](inspire_sweep_baseline/contact_sweep_clutter_v1_curriculum/curriculum_cfg.py)에서 관리한다.
+
+| 변경 대상 | 초기값 | 감소 주기 | 회당 감소량 | 최종값 |
+| --- | --- | --- | --- | --- |
+| `pushing_speed.params["free_speed"]` | 0.1 m/s | 3,000 iteration | 0.01 | 0.05 |
+| `arm_speed_excess.params["free_speed"]` | 1.0 rad/s | 5,000 iteration | 0.05 | 0.8 |
+| `arm_action_rate.weight` | −0.03 | 3,000 iteration | 0.005 | −0.06 |
+| `arm_joint_velocity.weight` | −0.03 | 3,000 iteration | 0.005 | −0.06 |
+
+로그의 0-based **Learning iteration**을 사용한다. 첫 변경은 각각 3,000·5,000 iteration의 rollout 첫 step 전에 적용한다. 이후 최종값에 도달하면 고정한다. `CurriculumOnPolicyRunner`가 `learn()` 시작 iteration과 실제 `num_steps_per_env`로 rollout 경계를 추적하므로 병렬 환경 수·physics step·episode reset 횟수에 의존하지 않는다. 보상은 `CurriculumManager`에서 절대값으로 계산해 실행 중인 `RewardManager`에 반영한다. Reset을 반복해도 감소가 누적되지 않으며 진행 중인 모든 episode에도 같은 값이 적용된다.
+
+재개는 checkpoint 내부 `iter`를 사용한다. 설치된 RSL-RL 5.0.1이 저장 index부터 다시 시작하는 원래 동작을 유지한다. 재생은 checkpoint 단계에 고정한다. 직접 환경만 실행하면 iteration 0이며, 다른 실행기는 `set_learning_iteration(i)`를 연결해야 한다. 기본 train/play는 등록된 전용 runner를 자동 선택한다.
+
+사용자 명시 요청에 따라 이 환경의 Arm 두 가중치만 변화한다. Hand 가중치 −0.03/−0.01, 로컬 raw 제곱합 함수·출력 상한·dt 처리, v1 관측·Action·장면·reset·종료·나머지 보상은 상속한다. 별도 v2의 F/T 보정은 포함하지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1 --num_envs 2048 --headless \
+  --resume --load_run "<run-directory-name>" --checkpoint "model_15000.pt"
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1 --num_envs 1 \
+  --checkpoint "<curriculum-checkpoint.pt>" --real-time
+```
+
+로그 폴더는 `logs/rsl_rl/inspire_contact_sweep_clutter_v1_curriculum`이다. TensorBoard의 `Curriculum/pushing_free_speed`, `Curriculum/arm_free_speed`, `Curriculum/arm_action_rate_weight`, `Curriculum/arm_joint_velocity_weight`에 reset 시점의 현재값을 기록한다. [실행한 검사와 GPU 미검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_clutter_v1_curriculum.md)를 확인한다.
+
 ### Contact Sweep Clutter v2 — F/T 하중 보정과 변화 비용
 
 `Isaac-Inspire-Contact-Sweep-Clutter-v2`는 Clutter v1의 Env·EnvCfg·관측·보상·PPO runner를 상속한다. [`contact_sweep_clutter_v2/`](inspire_sweep_baseline/contact_sweep_clutter_v2)에 구현하며, 기본 로그 폴더는 `logs/rsl_rl/inspire_contact_sweep_clutter_v2`다.
