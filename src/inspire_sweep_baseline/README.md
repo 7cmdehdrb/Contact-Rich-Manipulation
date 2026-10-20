@@ -696,6 +696,38 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 
 실험 폴더는 `logs/rsl_rl/inspire_contact_sweep`다. CPU 관련 검사 **131개 통과**, GPU 8 env·1 iteration 완료. v3 smoke와 저장 환경 YAML은 log_dir 외 동일하고 PPO는 experiment/run 이름 외 동일했다. 같은 seed의 1 iteration 후 Actor/Critic tensor도 전부 일치했다. 장시간 학습·실물 성능은 미검증이다. [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_reference.md).
 
+### Contact Sweep Clutter v0 — 장애물 초기 관측과 MLP 임베딩
+
+`Isaac-Inspire-Contact-Sweep-Clutter-v0`는 `ContactSweepEnv`·`ContactSweepEnvCfg`·`ContactSweepPPORunnerCfg`를 상속한다. 구현은 [`contact_sweep_clutter/`](inspire_sweep_baseline/contact_sweep_clutter)에 있다. 부모의 중앙 반경 2 cm 타겟 스폰, 최대 15 cm 목표와 선반 ±X 각각 15° 방향 제외, 고정 초기 관절 자세를 유지한다.
+
+목표를 먼저 확정하고 [`src/scene_randomization`](../scene_randomization/LOGIC.md)의 장애물 배치 규칙을 적용한다. 장애물은 **3개 고정**이며 뒤쪽 GRAY 1개, WHITE 2개다. RED 제외 반경은 **10.3 cm**(물체 반지름 4 cm × 2 + 여유 2.3 cm)로, 최초 v0의 8.3 cm에서 2 cm 확대했다. 형태와 전면 방향 확장 규칙은 유지한다. RED 회피, Tool/Wrist 전면 점유, 물체 간격, 셀·국소 밀도와 손가락 접근 경로 조건을 재사용한다. 장애물 배치 재시도에서도 타겟·목표는 바꾸지 않으며, 시도 상한에 도달하면 오류로 명시한다. 참조 생성기의 360°·5–20 cm 목표 및 넓은 타겟 스폰 분포는 사용자 선택에 따라 적용하지 않는다.
+
+원본 cm 좌표 `(x, y)`는 선반 로컬 m 좌표 `(0.20-y/100, x/100)`로 변환한다. 원본 −Y 전면 방향은 로봇 쪽인 선반 +X가 된다. 타겟은 파란색, 장애물은 주황색이다. 모든 실린더는 반지름 4 cm·높이 10 cm와 같은 질량·관성·마찰·충돌 설정을 사용한다. 매 reset에서 타겟의 물성 샘플을 모든 장애물에 동일하게 적용한다.
+
+| 구성 | 부모 대비 변경 |
+| --- | --- |
+| `object_tilt` | 기존 물체별 비용 `clip((angle−5°)/(0.9−5°), 0, 1)²`를 타겟과 장애물 총 4개에 합산. weight −2 유지 |
+| `object_drop` | 어떤 물체든 기존 높이 1.04 m 미만 또는 선반 법선 대비 tilt ≥0.9 rad이면 종료 |
+| 17D 촉각 | 직접 패드 접촉에 더해 손가락 본체 투영 필터에 타겟·장애물 총 4개 모두 포함 |
+| `obstacles` 관측 | `[HEADER, x, y, z] × 10` = 40D. 실제 장애물 3개는 HEADER=1, 나머지 7개는 전부 0 |
+| 초기 위치 | 타겟과 같은 robot-root frame, 단위 m, 실린더 밑면 중심. reset 때 각 축 ±1 cm 노이즈를 한 번 추가하고 episode 동안 고정 |
+| 정책·가치망 | 별도 학습 가능한 `40 → 32(ReLU) → 16` 인코더를 각각 사용, 기존 57D에 연결해 73D 입력 |
+
+기존 타겟 위치는 현재값이며 장애물만 초기 관측이다. rollout에는 `policy` 57D와 `obstacles` 40D를 저장하고 PPO 미니배치에서 임베딩을 다시 계산하므로 인코더까지 학습된다. Checkpoint는 인코더·optimizer를 포함하며 JIT/ONNX export도 인코더를 포함한다. Export의 외부 입력은 `[policy57, obstacles40]` 순서의 **97D**, 내부 정책망 입력은 **73D**다.
+
+나머지 보상·종료, Action 8D, Arm/Hand 네 운동 페널티와 물리적 관절 속도 제한, 제어 주기·PPO hyperparameter는 상속한다. 물체 속도 비용·`push_fast`는 기존처럼 타겟만 검사한다. 기존 57D 단일 물체 checkpoint와 입력·모델 구조가 다르므로 이 task로 학습한 checkpoint를 사용한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-v0 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-v0 --num_envs 1 \
+  --checkpoint "<clutter-checkpoint.pt>" --real-time
+```
+
+로그는 `logs/rsl_rl/inspire_contact_sweep_clutter`에 저장한다. 배치 계산은 checkout의 `src/scene_randomization/generator.py`를 읽기 전용으로 사용하므로 두 패키지를 함께 유지한다. 3개 장애물·RED 확장 변경은 [후속 검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_clutter_red_expansion.md)에 기록했다. 최초 구현의 검증 명령·결과·미검증 범위는 [개발 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_clutter.md)에 기록한다.
+
 ### Dex Tactile Renewal v3 — v1 상속, 질량·속도 비용·목표 보상 조정
 
 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3`는 `InspireDexTactileSweepOmniRenewalV1EnvCfg`를 직접 상속한다. Actor/Critic 57D, Joint Position 6D + Hand 2D, 0.02초 제어 주기와 기존 종료 조건을 사용한다.
