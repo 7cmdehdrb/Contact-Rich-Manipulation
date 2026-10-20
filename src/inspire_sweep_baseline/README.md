@@ -730,6 +730,8 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 
 ### Contact Sweep Clutter v1 — 초기 타겟 관측과 보상 균형
 
+2026-10-20 후속: `shelf_failure`는 `shelf_collision` 실패의 마지막 step 보상에서 **−3을 한 번** 차감한다. 실패 판정 후 reset 전에 계산하며 `dt`를 상쇄한다. Timeout 또는 다른 실패만 발생한 경우에는 0이다. v2도 상속한다. [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_clutter_v1_shelf_failure.md).
+
 `Isaac-Inspire-Contact-Sweep-Clutter-v1`는 Clutter v0의 Env·EnvCfg·관측·보상·PPO 설정을 상속한다. 구현은 [`contact_sweep_clutter_v1/`](inspire_sweep_baseline/contact_sweep_clutter_v1)에 있으며 runner는 `ContactSweepClutterV1PPORunnerCfg`, 로그 경로는 `logs/rsl_rl/inspire_contact_sweep_clutter_v1`다.
 
 Actor의 `policy.target_obs_state` 3D는 현재 타겟 위치에서 **episode 시작 위치**로 바뀐다. `InitialObjectPositionInRoot`가 reset 때 Command가 저장한 타겟 link 원점을 robot-root frame으로 변환해 고정한다. Initial Privileged 환경처럼 각 좌표에 reset당 한 번 ±1 cm 오차를 더하며 매 step 새로 측정하지 않는다. Critic 전용 `privileged.target_position` 3D는 현재 타겟 위치를 같은 frame에서 매 step 읽고 관측 노이즈를 추가하지 않는다. 기존 `agents/initial_privileged_ppo_cfg.py`의 비대칭 라우팅을 따르되, Critic 추가 정보는 요청한 위치 3D로 한정한다.

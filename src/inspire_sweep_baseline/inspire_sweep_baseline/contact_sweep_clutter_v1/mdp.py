@@ -7,6 +7,18 @@ import torch
 from ..mdp.tactile_observations import ProjectedTactileContactBits
 
 
+def shelf_failure(env):
+    """Unit event on the shelf-collision terminal transition, before auto-reset.
+
+    TerminationManager has already evaluated this transition; RewardManager
+    runs before reset clears its flags. Cancel its dt multiplier so weight
+    -3 means an actual -3 once on the final step, not a -3-per-second rate.
+    Timeout or other failures alone do not trigger this event. Auto-reset
+    makes each shelf-collision event the last rewarded step of its episode.
+    """
+    return env.termination_manager.get_term("shelf_collision").float() / env.step_dt
+
+
 class SharedTactileContactBits(ProjectedTactileContactBits):
     """Read current contacts once for both reward terms and the observation.
 
