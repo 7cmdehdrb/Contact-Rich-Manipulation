@@ -773,6 +773,27 @@ python src/inspire_sweep_baseline/scripts/analyze_clutter_rewards.py \
 
 분석 스크립트는 TensorBoard가 설치된 Python으로 실행한다. `--last-n 0` 또는 생략 시 전체 iteration을 사용한다. `--log-dir`를 새 v1 run으로 바꾸면 기존 가정치와 실제 신규 보상 그룹 비중을 함께 확인할 수 있다. 저장된 `params/env.yaml`의 계수를 읽으며 simulator를 시작하지 않는다. 재생은 관측 의미와 Critic 차원이 맞는 v1 checkpoint를 사용한다. [개발·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_clutter_v1.md)에 계산 근거와 실제 검증 범위를 기록한다.
 
+### Contact Sweep Clutter v2 — F/T 하중 보정과 변화 비용
+
+`Isaac-Inspire-Contact-Sweep-Clutter-v2`는 Clutter v1의 Env·EnvCfg·관측·보상·PPO runner를 상속한다. [`contact_sweep_clutter_v2/`](inspire_sweep_baseline/contact_sweep_clutter_v2)에 구현하며, 기본 로그 폴더는 `logs/rsl_rl/inspire_contact_sweep_clutter_v2`다.
+
+기존 `policy.wrist_wrench` 6D를 **Hand 중력·관성 하중을 차감한 EEF 기준점·EEF 축의 6축 반력**으로 교체한다. `axia80_feasibility`의 tool-only 차감 원리를 참조하되, 현재 Hand 자세·손가락 구성·가속도에 맞춘 모델 기반 보정을 사용한다. 하류 30개 강체의 실제 PhysX 질량·관성과 운동 상태를 사용하며 물체 GT·접촉 대상 ID를 보정 입력으로 사용하지 않는다. 고정 tare를 수집하지 않아 초기 접촉을 영점으로 지우지 않으며, 수치·solver 오차에 따른 잔여값은 남을 수 있다.
+
+새 `wrench_change` 비용은 같은 보정 표본을 월드 축으로 표현한 뒤 제어 step 사이 힘·모멘트 변화량을 계산한다. 각각 0.5 N·0.01 N·m까지 무비용이며, 초과분을 5 N·0.1 N·m로 나눈 제곱합의 절반을 최대 1로 제한한다. weight는 −0.1로 **초당 최대 −0.1·10초당 최대 −1**이다. 추가로 각 시점의 누적 비용을 **그때까지 실제로 얻은 양의 보상 합의 5%** 이하로 제한한다. 첫 유효 표본은 이력 초기화에만 사용하며 부분 reset 시 해당 환경의 이력·한도만 초기화한다.
+
+Actor 초기 타겟·Critic 현재 타겟, 원시 Actor 97D·Critic 100D와 인코더 후 73D·76D, 8D action·0.02초 제어·10초 timeout·실패 종료, 기존 14개 보상과 Arm/Hand 네 운동 비용의 함수·계수는 유지한다. F/T 관측 의미가 바뀌므로 v2로 새로 학습한 checkpoint 사용을 기본으로 한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-v2 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-v2 --num_envs 1 \
+  --checkpoint "<clutter-v2-checkpoint.pt>" --real-time
+```
+
+[보정·비용 계산식과 검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_clutter_v2.md)에 실제 실행 결과와 미검증 범위를 구분해 기록한다. 보정 모델과 비용 상한의 검증은 장기 학습의 밀기 성공률·충돌 회피 편향 개선을 입증하지 않는다.
+
 ### Dex Tactile Renewal v3 — v1 상속, 질량·속도 비용·목표 보상 조정
 
 `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3`는 `InspireDexTactileSweepOmniRenewalV1EnvCfg`를 직접 상속한다. Actor/Critic 57D, Joint Position 6D + Hand 2D, 0.02초 제어 주기와 기존 종료 조건을 사용한다.
