@@ -258,6 +258,60 @@ def test_dex_tactile_v1_requested_settings_and_separate_runner(renewal_tactile_v
     assert runner.to_dict() == expected_runner
 
 
+def test_v3_branches_from_v1_with_empirical_reward_balance_and_heavier_reset_mass(
+    renewal_tactile_v1, renewal_tactile, monkeypatch, load_mdp,
+):
+    parent_type = renewal_tactile_v1.InspireDexTactileSweepOmniRenewalV1EnvCfg
+    physics = load_mdp("realistic_physics")
+    module = types.ModuleType("_dex_tactile_v3_cpu_cfg")
+    module.__dict__.update(
+        configclass=renewal_tactile.old.baseline.configclass,
+        InspireDexTactileSweepOmniRenewalV1EnvCfg=parent_type,
+        randomize_scaled_episode_physics=physics.randomize_scaled_episode_physics,
+    )
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    cfg = _execute_definitions(MODULE_ROOT / "dex_tactile_omni_renewal_v3_env_cfg.py", module.__dict__)
+    parent = parent_type()
+    snapshot = parent.to_dict()
+    child_type = cfg.InspireDexTactileSweepOmniRenewalV3EnvCfg
+    child = child_type()
+    assert isinstance(child, parent_type)
+    expected = parent.to_dict()
+    expected["rewards"]["pushing_speed"]["params"]["free_speed"] = 0.2
+    expected["rewards"]["pushing_speed"]["weight"] = -2.0
+    expected["rewards"]["goal_distance"]["weight"] = 94.0
+    expected["scene"]["object_collection"]["rigid_objects"]["mass_cylinder"]["spawn"]["mass_props"]["mass"] *= 1.5
+    expected["events"]["physics_randomization"]["params"]["mass_scale"] = 1.5
+    expected["events"]["physics_randomization"]["func"] = f"{physics.__name__}:randomize_scaled_episode_physics"
+    assert child.to_dict() == expected
+    assert child.rewards.reaching.weight == 30.0
+    # These are measured TensorBoard means, not theoretical reward budgets.
+    reaching, goal = 0.7783182442188263, 3.314544939994812
+    assert goal * child.rewards.goal_distance.weight / 300 / reaching == pytest.approx(4 / 3, rel=0.001)
+    assert getattr(child.rewards, "success", None) is None
+    assert getattr(child.terminations, "success", None) is None
+    child.events.physics_randomization.params["mass_scale"] = 99.0
+    child.scene.object_collection.rigid_objects["mass_cylinder"].spawn.mass_props.mass = 99.0
+    assert parent.to_dict() == snapshot
+    assert parent_type().to_dict() == snapshot
+    assert child_type().to_dict() == expected
+
+    registrations = {}
+    gym = SimpleNamespace(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
+    _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
+    registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3"]
+    assert registration["kwargs"]["env_cfg_entry_point"] == (
+        "inspire_sweep_baseline.dex_tactile_omni_renewal_v3_env_cfg:InspireDexTactileSweepOmniRenewalV3EnvCfg"
+    )
+    assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
+        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV3PPORunnerCfg"
+    )
+    expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg().to_dict()
+    expected_runner["experiment_name"] = "inspire_dex_tactile_sweep_omni_renewal_v3"
+    assert renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV3PPORunnerCfg().to_dict() == expected_runner
+
+
 @pytest.fixture
 def renewal_tactile_v2(renewal_tactile_v1, renewal_tactile, omni_config, monkeypatch, load_mdp):
     parent_type = renewal_tactile_v1.InspireDexTactileSweepOmniRenewalV1EnvCfg

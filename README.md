@@ -74,6 +74,13 @@ UR Description의 현재 경로는 `src/trash/Universal_Robots_ROS2_Description`
 
 ## 활성 환경 실행
 
+2026-10-20부터 별도 기준 환경은 **`Isaac-Inspire-Contact-Sweep-v0`**다. Renewal v3의 최종 설정을 독립 Env·Manager Cfg로 구성했다. [클래스 구조와 실행 안내](src/inspire_sweep_baseline/README.md#contact-sweep-v0--독립-기준-환경)를 따른다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-v0 --num_envs 2048 --headless
+```
+
 저장소 루트에서 Isaac Lab 실행 환경을 사용한다. 아래 명령은 실행 예시이며
 전체 환경별 명령·상속 구조는 [활성 환경 안내](example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)에 있다.
 

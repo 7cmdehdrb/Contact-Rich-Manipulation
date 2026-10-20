@@ -123,6 +123,39 @@ def test_reset_has_constant_number_of_physx_calls(load_mdp, monkeypatch, count):
     assert views[1].reads["mass"] == views[1].reads["inertia"] == 1
 
 
+def test_mass_scale_changes_mass_and_inertia_without_compounding_or_changing_friction(load_mdp, monkeypatch):
+    physics = load_mdp("realistic_physics")
+    parent, parent_views = make_physics_env(physics, monkeypatch)
+    child, child_views = make_physics_env(physics, monkeypatch)
+    physics.initialize_realistic_materials(parent)
+    physics.initialize_realistic_materials(child)
+    # Use the same friction pool and random draws to isolate the mass change.
+    child._realistic_physics.friction_buckets = parent._realistic_physics.friction_buckets.clone()
+    original_inertia = child_views[1].inertia.clone()
+    ids = torch.tensor([1])
+    for seed in (7, 11):
+        torch.manual_seed(seed)
+        physics.randomize_episode_physics(parent, ids)
+        torch.manual_seed(seed)
+        physics.randomize_scaled_episode_physics(child, ids, mass_scale=1.5)
+        assert torch.allclose(child_views[1].mass[ids], parent_views[1].mass[ids] * 1.5)
+        assert torch.allclose(child_views[1].inertia[ids], parent_views[1].inertia[ids] * 1.5)
+        assert 0.345 <= child._realistic_physics.mass[1] <= 0.750
+        assert torch.equal(child_views[1].mass[[0, 2]], torch.full((2, 1), 0.365))
+        assert torch.equal(child_views[1].inertia[[0, 2]], original_inertia[[0, 2]])
+        for a, b in zip(parent_views, child_views):
+            assert torch.equal(a.properties, b.properties)
+
+
+@pytest.mark.parametrize("scale", [0.0, -1.0, float("nan"), float("inf")])
+def test_invalid_mass_scale_rejected_before_physics_writes(load_mdp, monkeypatch, scale):
+    physics = load_mdp("realistic_physics")
+    env, views = make_physics_env(physics, monkeypatch)
+    with pytest.raises(ValueError, match="mass_scale"):
+        physics.randomize_scaled_episode_physics(env, None, mass_scale=scale)
+    assert all(not any(view.writes.values()) for view in views)
+
+
 def test_gaussian_bucket_pool_retains_marginals_and_bounds_material_count(load_mdp):
     physics = load_mdp("realistic_physics")
     torch.manual_seed(42)

@@ -1,6 +1,7 @@
 """Batched episode mass/friction updates without USD edits or view readbacks."""
 
 from dataclasses import dataclass
+import math
 
 import torch
 
@@ -124,7 +125,14 @@ def initialize_realistic_materials(env, env_ids=None):
 
 
 def randomize_episode_physics(env, env_ids=None):
+    """Original reset event with the default object-mass distribution."""
+    randomize_scaled_episode_physics(env, env_ids, mass_scale=1.0)
+
+
+def randomize_scaled_episode_physics(env, env_ids, mass_scale=1.0):
     """One batched update per view, independent of the number of reset rows."""
+    if not math.isfinite(mass_scale) or mass_scale <= 0.0:
+        raise ValueError("mass_scale must be positive and finite")
     if env_ids is None:
         ids = torch.arange(env.num_envs)
     elif isinstance(env_ids, torch.Tensor):
@@ -136,6 +144,7 @@ def randomize_episode_physics(env, env_ids=None):
     initialize_realistic_materials(env)
     state = env._realistic_physics
     mass, static, dynamic = sample_episode_properties(ids.numel(), state.friction_buckets)
+    mass = mass * mass_scale
     view = env.scene["object_collection"].root_physx_view
     state.mass_buffer[ids] = mass[:, None]
     ratio = mass / state.default_mass[ids, 0]

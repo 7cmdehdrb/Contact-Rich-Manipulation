@@ -663,6 +663,68 @@ PPO는 부모와 같고 기본 실험 폴더 이름만 분리한다. 두 task �
 [Renewal 계열 속도 초과 비용의 exp 통일·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-16_renewal_only_exponential.md). `joint_vel_l2` 등 별도 운동 제곱합 페널티는 기존 규칙대로 유지한다.
 
 
+### Contact Sweep v0 — 독립 기준 환경
+
+2026-10-20 사용자 요청으로 Renewal v3의 최종 동작을 독립된 기준 환경 **`Isaac-Inspire-Contact-Sweep-v0`**로 구성했다. 기존 v3의 클래스와 설정은 보존한다. 새 환경은 기존 Baseline/Omni/Renewal 환경 Cfg를 import하거나 상속하지 않는다.
+
+[`contact_sweep/`](inspire_sweep_baseline/contact_sweep)에서 Manager별 클래스를 직접 정의한다.
+
+| 파일 | 클래스·책임 |
+| --- | --- |
+| `env.py` | `ContactSweepEnv(ManagerBasedRLEnv)`: 센서 freshness·reset Action 이력 |
+| `env_cfg.py` | `ContactSweepEnvCfg(ManagerBasedRLEnvCfg)`: Manager 조합·물리·제어 주기 |
+| `scene_cfg.py` | `ContactSweepSceneCfg(InteractiveSceneCfg)`: 자산·frame·촉각 view |
+| `observations_cfg.py` | `ContactSweepObservationsCfg`: Actor/Critic의 동일한 57D policy 순서 |
+| `actions_cfg.py` | `ContactSweepActionsCfg`: Arm Joint Position 6D + Hand 2D |
+| `commands_cfg.py` | `ContactSweepCommandsCfg`: 에피소드 고정 목표 |
+| `events_cfg.py` | `ContactSweepEventsCfg`: reset·스폰·물성 이벤트 |
+| `rewards_cfg.py` | `ContactSweepRewardsCfg`: 10개 활성 보상 전체 선언 |
+| `terminations_cfg.py` | `ContactSweepTerminationsCfg`: 실패·timeout 전체 선언 |
+| `ppo_cfg.py` | `ContactSweepPPORunnerCfg(RslRlOnPolicyRunnerCfg)`: 독립 PPO 설정 |
+| `common.py` | 기하·질량 상수와 Arm 관절 선택 |
+
+로봇 USD·spawn 유틸리티·MDP 계산 함수는 공통 모듈을 재사용한다. `goal_rewards.action_rate_l2`·`joint_vel_l2`의 Arm/Hand 네 운동 페널티와 계수도 그대로 사용한다. 목표 보상 94, 접근 보상 30, pushing_speed free_speed=0.2 m/s·weight=−2, 질량 중심 0.5475 kg·범위 0.345–0.750 kg, 0.02초 제어·최대 10초를 명시했다. 현재 물체 GT를 포함한 관측이므로 최종 Blind 환경으로 해석하지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-v0 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-v0 --num_envs 1 \
+  --checkpoint "<checkpoint.pt>" --real-time
+```
+
+실험 폴더는 `logs/rsl_rl/inspire_contact_sweep`다. CPU 관련 검사 **131개 통과**, GPU 8 env·1 iteration 완료. v3 smoke와 저장 환경 YAML은 log_dir 외 동일하고 PPO는 experiment/run 이름 외 동일했다. 같은 seed의 1 iteration 후 Actor/Critic tensor도 전부 일치했다. 장시간 학습·실물 성능은 미검증이다. [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_contact_sweep_reference.md).
+
+### Dex Tactile Renewal v3 — v1 상속, 질량·속도 비용·목표 보상 조정
+
+`Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3`는 `InspireDexTactileSweepOmniRenewalV1EnvCfg`를 직접 상속한다. Actor/Critic 57D, Joint Position 6D + Hand 2D, 0.02초 제어 주기와 기존 종료 조건을 사용한다.
+
+| 항목 | v1 | v3 |
+| --- | --- | --- |
+| pushing_speed free_speed | 0.3 m/s | 0.2 m/s |
+| pushing_speed weight | −1.0 | −2.0 |
+| goal_distance weight | 300.0 | 94.0 |
+| reaching weight | 30.0 | 30.0 |
+| 물체 질량 분포 중심 | 0.365 kg | 0.5475 kg |
+| 물체 질량 범위 | 0.230–0.500 kg | 0.345–0.750 kg |
+
+Goal 계수는 `logs/2026-10-19_12-15-47`의 마지막 10 iteration(39027–39036)에서 측정한 TensorBoard reaching 평균 0.778318, goal_distance 평균 3.314545를 사용했다. `300 × (4/3) × 0.778318 / 3.314545 = 93.9276`을 94로 반올림했다. 기존 궤적을 재가중하면 누적 기여가 약 +7.783 : +10.386으로 3:4가 된다. 이론상 최대 보상으로 산정하지 않았다. 질량·속도 비용을 바꾼 뒤 새로 학습한 정책에서 같은 기여 비율이 유지되는지는 별도 확인해야 한다.
+
+생성 질량과 reset 샘플을 모두 1.5배로 적용한다. 질량 노이즈도 비례 확대하며 관성은 질량에 맞게 갱신한다. 마찰 분포와 Arm/Hand 네 운동 페널티는 부모 설정을 상속한다. v2의 success/goal_hold 보상은 포함하지 않는다. PPO는 v1과 같고 실험 폴더는 `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal_v3`다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3 \
+  --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3 \
+  --num_envs 1 --checkpoint "<v3-checkpoint.pt>" --real-time
+```
+
+[환경 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v3_env_cfg.py) · [구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-20_renewal_v3_reward_mass.md).
+
 ### Dex Tactile Renewal v1
 
 2026-10-19: Arm actuator의 `velocity_limit_sim`을 shoulder pan/lift·elbow는 2.0 rad/s, wrist 1/2/3는 4.0 rad/s로 설정했다. v2·OSC v2도 상속한다. 관절 위치 범위는 유지하며 Arm 과속 종료 기준은 >5.0 rad/s 그대로다. PhysX가 적용하는 속도 제한으로, 순간 초과를 완전히 보장하는 상태 clamp는 아니다. [변경·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-19_v1_arm_velocity_limits.md).
