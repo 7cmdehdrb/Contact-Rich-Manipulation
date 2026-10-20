@@ -36,11 +36,17 @@ def test_termination_diagnostics_are_silent_even_when_all_terms_fire(capsys):
     assert capsys.readouterr().out == ""
 
 
-def test_all_tasks_use_common_runtime():
+def test_tasks_use_their_registered_runtime_family():
     registrations = {}
     gym = SimpleNamespace(registry=registrations)
     gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     assert registrations
-    for registration in registrations.values():
-        assert registration["entry_point"] == "inspire_sweep_baseline.env:InspireSweepEnv"
+    contact_runtimes = {
+        "Isaac-Inspire-Contact-Sweep-v0": "contact_sweep.env:ContactSweepEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-v0": "contact_sweep_clutter.env:ContactSweepClutterEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-v1": "contact_sweep_clutter_v1.env:ContactSweepClutterV1Env",
+    }
+    for task, registration in registrations.items():
+        runtime = contact_runtimes.get(task, "env:InspireSweepEnv")
+        assert registration["entry_point"] == f"inspire_sweep_baseline.{runtime}"
