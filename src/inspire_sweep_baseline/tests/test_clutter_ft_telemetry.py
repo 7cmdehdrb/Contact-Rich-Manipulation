@@ -171,7 +171,7 @@ def test_requested_checkpoint_loads_strictly_and_runs_cpu_inference(v1_models,ru
     """Real trained weights and RSL runner, synthetic inputs; no physics claim."""
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
     from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
-    checkpoint=PROJECT_ROOT/'logs/inspire_contact_sweep_clutter_v1_curriculum/2026-10-20_22-49-30/model_12800.pt'
+    checkpoint=PROJECT_ROOT/'logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1/2026-10-20_22-49-30/model_12800.pt'
     assert checkpoint.is_file(), 'Requested training result is missing'
     obs=_privileged_observations(count=8)
     class Env:

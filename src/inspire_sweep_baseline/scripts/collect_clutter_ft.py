@@ -21,7 +21,7 @@ import traceback
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 TASK = "Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0"
-DEFAULT_RUN = "logs/inspire_contact_sweep_clutter_v1_curriculum/2026-10-20_22-49-30"
+DEFAULT_RUN = "logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1/2026-10-20_22-49-30"
 
 
 def checkpoint_path(value):

@@ -758,7 +758,7 @@ Actor의 `policy.target_obs_state` 3D는 현재 타겟 위치에서 **episode �
 
 부모의 장애물 배치·물성·8D Joint Position action·0.02초 제어·10초 timeout·실패 종료를 상속한다. 목표 도달로 종료하지 않는다. 특히 `push_fast`의 0.8 m/s 종료는 그대로이므로 보상의 free speed 1.0은 종료 속도 완화를 의미하지 않는다.
 
-계수는 `logs/TEMP/2026-10-20_14-04-31`의 9,655개 iteration을 기준으로 정했다. 목표 유지 5초·5개 tactile 접촉 7초를 가정하면 **양의 네 보상 그룹 합**에서 Reaching/Goal distance/Goal 유지/Contact가 각각 **34.92/34.61/20.35/10.13%**, 마지막 1,000개 기준 **33.88/36.91/19.50/9.71%**다. 이는 기존 progress를 재가중한 시나리오이며 새 정책에서 실제 측정된 비중은 아니다. 음의 페널티는 이 분모에서 제외해 별도로 비교한다.
+계수는 `logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-v0/2026-10-20_14-04-31`의 9,655개 iteration을 기준으로 정했다. 목표 유지 5초·5개 tactile 접촉 7초를 가정하면 **양의 네 보상 그룹 합**에서 Reaching/Goal distance/Goal 유지/Contact가 각각 **34.92/34.61/20.35/10.13%**, 마지막 1,000개 기준 **33.88/36.91/19.50/9.71%**다. 이는 기존 progress를 재가중한 시나리오이며 새 정책에서 실제 측정된 비중은 아니다. 음의 페널티는 이 분모에서 제외해 별도로 비교한다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
@@ -769,7 +769,7 @@ Actor의 `policy.target_obs_state` 3D는 현재 타겟 위치에서 **episode �
   --checkpoint "<clutter-v1-checkpoint.pt>" --real-time
 
 python src/inspire_sweep_baseline/scripts/analyze_clutter_rewards.py \
-  --log-dir logs/TEMP/2026-10-20_14-04-31 --last-n 1000 \
+  --log-dir logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-v0/2026-10-20_14-04-31 --last-n 1000 \
   --output /tmp/clutter_v1_calibration_last1000.json
 ```
 
@@ -933,7 +933,7 @@ Goal 계수는 `logs/2026-10-19_12-15-47`의 마지막 10 iteration(39027–3903
 Workspace 루트에서 Isaac Lab 실행 환경을 활성화한 뒤 실행한다. `--checkpoint`는 파일 또는 run 디렉터리이며, 디렉터리면 숫자 iteration이 가장 큰 모델을 선택한다. 출력 디렉터리는 새 경로여야 한다.
 
 ```bash
-./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/collect_clutter_ft.py --headless --num_envs 16 --steps 5000 --checkpoint logs/inspire_contact_sweep_clutter_v1_curriculum/2026-10-20_22-49-30
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/collect_clutter_ft.py --headless --num_envs 16 --steps 5000 --checkpoint logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1/2026-10-20_22-49-30
 
 python src/inspire_sweep_baseline/scripts/validate_clutter_ft.py <output-directory>
 ```
