@@ -997,3 +997,36 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 ```
 
 이전 57D policy 모델과 입력 차원이 달라 새 학습이 필요하다. Actor/Critic encoder 입력은 각각 policy55/58+embedding16이며, Actor export raw 입력은 95D다. [전체 계약·계수 근거·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion.md)을 따른다.
+
+### Contact Sweep Clutter Fusion v1 — 수치 일정 변경
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1`은 Fusion v0의 Env를 재사용하고 Env Cfg·Curriculum Cfg·PPO Cfg를 상속한다. 구현은 [`contact_sweep_clutter_fusion_v1/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v1)에 있다. `push_fast.speed_condition`은 1.5 m/s다.
+
+아래 보상 일정은 **iteration 500에서 첫 증감**을 적용한다. 구간 사이에는 값을 유지하고 최종값에서 멈춘다. iteration은 기존 runner의 0부터 시작하는 Learning iteration이다.
+
+| 항목 | 초기값 → 최종값 | 증감 / 간격 | 최종 도달 iteration |
+| --- | --- | --- | --- |
+| pushing free speed | 0.1 → 0.03 m/s | −0.01 / 100 | 1100 |
+| arm free speed | 1.0 → 0.8 rad/s | −0.02 / 100 | 1400 |
+| action rate weight | −0.03 → −0.06 | −0.005 / 100 | 1000 |
+| EEF free speed | 1.5 → 0.5 m/s | −0.02 / 500 | 25000 |
+| contact_any / contact_count weight 각각 | 0.4 → 2.0 | +0.02 / 100 | 8400 |
+| wrench free force rate | 2000 → 500 N/s | −50 / 100 | 3400 |
+| wrench free moment rate | 100 → 25 N·m/s | −2.5 / 100 | 3400 |
+| wrench saturation force rate | 5000 → 1250 N/s | −125 / 100 | 3400 |
+| wrench saturation moment rate | 250 → 62.5 N·m/s | −6.25 / 100 | 3400 |
+
+Goal deadzone은 기존 ±60°·1000 iteration 유지 조건을 상속하고 간격만 100으로 바꾼다. 1100에서 첫 1° 감소, 7000에서 0°가 된다. 목표 분포 변경은 다음 reset에 적용한다. 보상 일정은 rollout 전에 즉시 적용하고 checkpoint 재개·재생은 기존 runner의 iteration 복원 방식을 따른다.
+
+관측 policy55D·obstacles40D·privileged3D, Action 8D와 제어·Scene·reset·나머지 보상·종료는 Fusion v0를 상속한다. Joint velocity의 Arm −0.03·Hand −0.01 효과, wrench 가중치 −0.1과 누적 양의 보상 대비 5% 예산 제한도 유지한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1 --num_envs 1 \
+  --checkpoint "<fusion-v1-checkpoint.pt>"
+```
+
+기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v1`이다. [실제 검증·미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v1.md)를 확인한다.

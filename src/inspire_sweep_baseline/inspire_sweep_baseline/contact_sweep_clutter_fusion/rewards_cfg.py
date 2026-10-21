@@ -15,7 +15,7 @@ from .safety_rewards import WrenchRatePenalty, eef_linear_speed_cost, eef_upward
 
 
 @configclass
-class ContactSweepClutterFusionRewardsCfg:
+class ddContactSweepClutterFusionRewardsCfg:
     reaching = RewTerm(
         func=dex_rewards.DexReachProgress, weight=30.0,
         params={"near_radius": 0.10, "frame_name": "ee_frame"},
@@ -67,3 +67,7 @@ class ContactSweepClutterFusionRewardsCfg:
                 "saturation_force_rate": 5000.0, "saturation_moment_rate": 250.0,
                 "sharpness": 3.0, "max_positive_fraction": 0.05},
     )
+
+
+# Keep the existing working-tree class name usable through the public import.
+ContactSweepClutterFusionRewardsCfg = ddContactSweepClutterFusionRewardsCfg
