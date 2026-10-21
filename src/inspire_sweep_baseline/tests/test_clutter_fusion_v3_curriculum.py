@@ -11,17 +11,17 @@ from test_omni_configuration import _execute_definitions, omni_config
 
 
 @pytest.fixture
-def v1_schedule(monkeypatch):
+def v3_schedule(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    delayed = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion_v1.curriculum")
+    delayed = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion_v3.curriculum")
     goal = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion.curriculum")
     namespace = {"configclass": lambda cls: cls, "CurriculumTermCfg": SimpleNamespace,
                  "goal_deadzone_schedule": goal.goal_deadzone_schedule,
                  "reward_schedule": object(), "delayed_reward_schedule": delayed.delayed_reward_schedule}
     _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion/curriculum_cfg.py", namespace)
     cfg = _execute_definitions(
-        MODULE_ROOT / "contact_sweep_clutter_fusion_v1/curriculum_cfg.py", namespace,
-    ).ContactSweepClutterFusionV1CurriculumCfg()
+        MODULE_ROOT / "contact_sweep_clutter_fusion_v3/curriculum_cfg.py", namespace,
+    ).ContactSweepClutterFusionV3CurriculumCfg()
     terms = {name: term for name, term in vars(type(cfg)).items() if not name.startswith("_")}
     configs = {name: SimpleNamespace(weight=-1., params={}) for name in
                ("pushing_speed", "arm_speed_excess", "action_rate", "eef_linear_speed",
@@ -38,21 +38,21 @@ def v1_schedule(monkeypatch):
 
 
 @pytest.mark.parametrize("name,initial,first,second,interval,last_iteration,penultimate,final", [
-    ("pushing_free_speed", .1, .09, .08, 100, 1100, .04, .03),
-    ("arm_free_speed", 1., .98, .96, 100, 1400, .82, .8),
-    ("action_rate_weight", -.03, -.035, -.04, 100, 1000, -.055, -.06),
-    ("eef_free_speed", 1.5, 1.48, 1.46, 500, 25000, .52, .5),
-    ("contact_any_weight", .4, .42, .44, 100, 8400, 1.98, 2.),
-    ("contact_count_weight", .4, .42, .44, 100, 8400, 1.98, 2.),
-    ("wrench_free_force_rate", 2000., 1950., 1900., 100, 3400, 550., 500.),
-    ("wrench_free_moment_rate", 100., 97.5, 95., 100, 3400, 27.5, 25.),
-    ("wrench_saturation_force_rate", 5000., 4875., 4750., 100, 3400, 1375., 1250.),
-    ("wrench_saturation_moment_rate", 250., 243.75, 237.5, 100, 3400, 68.75, 62.5),
+    ("pushing_free_speed", .1, .09, .08, 200, 1700, .04, .03),
+    ("arm_free_speed", 1., .98, .96, 200, 3300, .72, .7),
+    ("action_rate_weight", -.03, -.035, -.04, 200, 1500, -.055, -.06),
+    ("eef_free_speed", 1.5, 1.48, 1.46, 200, 12300, .32, .3),
+    ("contact_any_weight", .4, .42, .44, 200, 16300, 1.98, 2.),
+    ("contact_count_weight", .4, .42, .44, 200, 16300, 1.98, 2.),
+    ("wrench_free_force_rate", 2000., 1950., 1900., 200, 4300, 1050., 1000.),
+    ("wrench_free_moment_rate", 100., 97.5, 95., 200, 4300, 52.5, 50.),
+    ("wrench_saturation_force_rate", 5000., 4875., 4750., 200, 4300, 2625., 2500.),
+    ("wrench_saturation_moment_rate", 250., 243.75, 237.5, 200, 4300, 131.25, 125.),
 ])
 def test_delayed_boundaries_endpoints_and_rewind(
-    v1_schedule, name, initial, first, second, interval, last_iteration, penultimate, final,
+    v3_schedule, name, initial, first, second, interval, last_iteration, penultimate, final,
 ):
-    env, terms, configs, _ = v1_schedule
+    env, terms, configs, _ = v3_schedule
     term = terms[name]
     for iteration, expected in (
         (0, initial), (499, initial), (500, first), (500 + interval - 1, first),
@@ -67,8 +67,8 @@ def test_delayed_boundaries_endpoints_and_rewind(
             assert actual == pytest.approx(expected)
 
 
-def test_all_schedules_coexist_without_changing_live_goal_or_joint_velocity(v1_schedule):
-    env, terms, configs, event = v1_schedule
+def test_all_schedules_coexist_without_changing_live_goal_or_joint_velocity(v3_schedule):
+    env, terms, configs, event = v3_schedule
     goal = env.current_goal
     for iteration, degrees in ((0, 60), (1000, 60), (1099, 60), (1100, 59),
                                (6999, 1), (7000, 0), (90000, 0), (0, 60)):
@@ -86,12 +86,14 @@ def test_all_schedules_coexist_without_changing_live_goal_or_joint_velocity(v1_s
             assert configs["joint_velocity"].params == {"hand_ratio": 1 / 3}
 
 
-def test_v1_registration_and_termination_override_isolate_parent(omni_config):
+def test_v3_inherits_v2_and_only_overrides_curriculum(omni_config):
     configclass = omni_config.baseline.configclass
 
     @configclass
     class Parent:
         terminations = SimpleNamespace(push_fast=SimpleNamespace(params={"speed_condition": .8}))
+        rewards = SimpleNamespace(eef_orientation=SimpleNamespace(weight=-.02))
+        curriculum = SimpleNamespace(marker="v0")
 
         def __post_init__(self):
             self.parent_initialized = True
@@ -101,11 +103,19 @@ def test_v1_registration_and_termination_override_isolate_parent(omni_config):
         pass
 
     namespace = {"configclass": configclass, "ContactSweepClutterFusionEnvCfg": Parent,
-                 "ContactSweepClutterFusionV1CurriculumCfg": Curriculum}
+                 "ContactSweepClutterFusionV3CurriculumCfg": Curriculum}
+    _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion_v2/env_cfg.py", namespace)
+    parent = namespace["ContactSweepClutterFusionV2EnvCfg"]()
     child = _execute_definitions(
-        MODULE_ROOT / "contact_sweep_clutter_fusion_v1/env_cfg.py", namespace,
-    ).ContactSweepClutterFusionV1EnvCfg()
+        MODULE_ROOT / "contact_sweep_clutter_fusion_v3/env_cfg.py", namespace,
+    ).ContactSweepClutterFusionV3EnvCfg()
     assert child.parent_initialized
+    assert type(child).__bases__ == (namespace["ContactSweepClutterFusionV2EnvCfg"],)
+    expected = parent.to_dict()
+    expected["curriculum"] = child.curriculum.to_dict()
+    assert child.to_dict() == expected
+    assert child.rewards.eef_orientation is None
+    assert Parent().rewards.eef_orientation is not None
     assert child.terminations.push_fast.params["speed_condition"] == 1.5
     assert Parent().terminations.push_fast.params["speed_condition"] == .8
     child.terminations.push_fast.params["speed_condition"] = 9.
@@ -114,23 +124,24 @@ def test_v1_registration_and_termination_override_isolate_parent(omni_config):
     gym = SimpleNamespace(registry=registrations)
     gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
-    spec = registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1"]
+    assert "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1" not in registrations
+    spec = registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3"]
     assert spec["entry_point"] == registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0"]["entry_point"]
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("fusion_v1.env_cfg:ContactSweepClutterFusionV1EnvCfg")
-    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("fusion_v1.ppo_cfg:ContactSweepClutterFusionV1PPORunnerCfg")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("fusion_v3.env_cfg:ContactSweepClutterFusionV3EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("fusion_v3.ppo_cfg:ContactSweepClutterFusionV3PPORunnerCfg")
 
 
-def test_real_configclass_copies_inherited_curriculum_terms(omni_config, v1_schedule):
-    env, terms, _, _ = v1_schedule
+def test_real_configclass_copies_inherited_curriculum_terms(omni_config, v3_schedule):
+    env, terms, _, _ = v3_schedule
     namespace = {
         "configclass": omni_config.baseline.configclass, "CurriculumTermCfg": SimpleNamespace,
         "reward_schedule": object(), "goal_deadzone_schedule": terms["goal_deadzone"].func,
         "delayed_reward_schedule": terms["pushing_free_speed"].func,
     }
     _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion/curriculum_cfg.py", namespace)
-    _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion_v1/curriculum_cfg.py", namespace)
+    _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion_v3/curriculum_cfg.py", namespace)
     parent = namespace["ContactSweepClutterFusionCurriculumCfg"]()
-    child = namespace["ContactSweepClutterFusionV1CurriculumCfg"]()
+    child = namespace["ContactSweepClutterFusionV3CurriculumCfg"]()
     assert len(child.to_dict()) == 11
     child.goal_deadzone.params["interval"] = 9
     child.pushing_free_speed.params["final"] = .02

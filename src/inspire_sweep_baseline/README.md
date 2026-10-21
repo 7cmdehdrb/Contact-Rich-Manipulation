@@ -979,11 +979,11 @@ Arm/Hand action rate와 joint velocity를 각각 하나의 항으로 통합하�
 
 | 커리큘럼 | 변경 |
 | --- | --- |
-| pushing free speed | 500 iteration마다 0.1→0.05, −0.01 m/s |
-| arm free speed | 500마다 1.0→0.8, −0.02 rad/s |
-| 통합 action rate weight | 500마다 −0.03→−0.06, −0.005 |
-| EEF free speed | 500마다 1.5→0.7, −0.02 m/s |
-| 앞·뒤 goal deadzone | ±60°로 시작, 1000까지 유지, 1200부터 200마다 1° 감소, 13000에 제거 |
+| pushing free speed | 300 iteration마다 0.1→0.05, −0.01 m/s |
+| arm free speed | 300마다 1.0→0.8, −0.02 rad/s |
+| 통합 action rate weight | 300마다 −0.03→−0.06, −0.005 |
+| EEF free speed | 300마다 1.5→0.7, −0.02 m/s |
+| 앞·뒤 goal deadzone | ±60°로 시작, 500까지 유지, 700부터 200마다 1° 감소, 12500에 제거 |
 
 Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curriculum은 이후 reset에만 적용하며 진행 중 목표를 바꾸지 않는다. Checkpoint load 전에 만들어진 첫 episode도 목표는 유지하고, 다음 reset부터 복원한 단계의 목표 분포를 사용한다.
 
@@ -998,42 +998,42 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 
 이전 57D policy 모델과 입력 차원이 달라 새 학습이 필요하다. Actor/Critic encoder 입력은 각각 policy55/58+embedding16이며, Actor export raw 입력은 95D다. [전체 계약·계수 근거·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion.md)을 따른다.
 
-### Contact Sweep Clutter Fusion v1 — 수치 일정 변경
+### Contact Sweep Clutter Fusion v3 — 수치 일정 변경
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1`은 Fusion v0의 Env를 재사용하고 Env Cfg·Curriculum Cfg·PPO Cfg를 상속한다. 구현은 [`contact_sweep_clutter_fusion_v1/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v1)에 있다. `push_fast.speed_condition`은 1.5 m/s다.
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼만 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`과 `push_fast.speed_condition=1.5`를 v2에서 상속한다.
 
 아래 보상 일정은 **iteration 500에서 첫 증감**을 적용한다. 구간 사이에는 값을 유지하고 최종값에서 멈춘다. iteration은 기존 runner의 0부터 시작하는 Learning iteration이다.
 
 | 항목 | 초기값 → 최종값 | 증감 / 간격 | 최종 도달 iteration |
 | --- | --- | --- | --- |
-| pushing free speed | 0.1 → 0.03 m/s | −0.01 / 100 | 1100 |
-| arm free speed | 1.0 → 0.8 rad/s | −0.02 / 100 | 1400 |
-| action rate weight | −0.03 → −0.06 | −0.005 / 100 | 1000 |
-| EEF free speed | 1.5 → 0.5 m/s | −0.02 / 500 | 25000 |
-| contact_any / contact_count weight 각각 | 0.4 → 2.0 | +0.02 / 100 | 8400 |
-| wrench free force rate | 2000 → 500 N/s | −50 / 100 | 3400 |
-| wrench free moment rate | 100 → 25 N·m/s | −2.5 / 100 | 3400 |
-| wrench saturation force rate | 5000 → 1250 N/s | −125 / 100 | 3400 |
-| wrench saturation moment rate | 250 → 62.5 N·m/s | −6.25 / 100 | 3400 |
+| pushing free speed | 0.1 → 0.03 m/s | −0.01 / 200 | 1700 |
+| arm free speed | 1.0 → 0.7 rad/s | −0.02 / 200 | 3300 |
+| action rate weight | −0.03 → −0.06 | −0.005 / 200 | 1500 |
+| EEF free speed | 1.5 → 0.3 m/s | −0.02 / 200 | 12300 |
+| contact_any / contact_count weight 각각 | 0.4 → 2.0 | +0.02 / 200 | 16300 |
+| wrench free force rate | 2000 → 1000 N/s | −50 / 200 | 4300 |
+| wrench free moment rate | 100 → 50 N·m/s | −2.5 / 200 | 4300 |
+| wrench saturation force rate | 5000 → 2500 N/s | −125 / 200 | 4300 |
+| wrench saturation moment rate | 250 → 125 N·m/s | −6.25 / 200 | 4300 |
 
-Goal deadzone은 기존 ±60°·1000 iteration 유지 조건을 상속하고 간격만 100으로 바꾼다. 1100에서 첫 1° 감소, 7000에서 0°가 된다. 목표 분포 변경은 다음 reset에 적용한다. 보상 일정은 rollout 전에 즉시 적용하고 checkpoint 재개·재생은 기존 runner의 iteration 복원 방식을 따른다.
+Goal deadzone은 ±60°·1000 iteration 유지·100 간격을 사용한다. 1100에서 첫 1° 감소, 7000에서 0°가 된다. 목표 분포 변경은 다음 reset에 적용한다. 보상 일정은 rollout 전에 즉시 적용하고 checkpoint 재개·재생은 기존 runner의 iteration 복원 방식을 따른다.
 
-관측 policy55D·obstacles40D·privileged3D, Action 8D와 제어·Scene·reset·나머지 보상·종료는 Fusion v0를 상속한다. Joint velocity의 Arm −0.03·Hand −0.01 효과, wrench 가중치 −0.1과 누적 양의 보상 대비 5% 예산 제한도 유지한다.
+관측 policy55D·obstacles40D·privileged3D, Action 8D와 제어·Scene·reset·나머지 보상·종료는 Fusion v2를 상속한다. Joint velocity의 Arm −0.03·Hand −0.01 효과, wrench 가중치 −0.1과 누적 양의 보상 대비 5% 예산 제한도 유지한다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
-  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1 --num_envs 2048 --headless
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3 --num_envs 2048 --headless
 
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
-  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1 --num_envs 1 \
-  --checkpoint "<fusion-v1-checkpoint.pt>"
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3 --num_envs 1 \
+  --checkpoint "<fusion-v3-checkpoint.pt>"
 ```
 
-기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v1`이다. [실제 검증·미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v1.md)를 확인한다.
+기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v3`이다. [실제 검증·미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v3.md)를 확인한다.
 
 ### Contact Sweep Clutter Fusion v2 — EEF 자세 보상 제거
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2`는 Fusion v0를 직접 상속하여 `rewards.eef_orientation=None`만 적용한다. 직접 연결된 EEF 자세 termination은 없으므로 종료 조건은 v0와 같다. 물체 전도·낙하와 손목 높이 종료는 유지한다. 관측·Action·물리·reset·나머지 보상과 커리큘럼·PPO 설정도 v0를 상속한다. 따라서 `push_fast.speed_condition=0.8`이며 속도·action rate·goal deadzone 일정은 위 Fusion v0 설정을 사용한다. v1의 추가 contact·wrench 커리큘럼은 사용하지 않는다.
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2`는 Fusion v0를 직접 상속하여 `rewards.eef_orientation=None`과 `push_fast.speed_condition=1.5`를 적용한다. 직접 연결된 EEF 자세 termination은 없으며 나머지 종료 조건은 v0와 같다. 물체 전도·낙하와 손목 높이 종료는 유지한다. 관측·Action·물리·reset·나머지 보상과 커리큘럼·PPO 설정도 v0를 상속한다. 따라서 `push_fast.speed_condition=1.5`이며 속도·action rate·goal deadzone 일정은 위 Fusion v0 설정을 사용한다. v3의 추가 contact·wrench 커리큘럼은 사용하지 않는다.
 
 구현은 [`contact_sweep_clutter_fusion_v2/env_cfg.py`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v2/env_cfg.py)이며, 기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v2`다.
 
