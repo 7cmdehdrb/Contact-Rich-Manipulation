@@ -1000,7 +1000,7 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 
 ### Contact Sweep Clutter Fusion v3 — 수치 일정 변경
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼과 push_fast 임계값을 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`은 v2에서 상속하고, `push_fast.speed_condition`은 v3에서만 0.8→1.5로 변경한다.
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼만 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`은 v2에서 상속하고, `push_fast.speed_condition`은 v0·v2·v3 모두 0.8로 고정한다. [버전별 변경 비교](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_VERSIONS.md)를 따른다.
 
 아래 보상 일정은 **iteration 500에서 첫 증감**을 적용한다. 구간 사이에는 값을 유지하고 최종값에서 멈춘다. iteration은 기존 runner의 0부터 시작하는 Learning iteration이다.
 

@@ -1,4 +1,4 @@
-"""Inherit Fusion v2 and override curricula and push-fast speed."""
+"""Inherit Fusion v2, revise curricula, and keep push-fast fixed at 0.8 m/s."""
 
 from isaaclab.utils import configclass
 
