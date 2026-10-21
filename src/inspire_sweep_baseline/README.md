@@ -1030,3 +1030,20 @@ Goal deadzone은 기존 ±60°·1000 iteration 유지 조건을 상속하고 간
 ```
 
 기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v1`이다. [실제 검증·미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v1.md)를 확인한다.
+
+### Contact Sweep Clutter Fusion v2 — EEF 자세 보상 제거
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2`는 Fusion v0를 직접 상속하여 `rewards.eef_orientation=None`만 적용한다. 직접 연결된 EEF 자세 termination은 없으므로 종료 조건은 v0와 같다. 물체 전도·낙하와 손목 높이 종료는 유지한다. 관측·Action·물리·reset·나머지 보상과 커리큘럼·PPO 설정도 v0를 상속한다. 따라서 `push_fast.speed_condition=0.8`이며 속도·action rate·goal deadzone 일정은 위 Fusion v0 설정을 사용한다. v1의 추가 contact·wrench 커리큘럼은 사용하지 않는다.
+
+구현은 [`contact_sweep_clutter_fusion_v2/env_cfg.py`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v2/env_cfg.py)이며, 기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v2`다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2 --num_envs 1 \
+  --checkpoint "<fusion-v2-checkpoint.pt>"
+```
+
+[검증과 미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v2.md).

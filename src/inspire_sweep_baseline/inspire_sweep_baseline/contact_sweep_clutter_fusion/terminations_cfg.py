@@ -16,7 +16,7 @@ class ContactSweepClutterFusionTerminationsCfg:
         func=any_object_fall_or_tilt,
         params={"height_condition": 1.04, "fail_angle": 0.9},
     )
-    push_fast = DoneTerm(func=terminations.push_fast, params={"speed_condition": 0.8})
+    push_fast = DoneTerm(func=terminations.push_fast, params={"speed_condition": 1.0})
     shelf_collision = DoneTerm(
         func=terminations.shelf_collision,
         params={"threshold": 0.1, "check_fingers": False, "wrist_clearance": 0.03},
@@ -27,4 +27,6 @@ class ContactSweepClutterFusionTerminationsCfg:
         params={"asset_cfg": arm_entity(), "threshold": 5.0},
     )
     object_outside_shelf = None
-    shelf_displacement = DoneTerm(func=goal_terminations.shelf_displacement, params={"threshold": 0.05})
+    shelf_displacement = DoneTerm(
+        func=goal_terminations.shelf_displacement, params={"threshold": 0.05}
+    )
