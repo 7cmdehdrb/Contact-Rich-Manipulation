@@ -25,8 +25,8 @@ class ContactSweepClutterFusionRewardsCfg:
         params={"position_tolerance": 0.01},
     )
     goal_hold = RewTerm(func=goal_hold_xy, weight=0.9, params={"position_tolerance": 0.01})
-    contact_any = RewTerm(func=contact_any, weight=1.6)
-    contact_count = RewTerm(func=contact_count, weight=1.6, params={"max_contacts": 5})
+    contact_any = RewTerm(func=contact_any, weight=0.4)
+    contact_count = RewTerm(func=contact_count, weight=0.4, params={"max_contacts": 5})
     # The merged action and velocity costs retain the original per-group caps.
     action_rate = RewTerm(func=combined_action_rate, weight=-0.03, params={"max_cost": 100.0})
     joint_velocity = RewTerm(

@@ -975,7 +975,7 @@ python -B src/inspire_sweep_baseline/scripts/process_clutter_ft_rates.py <source
 
 policy는 55D다. Target width를 제거하고, goal은 초기 타겟→기존 목표의 XY distance(m)·시계방향 theta(rad)로 표현한다. 기준축은 robot-root이며 밀기 0·오른쪽 π/2·당기기 π·왼쪽 3π/2다. 실제 goal은 유지한다. 장애물 40D는 reset 시 전면 투영 폭 35% 이상인 물체만 남기고 실제 장애물별 1% 확률로 가시성을 반전한다. 숨긴 슬롯은 전부 0이며 매 step 재판정하지 않는다. Critic만 현재 타겟 3D를 추가로 사용한다.
 
-Arm/Hand action rate와 joint velocity를 각각 하나의 항으로 통합하고 기존 그룹별 상한·가중치 비율을 보존한다. Tilt·displacement도 하나의 object 항으로 합쳐 각각 기존의 15배 효과를 낸다. Contact 두 항은 각각 10배다. EEF 속도·위쪽 +Z 자세·큰 보정 F/T 변화율 비용은 모두 상한을 갖는다.
+Arm/Hand action rate와 joint velocity를 각각 하나의 항으로 통합하고 기존 그룹별 상한·가중치 비율을 보존한다. Tilt·displacement도 하나의 object 항으로 합쳐 각각 기존의 15배 효과를 낸다. Contact 두 항의 가중치는 각각 0.4다. EEF 속도·위쪽 +Z 자세·큰 보정 F/T 변화율 비용은 모두 상한을 갖는다.
 
 | 커리큘럼 | 변경 |
 | --- | --- |

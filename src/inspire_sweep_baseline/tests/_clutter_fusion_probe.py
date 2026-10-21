@@ -160,7 +160,7 @@ try:
         assert type(env.reward_manager.get_term_cfg("wrench_change").func) is WrenchRatePenalty
         expected_weights = {
             "reaching": 30., "goal_distance": 100., "goal_hold": .9,
-            "contact_any": 1.6, "contact_count": 1.6,
+            "contact_any": 0.4, "contact_count": 0.4,
             "action_rate": -.03, "joint_velocity": -.03, "object": -30.,
             "shelf_collision": -.5, "pushing_speed": -2., "arm_speed_excess": -1.,
             "shelf_failure": -3., "eef_linear_speed": -1., "eef_orientation": -.02, "wrench_change": -.1,
