@@ -47,6 +47,9 @@ def test_tasks_use_their_registered_runtime_family():
         "Isaac-Inspire-Contact-Sweep-Clutter-v0": "contact_sweep_clutter.env:ContactSweepClutterEnv",
         "Isaac-Inspire-Contact-Sweep-Clutter-v1": "contact_sweep_clutter_v1.env:ContactSweepClutterV1Env",
         "Isaac-Inspire-Contact-Sweep-Clutter-v2": "contact_sweep_clutter_v2.env:ContactSweepClutterV2Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1": "contact_sweep_clutter_v1_curriculum.env:ContactSweepClutterV1CurriculumEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0": "contact_sweep_clutter_ft_test.env:ContactSweepClutterFTTestEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
     }
     for task, registration in registrations.items():
         runtime = contact_runtimes.get(task, "env:InspireSweepEnv")

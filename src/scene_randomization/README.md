@@ -7,14 +7,14 @@
 저장소 루트에서:
 
 ```bash
-python -m pip install -r scene_randomization/requirements.txt
-python -m scene_randomization --count 10000 --seed 20261013
+python -m pip install -r src/scene_randomization/requirements.txt
+PYTHONPATH=src python -m scene_randomization --count 10000 --seed 20261013
 ```
 
-이 작업 환경의 기본 `python`에는 Matplotlib이 없고, 기존 `env_isaaclab` 환경에는 NumPy와 Matplotlib이 모두 설치되어 있다. 이 환경으로 실행하려면:
+이 작업 환경의 기본 `python`에는 Matplotlib이 없고, 기존 `jd_isaaclab` 환경에는 NumPy와 Matplotlib이 모두 설치되어 있다. 이 환경으로 실행하려면:
 
 ```bash
-MPLCONFIGDIR=/tmp/scene_randomization_mpl /home/min/miniconda3/envs/env_isaaclab/bin/python \
+PYTHONPATH=src MPLCONFIGDIR=/tmp/scene_randomization_mpl /home/ssu/miniconda3/envs/jd_isaaclab/bin/python \
   -m scene_randomization --count 10000 --output outputs/scene_randomization
 ```
 
@@ -32,15 +32,15 @@ MPLCONFIGDIR=/tmp/scene_randomization_mpl /home/min/miniconda3/envs/env_isaaclab
 기본 그림 저장은 화면 없이도 동작하는 `Agg` 백엔드를 사용한다. 저장된 Scene을 데스크톱 창에서 넘겨 보려면 GUI 백엔드가 있는 환경에서 다음 명령을 실행한다. 슬라이더, Prev/Next/Random, 좌우 방향키, `r` 키를 지원한다.
 
 ```bash
-python -m scene_randomization.viewer outputs/scene_randomization/scenes.npz
+PYTHONPATH=src python -m scene_randomization.viewer outputs/scene_randomization/scenes.npz
 ```
 
 병렬 생성이나 다른 난도 설정:
 
 ```bash
-python -m scene_randomization --count 10000 --workers 2 --no-plots
-python -m scene_randomization --count 10000 --config scene_randomization/example_config.json
-python -m unittest scene_randomization.test_generator -v
+PYTHONPATH=src python -m scene_randomization --count 10000 --workers 2 --no-plots
+PYTHONPATH=src python -m scene_randomization --count 10000 --config src/scene_randomization/example_config.json
+PYTHONPATH=src python -m unittest scene_randomization.test_generator -v
 ```
 
 `--no-save-scenes`로 NPZ 저장도 생략할 수 있다. **생성 시간은 검증·시각화·파일 저장을 제외한다.** 검증 시간은 별도 기록한다. Scene당 시간은 배치 생성 총시간을 Scene 수로 나눈 값이며, 개별 API 호출의 지연시간과는 다르다.
@@ -127,3 +127,52 @@ loaded = SceneBatch.load("scenes.npz")
 장애물 배열 순서는 뒤쪽 GRAY → 나머지 GRAY → WHITE다. 기본 인덱스 0은 뒤쪽, 0~2는 GRAY, 3~5는 WHITE다. 뒤쪽 개수는 먼저 지정한 수를 반드시 배치하며, 나머지 GRAY도 뒤쪽에 들어갈 수 있다. NPZ에는 seed 대신 사용 설정과 최종 좌표가 저장된다. 재생성용 seed와 프로세스 수는 `report.json`에 저장된다. 사용 모델은 `zone_model="wrist_downward_v2"`로 기록한다. 모델 정보가 없는 이전 NPZ는 기존 캡슐 규칙으로 생성되었으므로, 로더가 재생성을 안내하며 거절한다.
 
 검증 코드는 후보 수용 결과를 그대로 신뢰하지 않고 반환된 좌표에서 선분 거리, -y 확장 영역 거리, 물체 간 거리, 모든 물체의 밀도, Zone, 벽, 접촉 자세를 다시 계산한다. 자동 테스트는 4,096개 Scene의 전체 조건에 더해 수평·수직·대각선 확장, 상단 경계 보존, 독립적인 기하 계산과의 일치, 확장 GRAY 전면 샘플링, 분포 균형, 재현과 실패 처리 등을 확인한다.
+
+## 전면 가시성 판정과 시각화
+
+기존 랜덤화의 좌표·배치·명령 분포를 그대로 사용하고, 생성 뒤에 각 물체의 정면 가시 비율을 계산한다. 전면 `y=0`에서 `+y`로 바라보는 평행 투영이며 동일 높이·겹치지 않는 실린더를 가정한다. **다른 물체가 없을 때의 정면 투영 면적 대비 35% 이상 드러나면 인식, 미만이면 비인식**으로 표시한다. 실제 영상의 의미 인식 결과는 아니다.
+
+```bash
+PYTHONPATH=src python -m scene_randomization.visualize_visibility --count 10000 --output outputs/scene_visibility/new_numpy
+
+PYTHONPATH=src python -m scene_randomization.visualize_visibility --count 10000 --backend torch --device cuda:0 --output outputs/scene_visibility/new_cuda
+
+PYTHONPATH=src python -m unittest scene_randomization.test_generator scene_randomization.test_visibility -v
+```
+
+출력 폴더는 새 경로여야 한다. NumPy는 기본 설치만 필요하며 Torch를 import하지 않는다. 텐서 경로는 선택적으로 설치된 Torch를 사용한다. CPU 텐서는 `--backend torch --device cpu --torch-threads 1`, float32 계산은 `--dtype float32`로 선택할 수 있다. 기본 dtype은 float64다. 기본 30회 측정·3회 준비 실행은 `--repeats`, `--warmup`으로 변경한다. 기존 generator JSON은 `--config src/scene_randomization/example_config.json`으로 전달한다. `--threshold` 기본값은 0.35, `--plots`는 9이며 `--no-plots`로 그림만 생략할 수 있다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `visibility_gallery.png` | 비인식 개수가 다양한 씬의 평면도. 녹색=인식, 주황색=비인식, 물체 ID·가시 비율·생성/판정 시간 표시 |
+| `visibility_scene.png` | 비인식 개수가 가장 많은 씬의 평면도, 정면 투영, 물체별 가시 비율, 35% 기준선·시간 |
+| `visibility.csv` | 전체 씬·물체 ID·중심 위치·가시 비율·인식 여부 |
+| `visibility.npz` | 비율·마스크·가시 폭·정렬 경계·광선별 최초 물체 ID |
+| `scenes.npz` | 기존 `SceneBatch` 형식의 전체 랜덤 씬 |
+| `report.json` | 설정·기하 검증·시스템 버전·씬 생성 시간·첫 판정·배치/단일 판정 중앙값·p95·저장/그림 시간 |
+
+`T`는 타겟, `O1..`은 기존 장애물 순서다. 보라색 점선 원인 목표 위치와 RED/GRAY/WHITE 영역은 가림 물체로 취급하지 않는다. 인식 임계값보다 조금 보이는 물체도 실제 가림에는 계속 포함한다.
+
+판정은 모든 물체의 좌우 경계 `x−r`, `x+r`를 정렬하고 각 인접 구간의 중앙에서 최초 교차 물체를 구한다. 물체가 겹치지 않으면 해당 구간에서 깊이 순서가 바뀌지 않으므로, 구간 폭 전체를 최초 물체에 배정할 수 있다. 현재 7개 물체는 최대 13구간·91개 교차 검사이며 계산량은 씬당 O(N²)다. 겹친 원은 기본 입력 검사가 거절한다. 높이가 다르거나 원근·선반 상판의 가림을 고려하려면 모델을 확장해야 한다.
+
+직접 호출:
+
+```python
+from scene_randomization import classify_visibility, classify_visibility_torch
+
+# centers: [B,N,2], radii: scalar / [N] / [B,N]
+# active: 선택적인 [B,N] mask, padding은 가림에 참여하지 않음
+result = classify_visibility(centers, radii=4.0, threshold=0.35)
+ratio = result.ratio
+recognized = result.visible
+not_recognized = result.not_visible
+
+# Torch Tensor는 같은 device에서 반환. 학습/시뮬레이터 시작이 필요하지 않음.
+# 검증된 텐서의 반복 호출에서는 check_inputs=False로 입력 감사와 CUDA 동기화를 생략.
+# radii_tensor도 같은 device에 미리 준비하면 입력 전송을 반복하지 않음.
+result_gpu = classify_visibility_torch(centers_tensor, radii_tensor, check_inputs=False)
+```
+
+생성 시간은 기하 검사·판정·저장·그림을 제외한 기존 generator 실행이다. 첫 판정은 입력의 유한값·양의 반지름·비겹침 검사까지 포함한다. 반복 판정은 이미 검증·배치된 입력만 사용하며 CUDA는 전후 동기화한다. 배치 시간/씬 수는 **상각 평균**이고 단일 씬 호출 지연과 다르므로 둘 다 표시한다. 준비·입출력·그림 시간은 따로 기록한다. 준비되지 않은 GPU의 첫 호출은 반복 호출보다 느릴 수 있다.
+
+[실행한 CPU/GPU 성능과 검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_scene_visibility.md).

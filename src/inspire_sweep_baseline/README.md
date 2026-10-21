@@ -925,3 +925,75 @@ Goal 계수는 `logs/2026-10-19_12-15-47`의 마지막 10 iteration(39027–3903
 ```
 
 기본 로그 폴더는 `logs/rsl_rl/inspire_dex_tactile_sweep_omni_renewal_v2_osc`다. Joint Position v2와 action 의미가 다르므로 OSC 정책으로 학습·평가한다. 초기 0.1초의 명령 응답은 낮아졌지만, 이후에는 0 명령 대조군에서도 과속이 발생했다. 짧은 실행을 장시간 안정성이나 학습 성공으로 해석하지 않는다. [OSC v2 설정](inspire_sweep_baseline/dex_tactile_omni_renewal_v2_osc_env_cfg.py) · [명령 제한 구현](inspire_sweep_baseline/mdp/osc_actions.py) · [실측 속도·검증 및 한계](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_osc.md).
+
+### Clutter F/T 테스트 — Curriculum v1 정책과 v2 하중 보정
+
+`Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0`는 `ContactSweepClutterV1CurriculumEnv`와 `ContactSweepClutterV1CurriculumEnvCfg`를 상속한다. PPO 설정도 기존 Curriculum runner를 그대로 사용한다. Actor의 `policy57 + obstacles40`, Critic의 추가 `privileged3`, 원본 F/T 6D, 모든 보상·curriculum·행동·물리·종료 설정을 유지한다. v2의 `PureWrenchReader`를 별도 telemetry에 결합해 동일 동작에서 원본과 보정값을 취득한다. 아직 새 F/T 보상은 추가하지 않는다.
+
+Workspace 루트에서 Isaac Lab 실행 환경을 활성화한 뒤 실행한다. `--checkpoint`는 파일 또는 run 디렉터리이며, 디렉터리면 숫자 iteration이 가장 큰 모델을 선택한다. 출력 디렉터리는 새 경로여야 한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/collect_clutter_ft.py --headless --num_envs 16 --steps 5000 --checkpoint logs/inspire_contact_sweep_clutter_v1_curriculum/2026-10-20_22-49-30
+
+python src/inspire_sweep_baseline/scripts/validate_clutter_ft.py <output-directory>
+```
+
+기본 출력은 `outputs/clutter_ft/<UTC timestamp>/wrench.csv`와 `metadata.json`이다. `--steps`는 각 환경의 제어 step 수이며 learning iteration이 아니다. 제어 주기 0.02초의 마지막 physics substep을 읽으므로 16환경 ×5000 step은 80000행·환경당 누적 시뮬레이션 100초다. 기본 seed는 42이며 `--seed`로 변경한다. 정책 export나 학습 로그 쓰기는 수행하지 않는다.
+
+CSV의 핵심 열은 다음과 같다. 각 F/T prefix에는 `fx_N, fy_N, fz_N, mx_Nm, my_Nm, mz_Nm`가 붙는다.
+
+| 열 | 의미 |
+| --- | --- |
+| `v1_raw_eef_*` | 기존 정책과 동일한 v1 미보정 F/T 변환 |
+| `v2_raw_eef_*`, `v2_raw_world_*` | v2의 올바른 child joint frame 변환에 따른 보정 전 반력 |
+| `v2_support_eef_*`, `v2_support_world_*` | Hand 중력·관성 자체 하중 |
+| `v2_pure_eef_*`, `v2_pure_world_*` | v2 보정 F/T, raw − support |
+| `delta_pure_world_*`, `delta_force_norm_N`, `delta_moment_norm_Nm` | 인접 제어 step의 보정값 변화와 norm, 시간 미분 아님 |
+| `env_id`, `episode_id`, `episode_step`, `control_step` | 환경·episode·제어 step 식별 |
+| `sample_valid`, `delta_valid` | 표본·변화량 유효성. 보상 설계용 차분은 `delta_valid=1`만 사용 |
+| `terminated`, `time_out`, `done_*` | 종료 종류와 원인. 종료 직전 F/T도 reset 전에 저장 |
+| `tactile_*`, `tactile_count`, `goal_error_xy_m`, `inside_goal_1cm` | 접촉·목표 조건과 보상 설계용 context. 추가 정책 입력이 아님 |
+| `reward_*`, `weight_*`, `free_speed_*`, `learning_iteration` | 이미 가중치·dt가 적용된 step별 보상과 checkpoint 단계의 일정 |
+
+모든 모멘트 기준점은 EEF이며 `world`는 월드 축 표현을 뜻한다. EEF 위치와 wxyz quaternion도 저장한다. 부호는 parent-on-child 지지 반력으로, Hand에 작용한 외력과 반대다. v1과 v2는 원본 좌표 변환 구현이 다르므로 v1 raw에서 v2 support를 직접 빼지 않는다. 새 CSV는 v2 raw/support/pure를 별도로 제공한다. v2 값은 모델 기반 외력 반력 추정이며 실물 센서 정확도를 뜻하지 않는다.
+
+[구현·실제 수집·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_ft_collection.md).
+
+F/T 수집 CSV에서 축별 시간 변화율을 만들 때는 다음 후처리기를 사용한다. Isaac Sim이나 Torch 없이 Python 3.11 이상에서 실행할 수 있다.
+
+```bash
+python -B src/inspire_sweep_baseline/scripts/process_clutter_ft_rates.py <source-directory> --output-dir <new-output-directory>
+```
+
+기본으로 `world/`와 `eef/`에 각각 `fx_rate.csv`·`fy_rate.csv`·`fz_rate.csv`·`mx_rate.csv`·`my_rate.csv`·`mz_rate.csv`를 생성한다. `--frames world` 또는 `--frames eef`로 선택할 수도 있다. 동일 환경·episode의 인접 유효 표본만 사용하며 `(현재값 − 직전값) / control_dt_s`를 계산한다. 힘 변화율은 N/s, 모멘트 변화율은 N·m/s다. 각 파일에는 부호 있는 변화율·절댓값, 원래의 두 값과 차이, 실제 제어 간격, 환경·episode·종료·접촉 context가 있다. `delta_valid=0`과 stale 표본은 제외한다. EEF 축 변화율에는 축 회전에 따른 성분 변화가 포함되므로 월드 축 결과와 구분한다. 출력 폴더를 덮어쓰지 않으며 필터링·clamp·정규화는 하지 않는다.
+
+### Contact Sweep Clutter Fusion — 독립 구성
+
+[환경 설명서](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_ENVIRONMENT.md): Scene 설계 의도, 관측·노이즈·Frame, Action 범위, 보상 수치, 종료와 curriculum을 설명한다.
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0`는 Curriculum v1의 구조와 v2 보정 F/T를 결합한 환경이다. [`contact_sweep_clutter_fusion/`](inspire_sweep_baseline/contact_sweep_clutter_fusion)의 Env·Scene·Manager·PPO Cfg는 기존 환경 Cfg를 상속하지 않는다. MDP 함수와 센서·배치·iteration runner 구현은 재사용한다.
+
+policy는 55D다. Target width를 제거하고, goal은 초기 타겟→기존 목표의 XY distance(m)·시계방향 theta(rad)로 표현한다. 기준축은 robot-root이며 밀기 0·오른쪽 π/2·당기기 π·왼쪽 3π/2다. 실제 goal은 유지한다. 장애물 40D는 reset 시 전면 투영 폭 35% 이상인 물체만 남기고 실제 장애물별 1% 확률로 가시성을 반전한다. 숨긴 슬롯은 전부 0이며 매 step 재판정하지 않는다. Critic만 현재 타겟 3D를 추가로 사용한다.
+
+Arm/Hand action rate와 joint velocity를 각각 하나의 항으로 통합하고 기존 그룹별 상한·가중치 비율을 보존한다. Tilt·displacement도 하나의 object 항으로 합쳐 각각 기존의 15배 효과를 낸다. Contact 두 항은 각각 10배다. EEF 속도·위쪽 +Z 자세·큰 보정 F/T 변화율 비용은 모두 상한을 갖는다.
+
+| 커리큘럼 | 변경 |
+| --- | --- |
+| pushing free speed | 500 iteration마다 0.1→0.05, −0.01 m/s |
+| arm free speed | 500마다 1.0→0.8, −0.02 rad/s |
+| 통합 action rate weight | 500마다 −0.03→−0.06, −0.005 |
+| EEF free speed | 500마다 1.5→0.7, −0.02 m/s |
+| 앞·뒤 goal deadzone | ±60°로 시작, 1000까지 유지, 1200부터 200마다 1° 감소, 13000에 제거 |
+
+Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curriculum은 이후 reset에만 적용하며 진행 중 목표를 바꾸지 않는다. Checkpoint load 전에 만들어진 첫 episode도 목표는 유지하고, 다음 reset부터 복원한 단계의 목표 분포를 사용한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0 --num_envs 1 \
+  --checkpoint "<fusion-checkpoint.pt>"
+```
+
+이전 57D policy 모델과 입력 차원이 달라 새 학습이 필요하다. Actor/Critic encoder 입력은 각각 policy55/58+embedding16이며, Actor export raw 입력은 95D다. [전체 계약·계수 근거·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion.md)을 따른다.
