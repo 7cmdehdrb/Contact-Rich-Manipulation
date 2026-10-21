@@ -15,5 +15,5 @@ class ContactSweepClutterFusionV3EnvCfg(ContactSweepClutterFusionV2EnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # 기존 0.8에서 1.5로 변경
-        self.terminations.push_fast.params["speed_condition"] = 1.5
+        # 기존 0.8에서 1.5로 변경 -> 취소
+        self.terminations.push_fast.params["speed_condition"] = 0.8
