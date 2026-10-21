@@ -86,7 +86,7 @@ def test_all_schedules_coexist_without_changing_live_goal_or_joint_velocity(v3_s
             assert configs["joint_velocity"].params == {"hand_ratio": 1 / 3}
 
 
-def test_v3_inherits_v2_and_only_overrides_curriculum(omni_config):
+def test_v3_inherits_v2_and_overrides_curriculum_and_push_fast(omni_config):
     configclass = omni_config.baseline.configclass
 
     @configclass
@@ -113,7 +113,9 @@ def test_v3_inherits_v2_and_only_overrides_curriculum(omni_config):
     assert type(child).__bases__ == (namespace["ContactSweepClutterFusionV2EnvCfg"],)
     expected = parent.to_dict()
     expected["curriculum"] = child.curriculum.to_dict()
+    expected["terminations"]["push_fast"]["params"]["speed_condition"] = 1.5
     assert child.to_dict() == expected
+    assert parent.terminations.push_fast.params["speed_condition"] == .8
     assert child.rewards.eef_orientation is None
     assert Parent().rewards.eef_orientation is not None
     assert child.terminations.push_fast.params["speed_condition"] == 1.5

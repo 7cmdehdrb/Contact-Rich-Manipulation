@@ -1,1 +1,1 @@
-"""Clutter Fusion v2: no EEF orientation reward and push-fast at 1.5 m/s."""
+"""Clutter Fusion v2: Fusion v0 without the EEF orientation reward."""

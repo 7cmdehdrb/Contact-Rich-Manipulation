@@ -1,4 +1,4 @@
-"""Inherit Fusion v0, remove EEF orientation cost, and raise push-fast speed."""
+"""Inherit Fusion v0 and remove only its EEF orientation reward."""
 
 from isaaclab.utils import configclass
 
@@ -10,4 +10,3 @@ class ContactSweepClutterFusionV2EnvCfg(ContactSweepClutterFusionEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.rewards.eef_orientation = None
-        self.terminations.push_fast.params["speed_condition"] = 1.5

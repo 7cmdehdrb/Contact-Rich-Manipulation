@@ -1000,7 +1000,7 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 
 ### Contact Sweep Clutter Fusion v3 — 수치 일정 변경
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼만 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`과 `push_fast.speed_condition=1.5`를 v2에서 상속한다.
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼과 push_fast 임계값을 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`은 v2에서 상속하고, `push_fast.speed_condition`은 v3에서만 0.8→1.5로 변경한다.
 
 아래 보상 일정은 **iteration 500에서 첫 증감**을 적용한다. 구간 사이에는 값을 유지하고 최종값에서 멈춘다. iteration은 기존 runner의 0부터 시작하는 Learning iteration이다.
 
@@ -1033,7 +1033,7 @@ Goal deadzone은 ±60°·1000 iteration 유지·100 간격을 사용한다. 1100
 
 ### Contact Sweep Clutter Fusion v2 — EEF 자세 보상 제거
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2`는 Fusion v0를 직접 상속하여 `rewards.eef_orientation=None`과 `push_fast.speed_condition=1.5`를 적용한다. 직접 연결된 EEF 자세 termination은 없으며 나머지 종료 조건은 v0와 같다. 물체 전도·낙하와 손목 높이 종료는 유지한다. 관측·Action·물리·reset·나머지 보상과 커리큘럼·PPO 설정도 v0를 상속한다. 따라서 `push_fast.speed_condition=1.5`이며 속도·action rate·goal deadzone 일정은 위 Fusion v0 설정을 사용한다. v3의 추가 contact·wrench 커리큘럼은 사용하지 않는다.
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2`는 Fusion v0를 직접 상속하여 `rewards.eef_orientation=None`만 적용한다. 직접 연결된 EEF 자세 termination은 없으며 종료 조건은 v0와 같다. 물체 전도·낙하와 손목 높이 종료는 유지한다. 관측·Action·물리·reset·나머지 보상과 커리큘럼·PPO 설정도 v0를 상속한다. 따라서 `push_fast.speed_condition=0.8`이며 속도·action rate·goal deadzone 일정은 위 Fusion v0 설정을 사용한다. v3의 추가 contact·wrench 커리큘럼은 사용하지 않는다.
 
 구현은 [`contact_sweep_clutter_fusion_v2/env_cfg.py`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v2/env_cfg.py)이며, 기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v2`다.
 
