@@ -360,3 +360,15 @@ def test_acceleration_invalid_parameters_rejected(acceleration_env, kwargs):
     env, penalty = acceleration_env
     with pytest.raises(ValueError):
         penalty(env, **kwargs)
+
+
+def test_large_acceleration_allowance_keeps_zero_region_and_finite_cap(acceleration_env):
+    env, penalty = acceleration_env
+    penalty(env, free_acceleration=1_000_000.)
+    advance(env)
+    acceleration = env.scene['object_collection'].data.object_com_lin_acc_w
+    acceleration[0, 0, 0] = 1_000_000.
+    acceleration[1, 0, 0] = -1_000_001.
+    acceleration[2, 0, 0] = math.nan
+    assert penalty(env, free_acceleration=1_000_000.).tolist() == pytest.approx(
+        [0., .5 * math.expm1(2.), 100.])

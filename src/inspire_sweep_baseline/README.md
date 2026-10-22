@@ -1128,3 +1128,33 @@ All new schedules first decrease at1000 and update every250 iterations. Endpoint
 ```
 
 Replace the task suffix with `v1_2` for the second variant. Only offline tests were run; simulation and training performance are unverified.
+
+### Fusion v1_1_1 acceleration experiment
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1` derives from v1_1. Goal hold1cm, fade0 and acceleration100→5m/s² (first update1000, interval250, endpoint20000) remain. Obstacle free force2000N and wrench magnitude-change allowances5000N/500Nm are fixed; their curricula are removed. Other costs, terminations and PPO remain. Use `train_resilient.py --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1 --num_envs 2048 --headless --max_iterations 90000` through `./IsaacLab/isaaclab.sh -p`. Failure in this variant alone does not establish acceleration as the cause; other costs remain active.
+
+### Fusion v1_1_2 force-curriculum experiment
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2` directly derives from v1_1. Only the free acceleration changes to1,000,000m/s² fixed, and its curriculum is removed. Goal hold1cm, fade0, obstacle force100→50N and wrench magnitude-change500→5N /50→0.5Nm curricula remain. PhysX acceleration calculation, other costs, terminations and PPO remain unchanged. The very large threshold is finite; nonfinite acceleration still receives capped cost.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2 \
+  --num_envs 2048 --headless --max_iterations 90000
+```
+
+### Fusion v1_3 continuous threshold curricula
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3` directly derives from v1_1. Goal hold1cm and fade0 remain. Threshold points (iteration,value):
+
+- Obstacle force: (1000,200), (5000,100), (10000,50) N.
+- Wrench force/moment change: (1000,1000/100), (5000,500/50), (10000,100/10), (20000,5/0.5) N/Nm.
+- Object acceleration: (2000,100), (5000,20), (10000,10), (20000,5) m/s².
+
+Hold through the first point, interpolate linearly each iteration, hold after the final point. Resume/rewind recomputes from absolute iteration. Other rewards, schedules, terminations and PPO remain unchanged.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3 \
+  --num_envs 2048 --headless --max_iterations 90000
+```

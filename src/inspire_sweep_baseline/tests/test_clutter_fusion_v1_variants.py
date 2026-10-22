@@ -87,7 +87,7 @@ def test_reward_changes_are_limited_to_requested_parameters():
         assert params(r['hand_contact'])['weight'] == .29
 
 
-@pytest.mark.parametrize('version,parent', [('1_1','1_0'), ('1_2','1_1')])
+@pytest.mark.parametrize('version,parent', [('1_1','1_0'), ('1_2','1_1'), ('1_1_1','1_1'), ('1_1_2','1_1'), ('1_3','1_1')])
 def test_registration_env_and_ppo_wiring(version, parent):
     registry = {}
     def register(id, **kwargs): registry[id] = kwargs
@@ -114,3 +114,56 @@ def test_registration_env_and_ppo_wiring(version, parent):
 def test_invalid_schedule_rejected(stages, interval):
     with pytest.raises(ValueError):
         schedule(SimpleNamespace(learning_iteration=0), None, 'term', 'parameter', 100., stages, interval)
+
+
+def test_v1_1_1_only_restores_force_allowances_and_removes_their_schedules():
+    parent = config_terms('1_1', 'rewards_cfg.py')
+    variant = config_terms('1_1_1', 'rewards_cfg.py')
+    assert parent.keys() == variant.keys()
+    for name in parent:
+        if name not in ('obstacle_contact', 'wrench_change'):
+            assert ast.dump(parent[name]) == ast.dump(variant[name])
+    assert params(variant['obstacle_contact'])['params']['free_force'] == 2000.
+    wrench = params(variant['wrench_change'])['params']
+    assert wrench['free_force_change'] == 5000.
+    assert wrench['free_moment_change'] == 500.
+    schedules = config_terms('1_1_1', 'curriculum_cfg.py')
+    original = config_terms('1_1', 'curriculum_cfg.py')
+    assert schedules.keys() == original.keys() - {
+        'obstacle_free_force', 'wrench_free_force_change', 'wrench_free_moment_change'}
+    assert len(schedules) == 6
+    for name in schedules:
+        assert ast.dump(schedules[name]) == ast.dump(original[name])
+    # All schedule targets are accounted for; none can overwrite fixed forces.
+    targets = [params(call)['params'].get('term_name') for call in schedules.values()]
+    assert 'obstacle_contact' not in targets and 'wrench_change' not in targets
+    p = params(schedules['object_free_acceleration'])['params']
+    reward = SimpleNamespace(params=deepcopy(params(variant['object_acceleration'])['params']))
+    env = SimpleNamespace(reward_manager=SimpleNamespace(get_term_cfg=lambda _:reward, set_term_cfg=lambda *_:None))
+    for iteration, value in [(0,100.), (999,100.), (1000,100.-95./77),
+                             (19999,5.+95./77), (20000,5.), (90000,5.), (0,100.)]:
+        env.learning_iteration = iteration
+        assert schedule(env, None, **p) == pytest.approx(value)
+
+
+def test_v1_1_2_changes_only_acceleration_allowance_and_its_schedule():
+    parent = config_terms('1_1', 'rewards_cfg.py')
+    variant = config_terms('1_1_2', 'rewards_cfg.py')
+    assert parent.keys() == variant.keys()
+    for name in parent:
+        if name != 'object_acceleration':
+            assert ast.dump(parent[name]) == ast.dump(variant[name])
+    old = params(parent['object_acceleration'])
+    new = params(variant['object_acceleration'])
+    assert new['params'].pop('free_acceleration') == 1_000_000.
+    old['params'].pop('free_acceleration')
+    assert old == new
+    assert ast.dump(parent['object_acceleration'].keywords[0]) == ast.dump(variant['object_acceleration'].keywords[0])
+    schedules = config_terms('1_1_2', 'curriculum_cfg.py')
+    original = config_terms('1_1', 'curriculum_cfg.py')
+    assert schedules.keys() == original.keys() - {'object_free_acceleration'}
+    assert len(schedules) == 8
+    for name in schedules:
+        assert ast.dump(schedules[name]) == ast.dump(original[name])
+    assert all(params(call)['params'].get('term_name') != 'object_acceleration'
+               for call in schedules.values())

@@ -53,6 +53,9 @@ def test_tasks_use_their_registered_runtime_family():
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
     }

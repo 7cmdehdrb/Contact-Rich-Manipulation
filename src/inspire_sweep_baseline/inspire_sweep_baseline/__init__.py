@@ -42,6 +42,42 @@ DEX_TACTILE_OMNI_RENEWAL_V2_OSC_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-
 OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
 
 
+CONTACT_SWEEP_CLUTTER_FUSION_V1_1_1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1"
+if CONTACT_SWEEP_CLUTTER_FUSION_V1_1_1_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_V1_1_1_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_1_1.env_cfg:ContactSweepClutterFusionV1_1_1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_1_1.ppo_cfg:ContactSweepClutterFusionV1_1_1PPORunnerCfg",
+        },
+    )
+
+CONTACT_SWEEP_CLUTTER_FUSION_V1_1_2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2"
+if CONTACT_SWEEP_CLUTTER_FUSION_V1_1_2_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_V1_1_2_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_1_2.env_cfg:ContactSweepClutterFusionV1_1_2EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_1_2.ppo_cfg:ContactSweepClutterFusionV1_1_2PPORunnerCfg",
+        },
+    )
+
+CONTACT_SWEEP_CLUTTER_FUSION_V1_3_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3"
+if CONTACT_SWEEP_CLUTTER_FUSION_V1_3_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_V1_3_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_3.env_cfg:ContactSweepClutterFusionV1_3EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_3.ppo_cfg:ContactSweepClutterFusionV1_3PPORunnerCfg",
+        },
+    )
+
 CONTACT_SWEEP_CLUTTER_FUSION_V1_1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1"
 if CONTACT_SWEEP_CLUTTER_FUSION_V1_1_TASK_ID not in gym.registry:
     gym.register(
