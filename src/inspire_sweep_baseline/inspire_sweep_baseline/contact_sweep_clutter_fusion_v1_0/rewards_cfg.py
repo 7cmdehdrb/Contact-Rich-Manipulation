@@ -30,13 +30,13 @@ class ContactSweepClutterFusionV1_0RewardsCfg:
         func=dex_rewards.DexPlanarGoalProgress, weight=100.0,
         params={"position_tolerance": 0.01},
     )
-    goal_hold = RewTerm(func=goal_hold_xy, weight=0.9, params={"position_tolerance": 0.05})
+    goal_hold = RewTerm(func=goal_hold_xy, weight=0.9, params={"position_tolerance": 0.03})
     # Late v3 signed return excluding tactile = 12.990838965 per episode.
     # Five seconds at alpha=1 -> 1.45 reward, a 10.04% baseline share.
-    # Alpha fades to zero within 3 cm outside the live goal-hold tolerance.
+    # Alpha fades to zero within 1.5 cm outside the live goal-hold tolerance.
     hand_contact = RewTerm(
         func=hand_contact_any, weight=0.29,
-        params={"threshold_n": 0.01, "goal_contact_fade_width": 0.03},
+        params={"threshold_n": 0.01, "goal_contact_fade_width": 0.015},
     )
     # Workspace contract: separate raw-square costs, fixed coefficients.
     arm_action_rate = RewTerm(
@@ -82,7 +82,7 @@ class ContactSweepClutterFusionV1_0RewardsCfg:
     )
     object_acceleration = RewTerm(
         func=ObjectAccelerationPenalty, weight=-1.0,
-        params={"free_acceleration": 0.3, "max_cost": 100.0},
+        params={"free_acceleration": 1.0, "max_cost": 100.0},
     )
     # Preserve the v3 normalized exponential, absolute cap and positive budget.
     wrench_change = RewTerm(

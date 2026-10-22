@@ -43,7 +43,7 @@ class ContactSweepClutterFusionV1_0CurriculumCfg:
     goal_hold_tolerance = CurriculumTermCfg(
         func=delayed_reward_schedule,
         params={"term_name": "goal_hold", "parameter": "position_tolerance",
-                "start": 0.05, "step": -0.01, "final": 0.01,
+                "start": 0.03, "step": -0.01, "final": 0.01,
                 "start_iteration": 1000, "interval": 500},
     )
     wrench_free_force_change = CurriculumTermCfg(
@@ -61,6 +61,6 @@ class ContactSweepClutterFusionV1_0CurriculumCfg:
     object_free_acceleration = CurriculumTermCfg(
         func=delayed_reward_schedule,
         params={"term_name": "object_acceleration", "parameter": "free_acceleration",
-                "start": 0.3, "step": -0.01, "final": 0.05,
+                "start": 1.0, "step": -0.02, "final": 0.1,
                 "start_iteration": 1000, "interval": 250},
     )

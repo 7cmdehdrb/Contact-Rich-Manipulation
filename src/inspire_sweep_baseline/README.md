@@ -1003,11 +1003,11 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0`은 v3을 직접 상속하며, 이후 v1_1의 기반이다. [`contact_sweep_clutter_fusion_v1_0/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0)에 독립 Rewards·Terminations·Curriculum CFG를 두고, Env/PPO Cfg는 v3을 상속한다. Runtime은 Fusion Env를 상속한 `ContactSweepClutterFusionV1_0Env`이며 episode별 활성 물체를 관리한다. 기존 iteration runner와 관측55/40/3D, Action8D, tactile17D·제어를 유지한다. 같은 task의 후속 수정이며 새 환경 ID가 아니다.
 
 - Deadzone30°·hold3000·500마다5° 감소. 첫 감소는3500, 0°는6000이다.
-- Goal hold tolerance0.05→0.01m:1000부터500마다0.01m 감소.
-- 손 전체30 body의 Net Force≥0.01N에 접촉 유지 보상 `+0.29 * alpha /초`. `alpha=clamp((목표 XY 거리−현재 Goal hold tolerance)/0.03,0,1)`이며 Goal 커리큘럼과 즉시 동기화된다. 5초의 최대+1.45는 alpha=1일 때만 해당한다. 기존 tactile count/ON 보상과 weight 일정은 제거한다.
+- Goal hold tolerance0.03→0.01m:1000부터500마다0.01m 감소.
+- 손 전체30 body의 Net Force≥0.01N에 접촉 유지 보상 `+0.29 * alpha /초`. `alpha=clamp((목표 XY 거리−현재 Goal hold tolerance)/0.015,0,1)`이며 Goal 커리큘럼과 즉시 동기화된다. 5초의 최대+1.45는 alpha=1일 때만 해당한다. 기존 tactile count/ON 보상과 weight 일정은 제거한다.
 - 타겟 외 장애물 접촉 force>20N에 지수 비용. ContactSensor는 normal force를 제공하며 접선 마찰력은 제외한다.
 - EEF F/T의 `abs(norm(current)-norm(previous))` 변화량을 사용한다. Force50→10N, Moment5→1N·m:1000부터250마다1N/0.1N·m 감소. 기존 wrench 상한·양의 보상5% 예산은 유지한다.
-- 활성 물체 각각 Isaac Lab의 `object_com_lin_acc_w`(PhysX 월드 COM 선가속도)의 norm으로 비용을 계산해 합한다. 물체당 raw 비용 상한100이며 exp 평가 전에 입력을 제한한다. 마지막 물리 step의 가속도를 사용하고 제어 주기 속도 차분은 사용하지 않는다. 가속·감속에 같은 지수 비용을 사용한다. 임계값0.3→0.05m/s²:1000부터250마다0.01m/s² 감소.
+- 활성 물체 각각 Isaac Lab의 `object_com_lin_acc_w`(PhysX 월드 COM 선가속도)의 norm으로 비용을 계산해 합한다. 물체당 raw 비용 상한100이며 exp 평가 전에 입력을 제한한다. 마지막 물리 step의 가속도를 사용하고 제어 주기 속도 차분은 사용하지 않는다. 가속·감속에 같은 지수 비용을 사용한다. 임계값1.0→0.1m/s²:1000부터250마다0.02m/s² 감소.
 - 장애물40D는 가시성 판정·1% 반전 후 관측 물체를 노이즈 포함 root−Y 오름차순(좌→우)으로 정렬·앞쪽 압축한다. 점유된 인접 쌍을 왼쪽부터10% 확률로 한 번씩 순차 교환하며, 매 교환 결과가 다음 쌍에 반영된다. 빈 슬롯은 뒤에서0을 유지하고 입력 순서는 episode 동안 고정한다. `env.events.object_spawn.params.observation_swap_probability`로 확률을 조정한다.
 - Gray1/White1로 시작하고 White는3000·6000, Gray는4500·7500에서1개씩 증가한다. 최종 Gray3/White3/Target1이며 다음 reset부터 적용한다. 비활성 슬롯은 관측·보상·종료에서 제외한다. `env.max_gray_obstacles`/`env.max_white_obstacles`와 `env.curriculum.obstacle_population.params`로 최대 개수·시작/최종 개수·시점을 조정한다.
 

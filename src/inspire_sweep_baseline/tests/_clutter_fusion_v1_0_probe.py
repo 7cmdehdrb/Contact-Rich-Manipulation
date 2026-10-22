@@ -116,7 +116,7 @@ def check_physical_contacts(env):
                 env.set_learning_iteration(iteration)
                 tolerance = env.reward_manager.get_term_cfg("goal_hold").params["position_tolerance"]
                 position = objects.data.object_pos_w[0, 0, :2]
-                for margin, expected in ((-.005, 0.), (0., 0.), (.015, .5), (.03, 1.), (.04, 1.)):
+                for margin, expected in ((-.005, 0.), (0., 0.), (.0075, .5), (.015, 1.), (.025, 1.)):
                     goal[0, :2] = position + position.new_tensor([tolerance + margin, 0.])
                     actual = float(hand_contact_any(env)[0])
                     assert math.isclose(actual, expected, abs_tol=3e-6), (iteration, margin, actual)
@@ -168,13 +168,15 @@ try:
         action = torch.zeros((env.num_envs, 8), device=env.device)
         action[:, -2:] = 1.
         boundaries = [
-            (0, [30., .05, 50., 5., .3]), (999, [30., .05, 50., 5., .3]),
-            (1000, [30., .04, 49., 4.9, .29]), (1249, [30., .04, 49., 4.9, .29]),
-            (1250, [30., .04, 48., 4.8, .28]), (2500, [30., .01, 43., 4.3, .23]),
-            (3000, [30., .01, 41., 4.1, .21]), (3499, [30., .01, 40., 4., .2]),
-            (3500, [25., .01, 39., 3.9, .19]), (6000, [0., .01, 29., 2.9, .09]),
-            (7000, [0., .01, 25., 2.5, .05]), (10750, [0., .01, 10., 1., .05]),
-            (20000, [0., .01, 10., 1., .05]), (0, [30., .05, 50., 5., .3]),
+            (0, [30., .03, 50., 5., 1.]), (999, [30., .03, 50., 5., 1.]),
+            (1000, [30., .02, 49., 4.9, .98]), (1249, [30., .02, 49., 4.9, .98]),
+            (1250, [30., .02, 48., 4.8, .96]), (1499, [30., .02, 48., 4.8, .96]),
+            (1500, [30., .01, 47., 4.7, .94]), (2500, [30., .01, 43., 4.3, .86]),
+            (3000, [30., .01, 41., 4.1, .82]), (3499, [30., .01, 40., 4., .8]),
+            (3500, [25., .01, 39., 3.9, .78]), (6000, [0., .01, 29., 2.9, .58]),
+            (7000, [0., .01, 25., 2.5, .5]), (10750, [0., .01, 10., 1., .2]),
+            (11999, [0., .01, 10., 1., .12]), (12000, [0., .01, 10., 1., .1]),
+            (20000, [0., .01, 10., 1., .1]), (0, [30., .03, 50., 5., 1.]),
         ]
         report["schedule_boundaries"] = []
         for iteration, expected in boundaries:
@@ -259,7 +261,7 @@ try:
             assert (acceleration._cached_cost <= 100.0 * env._active_object_mask.sum(-1)).all()
             if step == 1:
                 magnitude = torch.linalg.vector_norm(native_acc, dim=-1)
-                excess = (magnitude - .3).clamp(0., .5 * math.log(201.))
+                excess = (magnitude - 1.).clamp(0., .5 * math.log(201.))
                 expected = (.5 * torch.expm1(2. * excess)).clamp(max=100.)
                 expected = torch.where(env._active_object_mask, expected, 0.).sum(-1)
                 ongoing = ~(terminated | timeout)
@@ -312,7 +314,7 @@ try:
     before = [parameter.detach().clone() for parameter in runner.alg.actor.obstacle_encoder.parameters()]
     runner.learn(2, init_at_random_ep_len=False)
     assert env.learning_iteration == 2500
-    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .23]))
+    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .86]))
     assert any(not torch.equal(a, b) for a, b in zip(before, runner.alg.actor.obstacle_encoder.parameters()))
     assert all(torch.isfinite(parameter).all() for model in (runner.alg.actor, runner.alg.critic)
                for parameter in model.parameters())
@@ -334,7 +336,7 @@ try:
         restored = restore_for_training(runner, checkpoint)
     assert restored == env.learning_iteration == 2500
     assert (env._active_object_mask.sum(-1) == 3).all()
-    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .23]))
+    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .86]))
     report["checks"].append("checkpoint_2500_restores_reward_and_population_before_reset_and_rollout")
     assert parent.to_dict() == parent_before
     assert parse_env_cfg(PARENT_TASK, device=cfg.sim.device, num_envs=args.num_envs).to_dict() == parent_before

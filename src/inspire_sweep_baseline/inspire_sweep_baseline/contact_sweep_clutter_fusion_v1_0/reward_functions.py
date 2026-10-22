@@ -17,7 +17,7 @@ from .contacts import hand_obstacle_contact_force_w, whole_hand_contact_force_w
 from .object_state import active_object_mask
 
 
-def hand_contact_any(env, threshold_n=0.01, goal_contact_fade_width=0.03):
+def hand_contact_any(env, threshold_n=0.01, goal_contact_fade_width=0.015):
     """Contact rate faded to zero at the current goal-hold boundary.
 
     As with the previous tactile ON reward, sustained contact earns the same
@@ -148,7 +148,7 @@ class ObjectAccelerationPenalty(ManagerTermBase):
         self._previous_valid[env_ids] = False
         self._cached_cost[env_ids] = 0.0
 
-    def __call__(self, env, free_acceleration=0.3, max_cost=100.0, asset_name="object_collection"):
+    def __call__(self, env, free_acceleration=1.0, max_cost=100.0, asset_name="object_collection"):
         if not math.isfinite(free_acceleration) or free_acceleration < 0.0:
             raise ValueError("free_acceleration must be finite and nonnegative")
         if not math.isfinite(max_cost) or max_cost <= 0.0:

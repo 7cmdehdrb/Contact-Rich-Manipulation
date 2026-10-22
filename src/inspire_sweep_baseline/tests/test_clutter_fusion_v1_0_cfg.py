@@ -39,10 +39,10 @@ def schedules(monkeypatch):
 
 
 @pytest.mark.parametrize("name,start,first,interval,last,before_last,final", [
-    ("goal_hold_tolerance", .05, .04, 500, 2500, .02, .01),
+    ("goal_hold_tolerance", .03, .02, 500, 1500, .02, .01),
     ("wrench_free_force_change", 50., 49., 250, 10750, 11., 10.),
     ("wrench_free_moment_change", 5., 4.9, 250, 10750, 1.1, 1.),
-    ("object_free_acceleration", .3, .29, 250, 7000, .06, .05),
+    ("object_free_acceleration", 1., .98, 250, 12000, .12, .1),
 ])
 def test_new_schedule_boundaries_resume_and_rewind(schedules, name, start, first, interval, last, before_last, final):
     env, terms, rewards, _ = schedules
@@ -105,6 +105,9 @@ def test_four_fixed_local_penalties_and_contact_calibration(omni_config, load_md
         assert term.func is func and term.weight == weight
     assert cfg.arm_action_rate.params["action_group"] == "arm"
     assert cfg.hand_action_rate.params["action_group"] == "hand"
+    assert cfg.goal_hold.params["position_tolerance"] == pytest.approx(.03)
+    assert cfg.hand_contact.params["goal_contact_fade_width"] == pytest.approx(.015)
+    assert cfg.object_acceleration.params["free_acceleration"] == pytest.approx(1.)
     five_seconds = cfg.hand_contact.weight * 5
     assert five_seconds == pytest.approx(1.45)
     assert five_seconds / (12.990838965 + five_seconds) == pytest.approx(.1, abs=.001)

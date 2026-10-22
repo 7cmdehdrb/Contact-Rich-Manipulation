@@ -192,8 +192,8 @@ def test_acceleration_threshold_independent_per_object_costs_and_all_object_sum(
     advance(env)
     acceleration = env.scene["object_collection"].data.object_com_lin_acc_w
     acceleration[:] = torch.tensor([
-        [[.18, .24, 0.], [0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-        [[.55, 0., 0.], [0., -.8, 0.], [0., 0., 0.], [0., 0., 0.]],
+        [[.6, .8, 0.], [0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
+        [[1.25, 0., 0.], [0., -1.5, 0.], [0., 0., 0.], [0., 0., 0.]],
         [[1e30, 0., 0.], [1e30, 0., 0.], [1e30, 0., 0.], [1e30, 0., 0.]],
     ])
     expected = [0.0, 0.5 * (math.expm1(.5) + math.expm1(1.0)), 400.0]
@@ -213,7 +213,7 @@ def test_acceleration_uses_physx_vector_without_control_dt_or_velocity_differenc
     env.scene["object_collection"].data.object_lin_vel_w = torch.full((3, 4, 3), math.nan)
     penalty(env)
     advance(env)
-    env.scene["object_collection"].data.object_com_lin_acc_w[:, 0] = torch.tensor([.6, -.8, 0.])
+    env.scene["object_collection"].data.object_com_lin_acc_w[:, 0] = torch.tensor([1.02, -1.36, 0.])
     expected = 0.5 * math.expm1(2.0 * .7)
     assert penalty(env).tolist() == pytest.approx([expected] * 3)
     assert not hasattr(penalty, "_previous_velocity")
@@ -257,7 +257,7 @@ def test_hand_contact_fade_matches_live_goal_hold_tolerance_and_world_xy(rewards
     env = make_env(6)
     env.scene["object_collection"].data.object_pos_w.zero_()
     goal = torch.zeros(6, 3)
-    goal[:, 0] = torch.tensor([.0, .05, .065, .08, .3, .03])
+    goal[:, 0] = torch.tensor([.0, .03, .0375, .045, .3, .015])
     goal[:, 2] = 1000.0  # Height does not enter goal_hold or the fade factor.
     requested_commands = []
 
@@ -266,11 +266,11 @@ def test_hand_contact_fade_matches_live_goal_hold_tolerance_and_world_xy(rewards
         return goal
 
     env.command_manager.get_command = get_command
-    hold_cfg = SimpleNamespace(params={"position_tolerance": .05, "command_name": "live_goal"})
+    hold_cfg = SimpleNamespace(params={"position_tolerance": .03, "command_name": "live_goal"})
     env.reward_manager = SimpleNamespace(get_term_cfg=lambda name: hold_cfg)
     monkeypatch.setattr(rewards, "whole_hand_contact_force_w", lambda env: torch.ones(6, 3))
     assert rewards.hand_contact_any(env).tolist() == pytest.approx([0., 0., .5, 1., 1., 0.], abs=1e-6)
-    hold_cfg.params["position_tolerance"] = .02  # A later curriculum value applies immediately.
+    hold_cfg.params["position_tolerance"] = .01  # A later curriculum value applies immediately.
     assert rewards.hand_contact_any(env).tolist() == pytest.approx([0., 1., 1., 1., 1., 1/3], abs=1e-6)
     assert requested_commands == ["live_goal", "live_goal"]
 
@@ -280,8 +280,8 @@ def test_acceleration_cost_is_symmetric_for_speeding_up_and_slowing_down(acceler
     acceleration = env.scene["object_collection"].data.object_com_lin_acc_w
     penalty(env)
     advance(env)
-    acceleration[0, 0, 0] = 1.0
-    acceleration[1, 0, 0] = -1.0
+    acceleration[0, 0, 0] = 1.7
+    acceleration[1, 0, 0] = -1.7
     expected = .5 * math.expm1(1.4)
     assert penalty(env).tolist() == pytest.approx([expected, expected, 0.])
 
@@ -299,8 +299,8 @@ def test_acceleration_ignores_inactive_slots_and_does_not_keep_their_history(rew
     penalty(env)
     advance(env)
     acceleration[~env._active_object_mask] = math.nan
-    acceleration[1, 0, 0] = 1.0
-    acceleration[2, 6, 0] = 1.0
+    acceleration[1, 0, 0] = 1.7
+    acceleration[2, 6, 0] = 1.7
     expected = .5 * math.expm1(1.4)
     assert penalty(env).tolist() == pytest.approx([0., expected, expected])
     assert torch.equal(penalty._previous_valid, env._active_object_mask)
