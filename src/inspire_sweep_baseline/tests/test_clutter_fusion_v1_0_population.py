@@ -141,7 +141,8 @@ def test_reset_keeps_parent_target_goal_and_disables_unused_slots(population_mod
     assert torch.equal(objects.disabled_rows, (~expected).T.reshape(-1, 1).to(torch.uint8))
     assert (state[..., 2][~expected] == mod.population.PARKING_HEIGHT).all()
     slots = env._initial_obstacle_observation.reshape(4, 10, 4)
-    assert slots[:, [1, 2, 4, 5, 6, 7, 8, 9]].count_nonzero() == 0
+    assert slots[:, 2:].count_nonzero() == 0
+    assert (slots[:, 1:, 0] <= slots[:, :-1, 0]).all()
 
 
 def test_partial_reset_activates_new_counts_only_in_reset_rows(population_modules, make_env):
@@ -185,3 +186,75 @@ def test_zero_capacity_reset_keeps_target_only(population_modules, make_env):
     assert env._active_object_mask.all()
     assert env._initial_obstacle_observation.count_nonzero() == 0
     assert env.scene["object_collection"].disabled_rows.count_nonzero() == 0
+
+
+def _observation_slots():
+    # X encodes identity, Y specifies left-to-right order: A, B, C, D.
+    slots = torch.zeros(1, 10, 4)
+    slots[0, 0] = torch.tensor([1., 3., -1., 30.])  # C
+    slots[0, 2] = torch.tensor([1., 1., 3., 10.])   # A
+    slots[0, 5] = torch.tensor([1., 4., -3., 40.])  # D
+    slots[0, 7] = torch.tensor([1., 2., 1., 20.])   # B
+    slots[0, 1] = torch.tensor([0., 999., 999., 999.])
+    return slots
+
+
+def test_observation_sort_is_left_to_right_compact_and_preserves_xyz(population_modules):
+    slots = _observation_slots()
+    original = slots.clone()
+    result = population_modules.events.pack_obstacle_observations(slots, 0.)
+    assert result[0, :, 0].tolist() == [1.] * 4 + [0.] * 6
+    assert result[0, :4, 1].tolist() == [1., 2., 3., 4.]
+    assert result[0, :4, 2].tolist() == [3., 1., -1., -3.]
+    assert result[0, :4, 3].tolist() == [10., 20., 30., 40.]
+    assert result[:, 4:].count_nonzero() == 0
+    assert torch.equal(slots, original)
+
+
+def test_observation_swaps_use_updated_pairs_and_never_empty_suffix(population_modules):
+    result = population_modules.events.pack_obstacle_observations(_observation_slots(), 1.)
+    # A B C D -> B A C D -> B C A D -> B C D A, not disjoint pairs.
+    assert result[0, :4, 1].tolist() == [2., 3., 4., 1.]
+    assert result[0, :, 0].tolist() == [1.] * 4 + [0.] * 6
+    assert result[:, 4:].count_nonzero() == 0
+
+
+def test_observation_ten_percent_trial_boundary_and_sequential_semantics(population_modules, monkeypatch):
+    trials = torch.ones(1, 9)
+    trials[0, :3] = torch.tensor([.099, .05, .1])
+    monkeypatch.setattr(population_modules.events.torch, "rand", lambda *args, **kwargs: trials.clone())
+    result = population_modules.events.pack_obstacle_observations(_observation_slots())
+    # First A/B swaps, next A/C swaps, .1 itself does not pass the <.1 test.
+    assert result[0, :4, 1].tolist() == [2., 3., 1., 4.]
+    assert result[:, 4:].count_nonzero() == 0
+
+
+def test_observation_empty_single_and_equal_coordinates(population_modules):
+    slots = torch.zeros(3, 10, 4)
+    slots[1, 8] = torch.tensor([1., 12., 0., 2.])
+    slots[2, 1] = torch.tensor([1., 7., 0., 2.])
+    slots[2, 8] = torch.tensor([1., 9., 0., 3.])
+    result = population_modules.events.pack_obstacle_observations(slots, 0.)
+    assert result[0].count_nonzero() == 0
+    assert result[1, 0].tolist() == [1., 12., 0., 2.]
+    assert result[1, 1:].count_nonzero() == 0
+    assert result[2, :2, 1].tolist() == [7., 9.]  # Stable tie order.
+
+
+def test_observation_swap_rate_and_seed_reproducibility(population_modules):
+    slots = torch.zeros(20000, 10, 4)
+    slots[:, 0] = torch.tensor([1., 1., 1., 0.])
+    slots[:, 1] = torch.tensor([1., 2., -1., 0.])
+    torch.manual_seed(521)
+    result = population_modules.events.pack_obstacle_observations(slots)
+    rate = (result[:, 0, 1] == 2.).float().mean().item()
+    assert .09 < rate < .11
+    assert result[:, 2:].count_nonzero() == 0
+    torch.manual_seed(521)
+    assert torch.equal(result, population_modules.events.pack_obstacle_observations(slots))
+
+
+@pytest.mark.parametrize("probability", [-.1, 1.1, math.nan])
+def test_observation_invalid_swap_probability(population_modules, probability):
+    with pytest.raises(ValueError, match="adjacent_swap_probability"):
+        population_modules.events.pack_obstacle_observations(_observation_slots(), probability)

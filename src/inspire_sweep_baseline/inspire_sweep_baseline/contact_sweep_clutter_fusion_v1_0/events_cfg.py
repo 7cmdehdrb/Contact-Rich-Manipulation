@@ -22,6 +22,7 @@ class ContactSweepClutterFusionV1_0EventsCfg:
             "shelf_surface_height": SHELF_SURFACE_HEIGHT,
             "excluded_x_half_angle": math.radians(30.0), "observation_noise": 0.01,
             "visibility_threshold": 0.35, "visibility_flip_probability": 0.01,
+            "observation_swap_probability": 0.1,
             "gray_obstacles": 1, "white_obstacles": 1,
         },
     )

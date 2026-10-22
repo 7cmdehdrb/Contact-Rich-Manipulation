@@ -203,8 +203,10 @@ try:
                 (~env._active_object_mask).T.reshape(-1, 1).to(gravity_flags.device),
             )
             slots = obs["obstacles"].reshape(env.num_envs, 10, 4)
-            inactive = ~env._active_object_mask[:, 1:]
-            assert torch.count_nonzero(slots[:, :6][inactive]) == 0
+            present = slots[..., 0].bool()
+            assert (slots[:, 1:, 0] <= slots[:, :-1, 0]).all()
+            assert (present.sum(-1) <= gray + white).all()
+            assert torch.count_nonzero(slots[~present]) == 0
             assert torch.count_nonzero(slots[:, 6:]) == 0
             # Inactive parked bodies do not drift or trigger drop termination.
             before_positions = env.scene["object_collection"].data.object_pos_w.clone()

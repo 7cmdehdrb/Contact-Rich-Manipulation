@@ -11,8 +11,37 @@ from .layout import generator_cm_to_shelf_xy, population_layout_generator, shelf
 from .population import PARKING_HEIGHT, active_population_mask, apply_gravity_mask
 
 
+def pack_obstacle_observations(slots, adjacent_swap_probability=0.1):
+    """Pack visible noisy root-frame observations, then sweep adjacent pairs.
+
+    Root +Y points left when facing the shelf. Ascending -Y therefore orders
+    left to right. Sort only the reported positions, never hidden ground truth.
+    Each occupied pair (0,1), (1,2), ... gets one independent swap trial; later
+    trials see earlier swaps. Empty slots remain an all-zero suffix.
+    """
+    if not math.isfinite(adjacent_swap_probability) or not 0 <= adjacent_swap_probability <= 1:
+        raise ValueError("adjacent_swap_probability must be in [0, 1]")
+    present = slots[..., 0] > 0.5
+    keys = torch.where(present, -slots[..., 2], math.inf)
+    order = keys.argsort(dim=1, stable=True)
+    packed = torch.where(present[..., None], slots, 0.0).gather(
+        1, order[..., None].expand(-1, -1, 4),
+    )
+    if adjacent_swap_probability == 0:
+        return packed
+    trials = torch.rand((slots.shape[0], max(0, slots.shape[1] - 1)), device=slots.device)
+    for index in range(slots.shape[1] - 1):
+        swap = ((packed[:, index, 0] > 0.5) & (packed[:, index + 1, 0] > 0.5)
+                & (trials[:, index] < adjacent_swap_probability))
+        left, right = packed[:, index].clone(), packed[:, index + 1].clone()
+        packed[:, index] = torch.where(swap[:, None], right, left)
+        packed[:, index + 1] = torch.where(swap[:, None], left, right)
+    return packed
+
+
 def apply_population_visibility(
     env, env_ids, object_radius=0.04, visibility_threshold=0.35, visibility_flip_probability=0.01,
+    observation_swap_probability=0.1,
 ):
     """Inactive capacity neither occludes nor appears in the initial snapshot."""
     if not math.isfinite(object_radius) or object_radius <= 0:
@@ -42,7 +71,9 @@ def apply_population_visibility(
     capacity = objects.num_objects - 1
     slots[:, :capacity] = torch.where(visible[..., None], slots[:, :capacity], 0.0)
     slots[:, capacity:] = 0.0
-    env._initial_obstacle_observation[ids] = slots.flatten(1)
+    env._initial_obstacle_observation[ids] = pack_obstacle_observations(
+        slots, observation_swap_probability,
+    ).flatten(1)
 
 
 def randomize_population_clutter_scene(
@@ -50,6 +81,7 @@ def randomize_population_clutter_scene(
     edge_clearance=0.02, shelf_half_extents=(0.20, 0.50), shelf_surface_height=1.05,
     excluded_x_half_angle=math.radians(30.0), observation_noise=0.01,
     visibility_threshold=0.35, visibility_flip_probability=0.01,
+    observation_swap_probability=0.1,
     gray_obstacles=1, white_obstacles=1,
 ):
     """Place exact active counts; layout failures never alter the sampled goal.
@@ -135,4 +167,5 @@ def randomize_population_clutter_scene(
     apply_population_visibility(
         env, ids, object_radius=object_radius, visibility_threshold=visibility_threshold,
         visibility_flip_probability=visibility_flip_probability,
+        observation_swap_probability=observation_swap_probability,
     )
