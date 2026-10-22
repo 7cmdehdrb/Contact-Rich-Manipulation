@@ -87,7 +87,7 @@ def test_reward_changes_are_limited_to_requested_parameters():
         assert params(r['hand_contact'])['weight'] == .29
 
 
-@pytest.mark.parametrize('version,parent', [('1_1','1_0'), ('1_2','1_1'), ('1_1_1','1_1'), ('1_1_2','1_1'), ('1_3','1_1')])
+@pytest.mark.parametrize('version,parent', [('1_1','1_0'), ('1_2','1_1'), ('1_1_1','1_1'), ('1_1_2','1_1'), ('1_3','1_1'), ('1_3_1','1_3')])
 def test_registration_env_and_ppo_wiring(version, parent):
     registry = {}
     def register(id, **kwargs): registry[id] = kwargs

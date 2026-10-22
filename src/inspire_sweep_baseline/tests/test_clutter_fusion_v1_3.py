@@ -55,3 +55,18 @@ def test_only_requested_thresholds_and_schedules_change():
 def test_invalid_points_fail_before_manager_mutation(points):
     with pytest.raises(ValueError):
         linear(SimpleNamespace(learning_iteration=0),None,'term','parameter',points)
+
+
+def test_v1_3_1_changes_only_goal_and_fade_and_adds_two_schedules():
+    parent=config_terms('1_3','rewards_cfg.py'); current=config_terms('1_3_1','rewards_cfg.py')
+    assert parent.keys()==current.keys()
+    for name in parent:
+        if name not in ('goal_hold','hand_contact'):
+            assert ast.dump(parent[name])==ast.dump(current[name])
+    assert params(current['goal_hold'])['params']['position_tolerance']==.02
+    assert params(current['hand_contact'])['params']['goal_contact_fade_width']==.001
+    parent=config_terms('1_3','curriculum_cfg.py');current=config_terms('1_3_1','curriculum_cfg.py')
+    assert current.keys()-parent.keys()=={'goal_hold_tolerance','hand_contact_fade_width'}
+    for name in parent:
+        assert ast.dump(parent[name])==ast.dump(current[name])
+    assert len(current)==11

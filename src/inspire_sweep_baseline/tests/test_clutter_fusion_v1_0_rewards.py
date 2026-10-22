@@ -372,3 +372,31 @@ def test_large_acceleration_allowance_keeps_zero_region_and_finite_cap(accelerat
     acceleration[2, 0, 0] = math.nan
     assert penalty(env, free_acceleration=1_000_000.).tolist() == pytest.approx(
         [0., .5 * math.expm1(2.), 100.])
+
+
+def test_v1_3_1_goal_and_width_curricula_drive_actual_contact_alpha(rewards, make_env, monkeypatch):
+    from test_clutter_fusion_v1_variants import config_terms, params
+    from test_clutter_fusion_v1_3 import linear
+    cfg = config_terms('1_3_1', 'rewards_cfg.py')
+    terms = {name: SimpleNamespace(**params(cfg[name])) for name in ('goal_hold', 'hand_contact')}
+    schedules = config_terms('1_3_1', 'curriculum_cfg.py')
+    env = make_env(3)
+    env.reward_manager = SimpleNamespace(get_term_cfg=terms.__getitem__, set_term_cfg=terms.__setitem__)
+    env.scene['object_collection'].data.object_pos_w.zero_()
+    goal = torch.zeros(3, 3)
+    env.command_manager.get_command = lambda _: goal
+    monkeypatch.setattr(rewards, 'whole_hand_contact_force_w', lambda _: torch.ones(3, 3))
+    checkpoints = [(0,.02,.001),(4999,.02,.001),(5000,.02,.001),
+                   (5001,.019998,.0010018),(7500,.015,.0055),
+                   (9999,.010002,.0099982),(10000,.01,.01),
+                   (15000,.0075,.01),(20000,.005,.01),(90000,.005,.01),
+                   (7500,.015,.0055),(0,.02,.001)]
+    for iteration, radius, width in checkpoints:
+        env.learning_iteration = iteration
+        for name in ('goal_hold_tolerance','hand_contact_fade_width'):
+            linear(env, [0, 2], **params(schedules[name])['params'])
+        assert terms['goal_hold'].params['position_tolerance'] == pytest.approx(radius)
+        assert terms['hand_contact'].params['goal_contact_fade_width'] == pytest.approx(width)
+        goal[:, 0] = torch.tensor([radius-.0001, radius+width/2, radius+2*width])
+        assert rewards.hand_contact_any(env, **terms['hand_contact'].params).tolist() == pytest.approx(
+            [0., .5, 1.], abs=3e-6)

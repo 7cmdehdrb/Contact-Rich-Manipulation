@@ -1158,3 +1158,13 @@ Hold through the first point, interpolate linearly each iteration, hold after th
   --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3 \
   --num_envs 2048 --headless --max_iterations 90000
 ```
+
+### Fusion v1_3_1 goal/contact-width curricula
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1` directly derives from v1_3. Goal hold radius points are (5000,0.02),(10000,0.01),(20000,0.005)m. Contact fade width points are (5000,0.001),(10000,0.01)m. Hold before the first point, interpolate each iteration, hold after the final point. Contact alpha reads the current Goal hold radius. All other rewards, schedules, terminations and PPO remain unchanged.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1 \
+  --num_envs 2048 --headless --max_iterations 90000
+```
