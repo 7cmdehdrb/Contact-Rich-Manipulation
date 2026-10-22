@@ -20,6 +20,8 @@
 
 ## 2. 최대 7개를 넘어 고밀도 물체 스폰으로 확장
 
+**상세 개발 계획:** [스폰 규칙 고도화와 reset Event 계획](../example/Contact-Rich-Manipulation-Context/01_plan/environments/CLUTTER_SPAWN_EVENT_PLAN.md). 영역별 요청 개수를 파라미터화하고, RED 제외·최소 거리를 유지하면서 유효 부분 배치를 반환한다. 물리적 불가능과 탐색 예산 소진을 구분하며, 계획만 작성한 상태다.
+
 **현재 상태:** Fusion v1_0의 [개수 커리큘럼](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0/population.py)은 기본적으로 타겟 1개 + GRAY/WHITE 각각 1개에서 각각 3개로 증가한다. 따라서 최대 7개는 타겟을 포함한 수다. [Scene](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0/scene_cfg.py)은 고정 슬롯과 비활성 mask를 사용하며, 현재 40D 장애물 관측은 최대 장애물 10개라는 별도 제한을 가진다.
 
 - [ ] 밀도를 물체 수, 사용 가능한 선반 면적 대비 바닥 투영 점유율, 물체 사이 최소 간격, 타겟 주변 이웃 수로 정의한다. 같은 개수에서도 군집·틈새·타겟 주변 밀집 조건을 분리한다.
