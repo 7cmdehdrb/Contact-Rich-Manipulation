@@ -39,17 +39,16 @@ def schedules(monkeypatch):
 
 
 @pytest.mark.parametrize("name,start,first,interval,last,before_last,final", [
-    ("goal_hold_tolerance", .03, .02, 500, 1500, .02, .01),
-    ("wrench_free_force_change", 50., 49., 250, 10750, 11., 10.),
-    ("wrench_free_moment_change", 5., 4.9, 250, 10750, 1.1, 1.),
-    ("object_free_acceleration", 1., .98, 250, 12000, .12, .1),
+    ("wrench_free_force_change", 5000., 4999., 250, 1248250, 11., 10.),
+    ("wrench_free_moment_change", 500., 499.9, 250, 1248250, 1.1, 1.),
+    ("object_free_acceleration", 100., 99.98, 250, 1249500, .12, .1),
 ])
 def test_new_schedule_boundaries_resume_and_rewind(schedules, name, start, first, interval, last, before_last, final):
     env, terms, rewards, _ = schedules
     term = terms[name]
     for iteration, expected in ((0, start), (999, start), (1000, first),
                                 (1000 + interval - 1, first), (last - 1, before_last),
-                                (last, final), (90000, final), (0, start)):
+                                (last, final), (max(90000, last + 1), final), (0, start)):
         env.learning_iteration = iteration
         for ids in (None, [0], [1, 3]):
             assert term.func(env, ids, **term.params) == pytest.approx(expected)
@@ -58,7 +57,8 @@ def test_new_schedule_boundaries_resume_and_rewind(schedules, name, start, first
 
 def test_deadzone_and_all_schedules_coexist_without_weight_mutation(schedules):
     env, terms, rewards, event = schedules
-    assert len(terms) == 9
+    assert len(terms) == 8
+    assert "goal_hold_tolerance" not in terms
     for iteration, expected in ((0, 30), (3000, 30), (3499, 30), (3500, 25),
                                 (5999, 5), (6000, 0), (90000, 0), (0, 30)):
         env.learning_iteration = iteration
@@ -105,9 +105,9 @@ def test_four_fixed_local_penalties_and_contact_calibration(omni_config, load_md
         assert term.func is func and term.weight == weight
     assert cfg.arm_action_rate.params["action_group"] == "arm"
     assert cfg.hand_action_rate.params["action_group"] == "hand"
-    assert cfg.goal_hold.params["position_tolerance"] == pytest.approx(.03)
-    assert cfg.hand_contact.params["goal_contact_fade_width"] == pytest.approx(.015)
-    assert cfg.object_acceleration.params["free_acceleration"] == pytest.approx(1.)
+    assert cfg.goal_hold.params["position_tolerance"] == pytest.approx(.01)
+    assert cfg.hand_contact.params["goal_contact_fade_width"] == pytest.approx(0.)
+    assert cfg.object_acceleration.params["free_acceleration"] == pytest.approx(100.)
     five_seconds = cfg.hand_contact.weight * 5
     assert five_seconds == pytest.approx(1.45)
     assert five_seconds / (12.990838965 + five_seconds) == pytest.approx(.1, abs=.001)

@@ -1111,3 +1111,20 @@ F/T는 기존 `PureWristWrench`의 Hand 중력·관성 하중 보정값이며, �
 ```
 
 [검증과 미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v2.md).
+
+### Fusion v1_1 / v1_2 parameter variants
+
+EnvCfg inheritance: v1_0 → v1_1 → v1_2. Both use the v1_0 runtime and independent reward/curriculum configurations. PPO is unchanged except experiment names.
+
+- `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1`: Goal hold 1cm fixed, contact fade disabled; obstacle free force 100→50N by iteration10000; object free acceleration 100→5m/s² and wrench free magnitude changes 500→5N / 50→0.5Nm by iteration20000.
+- `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2`: same thresholds, Goal hold 2→1cm by5000 then0.5cm by10000; contact fade width1cm synchronized with live Goal hold tolerance.
+
+All new schedules first decrease at1000 and update every250 iterations. Endpoints are exact. The second Goal stage first decreases at5250. Resume/rewind recomputes from absolute iteration. Existing velocity, obstacle displacement/tilt costs and termination thresholds remain active.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1 \
+  --num_envs 2048 --headless --max_iterations 90000
+```
+
+Replace the task suffix with `v1_2` for the second variant. Only offline tests were run; simulation and training performance are unverified.
