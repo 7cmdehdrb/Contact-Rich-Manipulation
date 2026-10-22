@@ -275,6 +275,24 @@ def test_hand_contact_fade_matches_live_goal_hold_tolerance_and_world_xy(rewards
     assert requested_commands == ["live_goal", "live_goal"]
 
 
+def test_hand_contact_zero_width_disables_fade_but_preserves_contact_gates(rewards, make_env, monkeypatch):
+    env = make_env(6)
+    # No goal manager access is needed, including when the object is at its goal.
+    env.reward_manager = None
+    env.command_manager = None
+    force = torch.tensor([[.01, 0., 0.], [.009, 0., 0.], [1., 0., 0.],
+                          [math.nan, 0., 0.], [math.inf, 0., 0.], [1., 0., 0.]])
+    env.sensor_data_fresh[-1] = False
+    monkeypatch.setattr(rewards, "whole_hand_contact_force_w", lambda env: force)
+    assert rewards.hand_contact_any(env, goal_contact_fade_width=0.0).tolist() == [1., 0., 1., 0., 0., 0.]
+
+
+@pytest.mark.parametrize("width", [-.01, math.nan, math.inf, -math.inf])
+def test_hand_contact_invalid_fade_width_rejected(rewards, make_env, width):
+    with pytest.raises(ValueError, match="finite and nonnegative"):
+        rewards.hand_contact_any(make_env(1), goal_contact_fade_width=width)
+
+
 def test_acceleration_cost_is_symmetric_for_speeding_up_and_slowing_down(acceleration_env):
     env, penalty = acceleration_env
     acceleration = env.scene["object_collection"].data.object_com_lin_acc_w

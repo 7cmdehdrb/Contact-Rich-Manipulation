@@ -24,15 +24,18 @@ def hand_contact_any(env, threshold_n=0.01, goal_contact_fade_width=0.015):
     rate on every step, without a duration ramp. Multiply that rate by
     ``clamp((XY_goal_distance - current_hold_tolerance) / fade_width, 0, 1)``.
     Read the live goal-hold term so curriculum updates affect both rewards
-    together. The 17 tactile channels remain observation-only.
+    together. A zero fade width disables distance fading (alpha is always 1).
+    The 17 tactile channels remain observation-only.
     """
     if not math.isfinite(threshold_n) or threshold_n <= 0.0:
         raise ValueError("threshold_n must be finite and positive")
-    if not math.isfinite(goal_contact_fade_width) or goal_contact_fade_width <= 0.0:
-        raise ValueError("goal_contact_fade_width must be finite and positive")
+    if not math.isfinite(goal_contact_fade_width) or goal_contact_fade_width < 0.0:
+        raise ValueError("goal_contact_fade_width must be finite and nonnegative")
     force = whole_hand_contact_force_w(env)
     magnitude = torch.linalg.vector_norm(force, dim=-1)
     valid = torch.isfinite(force).all(dim=-1) & env.sensor_data_fresh
+    if goal_contact_fade_width == 0.0:
+        return (valid & (magnitude >= threshold_n)).to(magnitude.dtype)
     hold_params = env.reward_manager.get_term_cfg("goal_hold").params
     tolerance = hold_params["position_tolerance"]
     goal = env.command_manager.get_command(hold_params.get("command_name", "target_goal_pos"))
