@@ -11,6 +11,7 @@ CONTACT_SWEEP_CLUTTER_V2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v2"
 CONTACT_SWEEP_CLUTTER_FT_TEST_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0"
 CONTACT_SWEEP_CLUTTER_FUSION_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0"
 CONTACT_SWEEP_CLUTTER_FUSION_V3_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3"
+CONTACT_SWEEP_CLUTTER_FUSION_V1_0_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0"
 CONTACT_SWEEP_CLUTTER_FUSION_V2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2"
 REALISTIC_PHYSICS_TASK_ID = "Isaac-Inspire-Sweep-Realistic-Physics-v0"
 INITIAL_PRIVILEGED_TASK_ID = (
@@ -40,6 +41,17 @@ DEX_TACTILE_OMNI_RENEWAL_V2_OSC_TASK_ID = "Isaac-Inspire-Dex-Tactile-Sweep-Omni-
 
 OMNI_RENEWAL_OSC_TASK_ID = "Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0"
 
+
+if CONTACT_SWEEP_CLUTTER_FUSION_V1_0_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_V1_0_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env_cfg:ContactSweepClutterFusionV1_0EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.ppo_cfg:ContactSweepClutterFusionV1_0PPORunnerCfg",
+        },
+    )
 
 if CONTACT_SWEEP_CLUTTER_FUSION_V2_TASK_ID not in gym.registry:
     gym.register(

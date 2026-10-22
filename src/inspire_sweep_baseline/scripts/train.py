@@ -54,6 +54,10 @@ parser.add_argument(
 parser.add_argument(
     "--max_iterations", type=int, default=None, help="RL Policy training iterations."
 )
+# Private protocol used by train_resilient.py; ordinary training is unchanged.
+parser.add_argument("--resilient-attempt-dir", type=Path, default=None, help=argparse.SUPPRESS)
+parser.add_argument("--resilient-checkpoint", type=Path, default=None, help=argparse.SUPPRESS)
+parser.add_argument("--resilient-target-iterations", type=int, default=None, help=argparse.SUPPRESS)
 parser.add_argument(
     "--distributed",
     action="store_true",
@@ -220,15 +224,21 @@ def main(
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Logging experiment in directory: {log_root_path}")
-    # specify directory for logging runs: {time-stamp}_{run_name}
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # The Ray Tune workflow extracts experiment name using the logging line below, hence, do not
-    # change it (see PR #2346, comment-2819298849)
-    print(f"Exact experiment name requested from command line: {log_dir}")
-    if agent_cfg.run_name:
-        log_dir += f"_{agent_cfg.run_name}"
-    log_dir = os.path.join(log_root_path, log_dir)
+    if args_cli.resilient_attempt_dir is not None:
+        if args_cli.distributed or args_cli.resilient_target_iterations is None:
+            raise ValueError("Resilient worker requires a target and a single training process")
+        log_dir = str(args_cli.resilient_attempt_dir.resolve())
+        print(f"[INFO] Logging experiment in directory: {log_dir}")
+        print(f"[INFO] Resilient attempt: {Path(log_dir).name}")
+    else:
+        print(f"[INFO] Logging experiment in directory: {log_root_path}")
+        # specify directory for logging runs: {time-stamp}_{run_name}
+        log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # Ray Tune extracts this line; preserve ordinary training's format.
+        print(f"Exact experiment name requested from command line: {log_dir}")
+        if agent_cfg.run_name:
+            log_dir += f"_{agent_cfg.run_name}"
+        log_dir = os.path.join(log_root_path, log_dir)
 
     # set the IO descriptors export flag if requested
     if isinstance(env_cfg, ManagerBasedRLEnvCfg):
@@ -251,7 +261,9 @@ def main(
         env = multi_agent_to_single_agent(env)
 
     # save resume path before creating a new log_dir
-    if agent_cfg.resume or agent_cfg.algorithm.class_name == "Distillation":
+    if args_cli.resilient_checkpoint is not None:
+        resume_path = str(args_cli.resilient_checkpoint.resolve())
+    elif agent_cfg.resume or agent_cfg.algorithm.class_name == "Distillation":
         resume_path = get_checkpoint_path(
             log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
         )
@@ -293,7 +305,13 @@ def main(
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # load the checkpoint
-    if agent_cfg.resume or agent_cfg.algorithm.class_name == "Distillation":
+    if args_cli.resilient_attempt_dir is not None:
+        from training_recovery import inspect_checkpoint, restore_for_training
+
+        if args_cli.resilient_checkpoint is not None:
+            inspect_checkpoint(args_cli.resilient_checkpoint)
+        restore_for_training(runner, args_cli.resilient_checkpoint)
+    elif agent_cfg.resume or agent_cfg.algorithm.class_name == "Distillation":
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         # load previously trained model
         runner.load(resume_path)
@@ -302,10 +320,35 @@ def main(
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
 
-    # run training
-    runner.learn(
-        num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True
-    )
+    # RSL-RL resumes its loop at checkpoint.iter, and saves the last index.
+    # Keep that convention while making the supervisor target absolute.
+    learning_iterations = agent_cfg.max_iterations
+    if args_cli.resilient_attempt_dir is not None:
+        from training_recovery import remaining_iterations, save_bootstrap_checkpoint, write_json_atomic
+
+        target = args_cli.resilient_target_iterations
+        restored_iteration = runner.current_learning_iteration
+        learning_iterations = remaining_iterations(target, restored_iteration)
+        status_path = Path(log_dir) / "training_status.json"
+        status = {"status": "running", "target_iterations": target,
+                  "restored_iteration": restored_iteration, "learning_iterations": learning_iterations,
+                  "curriculum_iteration": getattr(env.unwrapped, "learning_iteration", None)}
+        write_json_atomic(status_path, status)
+        # A finite initial checkpoint also permits rollback after a first-rollout crash.
+        save_bootstrap_checkpoint(runner, os.path.join(log_dir, f"model_{restored_iteration}.pt"))
+
+    runner.learn(num_learning_iterations=learning_iterations, init_at_random_ep_len=True)
+
+    if args_cli.resilient_attempt_dir is not None:
+        checkpoint = Path(log_dir) / f"model_{runner.current_learning_iteration}.pt"
+        # learn() saves this before stopping its logger. Do not upload again
+        # through an external logger that may already have been closed.
+        inspect_checkpoint(checkpoint)
+        if runner.current_learning_iteration < target - 1:
+            raise RuntimeError("Training returned before the absolute iteration target")
+        status.update(status="completed", last_iteration=runner.current_learning_iteration,
+                      checkpoint=str(checkpoint.resolve()))
+        write_json_atomic(status_path, status)
 
     print(f"Training time: {round(time.time() - start_time, 2)} seconds")
 

@@ -998,6 +998,42 @@ Joint velocity는 Arm −0.03·Hand −0.01 효과로 고정한다. Goal curricu
 
 이전 57D policy 모델과 입력 차원이 달라 새 학습이 필요하다. Actor/Critic encoder 입력은 각각 policy55/58+embedding16이며, Actor export raw 입력은 95D다. [전체 계약·계수 근거·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion.md)을 따른다.
 
+### Contact Sweep Clutter Fusion v1.0 — 손 전체 접촉과 변화량 비용
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0`은 v3을 직접 상속하며, 이후 v1_1의 기반이다. [`contact_sweep_clutter_fusion_v1_0/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0)에 독립 Rewards·Terminations·Curriculum CFG를 두고, Env/PPO Cfg는 v3을 상속한다. Runtime은 Fusion Env를 상속한 `ContactSweepClutterFusionV1_0Env`이며 episode별 활성 물체를 관리한다. 기존 iteration runner와 관측55/40/3D, Action8D, tactile17D·제어를 유지한다. 같은 task의 후속 수정이며 새 환경 ID가 아니다.
+
+- Deadzone30°·hold3000·500마다5° 감소. 첫 감소는3500, 0°는6000이다.
+- Goal hold tolerance0.05→0.01m:1000부터500마다0.01m 감소.
+- 손 전체30 body의 Net Force≥0.01N에 접촉 유지 보상 `+0.29 * alpha /초`. `alpha=clamp((목표 XY 거리−현재 Goal hold tolerance)/0.03,0,1)`이며 Goal 커리큘럼과 즉시 동기화된다. 5초의 최대+1.45는 alpha=1일 때만 해당한다. 기존 tactile count/ON 보상과 weight 일정은 제거한다.
+- 타겟 외 장애물 접촉 force>20N에 지수 비용. ContactSensor는 normal force를 제공하며 접선 마찰력은 제외한다.
+- EEF F/T의 `abs(norm(current)-norm(previous))` 변화량을 사용한다. Force50→10N, Moment5→1N·m:1000부터250마다1N/0.1N·m 감소. 기존 wrench 상한·양의 보상5% 예산은 유지한다.
+- 활성 물체 각각 Isaac Lab의 `object_com_lin_acc_w`(PhysX 월드 COM 선가속도)의 norm으로 비용을 계산해 합한다. 물체당 raw 비용 상한100이며 exp 평가 전에 입력을 제한한다. 마지막 물리 step의 가속도를 사용하고 제어 주기 속도 차분은 사용하지 않는다. 가속·감속에 같은 지수 비용을 사용한다. 임계값0.3→0.05m/s²:1000부터250마다0.01m/s² 감소.
+- Gray1/White1로 시작하고 White는3000·6000, Gray는4500·7500에서1개씩 증가한다. 최종 Gray3/White3/Target1이며 다음 reset부터 적용한다. 비활성 슬롯은 관측·보상·종료에서 제외한다. `env.max_gray_obstacles`/`env.max_white_obstacles`와 `env.curriculum.obstacle_population.params`로 최대 개수·시작/최종 개수·시점을 조정한다.
+
+Arm/Hand action-rate·joint-velocity 네 항은 Workspace 지침의 로컬 함수·고정 계수를 사용한다. 종료 조건은 v3와 같으며 push_fast=0.8이다. 나머지 v3 속도 임계값 커리큘럼도 유지한다. [전체 보상·계수 근거·검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-22_clutter_fusion_v1_0.md)를 확인한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0 --num_envs 1 \
+  --checkpoint "<v1_0-checkpoint.pt>"
+```
+
+학습 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v1_0`이다. 참조 로그에 대한 보상 비중 계산은 새 정책의 학습된 비중을 보장하지 않는다.
+
+자동 복구 학습은 아래 전용 실행기를 사용한다. `--max_iterations`는 재시작을 포함한 절대 목표다. 조기 중단 시 최신 저장 checkpoint보다500 iteration 앞선 시점 이하의 가장 가까운 유효 파일에서 새 프로세스로 재개한다. 커리큘럼 적용 후 reset하므로2500에서 재개할 때 첫 rollout부터2500의 물체 수·보상 일정이 적용된다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0 \
+  --num_envs 2048 --headless --max_iterations 90000 \
+  --rollback-iterations 500 --max-restarts 10
+```
+
+다른 환경도 `--task`로 지정할 수 있다. `--resume-checkpoint <파일.pt>`로 최초 복원 지점을 지정한다. 기본 저장 위치는 새 `logs/resilient/<task>/<UTC시각_uuid>/attempt_*`이며 `--job-dir <새 경로>`로 바꿀 수 있다. 기존 checkpoint는 보존하고 되돌리기 이후의 폐기된 분기는 재선택하지 않는다. Ctrl+C/SIGTERM에는 재시작하지 않는다. 기본 최대10회 재시작 후에도 실패하면 이유를 남기고 종료한다. [변경 계약·복구 규칙·실제 검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-22_clutter_fusion_v1_0_population_recovery.md)을 따른다.
+
 ### Contact Sweep Clutter Fusion v3 — 수치 일정 변경
 
 `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3`은 Fusion v2를 상속하여 커리큘럼만 변경한다. 기존 Fusion v1의 현재 커리큘럼을 v3으로 옮겼으며 상속은 `v0 → v2 → v3`이다. 구현은 [`contact_sweep_clutter_fusion_v3/`](inspire_sweep_baseline/contact_sweep_clutter_fusion_v3)에 있다. `eef_orientation=None`은 v2에서 상속하고, `push_fast.speed_condition`은 v0·v2·v3 모두 0.8로 고정한다. [버전별 변경 비교](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_VERSIONS.md)를 따른다.
@@ -1030,6 +1066,33 @@ Goal deadzone은 ±60°·1000 iteration 유지·100 간격을 사용한다. 1100
 ```
 
 기본 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v3`이다. [실제 검증·미실행 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-21_clutter_fusion_v3.md)를 확인한다.
+
+#### Fusion v3 F/T·물체 선속도 CSV 수집
+
+[`collect_fusion_telemetry.py`](scripts/collect_fusion_telemetry.py)는 위 v3의 등록된 Cfg와 runner를 그대로 사용한다. 실행 클래스만 `ContactSweepClutterFusionEnv`를 상속한 [`ContactSweepClutterFusionTelemetryEnv`](inspire_sweep_baseline/contact_sweep_clutter_fusion/telemetry_env.py)로 확장해 종료 직전 값을 부모 reset 전에 취득한다. 별도 task 등록이나 학습은 필요하지 않으며 보상·관측·정책·물리 설정을 변경하지 않는다. GT 선속도는 로그에만 저장한다.
+
+Workspace 루트에서 실행한다. 기본 checkpoint는 사용자가 지정한 `logs/rsl_rl/inspire_contact_sweep_clutter_fusion_v3/2026-10-21_21-55-18/model_7200.pt`다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/collect_fusion_telemetry.py \
+  --headless --num_envs 16 --steps 5000
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/validate_fusion_telemetry.py \
+  outputs/fusion_telemetry/<수집-폴더>
+```
+
+`--checkpoint <파일.pt>`, `--output-dir <새 폴더>`, `--seed 42`를 지정할 수 있다. GUI 재생은 `--headless`를 빼고 필요하면 `--real-time`을 추가한다. 기본 출력은 `outputs/fusion_telemetry/<UTC timestamp>`이며 기존 폴더를 덮어쓰거나 학습 로그에 쓰지 않는다.
+
+| 파일 | 열·단위 |
+| --- | --- |
+| `wrench_world.csv` | `time,Fx_0,Fy_0,Fz_0,Mx_0,My_0,Mz_0,...,Mz_15`; 월드 축, 힘 N·모멘트 N·m |
+| `wrench_eef.csv` | 동일 열; 회전하는 EEF 축 |
+| `object_velocity.csv` | `time,vx_Target_0,vy_Target_0,vz_Target_0,vx_obstacle_0_0,...,vz_obstacle_2_15`; 월드 축 COM 선속도 m/s |
+| `episodes.csv` | 환경마다 `episode_id,episode_step,terminated,time_out,delta_valid,target_id`에 `_0`…`_15` 접미사 |
+
+모든 CSV는 **제어 step당 한 행**이며 `time`은 누적 시뮬레이션 초다. 0.02초 간격·5,000행이면 환경당 100초, 16환경을 합쳐 1,600초다. 물체는 환경마다 Target(`mass_cylinder`) 1개·장애물 3개이며 각속도는 저장하지 않는다. 속도의 반올림·정규화·clamp를 하지 않는다.
+
+F/T는 기존 `PureWristWrench`의 Hand 중력·관성 하중 보정값이며, 두 좌표계 모두 모멘트 원점은 EEF다. 부호는 parent-on-child 반력이다. 기존 변화율 비용과 비교하려면 `wrench_world.csv`에서 `(현재−이전)/0.02`를 사용하고 **현재 행의 `delta_valid_N=0`인 차분은 제외**한다. 종료 직전 표본은 보존되며 다음 episode 첫 표본만 차분에서 제외한다. `metadata.json`에는 checkpoint 해시·복원 iteration·좌표계·물체 순서·열 정의·실행 설정이 있다. [실제 수집·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-22_fusion_telemetry.md)을 따른다.
 
 ### Contact Sweep Clutter Fusion v2 — EEF 자세 보상 제거
 

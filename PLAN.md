@@ -1,72 +1,112 @@
-"src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_v1_curriculum" 이 환경과 "src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_v2" 이 환경을 융합한 새로운 환경을 만들어줘.
+"src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion_v3" 이 환경을 계승(상속)한 "_v1_0" 환경을 만들어줘. 이후는 v1_1 이렇게 상속 받을 것이다.
 
-기존 환경들과 가지는 상속 관계를 끊고, 새로운 CFG들을 형성한다. 함수는 그대로 끌고 와서 써도 된다.
+다음과 같은 변경 사항을 가진다.
 
-다음과 같은 조건을 가진다:
+## 0. 용어의 정리
 
-0. 환경 이름은 적당히 설정한다. (중요하지 않음)
+- "Net Force", "Net Moment"의 경우, SQRT(F_x **2 + F_y ** 2 + F_z ** 2) 과 같은 방식으로 계산된다.
 
-1. 기본적인 센서 구성 방식은 contact_sweep_clutter_v2를 따른다. 즉, 캔슬레이션 된 F/T 센서 관측을 사용하는 환경이다.
-   
-2. Observation을 변경한다.
-    - 다른 물체의 관측을 변경한다. 관측 방식은 변하지 않지만, 정면(로봇이 존재하는 위치)에서 선반을 바라볼 때, 다른 물체에 가려져서 잘 보이지 않는 물체는 관측 대상에서 제외한다. ("src/scene_randomization"를 참고) 단, 관측 대상 물체를 선정하는 로직은 매우 빨라야하며, 1%(0.01)의 확률로 관측 여부를 flip한다. 즉, 1% 확률로 관측 안되는 물체인데 관측된 것으로 취급하고, 반대로 관측 안되야 하는 물체인데 관측되는 랜덤화를 수행한다. 
-    - Target Object Width 관측을 제거한다.
-    - Goal Pos를 3차원 관측에서 2차원 관측으로 변경한다. 기준 Frame을 변경하지는 않고, "얼마나 밀어야 하는가"를 의미하는 distance, "어느 방향으로 밀어야 하는가"를 의미하는 theta로 구분하여 2차원 입력욿 변경한다. 수직으로 밀어내는 것을 0.0, 끌어당기는 것을 3.14로 하여 시계 방향으로 rad 단위로 부여한다. 따라서, 가능한 수치는 0.0~2*3.14이다. 주의할 점은, 관측 방식만 바뀌는 것이지, 실질적으로 목표점이 변경되지는 않는다는 것이다.
+## 1. Dead Zone 커리큘럼의 변경
 
-3. Reward를 통합한다.
-   - arm_action_rate, hand_action_rate 이 2개의 action rate를 합쳐, 하나의 action rate 리워드로 계산해라. 실질적인 리워드는 변경하지 않는다.
-   - arm_joint_velocity, hand_joint_velocity 이 2개의 joint velocity를 합쳐, 하나의 joint velocity 리워드로 계산해라. 실질적인 리워드는 변경하지 않는다.
-   - object_tilt, obstacle_displacement 이 2개의 object를 합쳐, 하나의 object 리워드로 계산해라. 실질적인 리워드는 변경하지 않는다.
+기존의 Dead Zone 커리큘럼의 의도는 점점 수직 방향으로도 미는 경향을 학습하게 만드는 것이였으나, 생각보다 이 의도대로 동작하지 못하는 현상이 발생했다.
 
-4. Reward를 변경한다.
-   - Contact 보상을 강화한다. 단순 Weight 변화로, Weight를 10배 증가시켜라.
-   - 통합된 object 보상을 강화한다. 단순 Weight 변화로, 기존의 15배로 증가시켜라. 이는, 기존의 tilt와 displacement를 각각 15배 증가 시키는 것과 같은 효과를 만든다.
+따라서, 아래와 같이 변경한다.
+- start degress를 30도로 설정
+- holding iteration을 3000으로 설정
+- interval을 500으로 설정
+- 감소 degree를 5도로 설정
 
-5. Reward를 추가한다.
-   - EEF Linear Speed에 대한 페널티 항을 추가한다. 수식 구성 방식은 arm_joint_velocity와 같이 특정 임계점부터 exp하게 증가하는 방식이며, free speed를 1.5m/s으로 설정한다.
-   - EEF의 Orientation 페널티 항을 추가한다. 지금 v1-cur 환경을 보면, 손바닥을 아래로 향하고 접촉하는 형태가 목격된다. 이는 내가 원하는 방향이 아님으로, 손바닥의 Normal이 바닥 방향에 가까울 수록 주는 페널티를 부여한다. 이는 EEF Frame의 z축이 지금은 하늘 방향을 향하는 것에 페널티를 부여하는 것이다. EEF Frame의 Z축이 가르키는 방향과 하늘 방향 벡터 사이의 코사인 각도가 특정 값부터 페널티가 시작, 0.0(일치)일 때 최대가 되는 방향의 페널티를 구현한다. 페널티는 전체 보상의 abs(1%) 수준으로 설정하고, 발산하지 않도록 유의해라. 주의-반대 방향을 가르킬 경우는 페널티 대상이 아니다. 즉, 손바닥이 하늘을 향하는 방향은 문제 없다.
-   - 급격한 F/T 및 Wrench 변화에 대한 페널티를 추가해라. "outputs/clutter_ft/2026-10-21_curriculum_model12800_dataset_rates" 를 확인하여, 지나치게 큰 F/T 변화량에 대한 페널티를 부여하라. 주의할 점은, 페널티의 최대 한도가 있어야 하며(발산을 막기 위함), 지나치게 큰 경우만 막아야 한다는 점이다. 처음에 접촉이 발생할 때 정도의 페널티는 용인하는 느낌이여야 한다. 그래서 목표는, 지수함수 적으로 증가하는데, 적절한 계수를 설정하여 용인되는 변화량과 용인되지 않는 페널티를 간접적으로 구분하는 것이다.
+이 변경의 의도는 시작부터 대각선 방향을 어느 정도 학습하는 것이다.
 
-6. Curriculum을 추가 및 변경한다.
-   - pushing speed, arm speed, action rate(통합)의 커리큘럼을 변경한다.
-   - 변경 주기를 500 iteration으로 통일한다.
-   - pushing_speed의 free speed 경우 0.1 시작, 0.01씩 감소, 0.05 도달로 설정한다.
-   - arm_speed_excess의 free speed 경우, 1.0 시작, 0.02씩 감소, 0.8 도달로 설정한다.
-   - action rate weight의 경우, -0.03 시작, 0.005씩 감소, -0.06 도달로 설정한다.
-   - EEF Linear Speed의 free speed 경우, 1.5 시작, 0.02씩 감소하여 0.7 도달로 설정한다.
-   - Goal 관련 커리큘럼을 추가한다. 현재는 12시, 6시 방향에 고정된 DeadZone이 존재하는데, 이 DeadZone을 변경하는 커리큘럼을 추가한다. 시작에는 12시, 6시 각각 +-60도 범위로 goal을 설정하지 않지만, 1000 iteration 이후부터, 200 iteration마다 +-1도씩 감소시켜, 최종적으로 DeadZone이 삭제되는 구성을 따른다. 즉, 처음에는 좌, 우로만 밀 수 있다가 시간이 지나면서 앞 뒤까지 미는 경향성을 학습하게 만든다.
-  
+## 2. Goal 유지 보상의 커리큘럼 추가
+
+기존의 Goal 유지 보상은 1cm 이내에 유지시킬 때, 보상을 부여하는 것이다.
+이 보상은 의도대로 동작하나, 정책이 목표를 인식하는 것을 쉽게 하기 위해 position tolerance에 커리큘럼을 부여한다.
+
+- 시작 tolerance를 0.05로 설정
+- 1000 iteration부터 tolerance를 감소
+- interval을 500으로 설정
+- 감소 tolerance를 0.01로 설정
+- 0.01까지 감소
+
+## 3. Tactile 보상의 변경
+
+기존의 Tactile 보상의 의도는, Tactile 센서가 ON되는 갯수가 많아지고, 접촉을 유지할 수록 보상을 부여하는 것이다. 하지만, 왼쪽으로 미는 케이스에서 손가락 때문에 wrist3를 돌리지 못해 실질적으로 의미가 없는 보상이 되었다. 따라서, Tactile 센서는 단순한 관측으로만 사용하고, 접촉 유지 보상은 다른 방식으로 부여한다.
+
+- 손 전체를 Contact Sensor로 취급한다. (기존 Tactile 역할은 유지되어야 한다) 
+- 손에 느껴진 Netforce가 0.01 이상이 유지되면 보상을 부여한다. (기존 Tactile ON 보상과 같은 로직)
+- 5초 동안 풀로 유지될 경우, 전체 보상의 10% 수준을 유지하도록 리워드 및 Weight를 부여하라. "logs/rsl_rl/inspire_contact_sweep_clutter_fusion_v3/2026-10-21_21-55-18" 의 학습 결과 참조한다. 
+- 기존의 Tactile Weight 커리큘럼과 Tacile 갯수 보상은 삭제한다.
+
+## 4. 기대 밖의 접촉에 페널티를 추가한다.
+
+3은, 어떤 물체든 접촉이 발생하면 주어지는 보상이지만, 이 페널티는 "타겟 물체 밖의 접촉"에 부여하는 페널티이다. 어떤 물체와 접촉했는지를 확인해서, 접촉이 타겟 이외의 장애물에 의해 발생한다면, 해당 Net Force에 exp하게 증가하는 페널티를 부여한다.
+
+- exponential_joint_speed_cost_limit 와 같은 방식으로 부여
+- free speed에 해당하는 수치는 20N 으로 설정
+
+## 5. wrench_change 보상 구조 및 수치 변경
+
+아래와 같은 변경을 수행한다.
+
+- 리워드 부여에 사용하는 힘의 기준점을 관측과 같은 EEF 기준으로 변경할 것
+- 페널티의 기준을 Net Force와 Net Moment를 계산한 다음, 이것의 abs(delta)를 사용할 것. 즉, 이전 스탭과 현재 스탭에서 느껴지는 Net Force/Moment의 변화량의 절댓값이다.
+- exp하게 증가하는 페널티 구조를 유지하며, Net Force의 경우 50N, Moment의 경우 5.0Nm부터 증가하는 구조를 가진다
+- 커리큘럼도 변경한다. 
+   - Net Force의 경우 1000 iteration부터, 250 iteration마다 1N 씩 감소시켜 10N 까지 감소시킨다. 
+   - Net Moment의 경우 1000 iteration부터, 250 iteration마다 0.1Nm 씩 감소시켜 1.0Nm 까지 감소시킨다.
+
+## 6. Object 속도의 Acceleration에 페널티를 부여한다. 
+
+- 각각의 물체에 독립적으로 부여되는 페널티이고, 최종 페널티는 해당 페널티들의 합산으로 정해진다.
+- exponential_joint_speed_cost_limit 과 같이 특정 지점 이후부터 exp 하게 증가하는 방식으로 부여한다.
+- 0.3 m/s^2 이상부터 페널티를 부여한다.
+- 커리큘럼을 추가하여 1000 iteration 부터, 250 iteration마다 0.01 N/m^2 씩 감소시켜, 최종적으로 0.05 m/s^2 이상부터 페널티를 부여한다.
+
+## 7. 기타
+
+- 변경되는 리워드, 터미네이션, 커리큘럼은 새로운 CFG 클래스를 짜서 집어 넣는 방식을 사용할 것 (기존의 리워드, 터미네이션, 커리큘럼을 상속받지 않는다.)
 
 ---
 
-방금 구현한 환경을 설명하는 문서를 작성해줘. 다른 환경과 비교는 수행하지 않고, 독립적인 설명을 수행한다.
+추가 수정 사항 (Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0 환경의 변경이다. 새 환경 구현이 아니다.)
 
-1. Scene 구성 방법에 대한 설명
-   - Scene의 구성 요소에 대한 설명. 코드 레벨의 구현을 설명하는 것이 아닌, 어떤 의도로 구현되었는지를 설명
-   - Robot
-   - Hand
-   - Sensor
-   - Shelf
-   - Object
-  
-2. Observation
-   - 각 Observation의 의미와 차원
-   - Actor/Critic이 다른 관측을 사용할 경우, 반드시 이를 설명
-   - 관측 노이즈가 포함될 경우 이를 반드시 설명
-   - Frame이 존재할 경우(특정 Frame에서의 관측일 경우) 이에 대한 설명을 반드시 포함
+## 1. Acceleration 페널티:
 
-3. Action
-   - Action 정의 방법
-   - 최대로 나올 수 있는 Action의 크기
+Acceleration의 절댓값에 비례하는 페널티를 쓴다. 즉, 급격한 감속도 페널티 대상에 포함된다.
 
-4. Reward
-   - 각 Term의 의미와 의도
-   - 의도한 각 Term이 가지는 비중 (예상 보상 수치)
-   - 구성 상, 중요도가 높은 순서로 설명한다.
+## 2. 장애물 수를 쉽게 조정할 수 있도록 스폰 함수 조정 및 커리큘럼 추가:
 
-5. Termination
-   - 각 Term의 의미와 의도
-   - 매칭되는 Reward 항과 연계하여 설명한다.
+- 시작 장애물은 Gray Zone 1, White Zone 1 로 시작하게 설정한다.
+3000 iteration부터, 3000 iteration마다 White Zone Spawn 갯수를 1개씩 늘려, 최종적으로 3개까지 스폰하게 한다.
+- 4500 iteration부터, 3000 iteration마다 Gray Zone Spawn 갯수를 1개씩 늘려, 최종적으로 3개까지 스폰하게 한다.
+- 최종적으로, 3 White, 3 Gray, 1 Target이 되게 한다.
 
-6. Curriculum
-   - 각 커리큘럼의 의미와 의도
+## 3. Contact 유지 보상에 수정을 가한다.
+
+- alpha 라는 추가 계수를 Contact 유지 보상에 곱한다. 
+- 이 추가 계수는 Goal 도달로 인정하는 거리에서는 0.0, Goal 도달 인정 거리 +3cm에서는 1.0이라는 수치를 가지며, 그 사이에서는 선형적으로 감소한다.
+- 즉, 목표와 가까워지면 Contact를 유지할 목적을 점점 줄여가는 것에 있다.
+- 주의할 점은, Goal 도달로 인정하는 거리는 해당 커리큘럼과 반드시 동기화가 되어야 한다. Goal 도달 리워드에서 해당 거리가 감소된다면, 반드시 Contact 유지 보상의 인정 거리도 감소해야 한다.
+
+4. 전용 train.py 를 추가해라. 
+
+```
+RuntimeError: normal expects all elements of std >= 0.0
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+```
+
+이런 식으로 PPO에 문제가 생겨 학습이 중단되는 경우가 자주 발생한다. 따라서, 전용 train.py를 설정하여, Full Iteration을 만족하지 못하고 학습이 중단될 경우, 가장 최신의 checkpoint -500 iteration을 만족하는 checkpoint를 찾아, 자동적으로 resume 되도록 train.py를 구축한다.
+
+주의할 점은, resume시 커리큘럼도 같이 따라와야 한다는 것이다. 3000 iteration에서 터져서 2500에서 재학습 할 때, 이미 2500 iteration으로 취급되어 진행된 커리큘럼이 적용되어야 한다는 뜻이다.
+
+이 train.py는 이후 작성할 환경에도 재사용할 수 있도록 구현하라.
+
+---
+
+다음을 확인해라.
+
+가속 페널티에 상한 값이 존재하는지 체크해라. 상한이 없다면, 순간적으로 너무 큰 가속이 발생하면 해당 페널티가 발산할 가능성이 있다고 생각된다. 따라서 상한이 존재하지 않는다면, 가속도가 0.5m/s^2 수준에서 MAX가 되도록 설정해라. (음의 Weight를 무시하고 하는 말이다. 요점은, 해당 항이 발산하지 않도록 점검할 것)
+
+또한, velocity - self._previous_velocity 방식이 아니라, IsaacLab 자체에서 가속도 값을 얻을 수는 없는지 체크해라. 만약 가능하다면, 해당 방식으로 변경하고, 불가능하다면 기존 방식을 유지해라.
