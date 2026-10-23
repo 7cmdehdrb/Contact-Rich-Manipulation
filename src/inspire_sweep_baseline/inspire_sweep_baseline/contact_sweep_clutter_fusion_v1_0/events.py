@@ -41,7 +41,7 @@ def pack_obstacle_observations(slots, adjacent_swap_probability=0.1):
 
 def apply_population_visibility(
     env, env_ids, object_radius=0.04, visibility_threshold=0.35, visibility_flip_probability=0.01,
-    observation_swap_probability=0.1,
+    observation_swap_probability=0.1, obstacle_radius=None,
 ):
     """Inactive capacity neither occludes nor appears in the initial snapshot."""
     if not math.isfinite(object_radius) or object_radius <= 0:
@@ -62,12 +62,18 @@ def apply_population_visibility(
     )
     centers = torch.stack((shelf_positions[..., 1], -shelf_positions[..., 0]), dim=-1)
     active = env._active_object_mask[ids]
+    radii = object_radius
+    if obstacle_radius is not None:
+        if not math.isfinite(obstacle_radius) or obstacle_radius <= 0:
+            raise ValueError("obstacle_radius must be finite and positive")
+        radii = torch.full_like(centers[..., 0], obstacle_radius)
+        radii[:, 0] = object_radius
     visible = classify_visibility_torch(
-        centers, radii=object_radius, active=active, threshold=visibility_threshold, check_inputs=False,
+        centers, radii=radii, active=active, threshold=visibility_threshold, check_inputs=False,
     ).visible[:, 1:]
     flips = torch.rand(visible.shape, device=env.device) < visibility_flip_probability
     visible = torch.logical_xor(visible, flips) & active[:, 1:]
-    slots = env._initial_obstacle_observation[ids].reshape(-1, 10, 4)
+    slots = env._initial_obstacle_observation[ids].reshape(len(ids), -1, 4)
     capacity = objects.num_objects - 1
     slots[:, :capacity] = torch.where(visible[..., None], slots[:, :capacity], 0.0)
     slots[:, capacity:] = 0.0

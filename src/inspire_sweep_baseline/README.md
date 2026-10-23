@@ -1253,3 +1253,7 @@ Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2�
 ```
 
 Holding OSC v0의 이동·회전 명령은 현재 EEF 좌표축 기준이다. 정책 step마다 EEF pose를 복사하여 해당 명령의 기준으로 고정한다. 기존 Renewal OSC의 base 기준 명령과 이 점이 다르다.
+
+## Holding OSC ObjectRandom v0
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v0`는 Holding OSC 직접 파생이며 NVIDIA YCB4종과 균일크기3단계를 생성 시 무작위 선택한다. reset마다 위치·yaw·질량·마찰을 갱신하며 후속 요청으로 기존 대비1.5배 확대하고 실제 회전 바운딩 박스의 비겹침·선반 경계 검사를 추가했다. 타겟은 기존 반경4cm·높이10cm 실린더를 유지한다. 장애물은 −Y 상방을 +Z로 회전해 바로 세운다. 물체 개수 curriculum은 임시 비활성화하여 처음부터 타겟1+Gray7+White7=15개를 사용하며 장애물 관측·encoder를14슬롯56D로 확장했다. 이전40D encoder checkpoint와 직접 호환되지 않는다. 초기 흔들림을 줄이기 위해 원본 시각 모델과 별도로 평평한 상자·32각 원통 충돌 프록시를 사용한다. reset은 기존 물체 텔레포트 방식이다. [상세 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V0_ENVIRONMENT.md).

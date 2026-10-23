@@ -22,13 +22,13 @@ class ContactSweepClutterFusionV1_0SceneCfg(ContactSweepClutterFusionSceneCfg):
         super().__post_init__()
         self.configure_population_capacity(max_gray_obstacles=3, max_white_obstacles=3)
 
-    def configure_population_capacity(self, max_gray_obstacles, max_white_obstacles):
+    def configure_population_capacity(self, max_gray_obstacles, max_white_obstacles, observation_slots=10):
         """Build fixed gray/white slots before simulation starts.
 
         Counts live on EnvCfg because InteractiveScene treats scalar scene
         fields as assets. The runtime calls this again after Hydra overrides.
         """
-        validate_capacity(max_gray_obstacles, max_white_obstacles)
+        validate_capacity(max_gray_obstacles, max_white_obstacles, observation_slots)
         for name in tuple(vars(self)):
             if name.startswith("hand_contact_"):
                 delattr(self, name)

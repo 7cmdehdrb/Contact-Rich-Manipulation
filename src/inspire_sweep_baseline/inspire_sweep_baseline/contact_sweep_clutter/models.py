@@ -24,12 +24,14 @@ class MaskedObstacleEncoder(nn.Module):
         hidden_dims: tuple[int, ...] | list[int] = (32,),
         embedding_dim: int = 16,
         activation: str = "relu",
+        observation_slots: int = 10,
     ) -> None:
         super().__init__()
-        self.mlp = MLP(40, embedding_dim, hidden_dims, activation)
+        self.observation_slots = observation_slots
+        self.mlp = MLP(4 * observation_slots, embedding_dim, hidden_dims, activation)
 
     def forward(self, obstacles: torch.Tensor) -> torch.Tensor:
-        rows = obstacles.unflatten(-1, (10, 4))
+        rows = obstacles.unflatten(-1, (self.observation_slots, 4))
         # where also masks NaN/Inf dummy coordinates; multiplication by zero
         # would propagate them. Real rows retain their supplied coordinates.
         rows = torch.where(rows[..., :1] > 0.5, rows, torch.zeros_like(rows))

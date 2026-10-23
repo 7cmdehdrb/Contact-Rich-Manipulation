@@ -14,6 +14,7 @@ class ContactSweepClutterFusionModelCfg(RslRlMLPModelCfg):
     obs_normalization = False
     obstacle_group: str = "obstacles"
     encoder_hidden_dims: list[int] = [32]
+    obstacle_observation_slots: int = 10
     embedding_dim: int = 16
     encoder_activation: str = "relu"
 

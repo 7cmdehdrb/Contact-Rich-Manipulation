@@ -25,6 +25,7 @@ class ContactSweepClutterFusionEnvCfg(ManagerBasedRLEnvCfg):
     terminations: ContactSweepClutterFusionTerminationsCfg = ContactSweepClutterFusionTerminationsCfg()
     events: ContactSweepClutterFusionEventsCfg = ContactSweepClutterFusionEventsCfg()
     curriculum: ContactSweepClutterFusionCurriculumCfg = ContactSweepClutterFusionCurriculumCfg()
+    obstacle_observation_slots: int = 10
     viewer: ViewerCfg = ViewerCfg(eye=(3.5, 3.5, 3.5), lookat=(0.0, 0.0, 0.3))
 
     def __post_init__(self):

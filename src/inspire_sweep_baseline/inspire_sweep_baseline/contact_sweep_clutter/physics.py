@@ -21,8 +21,9 @@ def initialize_clutter_materials(env, env_ids=None):
     if hasattr(env, "_clutter_physics"):
         return
     objects = env.scene["object_collection"]
-    if not 1 <= objects.num_objects <= 11:
-        raise ValueError("Clutter requires one target and at most ten real obstacles")
+    capacity = getattr(env.cfg, "obstacle_observation_slots", 10)
+    if not 1 <= objects.num_objects <= capacity + 1:
+        raise ValueError(f"Clutter requires one target and at most {capacity} real obstacles")
     robot = env.scene["robot"]
     views = (env.scene["shelf"].root_physx_view, objects.root_physx_view, robot.root_physx_view)
     shapes = (

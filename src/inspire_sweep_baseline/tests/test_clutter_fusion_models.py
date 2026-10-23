@@ -154,3 +154,29 @@ def test_cfgs_do_not_inherit_other_task_cfgs():
                 # only importing its configuration classes breaks independence.
                 assert not any(alias.name.endswith("Cfg") for alias in node.names
                                if (node.module or "").split(".")[0].startswith("contact_sweep")), file
+
+
+def test_fourteen_obstacle_slots_train_and_export(fusion_models, fusion_runner_cfg):
+    """The added slots reach PPO gradients and the exported actor, without truncation."""
+    obs = _observations()
+    obs['obstacles'] = torch.zeros(8, 56)
+    obs['obstacles'].unflatten(-1, (14, 4))[..., 0] = 1.
+    obs['obstacles'][:, -3:] = torch.randn(8, 3)
+    fusion_runner_cfg.actor.obstacle_observation_slots = 14
+    fusion_runner_cfg.critic.obstacle_observation_slots = 14
+    alg = _algorithm(obs, fusion_runner_cfg)
+    obs['obstacles'].requires_grad_()
+    output = alg.actor(obs)
+    grad = torch.autograd.grad(output.sum(), obs['obstacles'])[0]
+    assert grad[:, -3:].abs().sum() > 0
+    assert alg.actor.obstacle_encoder.mlp[0].in_features == 56
+    exported = alg.actor.as_jit()
+    assert exported.get_dummy_inputs()[0].shape == (1, 111)
+    inputs = torch.cat((obs['policy'], obs['obstacles']), -1)
+    torch.testing.assert_close(torch.jit.script(exported)(inputs), output)
+    with torch.inference_mode():
+        for _ in range(alg.storage.num_transitions_per_env):
+            actions = alg.act(obs)
+            alg.process_env_step(obs, -actions.square().sum(-1), torch.zeros(8, dtype=torch.long), {})
+        alg.compute_returns(obs)
+    assert all(np.isfinite(value) for value in alg.update().values())

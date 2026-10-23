@@ -258,3 +258,11 @@ def test_observation_swap_rate_and_seed_reproducibility(population_modules):
 def test_observation_invalid_swap_probability(population_modules, probability):
     with pytest.raises(ValueError, match="adjacent_swap_probability"):
         population_modules.events.pack_obstacle_observations(_observation_slots(), probability)
+
+
+def test_extended_capacity_is_opt_in(population_modules):
+    mod = population_modules.population
+    with pytest.raises(ValueError):
+        mod.validate_capacity(7, 7)
+    mask = mod.active_population_mask(4, 7, 7, 7, 7, 'cpu', observation_slots=14)
+    assert mask.shape == (4, 15) and mask.all()

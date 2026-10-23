@@ -16,7 +16,7 @@ class ContactSweepClutterFusionEnv(ManagerBasedRLEnv):
         self.target_width = torch.full((count, 1), 0.04, device=device)
         self.sweep_dir = torch.zeros((count, 3), device=device)
         self.sensor_data_fresh = torch.zeros(count, device=device, dtype=torch.bool)
-        self._initial_obstacle_observation = torch.zeros((count, 40), device=device)
+        self._initial_obstacle_observation = torch.zeros((count, 4 * cfg.obstacle_observation_slots), device=device)
         self._initial_object_positions_w = torch.zeros(
             (count, len(cfg.scene.object_collection.rigid_objects), 3), device=device,
         )

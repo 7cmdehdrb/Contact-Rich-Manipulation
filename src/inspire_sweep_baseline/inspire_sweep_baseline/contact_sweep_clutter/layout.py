@@ -69,11 +69,11 @@ class ClutterLayoutGenerator:
     certificate, but never the target or goal.
     """
 
-    def __init__(self, seed=0, config=None):
+    def __init__(self, seed=0, config=None, max_obstacles=10):
         self.config = config if config is not None else DEFAULT_LAYOUT_CONFIG
         self.config.check()
-        if self.config.obstacles > 10:
-            raise ValueError("Clutter observation supports at most 10 obstacles")
+        if self.config.obstacles > max_obstacles:
+            raise ValueError(f"Clutter observation supports at most {max_obstacles} obstacles")
         self.rng = np.random.default_rng(seed)
 
     def generate(self, target_cm, goal_cm):

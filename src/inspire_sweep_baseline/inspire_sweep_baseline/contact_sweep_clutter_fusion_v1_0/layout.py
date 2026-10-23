@@ -19,5 +19,7 @@ def population_layout_generator(env, gray_obstacles, white_obstacles):
             gray_obstacles=gray_obstacles, rear_obstacles=min(1, gray_obstacles),
         )
         seed = getattr(env, "_population_layout_seed", env.cfg.seed)
-        env._population_layout_generators[key] = ClutterLayoutGenerator(seed=seed, config=config)
+        env._population_layout_generators[key] = ClutterLayoutGenerator(
+            seed=seed, config=config, max_obstacles=getattr(env.cfg, "obstacle_observation_slots", 10),
+        )
     return env._population_layout_generators[key]

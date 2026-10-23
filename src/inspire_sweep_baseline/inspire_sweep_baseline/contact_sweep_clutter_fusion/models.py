@@ -30,7 +30,9 @@ class ContactSweepClutterFusionModel(MLPModel):
         encoder_hidden_dims: tuple[int, ...] | list[int] = (32,),
         embedding_dim: int = 16,
         encoder_activation: str = "relu",
+        obstacle_observation_slots: int = 10,
     ) -> None:
+        self.obstacle_observation_slots = obstacle_observation_slots
         self.obstacle_group = obstacle_group
         self.embedding_dim = embedding_dim
         super().__init__(
@@ -38,7 +40,7 @@ class ContactSweepClutterFusionModel(MLPModel):
             obs_normalization, distribution_cfg,
         )
         self.obstacle_encoder = MaskedObstacleEncoder(
-            encoder_hidden_dims, embedding_dim, encoder_activation,
+            encoder_hidden_dims, embedding_dim, encoder_activation, obstacle_observation_slots,
         )
 
     def _get_obs_dim(
@@ -50,8 +52,8 @@ class ContactSweepClutterFusionModel(MLPModel):
         if obs["policy"].ndim != 2 or obs["policy"].shape[-1] != 55:
             raise ValueError("Clutter Fusion requires 55D policy observations.")
         obstacles = obs[self.obstacle_group]
-        if obstacles.ndim != 2 or obstacles.shape[-1] != 40:
-            raise ValueError("Obstacle observations must have shape (num_envs, 40).")
+        if obstacles.ndim != 2 or obstacles.shape[-1] != 4 * self.obstacle_observation_slots:
+            raise ValueError(f"Obstacle observations must have shape (num_envs, {4 * self.obstacle_observation_slots}).")
         if obs_set not in ("actor", "critic"):
             raise ValueError("Clutter Fusion observation set must be actor or critic.")
         expected = ["policy", self.obstacle_group]
@@ -93,7 +95,7 @@ class _ExportClutterFusionModel(nn.Module):
         super().__init__()
         self.verbose = verbose
         self.direct_dim = model.obs_dim
-        self.input_size = model.obs_dim + 40
+        self.input_size = model.obs_dim + 4 * model.obstacle_observation_slots
         self.obs_normalizer = copy.deepcopy(model.obs_normalizer)
         self.obstacle_encoder = copy.deepcopy(model.obstacle_encoder)
         self.mlp = copy.deepcopy(model.mlp)
