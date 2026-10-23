@@ -1197,3 +1197,45 @@ Hold through the first point, interpolate linearly each iteration, hold after th
   --num_envs 2048 --headless --resume \
   --load_run "<v1_0-run-절대경로>" --checkpoint "<model_ITER.pt>"
 ```
+
+## Fusion v1_0 동기화 3카메라 녹화
+
+`record_three_views.py`는 기존 play와 독립적으로 1환경에서 하이 앵글·선반 뒤 아이 레벨·선반 내부 탑다운을 동시에 기록한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/record_three_views.py \
+  --checkpoint logs/TEMP/Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0/2026-10-22_08-34-18_4833cc00/attempt_000/model_16400.pt \
+  --headless --seconds 60
+```
+
+기본960×720·50fps·3,000프레임씩 별도 MP4 세 개를 `outputs/three_view_recordings/<timestamp>/`에 기록한다. `--output-dir`은 새 폴더만 허용하며, `--real-time`은 가능한 경우 벽시계 속도를 제한한다. 녹화 길이는 시뮬레이션 시간으로 결정한다. 세 카메라는 같은 post-step 상태를 공유하며 자동 reset이 발생한 프레임은 reset 후 장면이다. `frames.csv`에 영상/시뮬레이션 시각·episode·reset을 기록하고 `metadata.json`에 완료 상태와 프레임 수를 남긴다. 시점은 스크립트의 `views`에서 조절한다.
+
+시점 확인만 하려면 위 명령에 `--preview-only`를 추가한다. 기본960×720 PNG를 카메라별1장씩 같은 시뮬레이션 시점에 저장하며 MP4는 만들지 않는다. 최소 해상도는720×480이다. 2026-10-23 조정: 뒤쪽 시점은18cm 후퇴·8cm 하강, 하이 앵글은 베이스 방향(+X)15cm 이동 및 안쪽 조준, 탑다운은 광학축 기준−90° 회전(기존 화면 위→왼쪽).
+
+최신 미리보기 설정(앞의 해상도·시점 설명을 대체): 기본1920×1080,16:9 비율 필수. Top down은 선반의 실제 pose를 매 프레임 따라가며 선반 평면에 수직·변에 평행하게 정렬한다. 광각 pinhole 초점거리는 top7.5mm/rear12mm(high18mm), 수평 aperture24mm다. Rear 위치는(-1.60,0,1.16)으로 추가 후퇴했다. `--preview-only`는 이 설정으로 PNG3개만 만든다.
+
+## Fusion Holding v0
+
+Task: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0`. [환경 구성](inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_v0/env_cfg.py)은 v1_0을 직접 상속한다. v1_0 runtime·관측·Action·물리·장면·최대Gray3/White3·목표12~15cm 생성·실패 종료(push_fast0.8)는 유지한다. 속도 세 커리큘럼은 논의 기준인 v1_4의 일정을 동일하게 적용한다(Arm0.7/EEF0.2/pushing0.02 최종값). Hand contact는 v1_0의0.29·fade0을 유지한다.
+
+Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2의 거리·속도 정착 보상으로 교체한다. `exp(-ln(2)*((d/r)^2+(v/s)^2))`, d는 목표 XY 거리, v는 물체3D 속력이다. d≥3r이면0이며 선반 밖·높이 이탈·과도한 기울기·비유한 상태는0이다. 정상 높이는 shelf-local root z1.04~1.07m, 물체 중심 XY범위±0.16/±0.46m, 선반과 타겟 상방 축 사이 각≤0.9rad다. 위치 척도 r은0/1000/6000/10000/12000/16000에서1/2/2/1/1/0.5cm, 속도 척도 s는6000까지0.05m/s,10000까지0.02로 감소 후 유지한다. 성공은 정착 점수와 독립적으로 오차≤0.005m·속력≤0.01m/s·정상 상태·실패 없음이 연속3초일 때 발생한다.
+
+| Iteration | Wrench free(N/Nm), weight | Accel free(m/s²), weight | Obstacle free(N), weight |
+| --- | --- | --- | --- |
+| 0~1000 | 50/5, 0 | 50, 0 | 80, 0 |
+| 3000 | 50/5, −0.03 | 50, −0.01 | 80, −0.02 |
+| 6000~10000 | 30/3, −0.1 | 30, −0.03 | 50, −0.05 |
+| 12000 이후 | 20/2, −0.1 | 20, −0.05 | 30, −0.1 |
+
+250 iteration 단위 보간으로 첫 음수 가중치는1250부터 적용한다. 0↔음수 전환 시 해당 stateful term의 이력을 초기화한다. 기존 비용 함수·상한·Wrench 예산 제한은 유지한다. 커리큘럼은 절대 iteration 기준으로 checkpoint load/rewind를 지원한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0 --num_envs 1 \
+  --checkpoint "<Holding-checkpoint.pt>" --real-time
+```
+
+새 PPO 설정은 v1_0 runner를 상속하고 experiment 이름만 `inspire_contact_sweep_clutter_fusion_holding_v0`로 분리한다. [개발·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v0.md).

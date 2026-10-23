@@ -469,3 +469,16 @@ __all__ = [
     "DEX_TACTILE_OMNI_RENEWAL_V3_TASK_ID",
     "DEX_TACTILE_OMNI_RENEWAL_V2_OSC_TASK_ID",
 ]
+
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V0_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point":"inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v0.env_cfg:FusionHoldingV0EnvCfg",
+            "rsl_rl_cfg_entry_point":"inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v0.ppo_cfg:FusionHoldingV0PPORunnerCfg",
+        },
+    )
