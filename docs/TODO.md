@@ -1,35 +1,41 @@
 # 후속 연구·개발 TODO
 
-기준일: 2026-10-23. 사용자 요청에 따라 이 파일에 다섯 가지 후속 과제를 정리한다. 현재 상태는 문서와 `src/inspire_sweep_baseline` 코드를 대조한 결과이며, 아래 체크박스는 앞으로 수행할 작업이다. 실험 수치·평가 조건은 실행 전에 확정하고, 실제 결과와 개발 이력은 문서 전용 저장소에 남긴다.
+기준일: 2026-10-23. 사용자 요청에 따라 이 파일에 후속 과제를 정리한다. 현재 상태는 문서와 `src/inspire_sweep_baseline` 코드를 대조한 결과이며, 체크박스는 구현·검증 근거가 있는 항목만 완료 처리한다. 구현 완료와 장기 학습·실물 검증 완료는 구분한다. 실험 수치·평가 조건은 실행 전에 확정하고, 실제 결과와 개발 이력은 문서 전용 저장소에 남긴다.
 
 참고: [프로젝트 인계](../example/Contact-Rich-Manipulation-Context/01_plan/00_HANDOFF_BRIEF.md) · [활성 환경](../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [기존 연구 TODO](../example/Contact-Rich-Manipulation-Context/01_plan/TODO.md).
 
 ## 1. Arm 컨트롤러를 OSC로 전환
 
-**현재 상태:** Clutter Fusion의 [Action 설정](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion/actions_cfg.py)은 Arm 6D Joint Position과 Hand 2D openness를 사용한다. 별도의 [Dex Renewal OSC v2](../src/inspire_sweep_baseline/inspire_sweep_baseline/dex_tactile_omni_renewal_v2_osc_env_cfg.py)는 이미 구현되어 있으며 stiffness 100, 상대 위치/회전 명령 한도 5 mm/0.025 rad를 사용한다. 그러나 [기존 검증 기록](../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_dex_tactile_renewal_v2_osc.md)에는 0 명령에서도 지속 과속 문제가 남아 있다.
+**현재 상태:** `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0`를 구현했다. 부모는 Holding v0이며, 참조 Renewal OSC v0의 stiffness200·damping ratio1·관성 분리·중력 보상을 적용하고 Arm 관절 PD를0으로 설정했다. 후속 변경으로 이동·회전 명령은 **현재 EEF 좌표축 기준**이다. 별도 bounded OSC의5mm/0.025rad 제한은 적용하지 않았다. [환경 설명](../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V0_ENVIRONMENT.md) · [검증 기록](../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_osc_v0.md).
 
-- [ ] 비교 기준으로 사용할 Contact Sweep/Clutter Fusion 버전·commit·설정·checkpoint를 고정하고, OSC를 적용할 부모 환경을 명시한다.
-- [ ] 기존 [bounded OSC Action](../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/osc_actions.py)을 검토해 Arm만 OSC로 바꾸는 파생 환경을 구성한다. Hand 제어와 비교 대상의 관측·보상·종료 조건을 유지한다.
-- [ ] Arm Action을 Cartesian 위치·회전 증분으로 정의하고, 좌표계·EEF 기준점·offset·단위·정책 주기·physics 주기를 문서화한다. 6D라는 차원이 같아도 기존 Joint Position 정책과 행동 의미가 다르므로 기존 checkpoint를 그대로 호환된다고 보지 않는다.
-- [ ] Jacobian·질량 행렬·중력 보상·Arm joint PD 비활성화·토크 제한·특이 자세를 점검한다. 명령 크기 제한만으로 실제 관절 속도가 제한된다고 가정하지 않는다.
-- [ ] 무접촉 0 명령 유지 → 작은 병진/회전 명령 → 선반 근처 이동 → 단일 물체 접촉 → 다중 물체 접촉 순서로 진동·과속을 재현하고 원인을 분리한다. gain·damping·제어 주기 변경 전후를 기록한다.
+- [x] OSC 적용 부모를 Holding v0으로 명시하고 직접 상속하는 별도 task를 등록한다.
+- [ ] 정량 비교 실험에 사용할 Joint Position/OSC의 commit·설정·학습 checkpoint를 고정한다.
+- [x] Arm만 OSC로 바꾸고 Hand 제어·관측·보상·종료·커리큘럼을 유지한다. 실제 Cfg 전체 비교로 Arm Action·PD gain 외 동일성을 확인했다.
+- [x] Cartesian 상대 이동·회전의 EEF 로컬 좌표계, EEF offset, 단위, 정책0.02초·physics0.01초 주기를 문서화한다. Z90° 자세에서 로컬+X→Base+Y 및 로컬 회전 목표를 검증했다. 기존 Joint Position checkpoint와 행동 의미는 다르다.
+- [x] OSC의 Jacobian·질량 행렬·중력 보상 연결과 Arm joint PD 비활성화를 실제 GPU 실행에서 확인한다.
+- [ ] OSC 출력의 실제 토크 상한 적용 및 특이 자세 동작을 검증한다. UR5e 설정값150/150/150/28/28/28Nm와 실제 전달 토크 제한은 구분한다.
+- [x] GPU2환경에서 0 명령·작은 병진 명령을 포함한32step smoke를 수행한다. 유한 보상·관절 상태·토크와 종료 없음을 확인했다. 작은 회전은 목표 변환을 검사했으며 실제 회전 추종 검증은 남아 있다.
+- [ ] 장시간 무접촉 유지 → 작은 병진/회전 추종 → 선반 근처 이동 → 단일 물체 접촉 → 다중 물체 접촉 순서로 진동·과속을 검증한다. gain·damping·제어 주기 변경 전후를 기록한다.
 - [ ] 동일 초기 조건에서 Joint Position과 OSC의 EEF 추종 오차, 관절 최대 속도, 토크 포화, F/T peak, 물체 목표 오차·전도율을 비교한 뒤 별도 학습·평가한다.
-- [ ] Manager 기반 책임 분리와 기존 운동 페널티 계약을 유지한다. Omni 파생에서는 로컬 `goal_rewards.action_rate_l2`·`joint_vel_l2`, Arm/Hand 분리, raw 변화량·실제 속도 제곱합 및 지정 계수(Arm −0.03/−0.03, Hand −0.03/−0.01)를 임의로 바꾸지 않는다.
+- [x] 현재 Holding OSC 파생에서 Manager별 책임과 부모의 Arm/Hand raw Action 변화량·실제 관절 속도 제곱합 페널티 및 고정 계수를 유지한다. 이후 변경에도 같은 계약을 적용한다.
 
 **완료 기준:** 0 명령 유지와 반복 접촉에서 안정성을 확인하고, 기존 제어 대비 정량 비교표·재현 명령·새 task 등록 및 상속 안내를 남긴다. 짧은 smoke test와 장시간 학습 성과는 따로 기록한다.
 
 ## 2. 최대 7개를 넘어 고밀도 물체 스폰으로 확장
 
-**상세 개발 계획:** [스폰 규칙 고도화와 reset Event 계획](../example/Contact-Rich-Manipulation-Context/01_plan/environments/CLUTTER_SPAWN_EVENT_PLAN.md). 영역별 요청 개수를 파라미터화하고, RED 제외·최소 거리를 유지하면서 유효 부분 배치를 반환한다. 물리적 불가능과 탐색 예산 소진을 구분하며, 계획만 작성한 상태다.
+**상세 개발 계획:** 스폰 규칙 고도화와 reset Event 계획(기존 참조 `CLUTTER_SPAWN_EVENT_PLAN.md`는 현재 작업트리에 없어 내용 확인 불가). 영역별 요청 개수를 파라미터화하고, RED 제외·최소 거리를 유지하면서 유효 부분 배치를 반환한다. 물리적 불가능과 탐색 예산 소진을 구분하며, 계획만 작성한 상태다.
 
-**현재 상태:** Fusion v1_0의 [개수 커리큘럼](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0/population.py)은 기본적으로 타겟 1개 + GRAY/WHITE 각각 1개에서 각각 3개로 증가한다. 따라서 최대 7개는 타겟을 포함한 수다. [Scene](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter_fusion_v1_0/scene_cfg.py)은 고정 슬롯과 비활성 mask를 사용하며, 현재 40D 장애물 관측은 최대 장애물 10개라는 별도 제한을 가진다.
+**현재 상태:** Holding v0과 이를 상속한 Holding OSC v0은 **타겟1개+GRAY5개+WHITE5개, 최대11개**까지 확장했다. White는3000부터3000마다 증가하여12000에서5개, Gray는4500부터3000마다 증가하여13500에서5개다. 최대10개 장애물의 기존40D 관측·고정 슬롯·활성 mask를 유지한다. GPU2환경에서 단계별 배치·reset·복원을 검증했다. [구현·검증 기록](../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v0.md). 이는 개수 확장 완료이며 아래의 고밀도 분포 설계·대규모 배치 안정성 검증 전체 완료를 뜻하지 않는다.
+
+- [x] 최대7개를 넘어 최대11개 물체를 지원하고 Gray/White별 개수 커리큘럼을 적용한다.
+- [x] 증가가 다음 reset에서 활성 mask에 적용되는지, 과거 iteration으로 복원하면 개수가 돌아오는지 GPU에서 확인한다.
 
 - [ ] 밀도를 물체 수, 사용 가능한 선반 면적 대비 바닥 투영 점유율, 물체 사이 최소 간격, 타겟 주변 이웃 수로 정의한다. 같은 개수에서도 군집·틈새·타겟 주변 밀집 조건을 분리한다.
-- [ ] 기존 7개 조건을 기준선으로 유지하고, 10개·15개·20개 등은 후보 단계로 검토한다. 최종 개수는 실제 에셋 크기·선반 면적·배치 성공률에 따라 정한다.
+- [ ] 기존7개와 구현된11개 조건을 비교하고, 15개·20개 등 추가 확장은 후보 단계로 검토한다. 최종 개수는 실제 에셋 크기·선반 면적·배치 성공률에 따라 정한다.
 - [ ] [배치 생성기](../src/inspire_sweep_baseline/inspire_sweep_baseline/contact_sweep_clutter/layout.py)의 RED 제외 영역, 물체 간격, 셀 점유·이웃 수 제한, 접근 경로 여유를 검토한다. 단순히 개수만 올리지 말고 고밀도에서도 가능한 분포와 불가능한 조건을 구분한다.
 - [ ] 기존의 여유 있는 배치와 물체끼리 인접해 다중 접촉이 발생하는 배치를 별도 난도로 설계한다. 목표·접근 가능성의 기존 보장을 변경할 경우 그 변경을 명시하고, 생성 실패를 숨기기 위해 목표를 임의로 바꾸지 않는다.
 - [ ] 장애물 10개 제한을 넘기기 전에 Scene 슬롯·40D 관측·encoder·접촉 filter·active mask·보상·낙하/전도 판정의 고정 크기 가정을 함께 확장한다. 초기 관측의 가림·노이즈 및 현재 GT의 Actor 유입 여부도 확인한다.
-- [ ] 개수와 밀도를 분리한 커리큘럼을 만들고, episode 도중 active mask가 변하지 않는지와 checkpoint 재개 시 단계가 복원되는지 검증한다.
+- [ ] 구현된 개수 커리큘럼과 별개로 밀도 커리큘럼을 설계하고, 실제 checkpoint 재개·다수 seed에서 장면 분포와 단계 복원을 추가 검증한다.
 - [ ] seed별 배치 생성 실패율·재시도 횟수·reset 시간·관통 여부를 검사한다. GPU 메모리, 접촉 버퍼 용량, steps/s를 측정해 병렬 환경 수를 결정한다.
 - [ ] 밀도별 목표 성공률, 비타겟 변위, 접촉 상실, 전도·낙하율과 실패 영상을 수집한다. 학습에 사용하지 않은 배치 seed를 평가에 사용한다.
 
@@ -78,6 +84,28 @@
 - [ ] 확보된 결과만 본문에 채우고 미실험 항목은 명시적으로 표시한다. 지도교수 검토용 PDF를 만든 뒤 논리·용어·그림·인용·재현 정보와 남은 실험을 점검한다.
 
 **완료 기준:** 모든 장이 연결된 가제본 PDF와 원본, 주장–근거 대응표, 미완료 실험 목록을 확보한다. 미확인 수치나 예상 성과를 결과로 기재하지 않는다.
+
+## 6. F/T 센서 가우시안 노이즈 추가
+
+**현재 상태:** 이번 요청은 할 일 등록이며 노이즈 코드는 아직 적용하지 않았다. 사용자 지정 F=0.1, M=0.005는 아래에서 **평균0 가우시안 노이즈의 축별 표준편차**로 해석한다. 적용 대상 환경과 raw/보정 후 주입 위치는 구현 시 명시한다.
+
+- [ ] 힘 Fx/Fy/Fz 각 축에 평균0·표준편차 **0.1N**의 가우시안 노이즈를 추가한다.
+- [ ] 모멘트 Mx/My/Mz 각 축에 평균0·표준편차 **0.005N·m**의 가우시안 노이즈를 추가한다.
+- [ ] 축별 독립 표본·제어 step별 갱신을 기본안으로 두고, 보정 F/T 관측과 `wrench_change`가 같은 표본을 공유할지 명시한다. 같은 step의 반복 조회마다 노이즈를 다시 뽑지 않도록 한다.
+- [ ] seed 재현성·reset 직후 센서 유효성·노이즈 ON/OFF 설정을 검증하고, 표본 평균·표준편차와 무접촉/접촉 시 분포를 확인한다.
+- [ ] 노이즈 추가 전후의 Wrench 변화 비용·정책 성능을 비교한다. 가우시안 노이즈 추가를 실물 센서 오차 전체의 재현으로 해석하지 않는다.
+
+**완료 기준:** 지정 단위·표준편차의 노이즈 구현, 주입 위치와 관측·보상 표본 공유 규칙 문서화, 통계·재현성 검증 및 적용 환경 기록.
+
+## 7. EEF 정렬 보상 도입 검토
+
+**현재 상태: 검토 중, 도입 미확정.** 사용자 관찰에 따르면 손등이 천장을 향한 상태에서 손날로 옆으로 미는 행동이 자주 나타난다. EEF 정렬 보상으로 이 자세를 억제하는 것이 적절한지 고민 중이다. 다만 목표까지 미는 동작이 안정적으로 학습되면 해당 행동이 자연스럽게 줄어들 가능성이 있으므로, 정렬 보상을 즉시 추가하기로 결정한 것은 아니다.
+
+- [ ] 목표까지 안정적으로 밀고 정착하는 정책이 형성된 뒤에도 해당 자세가 반복되는지 확인한다.
+- [ ] 해당 자세가 목표 도달·정착·접촉 안정성을 실제로 저해하는지, 단순한 자세 선호의 문제인지 구분한다.
+- [ ] 문제가 지속될 경우 EEF 정렬 보상 도입 여부를 검토한다. 정렬을 강제하면서 유효한 밀기 방향이나 접촉 전략을 과도하게 제한하지 않는지 함께 평가한다.
+
+**판단 기준:** 안정적인 밀기 학습 이후의 행동·성과를 근거로 보상 추가 필요성을 결정한다. 자연스럽게 해소되거나 과제 수행에 문제가 없다면 추가하지 않는 선택도 유지한다.
 
 ## 권장 진행 순서와 공통 기록
 

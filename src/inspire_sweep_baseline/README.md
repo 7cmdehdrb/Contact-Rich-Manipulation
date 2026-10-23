@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+> 현재 학습 실행 정책(2026-10-23): `scripts/train.py`를 사용한다. `train_resilient.py`는 복구 후에도 학습 중단이 반복되어 사용을 중단했으며 코드는 보존한다. 아래의 기존 자동 복구 설명·명령은 과거 이력이다. [학습 실행 정책](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md#학습-실행-정책).
+
 [활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)
 
 2026-10-18 공통 보상 변경: Omni 계열에서 사용하는 `mdp/goal_rewards.py`의 `action_rate_l2`·`joint_vel_l2`는 raw 입력의 제곱합을 계산한 뒤 `max_cost=100.0`으로 출력 상한을 적용한다. 두 함수의 반환 범위는 [0, 100]이며 음의 보상 가중치와 dt는 이후 RewardManager에서 적용한다. 입력·가중치는 바꾸지 않는다. [변경·검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-18_omni_squared_cost_caps.md).
@@ -1216,7 +1218,7 @@ Hold through the first point, interpolate linearly each iteration, hold after th
 
 ## Fusion Holding v0
 
-Task: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0`. [환경 구성](inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_v0/env_cfg.py)은 v1_0을 직접 상속한다. v1_0 runtime·관측·Action·물리·목표12~15cm 생성·실패 종료(push_fast0.8)는 유지한다. Holding v0의 최대 용량은 Gray5/White5이며 White는3000부터3000마다 증가하여12000에서5개, Gray는4500부터3000마다 증가하여13500에서5개가 된다. object 변위 제곱합 계수는5.0이다(합의 상한0.04·전체 weight−30 유지). 속도 세 커리큘럼은 논의 기준인 v1_4의 일정을 동일하게 적용한다(Arm0.7/EEF0.2/pushing0.02 최종값). Hand contact는 v1_0의0.29·fade0을 유지한다.
+Task: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0`. [환경 구성](inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_v0/env_cfg.py)은 v1_0을 직접 상속한다. v1_0 runtime·관측·Action·물리·목표12~15cm 생성는 유지하고 타겟 과속 종료는1.0m/s로 변경한다. Holding v0의 최대 용량은 Gray5/White5이며 White는3000부터3000마다 증가하여12000에서5개, Gray는4500부터3000마다 증가하여13500에서5개가 된다. object 변위 제곱합 계수는5.0이다(합의 상한0.04·전체 weight−30 유지). 속도 세 커리큘럼은 논의 기준인 v1_4의 일정을 동일하게 적용한다(Arm0.7/EEF0.2/pushing0.02 최종값). Hand contact weight는1.45이며 fade0을 유지한다.
 
 Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2의 거리·속도 정착 보상으로 교체한다. `exp(-ln(2)*((d/r)^2+(v/s)^2))`, d는 목표 XY 거리, v는 물체3D 속력이다. d≥3r이면0이며 선반 밖·높이 이탈·과도한 기울기·비유한 상태는0이다. 정상 높이는 shelf-local root z1.04~1.07m, 물체 중심 XY범위±0.16/±0.46m, 선반과 타겟 상방 축 사이 각≤0.9rad다. 위치 척도 r은0/1000/6000/10000/12000/16000에서1/2/2/1/1/0.5cm, 속도 척도 s는6000까지0.05m/s,10000까지0.02로 감소 후 유지한다. 성공은 정착 점수와 독립적으로 오차≤0.005m·속력≤0.01m/s·정상 상태·실패 없음이 연속3초일 때 발생한다.
 
@@ -1230,7 +1232,7 @@ Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2�
 250 iteration 단위 보간으로 첫 음수 가중치는1250부터 적용한다. 0↔음수 전환 시 해당 stateful term의 이력을 초기화한다. 기존 비용 함수·상한·Wrench 예산 제한은 유지한다. 커리큘럼은 절대 iteration 기준으로 checkpoint load/rewind를 지원한다.
 
 ```bash
-./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0 --num_envs 2048 --headless
 
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
@@ -1239,3 +1241,15 @@ Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2�
 ```
 
 새 PPO 설정은 v1_0 runner를 상속하고 experiment 이름만 `inspire_contact_sweep_clutter_fusion_holding_v0`로 분리한다. [개발·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v0.md).
+
+## Fusion Holding OSC v0
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0`는 Holding v0을 직접 상속하고 Arm만 Renewal OSC v0의 pose_rel·stiffness200·damping ratio1·관성 분리·중력 보상 제어로 바꾼다. Arm 관절 PD gain은0이며 Hand·보상·종료·커리큘럼은 유지한다. [환경 설명·Windows/Linux 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V0_ENVIRONMENT.md).
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0 \
+  --num_envs 2048 --headless --max_iterations 90000
+```
+
+Holding OSC v0의 이동·회전 명령은 현재 EEF 좌표축 기준이다. 정책 step마다 EEF pose를 복사하여 해당 명령의 기준으로 고정한다. 기존 Renewal OSC의 base 기준 명령과 이 점이 다르다.

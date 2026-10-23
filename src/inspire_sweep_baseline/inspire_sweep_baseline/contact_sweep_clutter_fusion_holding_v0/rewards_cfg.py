@@ -6,6 +6,7 @@ from .mdp import goal_settling
 
 @configclass
 class FusionHoldingV0RewardsCfg(ContactSweepClutterFusionV1_0RewardsCfg):
+    hand_contact = ContactSweepClutterFusionV1_0RewardsCfg().hand_contact.replace(weight=1.45)
     object = ContactSweepClutterFusionV1_0RewardsCfg().object.replace(
         params={**ContactSweepClutterFusionV1_0RewardsCfg().object.params,
                 'displacement_ratio': 5.0})
