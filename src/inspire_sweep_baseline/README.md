@@ -1244,7 +1244,7 @@ Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2�
 
 ## Fusion Holding OSC v0
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0`는 Holding v0을 직접 상속하고 Arm만 Renewal OSC v0의 pose_rel·stiffness200·damping ratio1·관성 분리·중력 보상 제어로 바꾼다. Arm 관절 PD gain은0이며 Hand·보상·종료·커리큘럼은 유지한다. [환경 설명·Windows/Linux 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V0_ENVIRONMENT.md).
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0`는 Holding v0을 직접 상속하고 Arm을 Robot Base 기준 상대 pose OSC로 바꾼다. 2026-10-23 후속 요청으로 EEF 기준을 Robot Base 기준으로 변경하고 stiffness를200에서100으로 낮췄다. damping ratio1·관성 분리·중력 보상, Arm 관절 PD gain0, Hand·보상·종료·커리큘럼은 유지한다. [환경 설명·Windows/Linux 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V0_ENVIRONMENT.md).
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
@@ -1252,8 +1252,44 @@ Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2�
   --num_envs 2048 --headless --max_iterations 90000
 ```
 
-Holding OSC v0의 이동·회전 명령은 현재 EEF 좌표축 기준이다. 정책 step마다 EEF pose를 복사하여 해당 명령의 기준으로 고정한다. 기존 Renewal OSC의 base 기준 명령과 이 점이 다르다.
+Holding OSC v0의 이동·회전 명령은 Robot Base 좌표축 기준이다. EEF가 회전해도 base +X 명령의 방향은 유지되며 현재 EEF pose에 상대 목표를 만든다. ObjectRandom v0도 이 제어 변경을 상속한다. 기존 EEF 기준으로 학습한 checkpoint는 명령 의미가 달라 같은 동작을 보장하지 않는다.
 
 ## Holding OSC ObjectRandom v0
 
 `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v0`는 Holding OSC 직접 파생이며 NVIDIA YCB4종과 균일크기3단계를 생성 시 무작위 선택한다. reset마다 위치·yaw·질량·마찰을 갱신하며 후속 요청으로 기존 대비1.5배 확대하고 실제 회전 바운딩 박스의 비겹침·선반 경계 검사를 추가했다. 타겟은 기존 반경4cm·높이10cm 실린더를 유지한다. 장애물은 −Y 상방을 +Z로 회전해 바로 세운다. 물체 개수 curriculum은 임시 비활성화하여 처음부터 타겟1+Gray7+White7=15개를 사용하며 장애물 관측·encoder를14슬롯56D로 확장했다. 이전40D encoder checkpoint와 직접 호환되지 않는다. 초기 흔들림을 줄이기 위해 원본 시각 모델과 별도로 평평한 상자·32각 원통 충돌 프록시를 사용한다. reset은 기존 물체 텔레포트 방식이다. [상세 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V0_ENVIRONMENT.md).
+
+## Fusion Holding v1 계열
+
+기존 v0 ID를 유지하면서 장애물 관측 용량을16슬롯으로 늘린 세 환경을 추가했다. 각 슬롯은 `[present, x, y, z]`이며 Actor/Critic 각각의 encoder는 `64 → 32 → 16D`다. 원시 입력은 Actor119D/Critic122D, 압축 후 MLP 입력은71D/74D다. 초기 관측의 가림·노이즈·정렬과 실행 중 타겟GT의 Critic 전용 경계는 유지한다.
+
+| 환경 ID | 직접 부모 EnvCfg | 물체 수와 제어 |
+| --- | --- | --- |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1` | Holding v0 | Gray/White 각1→5 curriculum 유지, Joint Position Arm |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1` | Holding v1 | 같은 population, OSC v0과 같은 Robot Base 기준·stiffness100 |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | Holding OSC v1 | 기존 ObjectRandom 자산·reset·물성 재사용, 타겟1+Gray7+White7 고정 |
+
+16슬롯은 관측 용량이다. Holding/OSC의 실제 장애물 최대10개와 ObjectRandom의14개를 자동으로16개로 늘리지 않으며 남은 슬롯은0으로 채운다. v0의40D/56D encoder checkpoint는 v1의64D encoder와 직접 호환되지 않으므로 새 학습을 시작한다. 새 PPO 설정은 환경별 experiment 이름을 분리한다.
+
+Workspace 루트에서 실행한다. 아래 병렬 환경 수는 실행 예시이며 처리량 보장이 아니다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1 --num_envs 256 --headless
+```
+
+재생은 같은 task ID와 해당 v1 checkpoint를 지정하여 `src/inspire_sweep_baseline/scripts/play.py --task <task-ID> --num_envs 1 --checkpoint <v1-checkpoint.pt> --real-time`을 사용한다. [Holding v1](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V1_ENVIRONMENT.md) · [OSC v1](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V1_ENVIRONMENT.md) · [ObjectRandom v1](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V1_ENVIRONMENT.md) · [개발·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v1.md).
+
+## Fusion Holding OSC v2
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2`는 Holding v1을 직접 상속한다. UR10 Reach의 RPY 상대 OSC·effort 제한을 사용하되 Arm6관절과 현재 EEF body/offset에 연결한다. 위치/회전 stiffness80/25, scale0.03/0.15, 관성 분리·중력 보상false이며 Scene 중력과 Hand·관측·보상은 부모를 유지한다. [전체 설정·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_osc_v2.md).
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2 --num_envs 2048 --headless
+```

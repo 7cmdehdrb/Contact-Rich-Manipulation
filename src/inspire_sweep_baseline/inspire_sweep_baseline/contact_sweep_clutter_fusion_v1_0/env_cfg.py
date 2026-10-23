@@ -26,7 +26,9 @@ class ContactSweepClutterFusionV1_0EnvCfg(ContactSweepClutterFusionV3EnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
-        self.scene.configure_population_capacity(self.max_gray_obstacles, self.max_white_obstacles)
+        self.scene.configure_population_capacity(
+            self.max_gray_obstacles, self.max_white_obstacles, self.obstacle_observation_slots,
+        )
         self.events.object_spawn.params["gray_obstacles"] = min(1, self.max_gray_obstacles)
         self.events.object_spawn.params["white_obstacles"] = min(1, self.max_white_obstacles)
         # Also correct before the first runner update/reset.

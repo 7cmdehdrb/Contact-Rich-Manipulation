@@ -27,8 +27,8 @@ def randomize_prop_physics(env, env_ids, mass_scale=1.5):
 class ObjectRandomSceneCfg(ContactSweepClutterFusionV1_0SceneCfg):
     replicate_physics: bool = False
 
-    def configure_population_capacity(self,max_gray_obstacles,max_white_obstacles):
-        super().configure_population_capacity(max_gray_obstacles,max_white_obstacles, observation_slots=14)
+    def configure_population_capacity(self,max_gray_obstacles,max_white_obstacles,observation_slots=14):
+        super().configure_population_capacity(max_gray_obstacles,max_white_obstacles, observation_slots=observation_slots)
         original=ContactSweepClutterFusionSceneCfg().object_collection.rigid_objects['mass_cylinder'].spawn
         for name, obj in self.object_collection.rigid_objects.items():
             if name == 'mass_cylinder':

@@ -507,3 +507,61 @@ if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V0_TASK_ID not in gym.
             'rsl_rl_cfg_entry_point':'inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v0.ppo_cfg:FusionHoldingOSCObjectRandomV0PPORunnerCfg',
         },
     )
+
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v1.env_cfg:FusionHoldingV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v1.ppo_cfg:FusionHoldingV1PPORunnerCfg",
+        },
+    )
+
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v1.env_cfg:FusionHoldingOSCV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v1.ppo_cfg:FusionHoldingOSCV1PPORunnerCfg",
+        },
+    )
+
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V1_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v1.env_cfg:FusionHoldingOSCObjectRandomV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v1.ppo_cfg:FusionHoldingOSCObjectRandomV1PPORunnerCfg",
+        },
+    )
+
+__all__ += [
+    "CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V1_TASK_ID",
+    "CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V1_TASK_ID",
+    "CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V1_TASK_ID",
+]
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.env_cfg:FusionHoldingOSCV2EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.ppo_cfg:FusionHoldingOSCV2PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID")

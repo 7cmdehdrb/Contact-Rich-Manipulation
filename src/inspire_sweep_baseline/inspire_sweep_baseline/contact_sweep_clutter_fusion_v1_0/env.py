@@ -9,7 +9,9 @@ class ContactSweepClutterFusionV1_0Env(ContactSweepClutterFusionEnv):
     def __init__(self, cfg, render_mode=None, **kwargs):
         # Hydra applies overrides after Cfg construction, so rebuild capacity
         # here before any assets, sensors or reward histories are instantiated.
-        cfg.scene.configure_population_capacity(cfg.max_gray_obstacles, cfg.max_white_obstacles)
+        cfg.scene.configure_population_capacity(
+            cfg.max_gray_obstacles, cfg.max_white_obstacles, cfg.obstacle_observation_slots,
+        )
         self._active_object_mask = torch.zeros(
             (cfg.scene.num_envs, len(cfg.scene.object_collection.rigid_objects)),
             dtype=torch.bool, device=cfg.sim.device,

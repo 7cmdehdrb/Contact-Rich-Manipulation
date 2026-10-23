@@ -118,6 +118,7 @@ def test_env_direct_v3_inheritance_manager_replacement_and_parent_isolation(omni
 
     @configclass
     class Parent:
+        obstacle_observation_slots: int = 10
         scene = SimpleNamespace(marker="parent")
         rewards = SimpleNamespace(eef_orientation=object())
         terminations = SimpleNamespace(push_fast=SimpleNamespace(params={"speed_condition": .8}))
@@ -137,8 +138,9 @@ def test_env_direct_v3_inheritance_manager_replacement_and_parent_isolation(omni
         push_fast = SimpleNamespace(params={"speed_condition": .8})
 
     class Scene(SimpleNamespace):
-        def configure_population_capacity(self, gray, white):
+        def configure_population_capacity(self, gray, white, observation_slots):
             self.capacity = (gray, white)
+            self.observation_slots = observation_slots
 
     namespace = dict(
         configclass=configclass, math=math, ContactSweepClutterFusionV3EnvCfg=Parent,
@@ -151,6 +153,7 @@ def test_env_direct_v3_inheritance_manager_replacement_and_parent_isolation(omni
     )
     cls = _execute_definitions(ROOT / "env_cfg.py", namespace).ContactSweepClutterFusionV1_0EnvCfg
     child = cls()
+    assert child.scene.observation_slots == 10
     assert cls.__bases__ == (Parent,)
     assert isinstance(child.rewards, NewRewards)
     assert isinstance(child.terminations, NewTerminations)

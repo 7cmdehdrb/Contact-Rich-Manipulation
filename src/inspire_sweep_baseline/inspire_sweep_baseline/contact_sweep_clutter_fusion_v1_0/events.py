@@ -117,7 +117,10 @@ def randomize_population_clutter_scene(
         raise ValueError("Invalid target spawn radius or goal distance")
     max_gray, max_white = env.cfg.max_gray_obstacles, env.cfg.max_white_obstacles
     gray, white = min(gray_obstacles, max_gray), min(white_obstacles, max_white)
-    active = active_population_mask(count, max_gray, max_white, gray, white, env.device)
+    observation_slots = getattr(env.cfg, "obstacle_observation_slots", 10)
+    active = active_population_mask(
+        count, max_gray, max_white, gray, white, env.device, observation_slots,
+    )
     objects = env.scene["object_collection"]
     capacity = max_gray + max_white
     if objects.num_objects != capacity + 1 or objects.object_names != [
@@ -166,7 +169,7 @@ def randomize_population_clutter_scene(
         robot.root_quat_w[ids, None].expand(-1, capacity, -1), world_positions[:, 1:],
     )
     initial_positions += torch.empty_like(initial_positions).uniform_(-observation_noise, observation_noise)
-    slots = torch.zeros((count, 10, 4), device=env.device)
+    slots = torch.zeros((count, observation_slots, 4), device=env.device)
     slots[:, :capacity, 0] = active[:, 1:]
     slots[:, :capacity, 1:] = torch.where(active[:, 1:, None], initial_positions, 0.0)
     env._initial_obstacle_observation[ids] = slots.flatten(1)
