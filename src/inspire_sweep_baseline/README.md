@@ -10,6 +10,20 @@
 
 다른 실행기에서 동일 증상을 확인할 때는 `--kit_args="--/app/vulkan=false"`를 전달한다. 기본 선반 서버 `omniverse://192.168.0.13`는 이 PC에서 VPN 연결이 필요하다. [진단·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-24_windows_vulkan_startup.md).
 
+## Fusion 계열 학습의 수치 안정성
+
+2026-10-24부터 Fusion과 이를 상속하는 Holding/OSC/ObjectRandom의 이전 action 관측8D는 `[-1,1]`로 제한한 복사본이다. raw action을 그대로 재입력하던 경로에서 출력이 반복 증폭되어 value loss와 std가 손상되는 문제를 재현해 수정했다. Action 실행과 보상 계산은 raw manager action을 그대로 사용한다. 관측 차원·모델·optimizer 키가 같아 기존 checkpoint를 로드할 수 있지만, 범위 밖 action에 대한 관측 의미는 변경되므로 기존 정책의 동작 동등성을 보장하지 않는다.
+
+`CurriculumOnPolicyRunner`의 PPO는 로컬 `NumericalPPO`를 사용한다. optimizer 복원 시 adaptive learning rate 변수도 함께 복원하고, scalar std는 optimizer step 뒤 최소`1e-4`로 투영한다. 관측·value·return·gradient·optimizer의 비유한 값 및 극단값을 검사한다. 다른 수치 이상이 발견되면 `numerical_failure.json`/`.pt`에 원인·관측·rollout·업데이트 전 상태를 남기고 중단하며 자동 재시작하지 않는다. 기본 관측·value·return 절댓값 상한과 value loss 상한은`1e6`이다. 이는 진단용 중단 기준이며 센서·보상을 clip하는 설정이 아니다.
+
+로그 전체의 읽기 전용 감사 도구는 다음처럼 실행한다. 출력 경로는 감사할 로그 트리 바깥을 지정한다.
+
+```powershell
+.\IsaacLab\isaaclab.bat -p src/inspire_sweep_baseline/scripts/audit_training_runs.py logs/TEMP --output outputs/temp_audit
+```
+
+[전체 TEMP 감사·원인 재현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-24_temp_training_stability.md).
+
 ## 파일 구조
 
 환경 파일은 역할별로 구성한다. 같은 계열의 v0/v1/v2는 아래 역할별 한 파일에 모으며 버전별 폴더를 만들지 않는다.

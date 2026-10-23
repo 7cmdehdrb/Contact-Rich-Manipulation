@@ -4,6 +4,16 @@ from isaaclab.utils.math import quat_apply_inverse
 import math as math
 import torch as torch
 
+def bounded_last_action(env):
+    """Bound policy feedback while retaining raw actions for execution/rewards.
+
+    Raw last_action creates a recurrent feedback path even in an MLP policy.
+    A learned gain above one can amplify it without any physics instability.
+    Out-of-place clipping preserves the manager's raw action-rate inputs.
+    """
+    return env.action_manager.action.clamp(-1.0, 1.0)
+
+
 def initial_goal_polar_in_root(env, command_name="target_goal_pos"):
     """Return [distance metres, clockwise azimuth radians] from the initial target.
 

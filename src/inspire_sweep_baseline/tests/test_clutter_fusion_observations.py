@@ -17,6 +17,27 @@ def observations(load_mdp):
     )
 
 
+def test_action_feedback_is_bounded_without_mutating_raw_reward_inputs(observations):
+    raw = torch.tensor([[.2, -.4, 2., -3., 1e6, -1e6, 9e5, -5e4]])
+    previous = raw.clone() - .1
+    env = SimpleNamespace(action_manager=SimpleNamespace(action=raw, prev_action=previous))
+    raw_before, previous_before = raw.clone(), previous.clone()
+    feedback = observations.bounded_last_action(env)
+    torch.testing.assert_close(feedback, raw_before.clamp(-1, 1))
+    feedback.zero_()
+    torch.testing.assert_close(raw, raw_before, rtol=0, atol=0)
+    torch.testing.assert_close(previous, previous_before, rtol=0, atol=0)
+
+
+def test_bounded_action_feedback_breaks_amplifying_loop(observations):
+    env = SimpleNamespace(action_manager=SimpleNamespace(action=torch.full((1, 8), .5)))
+    for _ in range(100):
+        feedback = observations.bounded_last_action(env)
+        env.action_manager.action = 2 * feedback + .1
+    assert torch.isfinite(env.action_manager.action).all()
+    assert env.action_manager.action.abs().max() <= 2.1
+
+
 def _set_command(env, displacements_w):
     initial = env.scene["object_collection"].data.object_link_state_w[:, 0].clone()
     command = SimpleNamespace(target_init_state_w=initial, command=initial[:, :7].clone())

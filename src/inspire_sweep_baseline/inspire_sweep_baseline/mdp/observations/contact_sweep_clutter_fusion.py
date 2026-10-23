@@ -6,10 +6,10 @@ from ..observation_functions.contact_sweep_clutter import PureWristWrench
 from ..observation_functions.contact_sweep_clutter import SharedTactileContactBits
 from ..observation_functions.contact_sweep_clutter import initial_obstacle_positions
 from ..observation_functions.contact_sweep_clutter_fusion import initial_goal_polar_in_root
+from ..observation_functions.contact_sweep_clutter_fusion import bounded_last_action
 from ..observation_functions.sweep import arm_joint_pos_rel
 from ..observation_functions.sweep import arm_joint_vel_rel
 from ..observation_functions.sweep import eef_pose_in_root
-from ..observation_functions.sweep import last_action
 from ..observation_functions.sweep import object_position_in_root
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -25,7 +25,7 @@ class ContactSweepClutterFusionObservationsCfg:
         # Arm 6+6, action 8, initial target 3, EEF 7, goal 2, tactile 17, F/T 6.
         joint_pos = ObsTerm(func=arm_joint_pos_rel, params={"asset_cfg": arm_entity()})
         joint_vel = ObsTerm(func=arm_joint_vel_rel, params={"asset_cfg": arm_entity()})
-        actions = ObsTerm(func=last_action)
+        actions = ObsTerm(func=bounded_last_action)
         target_obs_state = ObsTerm(
             func=InitialObjectPositionInRoot, params={"command_name": "target_goal_pos"},
             noise=NoiseModelWithAdditiveBiasCfg(

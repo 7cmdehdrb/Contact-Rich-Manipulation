@@ -5,6 +5,8 @@ Anchor at learn()'s starting index and count actual rollout steps, using the
 runner's configured horizon. This preserves its loop, logging and checkpoint
 semantics without copying the PPO loop or using the simulator step counter."""
 
+import copy
+
 from rsl_rl.runners import OnPolicyRunner
 
 class LearningIterationEnv:
@@ -53,7 +55,16 @@ class CurriculumOnPolicyRunner(OnPolicyRunner):
     """Use checkpoint iteration on load; advance curricula only during learn."""
 
     def __init__(self, env, train_cfg, log_dir=None, device="cpu"):
-        super().__init__(LearningIterationEnv(env), train_cfg, log_dir=log_dir, device=device)
+        config = copy.deepcopy(train_cfg)
+        if config["algorithm"]["class_name"] == "PPO":
+            config["algorithm"]["class_name"] = "inspire_sweep_baseline.agent.numerical_ppo:NumericalPPO"
+            config["algorithm"].update(config.pop("numerical_safety", {}))
+        super().__init__(LearningIterationEnv(env), config, log_dir=log_dir, device=device)
+        from .numerical_ppo import NumericalPPO
+
+        if isinstance(self.alg, NumericalPPO):
+            self.alg.diagnostic_dir = log_dir
+            self.alg.iteration_reader = lambda: self.env.unwrapped.learning_iteration
 
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         self.env.begin(self.current_learning_iteration, self.cfg["num_steps_per_env"])
