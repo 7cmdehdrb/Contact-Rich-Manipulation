@@ -1,6 +1,7 @@
 
 {
     "editor.rulers": [120],
+    "editor.pasteAs.enabled": false,
 
     // Enables python language server (seems to work slightly better than jedi)
     "python.languageServer": "Pylance",

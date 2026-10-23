@@ -1022,6 +1022,8 @@ Arm/Hand action-rate·joint-velocity 네 항은 Workspace 지침의 로컬 함�
   --checkpoint "<v1_0-checkpoint.pt>"
 ```
 
+2026-10-23 사용자 요청으로 종료 원인 출력과 `push_fast` 매 step 속도 모니터링 코드를 모두 주석 처리했다. 현재 train/play에서는 두 모니터링 출력이 발생하지 않으며 기존 종료 판정과 0.8m/s 임계값은 유지한다.
+
 학습 experiment 이름은 `inspire_contact_sweep_clutter_fusion_v1_0`이다. 참조 로그에 대한 보상 비중 계산은 새 정책의 학습된 비중을 보장하지 않는다.
 
 자동 복구 학습은 아래 전용 실행기를 사용한다. `--max_iterations`는 재시작을 포함한 절대 목표다. 조기 중단 시 최신 저장 checkpoint보다500 iteration 앞선 시점 이하의 가장 가까운 유효 파일에서 새 프로세스로 재개한다. 커리큘럼 적용 후 reset하므로2500에서 재개할 때 첫 rollout부터2500의 물체 수·보상 일정이 적용된다.
@@ -1167,4 +1169,31 @@ Hold through the first point, interpolate linearly each iteration, hold after th
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train_resilient.py \
   --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1 \
   --num_envs 2048 --headless --max_iterations 90000
+```
+
+
+### Fusion v1_3_1 페널티 입력 수집
+
+`collect_fusion_reward_inputs.py`는 기본 `model_14500.pt`를 16환경·25,000 제어 step(환경당500초)으로 재생한다. 등록된 v1_3_1 Cfg/runner를 사용하고, 계측 runtime `RewardTelemetryEnv`는 v1_0 runtime을 상속한다. 종료 전 표본을 보존하며 환경별 CSV에 episode/step·종료 원인·reset 차분 유효성을 기록한다. 물체별 Hand 접촉 합력 norm과 COM 가속도 norm, EEF 선속력, 보정 전 RAW F/T와 실제 wrench_change 입력을 함께 저장한다. 정책·보상·종료 계약을 바꾸지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/collect_fusion_reward_inputs.py \
+  --headless --num_envs 16 --steps 25000 \
+  --checkpoint logs/resilient/Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1/2026-10-22_10-27-21_5c4cf77b/attempt_000/model_14500.pt
+```
+
+`--task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0`를 지정하면 v1_0의 등록 Cfg/runner를 사용한다. `--checkpoint <model.pt> --steps 3000 --num_envs 16`으로 환경당60초를 수집한다. 기본 task는 기존 v1_3_1이며, task와 checkpoint 환경을 일치시킨다. [v1_0 두 체크포인트 실행 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_v1_0_checkpoint_comparison.md).
+
+기본 출력은 `outputs/fusion_reward_inputs/<UTC timestamp>`다. 새 출력 폴더는 `--output-dir`로 지정한다. `env_00.csv`~`env_15.csv`와 `resets.csv`, 설정·metadata를 생성한다. `scripts/validate_fusion_reward_inputs.py <출력 폴더>`는 전체 검증과 `episode_index.csv`/`environment_summary.csv`를 생성한다. [측정 계약·실제 실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_v1_3_1_reward_inputs.md)을 따른다.
+## Contact Sweep Clutter Fusion v1_4
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4`는 v1_0 EnvCfg/PPOCfg를 직접 상속한다. 250 간격 속도 커리큘럼·후반 가속도/Wrench 제한·최대 Gray5/White5/Target1·Goal hold3초 성공 종료를 추가했다. Goal hold weight9.0, Hand contact1.45, 물체 속도 종료1.0m/s다. [전체 일정·상속·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_clutter_fusion_v1_4.md)을 따른다.
+
+학습된 v1_0을 이어갈 때는 Workspace 루트에서 실행한다. Resume는 checkpoint의 절대 iteration과 optimizer 상태를 유지한다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4 \
+  --num_envs 2048 --headless --resume \
+  --load_run "<v1_0-run-절대경로>" --checkpoint "<model_ITER.pt>"
 ```

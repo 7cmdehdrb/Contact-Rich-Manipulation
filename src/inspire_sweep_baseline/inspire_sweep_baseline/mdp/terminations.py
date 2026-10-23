@@ -21,9 +21,25 @@ def object_drop(env, height_condition=1.04, rotation_condition=0.9):
     )
 
 
+# def push_fast(env, speed_condition=0.3, print_velocity=False):
 def push_fast(env, speed_condition=0.3):
     rows = torch.arange(env.num_envs, device=env.device)
     velocity = env.scene["object_collection"].data.object_lin_vel_w[rows, env.target_id[:, 0].long()]
+    # speed = torch.linalg.vector_norm(velocity, dim=-1)
+    # terminated = speed > speed_condition
+    # if print_velocity:
+    #     for env_id, target_id, components, magnitude, exceeded in zip(
+    #         rows.tolist(), env.target_id[:, 0].tolist(),
+    #         velocity.tolist(), speed.tolist(), terminated.tolist(),
+    #     ):
+    #         vx, vy, vz = components
+    #         print(
+    #             f"[push_fast] step={env.common_step_counter} env_id={env_id} target_id={target_id} "
+    #             f"velocity_world=({vx:.6f}, {vy:.6f}, {vz:.6f}) m/s "
+    #             f"speed={magnitude:.6f} m/s threshold={speed_condition:.6f} m/s exceeded={exceeded}",
+    #             flush=True,
+    #         )
+    # return terminated
     return torch.linalg.vector_norm(velocity, dim=-1) > speed_condition
 
 

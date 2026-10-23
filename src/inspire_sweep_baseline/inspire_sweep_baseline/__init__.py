@@ -66,6 +66,18 @@ if CONTACT_SWEEP_CLUTTER_FUSION_V1_1_2_TASK_ID not in gym.registry:
         },
     )
 
+CONTACT_SWEEP_CLUTTER_FUSION_V1_4_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4"
+if CONTACT_SWEEP_CLUTTER_FUSION_V1_4_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_V1_4_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_4.env_cfg:ContactSweepClutterFusionV1_4EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_4.ppo_cfg:ContactSweepClutterFusionV1_4PPORunnerCfg",
+        },
+    )
+
 CONTACT_SWEEP_CLUTTER_FUSION_V1_3_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3"
 if CONTACT_SWEEP_CLUTTER_FUSION_V1_3_TASK_ID not in gym.registry:
     gym.register(

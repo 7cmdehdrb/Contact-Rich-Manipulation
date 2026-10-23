@@ -16,7 +16,10 @@ class ContactSweepClutterFusionV1_0TerminationsCfg:
         func=any_active_object_fall_or_tilt,
         params={"height_condition": 1.04, "fail_angle": 0.9},
     )
-    push_fast = DoneTerm(func=terminations.push_fast, params={"speed_condition": 0.8})
+    push_fast = DoneTerm(
+        func=terminations.push_fast, params={"speed_condition": 0.8},
+        # Monitoring option (disabled with the commented function block): "print_velocity": True
+    )
     shelf_collision = DoneTerm(
         func=terminations.shelf_collision,
         params={"threshold": 0.1, "check_fingers": False, "wrist_clearance": 0.03},

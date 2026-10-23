@@ -24,3 +24,20 @@ class ContactSweepClutterFusionV1_0Env(ContactSweepClutterFusionEnv):
             self._population_layout_seed = seed
             self._population_layout_generators.clear()
         return super().reset(seed=seed, env_ids=env_ids, options=options)
+
+    # def step(self, action):
+    #     result = super().step(action)
+    #     # TerminationManager keeps this step's term masks through auto-reset.
+    #     # Read those results rather than evaluating conditions on reset states.
+    #     done_env_ids = (result[2] | result[3]).nonzero(as_tuple=True)[0]
+    #     if done_env_ids.numel() > 0:
+    #         for name in self.termination_manager.active_terms:
+    #             env_ids = done_env_ids[self.termination_manager.get_term(name)[done_env_ids]]
+    #             if env_ids.numel() > 0:
+    #                 detail = " (arm joint velocity)" if name == "hand_velocity" else ""
+    #                 print(
+    #                     f"[Termination][{type(self).__name__}] step={self.common_step_counter} "
+    #                     f"term={name}{detail} env_ids={env_ids.tolist()}",
+    #                     flush=True,
+    #                 )
+    #     return result
