@@ -6,11 +6,39 @@
 from __future__ import annotations
 
 import argparse
+from importlib import metadata
 import random
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg
+
+
+def apply_renderer_compatibility(args_cli: argparse.Namespace):
+    """Use D3D12 for Isaac Sim 5.1 on Windows unless a backend was requested.
+
+    Vulkan can crash in rtx.scenedb.plugin.dll before SimulationApp returns with
+    newer NVIDIA drivers: https://github.com/isaac-sim/IsaacSim/issues/517.
+    Keep this local to our launchers; do not modify Isaac Lab or the installation.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        sim_version = metadata.version("isaacsim")
+    except metadata.PackageNotFoundError:
+        return
+    if sim_version.split(".")[:2] != ["5", "1"]:
+        return
+    kit_args = args_cli.kit_args or ""
+    if any(
+        arg in ("--vulkan", "--d3d12")
+        or arg.startswith(("--/app/vulkan=", "--/app/d3d12="))
+        for arg in kit_args.split()
+    ):
+        return
+    args_cli.kit_args = (kit_args + " --/app/vulkan=false").strip()
+    print("[INFO] Isaac Sim 5.1 on Windows: using D3D12 to avoid the Vulkan startup crash.", flush=True)
 
 
 def apply_sweep_direction(env_cfg, direction):

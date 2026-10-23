@@ -4,6 +4,12 @@
 
 [활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)
 
+## Windows의 Isaac Sim 5.1 실행
+
+`scripts/play.py`와 `scripts/train.py`는 Windows + Isaac Sim 5.1에서 D3D12를 기본 사용한다. Isaac Lab experience가 Vulkan을 켜면 일부 NVIDIA 드라이버에서 환경 생성 전에 `rtx.scenedb.plugin.dll` 접근 위반으로 종료되기 때문이다. 별도 옵션 없이 기존 실행 명령을 사용하면 된다. 명시한 `--kit_args`의 렌더러 선택은 우선하며 Linux와 다른 Isaac Sim 버전은 변경하지 않는다.
+
+다른 실행기에서 동일 증상을 확인할 때는 `--kit_args="--/app/vulkan=false"`를 전달한다. 기본 선반 서버 `omniverse://192.168.0.13`는 이 PC에서 VPN 연결이 필요하다. [진단·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-24_windows_vulkan_startup.md).
+
 ## 파일 구조
 
 환경 파일은 역할별로 구성한다. 같은 계열의 v0/v1/v2는 아래 역할별 한 파일에 모으며 버전별 폴더를 만들지 않는다.
