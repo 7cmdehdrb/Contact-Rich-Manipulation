@@ -6,6 +6,9 @@ from .mdp import goal_settling
 
 @configclass
 class FusionHoldingV0RewardsCfg(ContactSweepClutterFusionV1_0RewardsCfg):
+    object = ContactSweepClutterFusionV1_0RewardsCfg().object.replace(
+        params={**ContactSweepClutterFusionV1_0RewardsCfg().object.params,
+                'displacement_ratio': 5.0})
     goal_distance = ContactSweepClutterFusionV1_0RewardsCfg().goal_distance.replace(params={'position_tolerance':0.})
     goal_hold = ContactSweepClutterFusionV1_0RewardsCfg().goal_hold.replace(
         func=goal_settling,weight=2.,params={'position_scale':.01,'speed_scale':.05,'cutoff_multiple':3.})

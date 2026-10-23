@@ -8,6 +8,8 @@ from .curriculum_cfg import FusionHoldingV0CurriculumCfg
 
 @configclass
 class FusionHoldingV0EnvCfg(ContactSweepClutterFusionV1_0EnvCfg):
+    max_gray_obstacles: int = 5
+    max_white_obstacles: int = 5
     rewards: FusionHoldingV0RewardsCfg = FusionHoldingV0RewardsCfg()
     terminations: FusionHoldingV0TerminationsCfg = FusionHoldingV0TerminationsCfg()
     curriculum: FusionHoldingV0CurriculumCfg = FusionHoldingV0CurriculumCfg()

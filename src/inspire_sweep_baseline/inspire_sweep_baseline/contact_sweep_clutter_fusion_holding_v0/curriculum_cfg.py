@@ -7,6 +7,9 @@ from .curriculum import reward_schedule
 
 @configclass
 class FusionHoldingV0CurriculumCfg(ContactSweepClutterFusionV1_0CurriculumCfg):
+    obstacle_population = ContactSweepClutterFusionV1_0CurriculumCfg().obstacle_population.replace(
+        params={**ContactSweepClutterFusionV1_0CurriculumCfg().obstacle_population.params,
+                'final_gray': 5, 'final_white': 5})
     # Same three speed schedules as the v1_4 discussion baseline.
     arm_free_speed = CurriculumTermCfg(func=reward_schedule, params={"term_name":'arm_speed_excess', "parameter":'free_speed',
         "points":((0, 1.0), (499, 1.0), (500, 0.98), (3300, 0.7)), "interval":250})

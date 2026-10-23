@@ -1216,7 +1216,7 @@ Hold through the first point, interpolate linearly each iteration, hold after th
 
 ## Fusion Holding v0
 
-Task: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0`. [환경 구성](inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_v0/env_cfg.py)은 v1_0을 직접 상속한다. v1_0 runtime·관측·Action·물리·장면·최대Gray3/White3·목표12~15cm 생성·실패 종료(push_fast0.8)는 유지한다. 속도 세 커리큘럼은 논의 기준인 v1_4의 일정을 동일하게 적용한다(Arm0.7/EEF0.2/pushing0.02 최종값). Hand contact는 v1_0의0.29·fade0을 유지한다.
+Task: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0`. [환경 구성](inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_v0/env_cfg.py)은 v1_0을 직접 상속한다. v1_0 runtime·관측·Action·물리·목표12~15cm 생성·실패 종료(push_fast0.8)는 유지한다. Holding v0의 최대 용량은 Gray5/White5이며 White는3000부터3000마다 증가하여12000에서5개, Gray는4500부터3000마다 증가하여13500에서5개가 된다. object 변위 제곱합 계수는5.0이다(합의 상한0.04·전체 weight−30 유지). 속도 세 커리큘럼은 논의 기준인 v1_4의 일정을 동일하게 적용한다(Arm0.7/EEF0.2/pushing0.02 최종값). Hand contact는 v1_0의0.29·fade0을 유지한다.
 
 Goal distance의 허용 반경은0, 가중치100이다. Goal hold는 가중치2의 거리·속도 정착 보상으로 교체한다. `exp(-ln(2)*((d/r)^2+(v/s)^2))`, d는 목표 XY 거리, v는 물체3D 속력이다. d≥3r이면0이며 선반 밖·높이 이탈·과도한 기울기·비유한 상태는0이다. 정상 높이는 shelf-local root z1.04~1.07m, 물체 중심 XY범위±0.16/±0.46m, 선반과 타겟 상방 축 사이 각≤0.9rad다. 위치 척도 r은0/1000/6000/10000/12000/16000에서1/2/2/1/1/0.5cm, 속도 척도 s는6000까지0.05m/s,10000까지0.02로 감소 후 유지한다. 성공은 정착 점수와 독립적으로 오차≤0.005m·속력≤0.01m/s·정상 상태·실패 없음이 연속3초일 때 발생한다.
 
