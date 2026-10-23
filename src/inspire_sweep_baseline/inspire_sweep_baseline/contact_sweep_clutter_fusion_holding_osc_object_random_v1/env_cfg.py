@@ -1,4 +1,4 @@
-"""Holding OSC v2 with the existing fourteen-prop randomization contract."""
+"""Holding OSC v2 with randomized props growing from 1/1 to 8/8."""
 
 from isaaclab.utils import configclass
 
@@ -18,20 +18,19 @@ class ObjectRandomV1SceneCfg(ObjectRandomSceneCfg):
 
 @configclass
 class ObjectRandomV1CurriculumCfg(FusionHoldingV2CurriculumCfg):
-    obstacle_population = None  # Preserve the fixed fourteen-obstacle scene.
+    obstacle_population = FusionHoldingV2CurriculumCfg().obstacle_population.replace(
+        params={**FusionHoldingV2CurriculumCfg().obstacle_population.params,
+                "final_gray": 8, "final_white": 8},
+    )
 
 
 @configclass
 class FusionHoldingOSCObjectRandomV1EnvCfg(FusionHoldingOSCV2EnvCfg):
-    max_gray_obstacles: int = 7
-    max_white_obstacles: int = 7
+    max_gray_obstacles: int = 8
+    max_white_obstacles: int = 8
     scene: ObjectRandomV1SceneCfg = ObjectRandomV1SceneCfg(num_envs=4096, env_spacing=2.5)
     events: ObjectRandomEventsCfg = ObjectRandomEventsCfg()
     curriculum: ObjectRandomV1CurriculumCfg = ObjectRandomV1CurriculumCfg()
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.events.object_spawn.params.update(
-            gray_obstacles=self.max_gray_obstacles,
-            white_obstacles=self.max_white_obstacles,
-        )
+    # Inherit the parent's 1 Gray + 1 White initial reset counts. The curriculum
+    # changes future resets without changing the current episode's active mask.

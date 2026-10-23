@@ -174,7 +174,8 @@ def test_v1_runner_descendants_preserve_16_slot_actor_and_critic(omni_config):
     assert Parent().actor.obstacle_observation_slots == 10
 
 
-def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config, cfg):
+@pytest.mark.parametrize("joint_position", [False, True])
+def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config, cfg, joint_position):
     configclass = omni_config.baseline.configclass
 
     @configclass
@@ -193,6 +194,7 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
             self.scene.configure_population_capacity(
                 self.max_gray_obstacles, self.max_white_obstacles, self.obstacle_observation_slots,
             )
+            self.events.object_spawn.params.update(gray_obstacles=1, white_obstacles=1)
 
     class Events:
         def __init__(self):
@@ -205,16 +207,52 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
              FusionHoldingV2CurriculumCfg=type(cfg)),
     )
     cls = cfgs.FusionHoldingOSCObjectRandomV1EnvCfg
+    if joint_position:
+        cls = _execute_definitions(
+            MODULE_ROOT / "contact_sweep_clutter_fusion_holding_object_random_test_v0/env_cfg.py",
+            dict(configclass=configclass, FusionHoldingV2EnvCfg=Parent,
+                 ObjectRandomV1SceneCfg=cfgs.ObjectRandomV1SceneCfg,
+                 ObjectRandomEventsCfg=Events,
+                 ObjectRandomV1CurriculumCfg=cfgs.ObjectRandomV1CurriculumCfg),
+        ).FusionHoldingObjectRandomTestV0EnvCfg
     assert cls.__bases__ == (Parent,)
     cfg = cls()
-    assert cfg.scene.capacity == (7, 7, 16)
+    assert cfg.scene.capacity == (8, 8, 16)
     assert cfg.obstacle_observation_slots == 16
-    assert cfg.events.object_spawn.params == dict(object_radius=.04, gray_obstacles=7, white_obstacles=7)
-    assert cfg.curriculum.obstacle_population is None
+    assert cfg.events.object_spawn.params == dict(object_radius=.04, gray_obstacles=1, white_obstacles=1)
+    assert cfg.curriculum.obstacle_population.params == dict(
+        initial_gray=1, initial_white=1, final_gray=8, final_white=8,
+        gray_start_iteration=4500, white_start_iteration=3000, interval=3000,
+    )
     assert cfg.curriculum.goal_position_scale is None
     assert cfg.curriculum.goal_position_tolerance.params["points"][-1] == (20000, .005)
     cfg.scene.configure_population_capacity(8, 8)
     assert cfg.scene.capacity == (8, 8, 16)
+
+    # Exercise the production schedule against the configured scene capacity,
+    # including every transition, the final cap and checkpoint rewind.
+    import runpy
+    schedule = runpy.run_path(str(MODULE_ROOT / "contact_sweep_clutter_fusion_v1_0/population.py"))
+    event = deepcopy(cfg.events.object_spawn)
+    env = SimpleNamespace(cfg=cfg, event_manager=SimpleNamespace(
+        get_term_cfg=lambda _: event, set_term_cfg=lambda *_: None))
+    checks = [(0, 1, 1), (2999, 1, 1)]
+    for increment in range(1, 8):
+        white_step = 3000 + (increment - 1) * 3000
+        gray_step = white_step + 1500
+        checks += [(white_step, increment, increment + 1),
+                   (gray_step - 1, increment, increment + 1),
+                   (gray_step, increment + 1, increment + 1),
+                   (gray_step + 1499, increment + 1, increment + 1)]
+    for iteration, gray, white in checks + [(90000, 8, 8)] + list(reversed(checks)):
+        env.learning_iteration = iteration
+        assert schedule["obstacle_population_schedule"](
+            env, None, **cfg.curriculum.obstacle_population.params,
+        ) == dict(gray_obstacles=gray, white_obstacles=white)
+        mask = schedule["active_population_mask"](1, 8, 8, gray, white, "cpu", observation_slots=16)
+        assert mask.sum().item() == 1 + gray + white
+        assert mask[0, 1:9].sum().item() == gray
+        assert mask[0, 9:].sum().item() == white
 
 
 def test_holding_v2_and_osc_v2_preserve_managers_and_change_only_arm(omni_config, cfg):
@@ -249,12 +287,56 @@ def test_holding_v2_and_osc_v2_preserve_managers_and_change_only_arm(omni_config
     parent, child = holding2(), osc2()
     snapshot = parent.to_dict()
     arm = child.actions.arm_action
-    assert arm.controller_cfg.motion_stiffness_task == (80., 80., 80., 25., 25., 25.)
-    assert not arm.controller_cfg.gravity_compensation
-    assert not arm.controller_cfg.inertial_dynamics_decoupling
+    assert arm.controller_cfg.motion_stiffness_task == (100., 100., 100., 50., 50., 50.)
+    assert arm.controller_cfg.gravity_compensation
+    assert arm.controller_cfg.inertial_dynamics_decoupling
     assert (arm.position_scale, arm.orientation_scale) == (.03, .15)
     child.actions.arm_action = deepcopy(parent.actions.arm_action)
     child.scene.robot.actuators["arm"] = deepcopy(parent.scene.robot.actuators["arm"])
     assert child.to_dict() == snapshot
     assert holding2().to_dict() == snapshot
     assert parent.obstacle_observation_slots == 16
+
+    joint_random = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_object_random_test_v0/env_cfg.py",
+        dict(configclass=cc, FusionHoldingV2EnvCfg=holding2,
+             ObjectRandomV1SceneCfg=type(parent.scene),
+             ObjectRandomEventsCfg=type(parent.events),
+             ObjectRandomV1CurriculumCfg=type(cfg)),
+    ).FusionHoldingObjectRandomTestV0EnvCfg
+    assert joint_random.__bases__ == (holding2,)
+    randomized = joint_random()
+    assert randomized.actions.to_dict() == parent.actions.to_dict()
+    assert randomized.scene.robot.actuators["arm"] == parent.scene.robot.actuators["arm"]
+    assert randomized.scene.robot.actuators["arm"].stiffness != 0.
+    assert randomized.scene.robot.actuators["arm"].damping != 0.
+    assert randomized.rewards == parent.rewards
+    assert randomized.terminations == parent.terminations
+    assert randomized.obstacle_observation_slots == 16
+
+
+def test_joint_random_runner_and_registration_preserve_holding_model(omni_config):
+    cc = omni_config.baseline.configclass
+
+    @cc
+    class Parent:
+        experiment_name: str = "inspire_contact_sweep_clutter_fusion_holding_v2"
+        actor = SimpleNamespace(obstacle_observation_slots=16, encoder_hidden_dims=[32], embedding_dim=16)
+        critic = SimpleNamespace(obstacle_observation_slots=16, encoder_hidden_dims=[32], embedding_dim=16)
+
+    cls = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_object_random_test_v0/ppo_cfg.py",
+        dict(configclass=cc, FusionHoldingV2PPORunnerCfg=Parent),
+    ).FusionHoldingObjectRandomTestV0PPORunnerCfg
+    assert cls.__bases__ == (Parent,)
+    before, after = Parent().to_dict(), cls().to_dict()
+    assert after.pop("experiment_name") == "inspire_contact_sweep_clutter_fusion_holding_object_random_test_v0"
+    before.pop("experiment_name")
+    assert before == after
+    registry = {}
+    _execute_definitions(MODULE_ROOT / "__init__.py", dict(gym=SimpleNamespace(
+        registry=registry, register=lambda **kw: registry.update({kw["id"]: kw}))))
+    spec = registry["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0"]
+    assert spec["entry_point"].endswith("fusion_v1_0.env:ContactSweepClutterFusionV1_0Env")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("holding_object_random_test_v0.env_cfg:FusionHoldingObjectRandomTestV0EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("holding_object_random_test_v0.ppo_cfg:FusionHoldingObjectRandomTestV0PPORunnerCfg")

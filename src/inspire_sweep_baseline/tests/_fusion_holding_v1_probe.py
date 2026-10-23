@@ -39,6 +39,7 @@ from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v0.env_cfg 
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v1.env_cfg import FusionHoldingOSCV1EnvCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v0.env_cfg import FusionHoldingOSCObjectRandomV0EnvCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v1.env_cfg import FusionHoldingOSCObjectRandomV1EnvCfg
+from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_object_random_test_v0.env_cfg import FusionHoldingObjectRandomTestV0EnvCfg
 
 
 def check_configs():
@@ -50,6 +51,7 @@ def check_configs():
         (FusionHoldingV2EnvCfg, FusionHoldingV1EnvCfg),
         (FusionHoldingOSCV2EnvCfg, FusionHoldingV2EnvCfg),
         (FusionHoldingOSCObjectRandomV1EnvCfg, FusionHoldingOSCV2EnvCfg),
+        (FusionHoldingObjectRandomTestV0EnvCfg, FusionHoldingV2EnvCfg),
     )
     for child, parent in relationships:
         assert child.__bases__ == (parent,)
@@ -74,11 +76,24 @@ def check_configs():
     assert randomized.rewards.to_dict() == parent.rewards.to_dict()
     assert randomized.terminations.to_dict() == parent.terminations.to_dict()
     current, expected = randomized.curriculum.to_dict(), parent.curriculum.to_dict()
-    assert current.pop("obstacle_population") is None
-    expected.pop("obstacle_population")
+    population = current.pop("obstacle_population")
+    parent_population = expected.pop("obstacle_population")
+    parent_population["params"].update(final_gray=8, final_white=8)
+    assert population == parent_population
     assert current == expected
     assert randomized.obstacle_observation_slots == 16
-    assert randomized.max_gray_obstacles == randomized.max_white_obstacles == 7
+    assert randomized.max_gray_obstacles == randomized.max_white_obstacles == 8
+    assert randomized.events.object_spawn.params["gray_obstacles"] == 1
+    assert randomized.events.object_spawn.params["white_obstacles"] == 1
+    joint = FusionHoldingObjectRandomTestV0EnvCfg()
+    holding = FusionHoldingV2EnvCfg()
+    assert joint.actions.to_dict() == holding.actions.to_dict()
+    assert joint.scene.robot.actuators["arm"].to_dict() == holding.scene.robot.actuators["arm"].to_dict()
+    # The complete configurations differ only in Arm action and Arm PD gains.
+    joint_dict, osc_dict = joint.to_dict(), randomized.to_dict()
+    joint_dict["actions"]["arm_action"] = osc_dict["actions"]["arm_action"]
+    joint_dict["scene"]["robot"]["actuators"]["arm"] = osc_dict["scene"]["robot"]["actuators"]["arm"]
+    assert joint_dict == osc_dict
 
 
 

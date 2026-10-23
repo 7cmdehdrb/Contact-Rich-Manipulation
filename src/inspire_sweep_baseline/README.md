@@ -1266,9 +1266,9 @@ Holding OSC v0의 이동·회전 명령은 Robot Base 좌표축 기준이다. EE
 | --- | --- | --- |
 | `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1` | Holding v0 | Gray/White 각1→5 curriculum 유지, Joint Position Arm |
 | `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1` | Holding v1 | 같은 population, OSC v0과 같은 Robot Base 기준·stiffness100 |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | Holding OSC v2 | 기존 ObjectRandom 자산·reset·물성 재사용, 타겟1+Gray7+White7 고정 |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | Holding OSC v2 | 기존 ObjectRandom 자산·reset·물성 재사용, 초기Gray1/White1→최대Gray8/White8 |
 
-16슬롯은 관측 용량이다. Holding/OSC의 실제 장애물 최대10개와 ObjectRandom의14개를 자동으로16개로 늘리지 않으며 남은 슬롯은0으로 채운다. v0의40D/56D encoder checkpoint는 v1의64D encoder와 직접 호환되지 않으므로 새 학습을 시작한다. 새 PPO 설정은 환경별 experiment 이름을 분리한다.
+16슬롯은 관측 용량이다. Holding/OSC의 실제 장애물은 최대10개이고, ObjectRandom-v1은 부모와 같은 개수 일정으로 최대16개까지 증가한다. 비활성 슬롯은0으로 채운다. v0의40D/56D encoder checkpoint는 v1의64D encoder와 직접 호환되지 않으므로 새 학습을 시작한다. 새 PPO 설정은 환경별 experiment 이름을 분리한다.
 
 Workspace 루트에서 실행한다. 아래 병렬 환경 수는 실행 예시이며 처리량 보장이 아니다.
 
@@ -1298,7 +1298,7 @@ Workspace 루트에서 실행한다. 아래 병렬 환경 수는 실행 예시�
 
 `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2`는 Holding-v1을 직접 상속한다. 성공·목표 유지 보상·접촉 간주의 공통 반경은5,000 iteration까지2cm,10,000에서1cm,20,000에서0.5cm이며 구간마다 iteration 단위로 선형 감소한다. goal_hold 계수는2→4다. 손 접촉은0.01N 이상 또는 유효한 목표 반경 안이면 인정하며, 계수1.45를 유지하고 fade는 새 함수에서 제거했다. 성공 속도0.01m/s·연속3초는 유지한다.
 
-직접 상속은 Holding-v1 → Holding-v2 → Holding-OSC-v2 → Holding-OSC-ObjectRandom-v1이다. ObjectRandom의 개수 일정만 비활성화하고 새 목표 일정을 상속한다. 이전 ObjectRandom-v1 checkpoint는 제어가 OSC-v1에서OSC-v2로 바뀌었으므로 같은 동작을 보장하지 않는다.
+직접 상속은 Holding-v1 → Holding-v2 → Holding-OSC-v2 → Holding-OSC-ObjectRandom-v1이다. ObjectRandom은 부모 개수 일정의 상한만8/8로 확장하고 새 목표 일정도 상속한다. 이전 ObjectRandom-v1 checkpoint는 제어가 OSC-v1에서OSC-v2로 바뀌었으므로 같은 동작을 보장하지 않는다.
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
@@ -1310,3 +1310,17 @@ Workspace 루트에서 실행한다. 아래 병렬 환경 수는 실행 예시�
 ```
 
 [전체 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_ENVIRONMENT.md) · [개발·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v2.md).
+
+ObjectRandom-v1 개수 일정(2026-10-23 후속): 0~2,999는Gray1/White1,3,000에White+1,4,500에Gray+1 이후1,500마다 교대로 증가한다.21,000에7/8,22,500부터8/8로 고정한다. 최대 타겟1+장애물16=17개이며 기존16슬롯64D 관측·encoder를 유지한다. [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_object_random_v1_population.md).
+
+## Holding ObjectRandom Test v0
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0`는 Holding-v2를 직접 상속하는 Joint Position 제어 테스트다. OSC-ObjectRandom-v1의 물체 랜덤화·배치·물성·1/1→8/8 일정과16슬롯 관측을 재사용한다. Arm은 Holding-v2의 JointPositionActionCfg와 관절 PD를 유지한다. OSC가 불안정한 상태에서 제어 문제와 복잡한 물체 학습 문제를 분리 검증하기 위한 환경이며 학습 성과는 아직 확인하지 않았다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0 \
+  --num_envs 256 --headless
+```
+
+[상속·설정·play 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_ENVIRONMENT.md) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_holding_object_random_test_v0.md).

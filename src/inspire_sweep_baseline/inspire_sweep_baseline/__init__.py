@@ -578,3 +578,16 @@ if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID not in gym.registry:
         },
     )
 __all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID")
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_object_random_test_v0.env_cfg:FusionHoldingObjectRandomTestV0EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_object_random_test_v0.ppo_cfg:FusionHoldingObjectRandomTestV0PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_TASK_ID")
