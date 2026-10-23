@@ -19,9 +19,9 @@ def fusion_events(load_mdp, monkeypatch):
         package = types.ModuleType(name)
         package.__path__ = [str(MODULE_ROOT / package_name)]
         monkeypatch.setitem(sys.modules, name, package)
-    name = "_baseline_cpu_pkg.contact_sweep_clutter.events"
+    name = "_baseline_cpu_pkg.mdp.event_functions.contact_sweep_clutter"
     monkeypatch.setitem(sys.modules, name, _module_from_file(name, MODULE_ROOT / "contact_sweep_clutter/events.py"))
-    name = "_baseline_cpu_pkg.contact_sweep_clutter_fusion.events"
+    name = "_baseline_cpu_pkg.mdp.event_functions.contact_sweep_clutter_fusion"
     module = _module_from_file(name, MODULE_ROOT / "contact_sweep_clutter_fusion/events.py")
     monkeypatch.setitem(sys.modules, name, module)
     return module
@@ -142,7 +142,7 @@ def test_partial_reset_and_reads_leave_other_cache_entries_fixed(fusion_events, 
     cached = env._initial_obstacle_observation.clone()
     assert torch.equal(cached[[0, 2]], original[[0, 2]])
     assert not torch.equal(cached[1], original[1])
-    source = _module_from_file("_baseline_cpu_pkg.contact_sweep_clutter.mdp", MODULE_ROOT / "contact_sweep_clutter/mdp.py")
+    source = _module_from_file("_baseline_cpu_pkg.mdp.reward_functions.contact_sweep_clutter", MODULE_ROOT / "contact_sweep_clutter/mdp.py")
     env.scene["object_collection"].data.object_pos_w += 5.0
     assert torch.equal(source.initial_obstacle_positions(env), cached)
     fusion_events.apply_initial_obstacle_visibility(env, [])
@@ -166,7 +166,7 @@ def test_wrapper_preserves_goals_and_layout_and_masks_only_initial_inputs(fusion
     assert torch.equal(after[:, :3][visible], before[:, :3][visible])
     assert after[:, :3][~visible].count_nonzero() == 0
     assert after[:, 3:].count_nonzero() == 0
-    # Initial ±60° cones exclude the forwards/backwards shelf X directions.
+    # Initial 짹60째 cones exclude the forwards/backwards shelf X directions.
     directions = filtered.sweep_dir[:, :2] / filtered.sweep_dir[:, :2].norm(dim=-1, keepdim=True)
     assert (directions[:, 0].abs() <= 0.5 + 1e-6).all()
 

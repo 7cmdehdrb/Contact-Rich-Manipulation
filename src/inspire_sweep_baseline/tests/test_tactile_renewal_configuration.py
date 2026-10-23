@@ -141,9 +141,9 @@ def test_registration_and_ppo_preserve_parent_settings(renewal_tactile, prefix, 
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     task = "Isaac-Inspire-" + ("Dex-" if "Dex" in prefix else "") + "Tactile-Sweep-Omni-Renewal-v0"
     registration = registrations[task]
-    assert registration["entry_point"] == "inspire_sweep_baseline.env:InspireSweepEnv"
-    assert registration["kwargs"]["env_cfg_entry_point"] == f"inspire_sweep_baseline.tactile_omni_renewal_env_cfg:{prefix}EnvCfg"
-    assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == f"inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:{prefix}PPORunnerCfg"
+    assert registration["entry_point"] == "inspire_sweep_baseline.runtime.sweep:InspireSweepEnv"
+    assert registration["kwargs"]["env_cfg_entry_point"] == f"inspire_sweep_baseline.envs.sweep_omni_renewal_envs:{prefix}EnvCfg"
+    assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == f"inspire_sweep_baseline.agent.sweep_omni_renewal_ppo_cfg:{prefix}PPORunnerCfg"
     runner = getattr(renewal_tactile.runners, prefix + "PPORunnerCfg")()
     expected = renewal_tactile.old.baseline_runner.InspireSweepPPORunnerCfg().to_dict()
     expected["experiment_name"] = experiment
@@ -247,10 +247,10 @@ def test_dex_tactile_v1_requested_settings_and_separate_runner(renewal_tactile_v
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1"]
     assert registration["kwargs"]["env_cfg_entry_point"] == (
-        "inspire_sweep_baseline.dex_tactile_omni_renewal_v1_env_cfg:InspireDexTactileSweepOmniRenewalV1EnvCfg"
+        "inspire_sweep_baseline.envs.sweep_omni_renewal_envs:InspireDexTactileSweepOmniRenewalV1EnvCfg"
     )
     assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
-        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV1PPORunnerCfg"
+        "inspire_sweep_baseline.agent.sweep_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV1PPORunnerCfg"
     )
     runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg()
     expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalPPORunnerCfg().to_dict()
@@ -282,7 +282,7 @@ def test_v3_branches_from_v1_with_empirical_reward_balance_and_heavier_reset_mas
     expected["rewards"]["goal_distance"]["weight"] = 94.0
     expected["scene"]["object_collection"]["rigid_objects"]["mass_cylinder"]["spawn"]["mass_props"]["mass"] *= 1.5
     expected["events"]["physics_randomization"]["params"]["mass_scale"] = 1.5
-    expected["events"]["physics_randomization"]["func"] = f"{physics.__name__}:randomize_scaled_episode_physics"
+    expected["events"]["physics_randomization"]["func"] = f"{physics.randomize_scaled_episode_physics.__module__}:randomize_scaled_episode_physics"
     assert child.to_dict() == expected
     assert child.rewards.reaching.weight == 30.0
     # These are measured TensorBoard means, not theoretical reward budgets.
@@ -302,10 +302,10 @@ def test_v3_branches_from_v1_with_empirical_reward_balance_and_heavier_reset_mas
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3"]
     assert registration["kwargs"]["env_cfg_entry_point"] == (
-        "inspire_sweep_baseline.dex_tactile_omni_renewal_v3_env_cfg:InspireDexTactileSweepOmniRenewalV3EnvCfg"
+        "inspire_sweep_baseline.envs.sweep_omni_renewal_envs:InspireDexTactileSweepOmniRenewalV3EnvCfg"
     )
     assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
-        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV3PPORunnerCfg"
+        "inspire_sweep_baseline.agent.sweep_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV3PPORunnerCfg"
     )
     expected_runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg().to_dict()
     expected_runner["experiment_name"] = "inspire_dex_tactile_sweep_omni_renewal_v3"
@@ -382,10 +382,10 @@ def test_dex_tactile_v2_adds_only_positive_hold_rewards_and_success(renewal_tact
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2"]
     assert registration["kwargs"]["env_cfg_entry_point"] == (
-        "inspire_sweep_baseline.dex_tactile_omni_renewal_v2_env_cfg:InspireDexTactileSweepOmniRenewalV2EnvCfg"
+        "inspire_sweep_baseline.envs.sweep_omni_renewal_envs:InspireDexTactileSweepOmniRenewalV2EnvCfg"
     )
     assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
-        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2PPORunnerCfg"
+        "inspire_sweep_baseline.agent.sweep_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2PPORunnerCfg"
     )
     runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV2PPORunnerCfg()
     assert isinstance(runner, renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV1PPORunnerCfg)

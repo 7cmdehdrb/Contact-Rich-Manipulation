@@ -5,6 +5,8 @@ The checked-in config classes, manager term cfgs, MDP callables and CLI helper
 execute unchanged, including configclass copying and inherited field order.
 """
 
+from _source_units import source_text
+
 import ast
 from collections.abc import Callable
 from copy import deepcopy
@@ -37,14 +39,9 @@ _AssetNode.FrameCfg = _AssetNode
 
 
 def _execute_definitions(path, namespace, selected_classes=None):
-    """Retain production bodies while supplying only their import dependencies."""
-    tree = ast.parse(path.read_text())
-    tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
-    if selected_classes is not None:
-        tree.body = [node for node in tree.body if isinstance(node, ast.ClassDef) and node.name in selected_classes]
-        tree.body.insert(0, ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0))
-    exec(compile(ast.fix_missing_locations(tree), str(path), "exec"), namespace)
-    return SimpleNamespace(**namespace)
+    """Execute the selected live production definitions with CPU dependencies."""
+    from _source_units import execute_definitions
+    return execute_definitions(path, namespace, selected_classes)
 
 
 @pytest.fixture
@@ -92,7 +89,7 @@ def omni_config(load_mdp, monkeypatch):
     robot_constants = vars(sys.modules["_baseline_cpu_pkg.assets.robot"])
     robot_namespace = dict(robot_constants, ArticulationCfg=_AssetNode, ImplicitActuatorCfg=_AssetNode,
                            Ur5eAxia80InspireSpawnerCfg=lambda: _AssetNode(sensor_height=0.02))
-    robot_tree = ast.parse((MODULE_ROOT / "assets/robot.py").read_text())
+    robot_tree = ast.parse(source_text(MODULE_ROOT / "assets/robot.py"))
     robot_tree.body = [node for node in robot_tree.body if isinstance(node, ast.FunctionDef) and node.name == "make_robot_cfg"]
     exec(compile(robot_tree, str(MODULE_ROOT / "assets/robot.py"), "exec"), robot_namespace)
 
@@ -215,42 +212,42 @@ def test_new_task_registration_uses_baseline_environment_and_exact_baseline_ppo(
     omni = registrations[namespace["OMNI_TASK_ID"]]
     assert namespace["OMNI_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v0"
     assert omni["entry_point"] == baseline["entry_point"]
-    assert omni["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniEnvCfg"
+    assert omni["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireSweepOmniEnvCfg"
     assert omni["kwargs"]["rsl_rl_cfg_entry_point"] == baseline["kwargs"]["rsl_rl_cfg_entry_point"]
-    assert omni["kwargs"]["rsl_rl_cfg_entry_point"] == "inspire_sweep_baseline.agents.rsl_rl_ppo_cfg:InspireSweepPPORunnerCfg"
+    assert omni["kwargs"]["rsl_rl_cfg_entry_point"] == "inspire_sweep_baseline.agent.sweep_ppo_cfg:InspireSweepPPORunnerCfg"
     v1 = registrations[namespace["OMNI_V1_TASK_ID"]]
     assert namespace["OMNI_V1_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v1"
     assert v1["entry_point"] == omni["entry_point"]
-    assert v1["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV1EnvCfg"
+    assert v1["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireSweepOmniV1EnvCfg"
     assert v1["kwargs"]["rsl_rl_cfg_entry_point"] == omni["kwargs"]["rsl_rl_cfg_entry_point"]
     v2 = registrations[namespace["OMNI_V2_TASK_ID"]]
     assert namespace["OMNI_V2_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v2"
     assert v2["entry_point"] == v1["entry_point"]
-    assert v2["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV2EnvCfg"
+    assert v2["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireSweepOmniV2EnvCfg"
     assert v2["kwargs"]["rsl_rl_cfg_entry_point"] == v1["kwargs"]["rsl_rl_cfg_entry_point"]
     v3 = registrations[namespace["OMNI_V3_TASK_ID"]]
     assert namespace["OMNI_V3_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v3"
     assert v3["entry_point"] == v2["entry_point"]
-    assert v3["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV3EnvCfg"
+    assert v3["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireSweepOmniV3EnvCfg"
     assert v3["kwargs"]["rsl_rl_cfg_entry_point"] == v2["kwargs"]["rsl_rl_cfg_entry_point"]
     v4 = registrations[namespace["OMNI_V4_TASK_ID"]]
     assert namespace["OMNI_V4_TASK_ID"] == "Isaac-Inspire-Sweep-Omni-v4"
     assert "OMNI_V4_TASK_ID" in namespace["__all__"]
     assert v4["entry_point"] == v3["entry_point"]
-    assert v4["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.omni_env_cfg:InspireSweepOmniV4EnvCfg"
+    assert v4["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireSweepOmniV4EnvCfg"
     assert v4["kwargs"]["rsl_rl_cfg_entry_point"] == v3["kwargs"]["rsl_rl_cfg_entry_point"]
     dex = registrations[namespace["DEX_OMNI_TASK_ID"]]
     assert namespace["DEX_OMNI_TASK_ID"] == "Isaac-Inspire-Dex-Omni-v0"
     assert "DEX_OMNI_TASK_ID" in namespace["__all__"]
     assert dex["entry_point"] == baseline["entry_point"]
     assert dex["disable_env_checker"] == baseline["disable_env_checker"]
-    assert dex["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.dex_omni_env_cfg:InspireDexOmniEnvCfg"
+    assert dex["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_omni_envs:InspireDexOmniEnvCfg"
     assert dex["kwargs"]["rsl_rl_cfg_entry_point"] == baseline["kwargs"]["rsl_rl_cfg_entry_point"]
     for constant, task_id, entry in (
         ("OMNI_RENEWAL_TASK_ID", "Isaac-Inspire-Sweep-Omni-Renewal-v0",
-         "omni_renewal_env_cfg:InspireSweepOmniRenewalEnvCfg"),
+         "envs.sweep_omni_renewal_envs:InspireSweepOmniRenewalEnvCfg"),
         ("DEX_OMNI_RENEWAL_TASK_ID", "Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0",
-         "dex_omni_renewal_env_cfg:InspireDexSweepOmniRenewalEnvCfg"),
+         "envs.sweep_omni_renewal_envs:InspireDexSweepOmniRenewalEnvCfg"),
     ):
         assert namespace[constant] == task_id
         assert constant in namespace["__all__"]
@@ -769,7 +766,7 @@ def test_renewal_osc_registration():
     assert child["entry_point"] == parent["entry_point"]
     assert child["kwargs"]["rsl_rl_cfg_entry_point"] == parent["kwargs"]["rsl_rl_cfg_entry_point"]
     assert child["kwargs"]["env_cfg_entry_point"] == (
-        "inspire_sweep_baseline.omni_renewal_osc_env_cfg:InspireSweepOmniRenewalOSCEnvCfg"
+        "inspire_sweep_baseline.envs.sweep_omni_renewal_envs:InspireSweepOmniRenewalOSCEnvCfg"
     )
 
 

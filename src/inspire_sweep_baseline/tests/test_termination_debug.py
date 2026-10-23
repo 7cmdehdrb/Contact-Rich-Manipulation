@@ -43,23 +43,32 @@ def test_tasks_use_their_registered_runtime_family():
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     assert registrations
     contact_runtimes = {
-        "Isaac-Inspire-Contact-Sweep-v0": "contact_sweep.env:ContactSweepEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-v0": "contact_sweep_clutter.env:ContactSweepClutterEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-v1": "contact_sweep_clutter_v1.env:ContactSweepClutterV1Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-v2": "contact_sweep_clutter_v2.env:ContactSweepClutterV2Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1": "contact_sweep_clutter_v1_curriculum.env:ContactSweepClutterV1CurriculumEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0": "contact_sweep_clutter_ft_test.env:ContactSweepClutterFTTestEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2": "contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
-        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2": "contact_sweep_clutter_fusion.env:ContactSweepClutterFusionEnv",
+        "Isaac-Inspire-Contact-Sweep-v0": "runtime.contact_sweep:ContactSweepEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-v0": "runtime.contact_sweep_clutter:ContactSweepClutterEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-v1": "runtime.contact_sweep_clutter:ContactSweepClutterV1Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-v2": "runtime.contact_sweep_clutter:ContactSweepClutterV2Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1": "runtime.contact_sweep_clutter:ContactSweepClutterV1CurriculumEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0": "runtime.contact_sweep_clutter:ContactSweepClutterFTTestEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionEnv",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionEnv",
     }
+    for suffix in (
+        "v1_4", "Holding-v0", "Holding-v1", "Holding-v2",
+        "Holding-OSC-v0", "Holding-OSC-v1", "Holding-OSC-v2",
+        "Holding-OSC-ObjectRandom-v0", "Holding-OSC-ObjectRandom-v1",
+        "Holding-ObjectRandom-Test-v0",
+    ):
+        contact_runtimes[f"Isaac-Inspire-Contact-Sweep-Clutter-Fusion-{suffix}"] = (
+            "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env"
+        )
     for task, registration in registrations.items():
-        runtime = contact_runtimes.get(task, "env:InspireSweepEnv")
+        runtime = contact_runtimes.get(task, "runtime.sweep:InspireSweepEnv")
         assert registration["entry_point"] == f"inspire_sweep_baseline.{runtime}"

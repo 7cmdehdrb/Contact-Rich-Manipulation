@@ -53,7 +53,7 @@ def main():
         from isaaclab_tasks.utils import parse_env_cfg, load_cfg_from_registry
         from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
         import inspire_sweep_baseline  # noqa: F401
-        from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
+        from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
         cfg = parse_env_cfg(args.task, device=args.device or 'cuda:0', num_envs=1)
         cfg.seed = args.seed
         cfg.log_dir = str(output.resolve())

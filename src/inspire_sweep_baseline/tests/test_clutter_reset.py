@@ -18,20 +18,10 @@ from test_tactile_renewal_configuration import renewal_tactile, renewal_tactile_
 
 @pytest.fixture
 def clutter_modules(load_mdp, monkeypatch):
-    # Reuse the existing real Isaac tensor math harness and local package.
-    parent_events = load_mdp("goal_events")
-    package = types.ModuleType("_baseline_cpu_pkg.contact_sweep_clutter")
-    package.__path__ = [str(MODULE_ROOT / "contact_sweep_clutter")]
-    monkeypatch.setitem(sys.modules, package.__name__, package)
-    modules = {}
-    for name in ("layout", "events", "mdp", "physics"):
-        qualified = f"{package.__name__}.{name}"
-        spec = importlib.util.spec_from_file_location(qualified, MODULE_ROOT / "contact_sweep_clutter" / f"{name}.py")
-        module = importlib.util.module_from_spec(spec)
-        monkeypatch.setitem(sys.modules, qualified, module)
-        spec.loader.exec_module(module)
-        modules[name] = module
-    return SimpleNamespace(**modules, parent_events=parent_events)
+    from _source_units import import_unit
+    modules = {name: import_unit("contact_sweep_clutter." + name)
+               for name in ("layout", "events", "mdp", "physics")}
+    return SimpleNamespace(**modules, parent_events=load_mdp("goal_events"))
 
 
 def _env(make_env, tensor_math, count=4):

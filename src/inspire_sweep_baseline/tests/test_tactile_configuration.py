@@ -1,5 +1,7 @@
 """Execute inherited tactile wiring using the official CPU config semantics."""
 
+from _source_units import source_text
+
 import ast
 from copy import deepcopy
 from dataclasses import MISSING
@@ -46,7 +48,7 @@ def tactile_config(omni_config, load_mdp, monkeypatch):
     runner_module.__dict__.update(configclass=configclass, MISSING=MISSING, Literal=Literal)
     monkeypatch.setitem(sys.modules, runner_module.__name__, runner_module)
     official_runner_path = PROJECT_ROOT / "IsaacLab/source/isaaclab_rl/isaaclab_rl/rsl_rl/rl_cfg.py"
-    runner_classes = {node.name for node in ast.parse(official_runner_path.read_text()).body
+    runner_classes = {node.name for node in ast.parse(source_text(official_runner_path)).body
                       if isinstance(node, ast.ClassDef)}
     official_runner = _execute_definitions(official_runner_path, runner_module.__dict__, runner_classes)
     baseline_runner_module = types.ModuleType("_tactile_cpu_baseline_runner")
@@ -329,8 +331,8 @@ def test_registration_uses_baseline_runtime_with_separate_tactile_runner():
     baseline = registrations["Isaac-Inspire-Sweep-Baseline-v0"]
     tactile = registrations["Isaac-Inspire-Sweep-Baseline-Tactile-v0"]
     assert tactile["entry_point"] == baseline["entry_point"]
-    assert tactile["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.tactile_env_cfg:InspireSweepTactileEnvCfg"
-    assert tactile["kwargs"]["rsl_rl_cfg_entry_point"] == "inspire_sweep_baseline.agents.tactile_ppo_cfg:InspireSweepTactilePPORunnerCfg"
+    assert tactile["kwargs"]["env_cfg_entry_point"] == "inspire_sweep_baseline.envs.sweep_envs:InspireSweepTactileEnvCfg"
+    assert tactile["kwargs"]["rsl_rl_cfg_entry_point"] == "inspire_sweep_baseline.agent.sweep_ppo_cfg:InspireSweepTactilePPORunnerCfg"
 
 
 def test_tactile_ppo_keeps_all_baseline_settings_except_log_directory(tactile_config):

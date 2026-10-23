@@ -90,7 +90,7 @@ try:
     from isaaclab.sensors import CameraCfg
     from isaaclab_tasks.utils import parse_env_cfg, load_cfg_from_registry
     from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
-    from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
+    from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
 
     task = 'Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v0'
     cfg = parse_env_cfg(task, device='cuda:0', num_envs=4)

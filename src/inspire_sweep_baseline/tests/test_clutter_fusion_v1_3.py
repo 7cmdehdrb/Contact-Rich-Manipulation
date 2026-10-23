@@ -10,7 +10,7 @@ import pytest
 from conftest import MODULE_ROOT
 from test_clutter_fusion_v1_variants import config_terms, params
 
-linear = runpy.run_path(str(MODULE_ROOT/'contact_sweep_clutter_fusion_v1_3/curriculum.py'))['piecewise_linear_reward_threshold']
+linear = runpy.run_path(str(MODULE_ROOT/'mdp/curriculum_functions/contact_sweep_clutter_fusion.py'))['piecewise_linear_reward_threshold']
 
 
 @pytest.mark.parametrize('name,points', [

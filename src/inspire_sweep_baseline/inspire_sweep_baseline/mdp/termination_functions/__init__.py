@@ -1,0 +1,1 @@
+"""termination functions components."""

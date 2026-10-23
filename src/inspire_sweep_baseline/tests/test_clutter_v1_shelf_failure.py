@@ -1,5 +1,7 @@
 """Exercise the real RL step/reward loop: shelf cost survives terminal reset."""
 
+from _source_units import source_text
+
 import ast
 from types import MethodType, SimpleNamespace
 
@@ -92,7 +94,7 @@ def test_terminal_step_contains_minus_three_before_partial_reset(v1_mdp, dt):
 
     # Keep the actual framework step body, replacing only simulator dependencies.
     source = PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/envs/manager_based_rl_env.py"
-    tree = ast.parse(source.read_text())
+    tree = ast.parse(source_text(source))
     cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "ManagerBasedRLEnv")
     step = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "step")
     module = ast.Module(body=[

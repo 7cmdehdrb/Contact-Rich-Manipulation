@@ -13,8 +13,8 @@ from test_omni_configuration import _execute_definitions
 @pytest.fixture
 def schedule_env(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    reward = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_v1_curriculum.mdp")
-    goal = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion.curriculum")
+    reward = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter")
+    goal = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter_fusion")
     cfg = _execute_definitions(
         MODULE_ROOT / "contact_sweep_clutter_fusion/curriculum_cfg.py",
         {"configclass": lambda cls: cls, "CurriculumTermCfg": SimpleNamespace,

@@ -1,5 +1,7 @@
 """Exercise independent fusion CFGs and the 55D actor through real CPU PPO."""
 
+from _source_units import source_text, unit_paths
+
 import ast
 import copy
 import importlib
@@ -19,7 +21,7 @@ from test_omni_configuration import _execute_definitions
 @pytest.fixture
 def fusion_models(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    return importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion.models")
+    return importlib.import_module("inspire_sweep_baseline.agent.contact_sweep_clutter_fusion_models")
 
 
 @pytest.fixture
@@ -145,8 +147,10 @@ def test_cfgs_do_not_inherit_other_task_cfgs():
         "InteractiveSceneCfg", "ManagerBasedRLEnvCfg", "RslRlOnPolicyRunnerCfg",
         "RslRlMLPModelCfg", "ObservationGroupCfg", "ObsGroup",
     }
-    for file in root.glob("*_cfg.py"):
-        for node in ast.walk(ast.parse(file.read_text())):
+    files = unit_paths("contact_sweep_clutter_fusion", "*_cfg.py")
+    assert files
+    for file in files:
+        for node in ast.walk(ast.parse(source_text(file))):
             if isinstance(node, ast.ClassDef):
                 assert all(isinstance(base, ast.Name) and base.id in allowed for base in node.bases), (file, node.name)
             if isinstance(node, ast.ImportFrom) and node.level == 2:

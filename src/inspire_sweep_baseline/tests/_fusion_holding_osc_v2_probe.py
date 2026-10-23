@@ -14,8 +14,8 @@ try:
     from isaaclab_tasks.utils import parse_env_cfg, load_cfg_from_registry
     from isaaclab.utils.math import quat_from_euler_xyz, quat_mul, axis_angle_from_quat
     from isaaclab_tasks.manager_based.manipulation.reach.config.ur_10.ur10_osc_reach_env_cfg import UR10OSCReachEnvCfg
-    from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v2.env_cfg import FusionHoldingV2EnvCfg
-    from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.env_cfg import FusionHoldingOSCV2EnvCfg
+    from inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_holding_envs import FusionHoldingV2EnvCfg
+    from inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV2EnvCfg
     task = 'Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2'
     output = Path('outputs/fusion_holding_osc_v2_validation')
     output.mkdir(parents=True, exist_ok=True)

@@ -13,7 +13,8 @@ from test_clutter_fusion_v1_0_rewards import rewards
 
 @pytest.fixture
 def object_state(rewards):
-    return sys.modules[rewards.__package__ + ".object_state"]
+    from _source_units import import_unit
+    return import_unit("contact_sweep_clutter_fusion_v1_0.object_state")
 
 
 def masked_env(make_env, count=4):
@@ -70,7 +71,7 @@ def test_parked_fallen_tilted_slots_are_ignored_but_active_targets_and_obstacles
 
 
 def test_contact_resultant_ignores_inactive_force_and_dynamic_target(rewards):
-    contacts = sys.modules[rewards.__package__ + ".contacts"]
+    contacts = sys.modules["_baseline_cpu_pkg.mdp.common.contact_sweep_clutter_fusion_contacts"]
     names = ["target", *(f"obstacle_{i}" for i in range(6))]
     env = SimpleNamespace(
         num_envs=2, target_id=torch.tensor([[0], [6]]),

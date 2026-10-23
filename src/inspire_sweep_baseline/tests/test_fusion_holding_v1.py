@@ -151,7 +151,7 @@ def test_full_sixteen_obstacle_reset_with_supplied_layout(population_modules, ma
     points = np.array([(x, y) for x in (-.12, 0., .12) for y in (-.40, -.24, -.08, .08, .24, .40)
                        if x != 0. or abs(y) > .1])
     assert points.shape == (16, 2)
-    generator = SimpleNamespace(generate=lambda *_: population_modules.layout.shelf_xy_to_generator_cm(points[None]))
+    generator = SimpleNamespace(generate=lambda *_: population_modules.coordinates.shelf_xy_to_generator_cm(points[None]))
     monkeypatch.setattr(population_modules.events, "population_layout_generator", lambda *_: generator)
     torch.manual_seed(42)
     population_modules.events.randomize_population_clutter_scene(

@@ -15,19 +15,9 @@ from test_omni_configuration import _execute_definitions
 
 @pytest.fixture
 def v1_mdp(load_mdp, monkeypatch):
-    tactile = load_mdp("tactile_observations")
-    package_name = "_baseline_cpu_pkg.contact_sweep_clutter_v1"
-    package = ModuleType(package_name)
-    package.__path__ = [str(MODULE_ROOT / "contact_sweep_clutter_v1")]
-    monkeypatch.setitem(sys.modules, package_name, package)
-    name = f"{package_name}.mdp"
-    spec = importlib.util.spec_from_file_location(
-        name, MODULE_ROOT / "contact_sweep_clutter_v1/mdp.py",
-    )
-    module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, name, module)
-    spec.loader.exec_module(module)
-    return SimpleNamespace(mdp=module, tactile=tactile)
+    from _source_units import import_unit
+    return SimpleNamespace(mdp=import_unit("contact_sweep_clutter_v1.mdp"),
+                           tactile=load_mdp("tactile_observations"))
 
 
 def test_goal_hold_uses_selected_target_world_xy_and_includes_one_cm(v1_mdp, make_env):
@@ -225,10 +215,10 @@ def test_v1_registration_selects_new_runtime_and_preserves_v0_registration():
         ("v1", "contact_sweep_clutter_v1", "ContactSweepClutterV1"),
     ):
         registered = registrations[f"Isaac-Inspire-Contact-Sweep-Clutter-{version}"]
-        assert registered["entry_point"] == f"inspire_sweep_baseline.{package}.env:{prefix}Env"
+        assert registered["entry_point"] == f"inspire_sweep_baseline.runtime.contact_sweep_clutter:{prefix}Env"
         assert registered["kwargs"]["env_cfg_entry_point"] == (
-            f"inspire_sweep_baseline.{package}.env_cfg:{prefix}EnvCfg"
+            f"inspire_sweep_baseline.envs.contact_sweep_clutter_envs:{prefix}EnvCfg"
         )
         assert registered["kwargs"]["rsl_rl_cfg_entry_point"] == (
-            f"inspire_sweep_baseline.{package}.ppo_cfg:{prefix}PPORunnerCfg"
+            f"inspire_sweep_baseline.agent.contact_sweep_clutter_ppo_cfg:{prefix}PPORunnerCfg"
         )

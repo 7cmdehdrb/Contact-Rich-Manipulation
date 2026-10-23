@@ -13,8 +13,8 @@ from test_omni_configuration import _execute_definitions, omni_config
 @pytest.fixture
 def v3_schedule(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    delayed = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion_v3.curriculum")
-    goal = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion.curriculum")
+    delayed = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter_fusion")
+    goal = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter_fusion")
     namespace = {"configclass": lambda cls: cls, "CurriculumTermCfg": SimpleNamespace,
                  "goal_deadzone_schedule": goal.goal_deadzone_schedule,
                  "reward_schedule": object(), "delayed_reward_schedule": delayed.delayed_reward_schedule}
@@ -128,8 +128,8 @@ def test_v3_inherits_v2_and_only_changes_curriculum(omni_config):
     assert "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1" not in registrations
     spec = registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3"]
     assert spec["entry_point"] == registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0"]["entry_point"]
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("fusion_v3.env_cfg:ContactSweepClutterFusionV3EnvCfg")
-    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("fusion_v3.ppo_cfg:ContactSweepClutterFusionV3PPORunnerCfg")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("envs.contact_sweep_clutter_fusion_envs:ContactSweepClutterFusionV3EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("agent.contact_sweep_clutter_fusion_ppo_cfg:ContactSweepClutterFusionV3PPORunnerCfg")
 
 
 def test_real_configclass_copies_inherited_curriculum_terms(omni_config, v3_schedule):

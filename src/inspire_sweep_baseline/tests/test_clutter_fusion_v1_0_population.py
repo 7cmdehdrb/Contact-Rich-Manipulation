@@ -13,12 +13,13 @@ from test_clutter_layout import validate_scenes
 
 @pytest.fixture
 def population_modules(load_mdp):
-    samplers = load_mdp("goal_events")
-    prefix = "_baseline_cpu_pkg.contact_sweep_clutter_fusion_v1_0."
+    from _source_units import import_unit
     return SimpleNamespace(
-        population=importlib.import_module(prefix + "population"),
-        layout=importlib.import_module(prefix + "layout"),
-        events=importlib.import_module(prefix + "events"), samplers=samplers,
+        population=import_unit("contact_sweep_clutter_fusion_v1_0.population"),
+        layout=import_unit("contact_sweep_clutter_fusion_v1_0.layout"),
+        coordinates=importlib.import_module("_baseline_cpu_pkg.assets.scenes.contact_sweep_clutter_layout"),
+        events=import_unit("contact_sweep_clutter_fusion_v1_0.events"),
+        samplers=load_mdp("goal_events"),
     )
 
 
@@ -69,8 +70,8 @@ def test_all_population_layouts_preserve_fixed_commands_and_source_safety(popula
     target_xy = mod.samplers._sample_uniform_disk(count, 0.02, "cpu")
     direction = mod.samplers._sample_planar_unit_vectors(count, "cpu", 0.0)
     distance = mod.samplers._goal_ray_distance(target_xy, direction, .15, (.14, .44))
-    target = mod.layout.shelf_xy_to_generator_cm(target_xy.numpy())
-    goal = mod.layout.shelf_xy_to_generator_cm((target_xy + direction * distance[:, None]).numpy())
+    target = mod.coordinates.shelf_xy_to_generator_cm(target_xy.numpy())
+    goal = mod.coordinates.shelf_xy_to_generator_cm((target_xy + direction * distance[:, None]).numpy())
     before_target, before_goal = target.copy(), goal.copy()
     shared = mod.layout.DEFAULT_LAYOUT_CONFIG
     env = SimpleNamespace(cfg=SimpleNamespace(seed=19))

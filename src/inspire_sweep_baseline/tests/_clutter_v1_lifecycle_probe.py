@@ -23,10 +23,8 @@ from isaaclab_tasks.utils import parse_env_cfg
 
 import inspire_sweep_baseline  # noqa: F401
 from inspire_sweep_baseline.assets.tactile_regions import TACTILE_REGIONS, parent_sensor_name
-from inspire_sweep_baseline.contact_sweep_clutter_v1.mdp import (
-    contact_any, contact_count, goal_hold_xy, obstacle_displacement_l2,
-)
-from inspire_sweep_baseline.mdp.observations import object_position_in_root
+from inspire_sweep_baseline.mdp.reward_functions.contact_sweep_clutter import contact_any, contact_count, goal_hold_xy, obstacle_displacement_l2
+from inspire_sweep_baseline.mdp.observation_functions.sweep import object_position_in_root
 
 
 task = "Isaac-Inspire-Contact-Sweep-Clutter-v1"

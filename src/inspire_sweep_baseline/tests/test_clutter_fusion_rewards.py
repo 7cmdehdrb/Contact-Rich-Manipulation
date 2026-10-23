@@ -13,25 +13,8 @@ from test_contact_sweep_clutter_mdp import multiobject_env
 
 @pytest.fixture
 def fusion_rewards(load_mdp, monkeypatch):
-    load_mdp("goal_rewards")
-    load_mdp("tactile_observations")
-    result = {}
-    for directory, name in (
-        ("contact_sweep_clutter", "mdp"),
-        ("contact_sweep_clutter_v1", "mdp"),
-        ("contact_sweep_clutter_fusion", "reward_functions"),
-    ):
-        package_name = f"_baseline_cpu_pkg.{directory}"
-        package = ModuleType(package_name)
-        package.__path__ = [str(MODULE_ROOT / directory)]
-        monkeypatch.setitem(sys.modules, package_name, package)
-        fullname = f"{package_name}.{name}"
-        spec = importlib.util.spec_from_file_location(fullname, MODULE_ROOT / directory / f"{name}.py")
-        module = importlib.util.module_from_spec(spec)
-        monkeypatch.setitem(sys.modules, fullname, module)
-        spec.loader.exec_module(module)
-        result[directory] = module
-    return result["contact_sweep_clutter_fusion"]
+    from _source_units import import_unit
+    return import_unit("contact_sweep_clutter_fusion.reward_functions")
 
 
 @pytest.mark.parametrize("dt", [0.01, 0.02, 0.1])

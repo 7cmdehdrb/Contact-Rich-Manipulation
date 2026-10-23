@@ -1,0 +1,1 @@
+"""curriculum functions components."""

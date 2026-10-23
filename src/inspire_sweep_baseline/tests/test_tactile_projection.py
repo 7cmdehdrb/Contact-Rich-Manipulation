@@ -1,5 +1,7 @@
 """Classify actual per-point parent contacts without changing collision shapes."""
 
+from _source_units import source_text
+
 import json
 from types import SimpleNamespace
 
@@ -9,7 +11,7 @@ import torch
 from conftest import MODULE_ROOT
 
 
-REGIONS = json.loads((MODULE_ROOT / "assets/data/tactile_regions.json").read_text())["regions"]
+REGIONS = json.loads(source_text(MODULE_ROOT / "assets/data/tactile_regions.json"))["regions"]
 
 
 def _raw(points, normals, counts, starts, magnitudes=None):

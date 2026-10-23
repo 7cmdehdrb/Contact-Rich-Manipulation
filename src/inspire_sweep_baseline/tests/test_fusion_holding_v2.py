@@ -1,5 +1,7 @@
 """Shared radius boundaries, contact OR, success timer and inherited schedules."""
 
+from _source_units import import_unit
+
 import importlib
 from types import SimpleNamespace as NS
 
@@ -16,7 +18,7 @@ ROOT = MODULE_ROOT / "contact_sweep_clutter_fusion_holding_v2"
 @pytest.fixture
 def mdp(load_mdp):
     load_mdp("goal_rewards")
-    return importlib.import_module("_baseline_cpu_pkg.contact_sweep_clutter_fusion_holding_v2.mdp")
+    return import_unit("contact_sweep_clutter_fusion_holding_v2.mdp", package="_baseline_cpu_pkg")
 
 
 @pytest.fixture
@@ -160,5 +162,5 @@ def test_reward_termination_configs_and_registration(mdp, omni_config):
     _execute_definitions(MODULE_ROOT / "__init__.py", dict(gym=NS(
         registry=registry, register=lambda **kw: registry.update({kw["id"]: kw}))))
     spec = registry["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2"]
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("holding_v2.env_cfg:FusionHoldingV2EnvCfg")
-    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("holding_v2.ppo_cfg:FusionHoldingV2PPORunnerCfg")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("envs.contact_sweep_clutter_fusion_holding_envs:FusionHoldingV2EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("agent.contact_sweep_clutter_fusion_holding_ppo_cfg:FusionHoldingV2PPORunnerCfg")

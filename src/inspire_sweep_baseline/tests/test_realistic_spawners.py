@@ -1,5 +1,7 @@
 """Production spawn-time bindings and preservation of source configuration."""
 
+from _source_units import source_text
+
 import ast
 from copy import deepcopy
 from dataclasses import dataclass, field, fields
@@ -28,7 +30,7 @@ def test_spawn_time_materials_and_cylinder_origin_before_physics_cloning():
 
 
 def test_spawner_conversion_preserves_all_source_settings_without_mutating_baseline():
-    source = ast.parse((MODULE_ROOT / "assets/realistic_spawners.py").read_text())
+    source = ast.parse(source_text(MODULE_ROOT / "assets/realistic_spawners.py"))
     source.body = [node for node in source.body if isinstance(node, ast.FunctionDef) and node.name == "replace_friction_spawner"]
     namespace = {"deepcopy": deepcopy, "fields": fields}
     exec(compile(source, "realistic_spawners.py", "exec"), namespace)

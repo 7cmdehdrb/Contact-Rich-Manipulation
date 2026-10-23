@@ -1,5 +1,7 @@
 """Wiring, independence, and numerical PPO parity without a GPU launcher."""
 
+from _source_units import source_text
+
 import ast
 from pathlib import Path
 
@@ -7,7 +9,7 @@ from conftest import MODULE_ROOT, PACKAGE_ROOT, PROJECT_ROOT
 
 
 def _tree(path):
-    return ast.parse(Path(path).read_text())
+    return ast.parse(source_text(Path(path)))
 
 
 def _class(tree, name):
@@ -38,7 +40,7 @@ def test_production_imports_do_not_depend_on_existing_project_packages():
                 assert not roots & forbidden, path
             elif isinstance(node, ast.ImportFrom) and node.level == 0:
                 assert (node.module or "").split(".")[0] not in forbidden, path
-        source = path.read_text()
+        source = source_text(path)
         assert "/home/min/7cmdehdrb/grad" not in source, path
         assert "example/Sweep-Policy" not in source, path
 
@@ -69,7 +71,7 @@ def test_reward_weights_match_original_sweep_and_sensor_channels_are_observation
         for name, value in _assignments(actual).items() if isinstance(value, ast.Call)
     }
     assert actual_weights == source_weights
-    reward_source = (MODULE_ROOT / "mdp/rewards.py").read_text()
+    reward_source = source_text(MODULE_ROOT / "mdp/rewards.py")
     assert "palm_tactile" not in reward_source
     assert "body_incoming_joint_wrench" not in reward_source
 
@@ -77,7 +79,7 @@ def test_reward_weights_match_original_sweep_and_sensor_channels_are_observation
 def test_configuration_connects_nine_policy_terms_and_both_height_terms():
     tree = _tree(MODULE_ROOT / "env_cfg.py")
     policy = _assignments(_class(tree, "PolicyCfg"))
-    assert [_keywords(value)["func"].attr for value in policy.values()] == [
+    assert [_keywords(value)["func"].id for value in policy.values()] == [
         "arm_joint_pos_rel", "arm_joint_vel_rel", "last_action", "object_position_in_root",
         "object_width", "eef_pose_in_root", "goal_position_in_root", "palm_contact_bit", "wrist_wrench_eef",
     ]
@@ -102,6 +104,6 @@ def test_configuration_connects_nine_policy_terms_and_both_height_terms():
     assert params["asset_cfg"].func.id == "_arm"
     actions = _assignments(_class(tree, "ActionsCfg"))
     assert set(actions) == {"arm_action", "gripper_action"}
-    assert actions["arm_action"].func.attr == "JointPositionActionCfg"
+    assert actions["arm_action"].func.id == "JointPositionActionCfg"
     assert _keywords(actions["arm_action"])["joint_names"].args[0].id == "ARM_JOINT_NAMES"
-    assert actions["gripper_action"].func.attr == "HandOpennessActionCfg"
+    assert actions["gripper_action"].func.id == "HandOpennessActionCfg"

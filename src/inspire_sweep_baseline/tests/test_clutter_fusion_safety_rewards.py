@@ -14,17 +14,8 @@ from test_omni_configuration import _execute_definitions
 
 @pytest.fixture
 def safety(load_mdp, monkeypatch):
-    load_mdp("goal_rewards")
-    package_name = "_baseline_cpu_pkg.contact_sweep_clutter_fusion"
-    package = ModuleType(package_name)
-    package.__path__ = [str(MODULE_ROOT / "contact_sweep_clutter_fusion")]
-    monkeypatch.setitem(sys.modules, package_name, package)
-    name = f"{package_name}.safety_rewards"
-    spec = importlib.util.spec_from_file_location(name, MODULE_ROOT / "contact_sweep_clutter_fusion/safety_rewards.py")
-    module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, name, module)
-    spec.loader.exec_module(module)
-    return module
+    from _source_units import import_unit
+    return import_unit("contact_sweep_clutter_fusion.safety_rewards")
 
 
 @pytest.fixture

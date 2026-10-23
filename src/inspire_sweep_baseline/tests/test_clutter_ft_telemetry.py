@@ -157,7 +157,7 @@ def test_registration_inherits_curriculum_input_and_runner():
     gym.register=lambda **kw:regs.update({kw['id']:kw})
     _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':gym})
     spec=regs['Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0']
-    assert spec['entry_point'].endswith('ft_test.env:ContactSweepClutterFTTestEnv')
+    assert spec['entry_point'].endswith('runtime.contact_sweep_clutter:ContactSweepClutterFTTestEnv')
     assert spec['kwargs']['rsl_rl_cfg_entry_point']==regs['Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1']['kwargs']['rsl_rl_cfg_entry_point']
     class Parent: pass
     cls=_execute_definitions(MODULE_ROOT/'contact_sweep_clutter_ft_test/env_cfg.py',
@@ -170,7 +170,7 @@ def test_registration_inherits_curriculum_input_and_runner():
 def test_requested_checkpoint_loads_strictly_and_runs_cpu_inference(v1_models,runner_configs,monkeypatch):
     """Real trained weights and RSL runner, synthetic inputs; no physics claim."""
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
+    from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
     checkpoint=PROJECT_ROOT/'logs/backup/Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1/2026-10-20_22-49-30/model_12800.pt'
     assert checkpoint.is_file(), 'Requested training result is missing'
     obs=_privileged_observations(count=8)

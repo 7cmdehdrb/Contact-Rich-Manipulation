@@ -32,6 +32,7 @@ def test_reward_input_capture_and_per_environment_csv(harness, tmp_path):
         params={}, func=SimpleNamespace(_previous_wrench=sample.pure_eef.clone())))
     env.termination_manager = SimpleNamespace(active_terms=['object_drop'], get_term=lambda name: torch.tensor([False,True]))
     module = _execute_definitions(MODULE_ROOT/'contact_sweep_clutter_fusion_v1_0/reward_telemetry.py', {
+        '__name__': h.module.__name__, '__package__': h.module.__package__,
         'PlaybackTelemetry': h.module.PlaybackTelemetry, 'ContactSweepClutterFusionV1_0Env': object,
         'torch':torch, 'csv':csv, 'Path':type(tmp_path),
         'object_hand_sensor_name':lambda name:'hand_contact_'+name,

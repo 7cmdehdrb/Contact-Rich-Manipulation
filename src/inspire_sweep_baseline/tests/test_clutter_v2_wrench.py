@@ -13,18 +13,8 @@ import torch
 
 @pytest.fixture
 def wrench_module(load_mdp, monkeypatch):
-    load_mdp("sensors")
-    root = Path(__file__).resolve().parents[1] / "inspire_sweep_baseline"
-    package_name = "_baseline_cpu_pkg.contact_sweep_clutter_v2"
-    package = ModuleType(package_name)
-    package.__path__ = [str(root / "contact_sweep_clutter_v2")]
-    monkeypatch.setitem(sys.modules, package_name, package)
-    name = f"{package_name}.wrench"
-    spec = importlib.util.spec_from_file_location(name, root / "contact_sweep_clutter_v2/wrench.py")
-    module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, name, module)
-    spec.loader.exec_module(module)
-    return module
+    from _source_units import import_unit
+    return import_unit("contact_sweep_clutter_v2.wrench")
 
 
 def make_robot(module, count=2):

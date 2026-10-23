@@ -26,16 +26,12 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
 from isaaclab_tasks.utils import load_cfg_from_registry, parse_env_cfg
 
 import inspire_sweep_baseline  # noqa: F401
-from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
+from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
 from inspire_sweep_baseline.assets.robot import HAND_CONTACT_BODY_NAMES
 from inspire_sweep_baseline.assets.tactile_regions import TACTILE_REGIONS
-from inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.contacts import (
-    hand_obstacle_contact_force_w,
-    object_hand_sensor_name,
-    whole_hand_contact_force_w,
-)
-from inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.reward_functions import hand_contact_any
-from inspire_sweep_baseline.contact_sweep_clutter_fusion_v3.env_cfg import ContactSweepClutterFusionV3EnvCfg
+from inspire_sweep_baseline.mdp.common.contact_sweep_clutter_fusion_contacts import hand_obstacle_contact_force_w, object_hand_sensor_name, whole_hand_contact_force_w
+from inspire_sweep_baseline.mdp.reward_functions.contact_sweep_clutter_fusion import hand_contact_any
+from inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_envs import ContactSweepClutterFusionV3EnvCfg
 
 TASK = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0"
 PARENT_TASK = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3"
@@ -116,11 +112,19 @@ def check_physical_contacts(env):
                 env.set_learning_iteration(iteration)
                 tolerance = env.reward_manager.get_term_cfg("goal_hold").params["position_tolerance"]
                 position = objects.data.object_pos_w[0, 0, :2]
-                for margin, expected in ((-.005, 0.), (0., 0.), (.0075, .5), (.015, 1.), (.025, 1.)):
-                    goal[0, :2] = position + position.new_tensor([tolerance + margin, 0.])
-                    actual = float(hand_contact_any(env)[0])
-                    assert math.isclose(actual, expected, abs_tol=3e-6), (iteration, margin, actual)
-                    fades.append([iteration, tolerance, margin, actual])
+                contact_params = env.reward_manager.get_term_cfg("hand_contact").params
+                assert contact_params["goal_contact_fade_width"] == 0.
+                # Exercise both the configured disabled fade and the function's
+                # optional fade; pass parameters as RewardManager actually does.
+                for width, samples in (
+                    (0., ((-.005, 1.), (.005, 1.), (.015, 1.))),
+                    (.015, ((-.005, 0.), (0., 0.), (.0075, .5), (.015, 1.), (.025, 1.))),
+                ):
+                    for margin, expected in samples:
+                        goal[0, :2] = position + position.new_tensor([tolerance + margin, 0.])
+                        actual = float(hand_contact_any(env, **{**contact_params, "goal_contact_fade_width": width})[0])
+                        assert math.isclose(actual, expected, abs_tol=3e-6), (iteration, width, margin, actual)
+                        fades.append([iteration, tolerance, width, margin, actual])
             return {"fixture": "real obstacle_0 against calibrated palm; other objects isolated",
                     "matrix_shape": list(matrix.shape), "diagnostics": diagnostics,
                     "goal_contact_fade": fades,
@@ -156,7 +160,10 @@ try:
         report["curriculum_terms"] = list(env.curriculum_manager.active_terms)
         report["termination_terms"] = list(env.termination_manager.active_terms)
         assert len(report["reward_terms"]) == 17
-        assert len(report["curriculum_terms"]) == 9
+        assert set(report["curriculum_terms"]) == {
+            "obstacle_population", "pushing_free_speed", "arm_free_speed", "eef_free_speed",
+            "goal_deadzone", "wrench_free_force_change", "wrench_free_moment_change", "object_free_acceleration",
+        }
         assert len(report["termination_terms"]) == 6
         sensor = env.scene["whole_hand_contact"]
         assert set(sensor.body_names) == set(HAND_CONTACT_BODY_NAMES)
@@ -168,15 +175,25 @@ try:
         action = torch.zeros((env.num_envs, 8), device=env.device)
         action[:, -2:] = 1.
         boundaries = [
-            (0, [30., .03, 50., 5., 1.]), (999, [30., .03, 50., 5., 1.]),
-            (1000, [30., .02, 49., 4.9, .98]), (1249, [30., .02, 49., 4.9, .98]),
-            (1250, [30., .02, 48., 4.8, .96]), (1499, [30., .02, 48., 4.8, .96]),
-            (1500, [30., .01, 47., 4.7, .94]), (2500, [30., .01, 43., 4.3, .86]),
-            (3000, [30., .01, 41., 4.1, .82]), (3499, [30., .01, 40., 4., .8]),
-            (3500, [25., .01, 39., 3.9, .78]), (6000, [0., .01, 29., 2.9, .58]),
-            (7000, [0., .01, 25., 2.5, .5]), (10750, [0., .01, 10., 1., .2]),
-            (11999, [0., .01, 10., 1., .12]), (12000, [0., .01, 10., 1., .1]),
-            (20000, [0., .01, 10., 1., .1]), (0, [30., .03, 50., 5., 1.]),
+            (0, [30.0, 0.01, 5000.0, 500.0, 100.0]),
+            (999, [30.0, 0.01, 5000.0, 500.0, 100.0]),
+            (1000, [30.0, 0.01, 4999.0, 499.9, 99.98]),
+            (1249, [30.0, 0.01, 4999.0, 499.9, 99.98]),
+            (1250, [30.0, 0.01, 4998.0, 499.8, 99.96]),
+            (1499, [30.0, 0.01, 4998.0, 499.8, 99.96]),
+            (1500, [30.0, 0.01, 4997.0, 499.7, 99.94]),
+            (2500, [30.0, 0.01, 4993.0, 499.3, 99.86]),
+            (3000, [30.0, 0.01, 4991.0, 499.1, 99.82]),
+            (3499, [30.0, 0.01, 4990.0, 499.0, 99.8]),
+            (3500, [25.0, 0.01, 4989.0, 498.9, 99.78]),
+            (6000, [0.0, 0.01, 4979.0, 497.9, 99.58]),
+            (7000, [0.0, 0.01, 4975.0, 497.5, 99.5]),
+            (10750, [0.0, 0.01, 4960.0, 496.0, 99.2]),
+            (11999, [0.0, 0.01, 4956.0, 495.6, 99.12]),
+            (12000, [0.0, 0.01, 4955.0, 495.5, 99.1]),
+            (20000, [0.0, 0.01, 4923.0, 492.3, 98.46]),
+            (1250000, [0.0, 0.01, 10.0, 1, 0.1]),
+            (0, [30.0, 0.01, 5000.0, 500.0, 100.0]),
         ]
         report["schedule_boundaries"] = []
         for iteration, expected in boundaries:
@@ -261,7 +278,7 @@ try:
             assert (acceleration._cached_cost <= 100.0 * env._active_object_mask.sum(-1)).all()
             if step == 1:
                 magnitude = torch.linalg.vector_norm(native_acc, dim=-1)
-                excess = (magnitude - 1.).clamp(0., .5 * math.log(201.))
+                excess = (magnitude - 100.).clamp(0., .5 * math.log(201.))
                 expected = (.5 * torch.expm1(2. * excess)).clamp(max=100.)
                 expected = torch.where(env._active_object_mask, expected, 0.).sum(-1)
                 ongoing = ~(terminated | timeout)
@@ -314,7 +331,7 @@ try:
     before = [parameter.detach().clone() for parameter in runner.alg.actor.obstacle_encoder.parameters()]
     runner.learn(2, init_at_random_ep_len=False)
     assert env.learning_iteration == 2500
-    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .86]))
+    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 4993., 499.3, 99.86]))
     assert any(not torch.equal(a, b) for a, b in zip(before, runner.alg.actor.obstacle_encoder.parameters()))
     assert all(torch.isfinite(parameter).all() for model in (runner.alg.actor, runner.alg.critic)
                for parameter in model.parameters())
@@ -336,7 +353,7 @@ try:
         restored = restore_for_training(runner, checkpoint)
     assert restored == env.learning_iteration == 2500
     assert (env._active_object_mask.sum(-1) == 3).all()
-    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 43., 4.3, .86]))
+    assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(stages(env), [30., .01, 4993., 499.3, 99.86]))
     report["checks"].append("checkpoint_2500_restores_reward_and_population_before_reset_and_rollout")
     assert parent.to_dict() == parent_before
     assert parse_env_cfg(PARENT_TASK, device=cfg.sim.device, num_envs=args.num_envs).to_dict() == parent_before

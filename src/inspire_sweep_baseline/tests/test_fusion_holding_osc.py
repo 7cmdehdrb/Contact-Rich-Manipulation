@@ -1,5 +1,9 @@
 """Holding OSC base-frame targets, direct inheritance and model isolation."""
 
+from _source_units import import_unit
+
+from _source_units import source_text
+
 import ast
 from copy import deepcopy
 from dataclasses import MISSING
@@ -29,7 +33,7 @@ def osc(omni_config, tensor_math):
     # Retain upstream processing and frame selection; PhysX construction is
     # covered by the separate simulation smoke check.
     path = PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/task_space_actions.py"
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(source_text(path))
     action = next(node for node in tree.body if isinstance(node, ast.ClassDef)
                   and node.name == "OperationalSpaceControllerAction")
     action.bases = []
@@ -232,7 +236,8 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
     # Exercise the production schedule against the configured scene capacity,
     # including every transition, the final cap and checkpoint rewind.
     import runpy
-    schedule = runpy.run_path(str(MODULE_ROOT / "contact_sweep_clutter_fusion_v1_0/population.py"))
+    schedule = runpy.run_path(str(MODULE_ROOT / "mdp/curriculum_functions/contact_sweep_clutter_fusion.py"))
+    population = runpy.run_path(str(MODULE_ROOT / "mdp/common/contact_sweep_clutter_fusion_population.py"))
     event = deepcopy(cfg.events.object_spawn)
     env = SimpleNamespace(cfg=cfg, event_manager=SimpleNamespace(
         get_term_cfg=lambda _: event, set_term_cfg=lambda *_: None))
@@ -249,7 +254,7 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
         assert schedule["obstacle_population_schedule"](
             env, None, **cfg.curriculum.obstacle_population.params,
         ) == dict(gray_obstacles=gray, white_obstacles=white)
-        mask = schedule["active_population_mask"](1, 8, 8, gray, white, "cpu", observation_slots=16)
+        mask = population["active_population_mask"](1, 8, 8, gray, white, "cpu", observation_slots=16)
         assert mask.sum().item() == 1 + gray + white
         assert mask[0, 1:9].sum().item() == gray
         assert mask[0, 9:].sum().item() == white
@@ -337,6 +342,6 @@ def test_joint_random_runner_and_registration_preserve_holding_model(omni_config
     _execute_definitions(MODULE_ROOT / "__init__.py", dict(gym=SimpleNamespace(
         registry=registry, register=lambda **kw: registry.update({kw["id"]: kw}))))
     spec = registry["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0"]
-    assert spec["entry_point"].endswith("fusion_v1_0.env:ContactSweepClutterFusionV1_0Env")
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("holding_object_random_test_v0.env_cfg:FusionHoldingObjectRandomTestV0EnvCfg")
-    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("holding_object_random_test_v0.ppo_cfg:FusionHoldingObjectRandomTestV0PPORunnerCfg")
+    assert spec["entry_point"].endswith("runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("envs.contact_sweep_clutter_fusion_holding_osc_object_random_envs:FusionHoldingObjectRandomTestV0EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("agent.contact_sweep_clutter_fusion_holding_osc_object_random_ppo_cfg:FusionHoldingObjectRandomTestV0PPORunnerCfg")

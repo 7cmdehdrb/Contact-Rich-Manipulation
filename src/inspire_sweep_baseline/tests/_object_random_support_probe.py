@@ -8,8 +8,8 @@ try:
  import torch,numpy as np
  import isaaclab.sim as sim
  from isaaclab.assets import RigidObjectCollection,RigidObjectCollectionCfg,RigidObjectCfg
- from inspire_sweep_baseline.contact_sweep_clutter_fusion.scene_cfg import ContactSweepClutterFusionSceneCfg
- from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v0.spawn import prop_variants
+ from inspire_sweep_baseline.assets.scenes.contact_sweep_clutter_fusion import ContactSweepClutterFusionSceneCfg
+ from inspire_sweep_baseline.assets.contact_sweep_clutter_fusion_holding_osc_object_random_spawners import prop_variants
  from pxr import Usd,UsdGeom,UsdPhysics
  ctx=sim.SimulationContext(sim.SimulationCfg(dt=.01,device='cuda:0'))
  floor=sim.GroundPlaneCfg();floor.func('/World/Floor',floor)

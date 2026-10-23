@@ -1,5 +1,7 @@
 """Offline CFG wiring and real schedule execution; no simulator imports."""
 
+from _source_units import source_text
+
 import ast
 from copy import deepcopy
 import math
@@ -12,12 +14,12 @@ from conftest import MODULE_ROOT
 from test_omni_configuration import _execute_definitions
 
 
-schedule = runpy.run_path(str(MODULE_ROOT / 'contact_sweep_clutter_fusion_v1_1/curriculum.py'))['staged_reward_threshold']
+schedule = runpy.run_path(str(MODULE_ROOT / 'mdp/curriculum_functions/contact_sweep_clutter_fusion.py'))['staged_reward_threshold']
 
 
 def config_terms(version, filename):
     path = MODULE_ROOT / f'contact_sweep_clutter_fusion_v{version}' / filename
-    node = next(n for n in ast.parse(path.read_text()).body if isinstance(n, ast.ClassDef))
+    node = next(n for n in ast.parse(source_text(path)).body if isinstance(n, ast.ClassDef))
     assert not node.bases  # Reward/curriculum managers are independent declarations.
     return {n.targets[0].id: n.value for n in node.body if isinstance(n, ast.Assign)}
 
@@ -94,11 +96,11 @@ def test_registration_env_and_ppo_wiring(version, parent):
     ns = {'gym': SimpleNamespace(registry=registry, register=register)}
     _execute_definitions(MODULE_ROOT / '__init__.py', ns)
     task = registry[f'Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v{version}']
-    assert task['entry_point'].endswith('fusion_v1_0.env:ContactSweepClutterFusionV1_0Env')
-    assert task['kwargs']['env_cfg_entry_point'].endswith(f'fusion_v{version}.env_cfg:ContactSweepClutterFusionV{version}EnvCfg')
-    assert task['kwargs']['rsl_rl_cfg_entry_point'].endswith(f'fusion_v{version}.ppo_cfg:ContactSweepClutterFusionV{version}PPORunnerCfg')
+    assert task['entry_point'].endswith('runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env')
+    assert task['kwargs']['env_cfg_entry_point'].endswith(f'envs.contact_sweep_clutter_fusion_envs:ContactSweepClutterFusionV{version}EnvCfg')
+    assert task['kwargs']['rsl_rl_cfg_entry_point'].endswith(f'agent.contact_sweep_clutter_fusion_ppo_cfg:ContactSweepClutterFusionV{version}PPORunnerCfg')
     for filename, suffix in [('env_cfg.py','EnvCfg'), ('ppo_cfg.py','PPORunnerCfg')]:
-        tree = ast.parse((MODULE_ROOT/f'contact_sweep_clutter_fusion_v{version}'/filename).read_text())
+        tree = ast.parse(source_text(MODULE_ROOT/f'contact_sweep_clutter_fusion_v{version}'/filename))
         cls = next(n for n in tree.body if isinstance(n, ast.ClassDef))
         assert cls.bases[0].id == f'ContactSweepClutterFusionV{parent}{suffix}'
         if filename == 'ppo_cfg.py':

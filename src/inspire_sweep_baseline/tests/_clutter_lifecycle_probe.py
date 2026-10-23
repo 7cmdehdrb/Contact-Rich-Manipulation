@@ -27,11 +27,9 @@ from isaaclab_tasks.utils import parse_env_cfg
 
 import inspire_sweep_baseline  # noqa: F401
 from inspire_sweep_baseline.assets.robot import ARM_JOINT_NAMES, HAND_JOINT_NAMES
-from inspire_sweep_baseline.assets.tactile_regions import (
-    TACTILE_PARENT_BODY_NAMES, TACTILE_REGIONS, parent_sensor_name,
-)
-from inspire_sweep_baseline.contact_sweep_clutter.mdp import all_object_tilt_cost
-from inspire_sweep_baseline.mdp.goal_rewards import object_tilt_cost
+from inspire_sweep_baseline.assets.tactile_regions import TACTILE_PARENT_BODY_NAMES, TACTILE_REGIONS, parent_sensor_name
+from inspire_sweep_baseline.mdp.reward_functions.contact_sweep_clutter import all_object_tilt_cost
+from inspire_sweep_baseline.mdp.reward_functions.goal_rewards import object_tilt_cost
 
 
 def read_cylinder_properties(env):

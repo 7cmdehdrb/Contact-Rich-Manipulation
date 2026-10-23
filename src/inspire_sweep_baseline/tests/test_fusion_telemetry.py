@@ -4,6 +4,8 @@ import csv
 import importlib.util
 import json
 from pathlib import Path
+import sys
+import types
 from types import SimpleNamespace
 
 import pytest
@@ -14,15 +16,22 @@ from test_omni_configuration import _execute_definitions
 
 
 def load_file(path):
-    spec = importlib.util.spec_from_file_location("_fusion_telemetry_test", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    from conftest import _module_from_file
+    return _module_from_file("_fusion_telemetry_test", path)
 
 
 @pytest.fixture
-def harness():
-    module = load_file(MODULE_ROOT / "contact_sweep_clutter_fusion/telemetry.py")
+def harness(monkeypatch):
+    # The shared runtime file also contains simulator Env subclasses. Load only
+    # the telemetry unit and give its method-local relative imports a CPU package.
+    package = types.ModuleType("_fusion_telemetry_cpu")
+    package.__path__ = []
+    monkeypatch.setitem(sys.modules, package.__name__, package)
+    module = types.ModuleType("_fusion_telemetry_cpu.contact_sweep_clutter_fusion_telemetry")
+    module.__package__ = package.__name__
+    module.__dict__.update(csv=csv, Path=Path, torch=torch)
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    _execute_definitions(MODULE_ROOT / "contact_sweep_clutter_fusion/telemetry.py", module.__dict__)
     sample = SimpleNamespace(pure_world=torch.arange(12, dtype=torch.float32).reshape(2, 6))
     sample.pure_eef = sample.pure_world.clone()
     velocities = torch.arange(24, dtype=torch.float32).reshape(2, 4, 3)

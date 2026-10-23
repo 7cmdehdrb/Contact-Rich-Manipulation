@@ -28,11 +28,11 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
 from isaaclab_tasks.utils import load_cfg_from_registry, parse_env_cfg
 
 import inspire_sweep_baseline  # noqa: F401
-from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
-from inspire_sweep_baseline.contact_sweep_clutter_fusion.events import classify_visibility_torch
-from inspire_sweep_baseline.contact_sweep_clutter_fusion.observations import initial_goal_polar_in_root
-from inspire_sweep_baseline.contact_sweep_clutter_fusion.safety_rewards import WrenchRatePenalty
-from inspire_sweep_baseline.contact_sweep_clutter_v2.observations_cfg import PureWristWrench
+from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
+from inspire_sweep_baseline.mdp.event_functions.contact_sweep_clutter_fusion import classify_visibility_torch
+from inspire_sweep_baseline.mdp.observation_functions.contact_sweep_clutter_fusion import initial_goal_polar_in_root
+from inspire_sweep_baseline.mdp.reward_functions.contact_sweep_clutter_fusion import WrenchRatePenalty
+from inspire_sweep_baseline.mdp.observation_functions.contact_sweep_clutter import PureWristWrench
 
 
 TASK = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0"
@@ -139,9 +139,16 @@ try:
     assert type(cfg.scene).__bases__ == (InteractiveSceneCfg,)
     for name in ("observations", "actions", "commands", "rewards", "terminations", "events", "curriculum"):
         assert type(getattr(cfg, name)).__bases__ == (object,), name
-    for name in ("scene", "actions", "commands", "terminations"):
+    for name in ("scene", "actions", "commands"):
         assert getattr(cfg, name).to_dict() == getattr(former[next(iter(former))], name).to_dict(), name
-    report["checks"].append("independent_cfg_bases_and_preserved_scene_action_command_terminations")
+    # These thresholds already differ in the pre-migration registered configs.
+    fusion_terminations = cfg.terminations.to_dict()
+    clutter_terminations = former[next(iter(former))].terminations.to_dict()
+    assert fusion_terminations["push_fast"]["params"] == {"speed_condition": 1.0}
+    assert clutter_terminations["push_fast"]["params"] == {"speed_condition": 0.8}
+    fusion_terminations["push_fast"]["params"] = clutter_terminations["push_fast"]["params"]
+    assert fusion_terminations == clutter_terminations
+    report["checks"].append("independent_cfg_bases_and_existing_scene_action_command_termination_contract")
     cfg.seed = 42
     cfg.log_dir = str(args.output.parent)
     env = gym.make(TASK, cfg=cfg).unwrapped
@@ -162,7 +169,7 @@ try:
             "reaching": 30., "goal_distance": 100., "goal_hold": .9,
             "contact_any": 0.4, "contact_count": 0.4,
             "action_rate": -.03, "joint_velocity": -.03, "object": -30.,
-            "shelf_collision": -.5, "pushing_speed": -2., "arm_speed_excess": -1.,
+            "shelf_collision": -.5, "pushing_speed": -5., "arm_speed_excess": -1.,
             "shelf_failure": -3., "eef_linear_speed": -1., "eef_orientation": -.02, "wrench_change": -.1,
         }
         assert set(env.reward_manager.active_terms) == set(expected_weights)
@@ -174,13 +181,18 @@ try:
         action[:, -2:] = 1.
         stages = [
             (0, [.1, 1., -.03, 1.5, 60.]),
+            (299, [.1, 1., -.03, 1.5, 60.]),
+            (300, [.09, .98, -.035, 1.48, 60.]),
             (500, [.09, .98, -.035, 1.48, 60.]),
-            (1000, [.08, .96, -.04, 1.46, 60.]),
-            (1200, [.08, .96, -.04, 1.46, 59.]),
-            (2500, [.05, .9, -.055, 1.4, 53.]),
-            (3000, [.05, .88, -.06, 1.38, 50.]),
-            (5000, [.05, .8, -.06, 1.3, 40.]),
-            (13000, [.05, .8, -.06, .98, 0.]),
+            (600, [.08, .96, -.04, 1.46, 60.]),
+            (699, [.08, .96, -.04, 1.46, 60.]),
+            (700, [.08, .96, -.04, 1.46, 59.]),
+            (1000, [.07, .94, -.045, 1.44, 58.]),
+            (1200, [.06, .92, -.05, 1.42, 57.]),
+            (2500, [.05, .84, -.06, 1.34, 50.]),
+            (3000, [.05, .8, -.06, 1.3, 48.]),
+            (5000, [.05, .8, -.06, 1.18, 38.]),
+            (13000, [.05, .8, -.06, .7, 0.]),
             (20000, [.05, .8, -.06, .7, 0.]),
         ]
         report["stages"] = []
@@ -234,19 +246,19 @@ try:
     agent_cfg.algorithm.num_mini_batches = 1
     wrapped = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
     runner = CurriculumOnPolicyRunner(wrapped, agent_cfg.to_dict(), log_dir=None, device=str(env.device))
-    runner.current_learning_iteration = 499
+    runner.current_learning_iteration = 299
     before = [p.detach().clone() for p in runner.alg.actor.obstacle_encoder.parameters()]
     runner.learn(2, init_at_random_ep_len=False)
-    assert env.learning_iteration == 500
+    assert env.learning_iteration == 300
     assert all(
         math.isclose(a, b, abs_tol=1e-10) for a, b in zip(stage_values(env), [.09, .98, -.035, 1.48, 60.])
     )
     assert any(not torch.equal(a, b) for a, b in zip(before, runner.alg.actor.obstacle_encoder.parameters()))
     assert all(torch.isfinite(p).all() for model in (runner.alg.actor, runner.alg.critic) for p in model.parameters())
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    checkpoint = args.output.parent / "probe_model_500.pt"
+    checkpoint = args.output.parent / "probe_model_300.pt"
     runner.save(str(checkpoint))
-    report["ppo"] = {"iterations": [499, 500], "steps_per_env_per_iteration": 4, "checkpoint": str(checkpoint), "logging_directory": None}
+    report["ppo"] = {"iterations": [299, 300], "steps_per_env_per_iteration": 4, "checkpoint": str(checkpoint), "logging_directory": None}
     report["checks"].append("real_PPO_rollout_update_and_curriculum_boundary")
     for task, old in former.items():
         assert old.to_dict() == former_values[task]

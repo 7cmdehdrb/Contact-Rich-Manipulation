@@ -22,7 +22,7 @@ from test_omni_configuration import _execute_definitions
 @pytest.fixture
 def models(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    return importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter.models")
+    return importlib.import_module("inspire_sweep_baseline.agent.contact_sweep_clutter_models")
 
 
 def _observations(count=8):

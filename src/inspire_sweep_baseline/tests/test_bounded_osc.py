@@ -1,5 +1,7 @@
 """Exercise the real upstream OSC preprocessor and the local command bounds."""
 
+from _source_units import source_text
+
 import ast
 from copy import deepcopy
 from dataclasses import MISSING
@@ -23,7 +25,7 @@ def bounded_osc(omni_config, monkeypatch):
     # Keep the production upstream command-processing methods. Construction
     # of PhysX views is covered by the manual GPU probe, rather than mocked.
     path = PROJECT_ROOT / "IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/task_space_actions.py"
-    source = ast.parse(path.read_text())
+    source = ast.parse(source_text(path))
     upstream = next(node for node in source.body if isinstance(node, ast.ClassDef) and node.name == "OperationalSpaceControllerAction")
     upstream.bases = []
     upstream.body = [
@@ -159,10 +161,10 @@ def test_v2_osc_changes_only_arm_control_and_keeps_v2_rewards_and_terminations(
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     registration = registrations["Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2"]
     assert registration["kwargs"]["env_cfg_entry_point"] == (
-        "inspire_sweep_baseline.dex_tactile_omni_renewal_v2_osc_env_cfg:InspireDexTactileSweepOmniRenewalV2OSCEnvCfg"
+        "inspire_sweep_baseline.envs.sweep_omni_renewal_envs:InspireDexTactileSweepOmniRenewalV2OSCEnvCfg"
     )
     assert registration["kwargs"]["rsl_rl_cfg_entry_point"] == (
-        "inspire_sweep_baseline.agents.tactile_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2OSCPPORunnerCfg"
+        "inspire_sweep_baseline.agent.sweep_omni_renewal_ppo_cfg:InspireDexTactileSweepOmniRenewalV2OSCPPORunnerCfg"
     )
     runner = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV2OSCPPORunnerCfg()
     expected = renewal_tactile.runners.InspireDexTactileSweepOmniRenewalV2PPORunnerCfg().to_dict()

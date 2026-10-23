@@ -1,5 +1,7 @@
 """Schedule boundaries, standalone managers, registration and parent isolation."""
 
+from _source_units import source_text
+
 import ast
 import importlib
 import math
@@ -17,13 +19,12 @@ ROOT = MODULE_ROOT / "contact_sweep_clutter_fusion_v1_0"
 @pytest.fixture
 def schedules(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    delayed = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion_v3.curriculum")
-    goal = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion.curriculum")
-    population = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.population")
+    delayed = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter_fusion")
+    goal = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter_fusion")
     namespace = dict(configclass=lambda cls: cls, CurriculumTermCfg=SimpleNamespace,
                      delayed_reward_schedule=delayed.delayed_reward_schedule,
                      goal_deadzone_schedule=goal.goal_deadzone_schedule,
-                     obstacle_population_schedule=population.obstacle_population_schedule)
+                     obstacle_population_schedule=delayed.obstacle_population_schedule)
     cfg = _execute_definitions(ROOT / "curriculum_cfg.py", namespace).ContactSweepClutterFusionV1_0CurriculumCfg()
     terms = {k: v for k, v in vars(type(cfg)).items() if not k.startswith("_")}
     rewards = {term.params["term_name"]: SimpleNamespace(params={}, weight=-1.0)
@@ -70,12 +71,12 @@ def test_deadzone_and_all_schedules_coexist_without_weight_mutation(schedules):
 
 def test_managers_have_no_inherited_terms_and_no_tactile_reward_or_weight_schedule():
     for filename in ("rewards_cfg.py", "terminations_cfg.py", "curriculum_cfg.py"):
-        tree = ast.parse((ROOT / filename).read_text())
+        tree = ast.parse(source_text(ROOT / filename))
         classes = [node for node in tree.body if isinstance(node, ast.ClassDef)]
         assert len(classes) == 1 and not classes[0].bases
-    rewards = (ROOT / "rewards_cfg.py").read_text()
+    rewards = source_text(ROOT / "rewards_cfg.py")
     assert "contact_count" not in rewards and "func=contact_any" not in rewards
-    assert "action_rate_weight" not in (ROOT / "curriculum_cfg.py").read_text()
+    assert "action_rate_weight" not in source_text(ROOT / "curriculum_cfg.py")
 
 
 def test_four_fixed_local_penalties_and_contact_calibration(omni_config, load_mdp):
@@ -168,6 +169,6 @@ def test_env_direct_v3_inheritance_manager_replacement_and_parent_isolation(omni
     gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     spec = registrations["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0"]
-    assert spec["entry_point"].endswith("fusion_v1_0.env:ContactSweepClutterFusionV1_0Env")
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("fusion_v1_0.env_cfg:ContactSweepClutterFusionV1_0EnvCfg")
-    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("fusion_v1_0.ppo_cfg:ContactSweepClutterFusionV1_0PPORunnerCfg")
+    assert spec["entry_point"].endswith("runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("envs.contact_sweep_clutter_fusion_envs:ContactSweepClutterFusionV1_0EnvCfg")
+    assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith("agent.contact_sweep_clutter_fusion_ppo_cfg:ContactSweepClutterFusionV1_0PPORunnerCfg")

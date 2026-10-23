@@ -14,14 +14,8 @@ from test_omni_configuration import _AssetNode, _execute_definitions, omni_confi
 
 @pytest.fixture
 def contacts(monkeypatch):
-    name = "_fusion_v1_0_contacts_test"
-    spec = importlib.util.spec_from_file_location(
-        name, MODULE_ROOT / "contact_sweep_clutter_fusion_v1_0/contacts.py",
-    )
-    module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, name, module)
-    spec.loader.exec_module(module)
-    return module
+    from conftest import _module_from_file
+    return _module_from_file("_fusion_v1_0_contacts_test", MODULE_ROOT / "contact_sweep_clutter_fusion_v1_0/contacts.py")
 
 
 @pytest.fixture
@@ -53,7 +47,7 @@ def scene_cfg(omni_config, contacts, monkeypatch):
         object_hand_sensor_name=contacts.object_hand_sensor_name,
         TACTILE_PARENT_BODY_NAMES=geometry.TACTILE_PARENT_BODY_NAMES,
         parent_sensor_name=geometry.parent_sensor_name,
-        validate_capacity=importlib.import_module("_baseline_cpu_pkg.contact_sweep_clutter_fusion_v1_0.population").validate_capacity,
+        validate_capacity=importlib.import_module("_baseline_cpu_pkg.mdp.common.contact_sweep_clutter_fusion_population").validate_capacity,
         PARKING_HEIGHT=100.0,
     )
     monkeypatch.setitem(sys.modules, child.__name__, child)

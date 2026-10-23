@@ -68,7 +68,7 @@ def main():
 
     math_path = module_root.parents[2] / "IsaacLab/source/isaaclab/isaaclab/utils/math.py"
     official_math = load_module("_tactile_geometry_official_math", math_path)
-    mapper_path = module_root / "mdp/tactile_observations.py"
+    mapper_path = module_root / "mdp/observation_functions/tactile_observations.py"
     source_ast = ast.parse(mapper_path.read_text())
     mapper_classes = [
         node for node in source_ast.body
@@ -79,7 +79,7 @@ def main():
     mapper_ast = ast.Module(body=mapper_classes, type_ignores=[])
     exec(compile(mapper_ast, str(mapper_path), "exec"), namespace)
     mapper_class = namespace["ParentContactRegions"]
-    sensor_math = load_module("_tactile_geometry_sensor_math", module_root / "mdp/sensors.py")
+    sensor_math = load_module("_tactile_geometry_sensor_math", module_root / "mdp/common/sensors.py")
 
     parent_names = list(dict.fromkeys(region["parent_name"] for region in regions))
     mappers = {}

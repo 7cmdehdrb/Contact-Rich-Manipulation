@@ -12,6 +12,7 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
+from _source_units import _unit, current_path, import_unit
 
 import pytest
 
@@ -21,6 +22,11 @@ MODULE_ROOT = PACKAGE_ROOT / "inspire_sweep_baseline"
 
 
 def _module_from_file(name, path):
+    unit = _unit(path)
+    if unit is not None:
+        if "_baseline_cpu_pkg" in sys.modules:
+            return import_unit(unit)
+        path = current_path(unit)
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
@@ -81,18 +87,15 @@ def load_mdp(monkeypatch, tensor_math):
     package = types.ModuleType(f"{local_package.__name__}.mdp")
     package.__path__ = [str(MODULE_ROOT / "mdp")]
     monkeypatch.setitem(sys.modules, package.__name__, package)
-    loaded = []
+    before = set(sys.modules)
 
     def load(name):
-        fullname = f"{package.__name__}.{name}"
-        module = _module_from_file(fullname, MODULE_ROOT / "mdp" / f"{name}.py")
-        loaded.append(fullname)
-        return module
+        return import_unit(f"mdp.{name}")
 
     yield load
-    for name in loaded:
-        sys.modules.pop(name, None)
-    sys.modules.pop(f"{package.__name__}.sensors", None)
+    for name in set(sys.modules) - before:
+        if name.startswith(f"{local_package.__name__}."):
+            sys.modules.pop(name, None)
 
 
 @pytest.fixture

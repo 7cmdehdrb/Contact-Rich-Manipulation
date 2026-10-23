@@ -1,4 +1,6 @@
 """Holding reward geometry, strict success, warmup and rewind contracts."""
+
+from _source_units import import_unit
 import importlib
 import runpy
 from types import SimpleNamespace as NS
@@ -8,13 +10,13 @@ from conftest import MODULE_ROOT
 from test_omni_configuration import _execute_definitions, omni_config
 
 ROOT=MODULE_ROOT/'contact_sweep_clutter_fusion_holding_v0'
-schedule=runpy.run_path(str(ROOT/'curriculum.py'))
+schedule=runpy.run_path(str(MODULE_ROOT / "mdp/curriculum_functions/contact_sweep_clutter_fusion_holding.py"))
 
 
 @pytest.fixture
 def holding(load_mdp):
     load_mdp('goal_rewards')
-    return importlib.import_module('_baseline_cpu_pkg.contact_sweep_clutter_fusion_holding_v0.mdp')
+    return import_unit("contact_sweep_clutter_fusion_holding_v0.mdp", package="_baseline_cpu_pkg")
 
 
 def environment():
@@ -74,7 +76,7 @@ def test_zero_warmup_and_rewind(curricula,name,end):
 
 
 def test_speed_schedule_matches_unchanged_v14_and_all_points(curricula):
-    old=runpy.run_path(str(MODULE_ROOT/'contact_sweep_clutter_fusion_v1_4/curriculum.py'))['staged_reward_threshold']
+    old=runpy.run_path(str(MODULE_ROOT/'mdp/curriculum_functions/contact_sweep_clutter_fusion_quantized_ramps.py'))['staged_reward_threshold']
     for name,initial,stage in [('arm_free_speed',1.,(500,3300,.98,.7)),('eef_free_speed',1.5,(500,13300,1.48,.2)),('pushing_free_speed',.1,(500,1900,.09,.02))]:
         term=getattr(curricula,name);cfg=NS(params={},weight=-1.)
         env=NS(reward_manager=NS(get_term_cfg=lambda _:cfg,set_term_cfg=lambda *_:None))

@@ -14,7 +14,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.scene import InteractiveScene
 from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_mul, quat_conjugate, axis_angle_from_quat
 from inspire_sweep_baseline.assets.robot import HAND_CONTACT_BODY_NAMES, PALM_SENSOR_BODY_NAMES, ROBOT_USD_PATH
-from inspire_sweep_baseline.mdp.tactile_observations import ProjectedTactileContactBits
+from inspire_sweep_baseline.mdp.observation_functions.tactile_observations import ProjectedTactileContactBits
 
 from .scene import make_scene
 from .targets import build_targets, load_regions, DEFAULT_REGION_PATH
@@ -62,7 +62,7 @@ def run(args, app):
         "schema_version": 2, "pad_layout": args.pad_layout, "gravity_world": [0.0, 0.0, 0.0],
         "render_independent_physics": True, "arguments": {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()},
         "channels": list(PALM_SENSOR_BODY_NAMES), "targets": targets, "physics_dt": dt,
-        "reader": "inspire_sweep_baseline.mdp.tactile_observations.ProjectedTactileContactBits",
+        "reader": "inspire_sweep_baseline.mdp.observation_functions.tactile_observations.ProjectedTactileContactBits",
         "region_sha256": hashlib.sha256(DEFAULT_REGION_PATH.read_bytes()).hexdigest(),
         "test_code_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(__file__).parent.glob("*.py")},
         "usd_sha256": {str(p.relative_to(ROBOT_USD_PATH.parent)): hashlib.sha256(p.read_bytes()).hexdigest() for p in ROBOT_USD_PATH.parent.rglob("*.usd")},

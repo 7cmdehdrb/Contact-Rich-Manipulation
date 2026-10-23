@@ -1,5 +1,7 @@
 """Independent pad bits, deterministic body order, and reset-safe readings."""
 
+from _source_units import source_text
+
 import hashlib
 import json
 from types import SimpleNamespace
@@ -143,7 +145,7 @@ def test_force_tensor_must_match_exact_environment_and_pad_dimensions(tactile_se
 def test_virtual_region_calibration_matches_the_original_collision_assets(load_mdp):
     module = load_mdp("tactile_observations")
     data_root = MODULE_ROOT / "assets/data"
-    metadata = json.loads((data_root / "tactile_regions.json").read_text())
+    metadata = json.loads(source_text(data_root / "tactile_regions.json"))
     assert tuple(region["name"] for region in metadata["regions"]) == module.PALM_SENSOR_BODY_NAMES
     # Changed source collision geometry requires recalibration rather than
     # silently applying region coordinates from a different Hand asset.

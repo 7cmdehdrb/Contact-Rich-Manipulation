@@ -29,7 +29,7 @@ import torch
 from isaaclab_tasks.utils import parse_env_cfg
 
 import inspire_sweep_baseline  # noqa: F401
-from inspire_sweep_baseline.contact_sweep_clutter_v2.wrench import PureWrenchReader
+from inspire_sweep_baseline.mdp.common.compensated_wrench import PureWrenchReader
 
 
 def stats(values):

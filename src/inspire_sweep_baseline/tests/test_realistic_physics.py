@@ -1,5 +1,7 @@
 """Mass/friction distribution and reset isolation of the inherited experiment."""
 
+from _source_units import source_text
+
 import ast
 from types import SimpleNamespace
 import sys
@@ -191,7 +193,7 @@ def test_hand_shape_mapping_uses_body_names_and_excludes_arm_and_axia(load_mdp):
 
 
 def test_variant_uses_replication_and_spawn_time_bindings_with_no_prestartup_edits():
-    tree = ast.parse((MODULE_ROOT / "realistic_physics_env_cfg.py").read_text())
+    tree = ast.parse(source_text(MODULE_ROOT / "realistic_physics_env_cfg.py"))
     cfg = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "InspireSweepRealisticPhysicsEnvCfg")
     assert [node.id for node in cfg.bases] == ["InspireSweepEnvCfg"]
     assert [node.target.id for node in cfg.body if isinstance(node, ast.AnnAssign)] == ["events"]
@@ -208,7 +210,7 @@ def test_variant_uses_replication_and_spawn_time_bindings_with_no_prestartup_edi
     assert list(event_terms) == ["physics_materials", "physics_randomization"]
     assert {name: ast.literal_eval(next(kw.value for kw in call.keywords if kw.arg == "mode"))
             for name, call in event_terms.items()} == {"physics_materials": "startup", "physics_randomization": "reset"}
-    runner = ast.parse((MODULE_ROOT / "agents/realistic_physics_ppo_cfg.py").read_text())
+    runner = ast.parse(source_text(MODULE_ROOT / "agents/realistic_physics_ppo_cfg.py"))
     runner = next(node for node in runner.body if isinstance(node, ast.ClassDef))
     assert runner.bases[0].id == "InspireSweepPPORunnerCfg"
     assert [node.targets[0].id for node in runner.body if isinstance(node, ast.Assign)] == ["experiment_name"]

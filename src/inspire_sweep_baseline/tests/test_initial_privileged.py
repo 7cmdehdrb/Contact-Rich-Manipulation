@@ -1,5 +1,7 @@
 """Actor reset snapshot, live Scene Critic state and actual RSL-RL routing."""
 
+from _source_units import source_text
+
 import ast
 import importlib.util
 from types import SimpleNamespace
@@ -107,7 +109,7 @@ def test_actual_rsl_rl_models_use_41d_actor_and_54d_critic_without_privileged_ac
     from rsl_rl.models import MLPModel
     from tensordict import TensorDict
 
-    tree = ast.parse((MODULE_ROOT / "agents/initial_privileged_ppo_cfg.py").read_text())
+    tree = ast.parse(source_text(MODULE_ROOT / "agents/initial_privileged_ppo_cfg.py"))
     runner = next(node for node in tree.body if isinstance(node, ast.ClassDef))
     routing_node = next(node for node in runner.body if isinstance(node, ast.Assign) and node.targets[0].id == "obs_groups")
     routing = ast.literal_eval(routing_node.value)
@@ -132,14 +134,14 @@ def test_actual_rsl_rl_models_use_41d_actor_and_54d_critic_without_privileged_ac
 
 
 def test_new_environment_inherits_realistic_physics_and_only_changes_observations():
-    tree = ast.parse((MODULE_ROOT / "initial_privileged_env_cfg.py").read_text())
+    tree = ast.parse(source_text(MODULE_ROOT / "initial_privileged_env_cfg.py"))
     cfg = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "InspireSweepRealisticInitialPrivilegedEnvCfg")
     assert [node.id for node in cfg.bases] == ["InspireSweepRealisticPhysicsEnvCfg"]
     assert [node.target.id for node in cfg.body if isinstance(node, ast.AnnAssign)] == ["observations"]
     post = next(node for node in cfg.body if isinstance(node, ast.FunctionDef))
     attribute_writes = [node.targets[0] for node in post.body if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Attribute)]
     assert [node.attr for node in attribute_writes] == ["func", "params", "noise"]
-    runner = ast.parse((MODULE_ROOT / "agents/initial_privileged_ppo_cfg.py").read_text())
+    runner = ast.parse(source_text(MODULE_ROOT / "agents/initial_privileged_ppo_cfg.py"))
     runner = next(node for node in runner.body if isinstance(node, ast.ClassDef))
     assert runner.bases[0].id == "InspireSweepRealisticPhysicsPPORunnerCfg"
     assert [node.targets[0].id for node in runner.body if isinstance(node, ast.Assign)] == ["experiment_name", "obs_groups"]

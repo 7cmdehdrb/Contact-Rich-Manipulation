@@ -13,25 +13,14 @@ from conftest import MODULE_ROOT
 
 @pytest.fixture
 def clutter_modules(load_mdp, monkeypatch):
-    parent_physics = load_mdp("realistic_physics")
-    parent_rewards = load_mdp("goal_rewards")
-    parent_terminations = load_mdp("goal_terminations")
-    package_name = "_baseline_cpu_pkg.contact_sweep_clutter"
-    package = ModuleType(package_name)
-    package.__path__ = [str(MODULE_ROOT / "contact_sweep_clutter")]
-    monkeypatch.setitem(sys.modules, package_name, package)
-    loaded = {}
-    for name in ("mdp", "physics"):
-        full_name = f"{package_name}.{name}"
-        spec = importlib.util.spec_from_file_location(
-            full_name, MODULE_ROOT / "contact_sweep_clutter" / f"{name}.py",
-        )
-        module = importlib.util.module_from_spec(spec)
-        monkeypatch.setitem(sys.modules, full_name, module)
-        spec.loader.exec_module(module)
-        loaded[name] = module
-    return SimpleNamespace(**loaded, parent_physics=parent_physics, parent_rewards=parent_rewards,
-                           parent_terminations=parent_terminations)
+    from _source_units import import_unit
+    return SimpleNamespace(
+        mdp=import_unit("contact_sweep_clutter.mdp"),
+        physics=import_unit("contact_sweep_clutter.physics"),
+        parent_physics=load_mdp("realistic_physics"),
+        parent_rewards=load_mdp("goal_rewards"),
+        parent_terminations=load_mdp("goal_terminations"),
+    )
 
 
 def multiobject_env(make_env, count=3, objects=4):
@@ -159,7 +148,7 @@ class PhysicsView:
 
 def physics_env(clutter_modules, monkeypatch, count=4, objects=3):
     shelf, cylinders, robot = PhysicsView(count, 3), PhysicsView(count * objects, 2), PhysicsView(count, 6)
-    env = SimpleNamespace(num_envs=count, scene={
+    env = SimpleNamespace(num_envs=count, cfg=SimpleNamespace(obstacle_observation_slots=10), scene={
         "shelf": SimpleNamespace(root_physx_view=shelf),
         "object_collection": SimpleNamespace(num_objects=objects, root_physx_view=cylinders),
         "robot": SimpleNamespace(root_physx_view=robot),

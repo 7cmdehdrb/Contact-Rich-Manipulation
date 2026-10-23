@@ -1,10 +1,12 @@
 """Conservative geometry envelope protects the inherited cylinder layout."""
+
+from _source_units import source_text
 import math
 import runpy
 from pathlib import Path
 import pytest
 
-fit_scale=runpy.run_path(str(Path(__file__).parents[1]/'inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_osc_object_random_v0/geometry.py'))['fit_scale']
+fit_scale=runpy.run_path(str(Path(__file__).parents[1]/'inspire_sweep_baseline/assets/contact_sweep_clutter_fusion_holding_osc_object_random_geometry.py'))['fit_scale']
 
 @pytest.mark.parametrize('size',[(.164,.072,.214),(.093,.045,.176),(.068,.068,.102),(.096,.058,.191)])
 @pytest.mark.parametrize('fraction',[.8,.9,1.])
@@ -30,8 +32,8 @@ def test_bad_bounds_fail_instead_of_overlapping():
 def test_obb_rejects_large_boxes_and_shelf_overhang():
     import ast
     import numpy as np
-    path=Path(__file__).parents[1]/'inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_osc_object_random_v0/placement.py'
-    node=next(n for n in ast.parse(path.read_text()).body if isinstance(n,ast.FunctionDef) and n.name=='valid_layout')
+    path=Path(__file__).parents[1]/'inspire_sweep_baseline/mdp/common/contact_sweep_clutter_fusion_holding_osc_object_random_placement.py'
+    node=next(n for n in ast.parse(source_text(path)).body if isinstance(n,ast.FunctionDef) and n.name=='valid_layout')
     ns={'np':np};exec(compile(ast.Module(body=[node],type_ignores=[]),str(path),'exec'),ns)
     valid=ns['valid_layout'];half=np.array([[.05,.02],[.05,.02]])
     centers=np.array([[0,0],[.09,0]])
@@ -44,7 +46,7 @@ def test_obb_rejects_large_boxes_and_shelf_overhang():
 def test_collision_proxy_is_closed_and_has_level_support_inside_visual_bounds(kind):
     import collections
     import numpy as np
-    mesh=runpy.run_path(str(Path(__file__).parents[1]/'inspire_sweep_baseline/contact_sweep_clutter_fusion_holding_osc_object_random_v0/geometry.py'))['flat_collision_mesh']
+    mesh=runpy.run_path(str(Path(__file__).parents[1]/'inspire_sweep_baseline/assets/contact_sweep_clutter_fusion_holding_osc_object_random_geometry.py'))['flat_collision_mesh']
     dimensions=np.array([.098,.043,.129])
     points,counts,indices=mesh(dimensions,kind)
     points=np.asarray(points)

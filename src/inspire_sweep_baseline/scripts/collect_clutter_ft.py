@@ -59,8 +59,8 @@ def collect(args, checkpoint, output, report):
         from isaaclab.utils.io import dump_yaml
         from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
         import inspire_sweep_baseline  # noqa: F401
-        from inspire_sweep_baseline.agents.curriculum_runner import CurriculumOnPolicyRunner
-        from inspire_sweep_baseline.contact_sweep_clutter_ft_test.telemetry import WrenchCSVWriter
+        from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
+        from inspire_sweep_baseline.runtime.contact_sweep_clutter_telemetry import WrenchCSVWriter
 
         cfg = parse_env_cfg(TASK, device=args.device, num_envs=args.num_envs)
         agent_cfg = load_cfg_from_registry(TASK, "rsl_rl_cfg_entry_point")

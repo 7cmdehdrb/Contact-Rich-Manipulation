@@ -1,5 +1,7 @@
 """v1.4 schedule boundaries, live success predicate, inheritance and full clutter."""
 
+from _source_units import import_unit
+
 import importlib
 import math
 import runpy
@@ -14,7 +16,7 @@ from test_clutter_fusion_v1_0_population import population_modules
 from test_clutter_layout import validate_scenes
 
 ROOT = MODULE_ROOT / "contact_sweep_clutter_fusion_v1_4"
-schedule = runpy.run_path(str(ROOT / "curriculum.py"))["staged_reward_threshold"]
+schedule = runpy.run_path(str(MODULE_ROOT / "mdp/curriculum_functions/contact_sweep_clutter_fusion_quantized_ramps.py"))["staged_reward_threshold"]
 
 
 @pytest.fixture
@@ -68,7 +70,7 @@ def test_population_and_deadzone_preserved(cfgs, population_modules):
 
 def test_success_continuous_time_exit_live_tolerance_failure_and_partial_reset(load_mdp, make_env):
     load_mdp("goal_rewards")
-    mdp = importlib.import_module("_baseline_cpu_pkg.contact_sweep_clutter_fusion_v1_4.mdp")
+    mdp = import_unit("contact_sweep_clutter_fusion_v1_4.mdp", package="_baseline_cpu_pkg")
     env = make_env(3)
     env.step_dt = .02
     reward = SimpleNamespace(params={"position_tolerance":0.})
@@ -121,8 +123,8 @@ def test_direct_inheritance_registration_and_final_override(omni_config):
     _execute_definitions(MODULE_ROOT / "__init__.py",dict(gym=SimpleNamespace(
         registry=registry,register=lambda **kw:registry.update({kw["id"]:kw}))))
     spec=registry["Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4"]
-    assert spec["entry_point"].endswith("fusion_v1_0.env:ContactSweepClutterFusionV1_0Env")
-    assert spec["kwargs"]["env_cfg_entry_point"].endswith("fusion_v1_4.env_cfg:ContactSweepClutterFusionV1_4EnvCfg")
+    assert spec["entry_point"].endswith("runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env")
+    assert spec["kwargs"]["env_cfg_entry_point"].endswith("envs.contact_sweep_clutter_fusion_envs:ContactSweepClutterFusionV1_4EnvCfg")
 
 
 def test_five_gray_five_white_geometry(population_modules, validate_scenes):
@@ -131,9 +133,9 @@ def test_five_gray_five_white_geometry(population_modules, validate_scenes):
     count=128
     target_xy=mod.samplers._sample_uniform_disk(count,.02,"cpu")
     direction=mod.samplers._sample_planar_unit_vectors(count,"cpu",0.)
-    target=mod.layout.shelf_xy_to_generator_cm(target_xy.numpy())
+    target=mod.coordinates.shelf_xy_to_generator_cm(target_xy.numpy())
     distance=mod.samplers._goal_ray_distance(target_xy,direction,.15,(.14,.44))
-    goal=mod.layout.shelf_xy_to_generator_cm((target_xy+distance[:,None]*direction).numpy())
+    goal=mod.coordinates.shelf_xy_to_generator_cm((target_xy+distance[:,None]*direction).numpy())
     generator=mod.layout.population_layout_generator(SimpleNamespace(cfg=SimpleNamespace(seed=19)),5,5)
     batch=generator.generate_batch(target,goal)
     assert batch.obstacles.shape == (count,10,2)

@@ -1,5 +1,7 @@
 """Schedule boundaries and actual RSL-RL learn/save/load on a CPU toy VecEnv."""
 
+from _source_units import source_text
+
 import importlib
 from copy import deepcopy
 from types import SimpleNamespace
@@ -15,8 +17,8 @@ from test_omni_configuration import _execute_definitions
 @pytest.fixture
 def curriculum(monkeypatch):
     monkeypatch.syspath_prepend(str(PACKAGE_ROOT))
-    mdp = importlib.import_module("inspire_sweep_baseline.contact_sweep_clutter_v1_curriculum.mdp")
-    runner = importlib.import_module("inspire_sweep_baseline.agents.curriculum_runner")
+    mdp = importlib.import_module("inspire_sweep_baseline.mdp.curriculum_functions.contact_sweep_clutter")
+    runner = importlib.import_module("inspire_sweep_baseline.agent.curriculum_runner")
     cfg = _execute_definitions(
         MODULE_ROOT / "contact_sweep_clutter_v1_curriculum/curriculum_cfg.py",
         {"configclass": lambda cls: cls, "CurriculumTermCfg": SimpleNamespace,
@@ -90,8 +92,9 @@ def test_absolute_schedule_boundaries_and_repeated_resets(curriculum, iteration,
 
 def test_runtime_updates_manager_immediately(curriculum):
     cls = _execute_definitions(
-        MODULE_ROOT / "contact_sweep_clutter_v1_curriculum/env.py",
+        MODULE_ROOT / "runtime/contact_sweep_clutter.py",
         {"ContactSweepClutterV1Env": object},
+        {"ContactSweepClutterV1CurriculumEnv"},
     ).ContactSweepClutterV1CurriculumEnv
     env = cls.__new__(cls)
     calls = []
@@ -167,10 +170,8 @@ def test_registration_and_launcher_runner_selection():
     gym.register = lambda **kwargs: registrations.update({kwargs["id"]: kwargs})
     _execute_definitions(MODULE_ROOT / "__init__.py", {"gym": gym})
     spec = registrations["Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1"]
-    assert spec["entry_point"].endswith("curriculum.env:ContactSweepClutterV1CurriculumEnv")
+    assert spec["entry_point"].endswith("runtime.contact_sweep_clutter:ContactSweepClutterV1CurriculumEnv")
     assert spec["kwargs"]["env_cfg_entry_point"].endswith(":ContactSweepClutterV1CurriculumEnvCfg")
     assert spec["kwargs"]["rsl_rl_cfg_entry_point"].endswith(":ContactSweepClutterV1CurriculumPPORunnerCfg")
     for script in ("train.py", "play.py"):
-        assert 'agent_cfg.class_name == "CurriculumOnPolicyRunner"' in (
-            PACKAGE_ROOT / "scripts" / script
-        ).read_text()
+        assert 'agent_cfg.class_name == "CurriculumOnPolicyRunner"' in source_text(PACKAGE_ROOT / "scripts" / script)

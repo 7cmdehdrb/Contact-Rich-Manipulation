@@ -1,5 +1,7 @@
 """Independent numeric oracle, target selection and Arm-only speed reduction."""
 
+from _source_units import source_text, unit_paths
+
 import ast
 import math
 from types import SimpleNamespace
@@ -13,10 +15,14 @@ from conftest import MODULE_ROOT
 def test_no_renewal_config_references_quadratic_excess_speed_functions():
     legacy = {"pushing_speed_cost", "joint_speed_cost"}
     violations = []
-    for file in MODULE_ROOT.rglob("*renewal*env_cfg.py"):
-        for node in ast.walk(ast.parse(file.read_text())):
-            if isinstance(node, ast.Attribute) and node.attr in legacy:
-                violations.append(f"{file.name}:{node.lineno}: {node.attr}")
+    files = unit_paths(pattern="*renewal*env_cfg.py")
+    assert files
+    for file in files:
+        for node in ast.walk(ast.parse(source_text(file))):
+            if isinstance(node, (ast.Attribute, ast.Name)):
+                name = node.attr if isinstance(node, ast.Attribute) else node.id
+                if name in legacy:
+                    violations.append(f"{file.name}:{node.lineno}: {name}")
     assert not violations, violations
 
 

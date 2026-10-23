@@ -1,5 +1,7 @@
 """Independent configuration parity and reset lifecycle for the new reference."""
 
+from _source_units import source_text, unit_paths
+
 import ast
 import sys
 import types
@@ -102,8 +104,10 @@ def test_contact_classes_do_not_import_or_inherit_legacy_environment_configs():
     root = MODULE_ROOT / 'contact_sweep'
     forbidden = ('renewal', 'tactile_env_cfg', 'realistic_physics_env_cfg', 'omni_env_cfg')
     allowed_bases = {'InteractiveSceneCfg', 'ObsGroup', 'ManagerBasedRLEnvCfg', 'ManagerBasedRLEnv', 'RslRlOnPolicyRunnerCfg'}
-    for file in root.glob('*.py'):
-        tree = ast.parse(file.read_text())
+    files = unit_paths('contact_sweep')
+    assert files
+    for file in files:
+        tree = ast.parse(source_text(file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 assert not any(part in (node.module or '') for part in forbidden), file
@@ -115,9 +119,9 @@ def test_contact_classes_do_not_import_or_inherit_legacy_environment_configs():
     gym.register = lambda **kwargs: registrations.update({kwargs['id']: kwargs})
     _execute_definitions(MODULE_ROOT / '__init__.py', {'gym': gym})
     cfg = registrations['Isaac-Inspire-Contact-Sweep-v0']
-    assert cfg['entry_point'] == 'inspire_sweep_baseline.contact_sweep.env:ContactSweepEnv'
-    assert cfg['kwargs']['env_cfg_entry_point'] == 'inspire_sweep_baseline.contact_sweep.env_cfg:ContactSweepEnvCfg'
-    assert cfg['kwargs']['rsl_rl_cfg_entry_point'] == 'inspire_sweep_baseline.contact_sweep.ppo_cfg:ContactSweepPPORunnerCfg'
+    assert cfg['entry_point'] == 'inspire_sweep_baseline.runtime.contact_sweep:ContactSweepEnv'
+    assert cfg['kwargs']['env_cfg_entry_point'] == 'inspire_sweep_baseline.envs.contact_sweep_envs:ContactSweepEnvCfg'
+    assert cfg['kwargs']['rsl_rl_cfg_entry_point'] == 'inspire_sweep_baseline.agent.contact_sweep_ppo_cfg:ContactSweepPPORunnerCfg'
 
 
 def test_reference_ppo_has_its_own_framework_base_and_matches_v3(renewal_tactile, monkeypatch):

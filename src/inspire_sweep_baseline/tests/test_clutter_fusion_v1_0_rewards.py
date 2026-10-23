@@ -14,24 +14,8 @@ from test_omni_configuration import _execute_definitions
 
 @pytest.fixture
 def rewards(load_mdp, monkeypatch):
-    load_mdp("goal_rewards")
-    loaded = {}
-    for directory, names in (
-        ("contact_sweep_clutter_fusion", ("safety_rewards",)),
-        ("contact_sweep_clutter_fusion_v1_0", ("object_state", "contacts", "reward_functions")),
-    ):
-        package_name = f"_baseline_cpu_pkg.{directory}"
-        package = ModuleType(package_name)
-        package.__path__ = [str(MODULE_ROOT / directory)]
-        monkeypatch.setitem(sys.modules, package_name, package)
-        for name in names:
-            fullname = f"{package_name}.{name}"
-            spec = importlib.util.spec_from_file_location(fullname, MODULE_ROOT / directory / f"{name}.py")
-            module = importlib.util.module_from_spec(spec)
-            monkeypatch.setitem(sys.modules, fullname, module)
-            spec.loader.exec_module(module)
-            loaded[name] = module
-    return loaded["reward_functions"]
+    from _source_units import import_unit
+    return import_unit("contact_sweep_clutter_fusion_v1_0.reward_functions")
 
 
 def advance(env):
