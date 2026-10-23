@@ -14,14 +14,14 @@ try:
     from isaaclab_tasks.utils import parse_env_cfg, load_cfg_from_registry
     from isaaclab.utils.math import quat_from_euler_xyz, quat_mul, axis_angle_from_quat
     from isaaclab_tasks.manager_based.manipulation.reach.config.ur_10.ur10_osc_reach_env_cfg import UR10OSCReachEnvCfg
-    from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v1.env_cfg import FusionHoldingV1EnvCfg
+    from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v2.env_cfg import FusionHoldingV2EnvCfg
     from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.env_cfg import FusionHoldingOSCV2EnvCfg
     task = 'Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2'
     output = Path('outputs/fusion_holding_osc_v2_validation')
     output.mkdir(parents=True, exist_ok=True)
     cfg = parse_env_cfg(task, device='cuda:0', num_envs=2)
-    assert FusionHoldingOSCV2EnvCfg.__bases__ == (FusionHoldingV1EnvCfg,)
-    parent = FusionHoldingV1EnvCfg()
+    assert FusionHoldingOSCV2EnvCfg.__bases__ == (FusionHoldingV2EnvCfg,)
+    parent = FusionHoldingV2EnvCfg()
     child_dict = FusionHoldingOSCV2EnvCfg().to_dict()
     parent_dict = parent.to_dict()
     child_dict['actions']['arm_action'] = parent_dict['actions']['arm_action']

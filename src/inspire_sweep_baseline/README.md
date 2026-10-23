@@ -1266,7 +1266,7 @@ Holding OSC v0의 이동·회전 명령은 Robot Base 좌표축 기준이다. EE
 | --- | --- | --- |
 | `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1` | Holding v0 | Gray/White 각1→5 curriculum 유지, Joint Position Arm |
 | `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1` | Holding v1 | 같은 population, OSC v0과 같은 Robot Base 기준·stiffness100 |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | Holding OSC v1 | 기존 ObjectRandom 자산·reset·물성 재사용, 타겟1+Gray7+White7 고정 |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | Holding OSC v2 | 기존 ObjectRandom 자산·reset·물성 재사용, 타겟1+Gray7+White7 고정 |
 
 16슬롯은 관측 용량이다. Holding/OSC의 실제 장애물 최대10개와 ObjectRandom의14개를 자동으로16개로 늘리지 않으며 남은 슬롯은0으로 채운다. v0의40D/56D encoder checkpoint는 v1의64D encoder와 직접 호환되지 않으므로 새 학습을 시작한다. 새 PPO 설정은 환경별 experiment 이름을 분리한다.
 
@@ -1287,9 +1287,26 @@ Workspace 루트에서 실행한다. 아래 병렬 환경 수는 실행 예시�
 
 ## Fusion Holding OSC v2
 
-`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2`는 Holding v1을 직접 상속한다. UR10 Reach의 RPY 상대 OSC·effort 제한을 사용하되 Arm6관절과 현재 EEF body/offset에 연결한다. 위치/회전 stiffness80/25, scale0.03/0.15, 관성 분리·중력 보상false이며 Scene 중력과 Hand·관측·보상은 부모를 유지한다. [전체 설정·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_osc_v2.md).
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2`는 Holding v2를 직접 상속한다. UR10 Reach의 RPY 상대 OSC·effort 제한을 사용하되 Arm6관절과 현재 EEF body/offset에 연결한다. 위치/회전 stiffness80/25, scale0.03/0.15, 관성 분리·중력 보상false이며 Scene 중력과 Hand·관측·보상은 부모를 유지한다. [전체 설정·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_osc_v2.md).
 
 ```bash
 ./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
   --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2 --num_envs 2048 --headless
 ```
+
+## Fusion Holding v2
+
+`Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2`는 Holding-v1을 직접 상속한다. 성공·목표 유지 보상·접촉 간주의 공통 반경은5,000 iteration까지2cm,10,000에서1cm,20,000에서0.5cm이며 구간마다 iteration 단위로 선형 감소한다. goal_hold 계수는2→4다. 손 접촉은0.01N 이상 또는 유효한 목표 반경 안이면 인정하며, 계수1.45를 유지하고 fade는 새 함수에서 제거했다. 성공 속도0.01m/s·연속3초는 유지한다.
+
+직접 상속은 Holding-v1 → Holding-v2 → Holding-OSC-v2 → Holding-OSC-ObjectRandom-v1이다. ObjectRandom의 개수 일정만 비활성화하고 새 목표 일정을 상속한다. 이전 ObjectRandom-v1 checkpoint는 제어가 OSC-v1에서OSC-v2로 바뀌었으므로 같은 동작을 보장하지 않는다.
+
+```bash
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/train.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2 --num_envs 2048 --headless
+
+./IsaacLab/isaaclab.sh -p src/inspire_sweep_baseline/scripts/play.py \
+  --task Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2 \
+  --num_envs 1 --checkpoint "<Holding-v2-checkpoint.pt>" --real-time
+```
+
+[전체 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_ENVIRONMENT.md) · [개발·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_fusion_holding_v2.md).

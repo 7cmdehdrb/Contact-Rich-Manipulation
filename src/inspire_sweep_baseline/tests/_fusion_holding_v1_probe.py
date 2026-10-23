@@ -24,7 +24,7 @@ import gymnasium as gym
 import torch
 from tensordict import TensorDict
 from isaaclab.envs.mdp.actions import OperationalSpaceControllerActionCfg
-from isaaclab.utils.math import quat_from_angle_axis, quat_mul
+from isaaclab.utils.math import quat_from_angle_axis, quat_from_euler_xyz, quat_mul
 from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_cfg
 from isaaclab_tasks.utils import load_cfg_from_registry, parse_env_cfg
 
@@ -32,6 +32,9 @@ import inspire_sweep_baseline  # noqa: F401
 from inspire_sweep_baseline.contact_sweep_clutter_fusion.models import ContactSweepClutterFusionModel
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v0.env_cfg import FusionHoldingV0EnvCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v1.env_cfg import FusionHoldingV1EnvCfg
+from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v2.env_cfg import FusionHoldingV2EnvCfg
+from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.env_cfg import FusionHoldingOSCV2EnvCfg
+from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v2.actions import UR10OperationalSpaceControllerActionCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v0.env_cfg import FusionHoldingOSCV0EnvCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_v1.env_cfg import FusionHoldingOSCV1EnvCfg
 from inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_osc_object_random_v0.env_cfg import FusionHoldingOSCObjectRandomV0EnvCfg
@@ -44,7 +47,9 @@ def check_configs():
         (FusionHoldingOSCV0EnvCfg, FusionHoldingV0EnvCfg),
         (FusionHoldingOSCV1EnvCfg, FusionHoldingV1EnvCfg),
         (FusionHoldingOSCObjectRandomV0EnvCfg, FusionHoldingOSCV0EnvCfg),
-        (FusionHoldingOSCObjectRandomV1EnvCfg, FusionHoldingOSCV1EnvCfg),
+        (FusionHoldingV2EnvCfg, FusionHoldingV1EnvCfg),
+        (FusionHoldingOSCV2EnvCfg, FusionHoldingV2EnvCfg),
+        (FusionHoldingOSCObjectRandomV1EnvCfg, FusionHoldingOSCV2EnvCfg),
     )
     for child, parent in relationships:
         assert child.__bases__ == (parent,)
@@ -54,7 +59,7 @@ def check_configs():
     assert after.pop("obstacle_observation_slots") == 16
     assert before == after, "Holding v1 changed more than obstacle capacity"
     for cls in (FusionHoldingOSCV0EnvCfg, FusionHoldingOSCV1EnvCfg,
-                FusionHoldingOSCObjectRandomV0EnvCfg, FusionHoldingOSCObjectRandomV1EnvCfg):
+                FusionHoldingOSCObjectRandomV0EnvCfg):
         cfg = cls()
         arm = cfg.actions.arm_action
         assert type(arm) is OperationalSpaceControllerActionCfg
@@ -63,10 +68,18 @@ def check_configs():
         assert arm.controller_cfg.target_types == ["pose_rel"]
         assert cfg.scene.robot.actuators["arm"].stiffness == 0.0
         assert cfg.scene.robot.actuators["arm"].damping == 0.0
-    old, new = FusionHoldingOSCObjectRandomV0EnvCfg().to_dict(), FusionHoldingOSCObjectRandomV1EnvCfg().to_dict()
-    assert old.pop("obstacle_observation_slots") == 14
-    assert new.pop("obstacle_observation_slots") == 16
-    assert old == new, "ObjectRandom v1 changed more than obstacle capacity"
+    parent = FusionHoldingOSCV2EnvCfg()
+    randomized = FusionHoldingOSCObjectRandomV1EnvCfg()
+    assert randomized.actions.to_dict() == parent.actions.to_dict()
+    assert randomized.rewards.to_dict() == parent.rewards.to_dict()
+    assert randomized.terminations.to_dict() == parent.terminations.to_dict()
+    current, expected = randomized.curriculum.to_dict(), parent.curriculum.to_dict()
+    assert current.pop("obstacle_population") is None
+    expected.pop("obstacle_population")
+    assert current == expected
+    assert randomized.obstacle_observation_slots == 16
+    assert randomized.max_gray_obstacles == randomized.max_white_obstacles == 7
+
 
 
 def check_base_frame(raw):
@@ -82,9 +95,11 @@ def check_base_frame(raw):
         command[:, 0], command[:, 3] = .01, .1
         term.process_actions(command)
         desired = term._osc.desired_ee_pose_b
-        torch.testing.assert_close(desired[:, :3], command[:, :3])
+        torch.testing.assert_close(desired[:, :3], command[:, :3] * term.cfg.position_scale)
         delta = quat_from_angle_axis(torch.full((2,), .1, device=raw.device),
                                     torch.tensor([[1., 0., 0.]] * 2, device=raw.device))
+        if isinstance(term.cfg, UR10OperationalSpaceControllerActionCfg):
+            delta = quat_from_euler_xyz(*(command[:, 3:] * term.cfg.orientation_scale).unbind(-1))
         torch.testing.assert_close(desired[:, 3:], quat_mul(delta, poses[:, 3:]))
         assert term._task_frame_pose_b is None
         torch.testing.assert_close(term.raw_actions, command)

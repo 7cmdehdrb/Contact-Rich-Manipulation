@@ -565,3 +565,16 @@ if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID not in gym.registry:
         },
     )
 __all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V2_TASK_ID")
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID,
+        entry_point="inspire_sweep_baseline.contact_sweep_clutter_fusion_v1_0.env:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v2.env_cfg:FusionHoldingV2EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.contact_sweep_clutter_fusion_holding_v2.ppo_cfg:FusionHoldingV2PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V2_TASK_ID")

@@ -11,6 +11,7 @@ import torch
 
 from conftest import MODULE_ROOT, PROJECT_ROOT
 from test_omni_configuration import _execute_definitions, omni_config
+from test_fusion_holding_v2 import cfg, curricula
 
 
 @pytest.fixture
@@ -150,15 +151,19 @@ def test_v1_runner_descendants_preserve_16_slot_actor_and_critic(omni_config):
         MODULE_ROOT / "contact_sweep_clutter_fusion_holding_v1/ppo_cfg.py",
         dict(configclass=configclass, FusionHoldingV0PPORunnerCfg=Parent),
     ).FusionHoldingV1PPORunnerCfg
-    osc = _execute_definitions(
-        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_osc_v1/ppo_cfg.py",
+    holding_v2 = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_v2/ppo_cfg.py",
         dict(configclass=configclass, FusionHoldingV1PPORunnerCfg=holding),
-    ).FusionHoldingOSCV1PPORunnerCfg
+    ).FusionHoldingV2PPORunnerCfg
+    osc = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_osc_v2/ppo_cfg.py",
+        dict(configclass=configclass, FusionHoldingV2PPORunnerCfg=holding_v2),
+    ).FusionHoldingOSCV2PPORunnerCfg
     random = _execute_definitions(
         MODULE_ROOT / "contact_sweep_clutter_fusion_holding_osc_object_random_v1/ppo_cfg.py",
-        dict(configclass=configclass, FusionHoldingOSCV1PPORunnerCfg=osc),
+        dict(configclass=configclass, FusionHoldingOSCV2PPORunnerCfg=osc),
     ).FusionHoldingOSCObjectRandomV1PPORunnerCfg
-    assert osc.__bases__ == (holding,)
+    assert osc.__bases__ == (holding_v2,)
     assert random.__bases__ == (osc,)
     for cls in (holding, osc, random):
         cfg = cls()
@@ -169,7 +174,7 @@ def test_v1_runner_descendants_preserve_16_slot_actor_and_critic(omni_config):
     assert Parent().actor.obstacle_observation_slots == 10
 
 
-def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config):
+def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config, cfg):
     configclass = omni_config.baseline.configclass
 
     @configclass
@@ -195,9 +200,9 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
 
     cfgs = _execute_definitions(
         MODULE_ROOT / "contact_sweep_clutter_fusion_holding_osc_object_random_v1/env_cfg.py",
-        dict(configclass=configclass, FusionHoldingOSCV1EnvCfg=Parent,
+        dict(configclass=configclass, FusionHoldingOSCV2EnvCfg=Parent,
              ObjectRandomSceneCfg=Scene, ObjectRandomEventsCfg=Events,
-             ObjectRandomCurriculumCfg=lambda: SimpleNamespace(obstacle_population=None)),
+             FusionHoldingV2CurriculumCfg=type(cfg)),
     )
     cls = cfgs.FusionHoldingOSCObjectRandomV1EnvCfg
     assert cls.__bases__ == (Parent,)
@@ -206,5 +211,50 @@ def test_object_random_v1_preserves_prop_setup_with_16_slot_capacity(omni_config
     assert cfg.obstacle_observation_slots == 16
     assert cfg.events.object_spawn.params == dict(object_radius=.04, gray_obstacles=7, white_obstacles=7)
     assert cfg.curriculum.obstacle_population is None
+    assert cfg.curriculum.goal_position_scale is None
+    assert cfg.curriculum.goal_position_tolerance.params["points"][-1] == (20000, .005)
     cfg.scene.configure_population_capacity(8, 8)
     assert cfg.scene.capacity == (8, 8, 16)
+
+
+def test_holding_v2_and_osc_v2_preserve_managers_and_change_only_arm(omni_config, cfg):
+    from test_omni_configuration import _AssetNode
+
+    cc = omni_config.baseline.configclass
+    base = omni_config.baseline.InspireSweepEnvCfg
+    holding1 = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_v1/env_cfg.py",
+        dict(configclass=cc, FusionHoldingV0EnvCfg=base),
+    ).FusionHoldingV1EnvCfg
+    holding2 = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_v2/env_cfg.py",
+        dict(configclass=cc, FusionHoldingV1EnvCfg=holding1,
+             FusionHoldingV2RewardsCfg=lambda: SimpleNamespace(marker="v2_reward"),
+             FusionHoldingV2TerminationsCfg=lambda: SimpleNamespace(marker="v2_success"),
+             FusionHoldingV2CurriculumCfg=type(cfg)),
+    ).FusionHoldingV2EnvCfg
+
+    class ArmCfg(_AssetNode):
+        OffsetCfg = _AssetNode
+
+    osc2 = _execute_definitions(
+        MODULE_ROOT / "contact_sweep_clutter_fusion_holding_osc_v2/env_cfg.py",
+        dict(configclass=cc, FusionHoldingV2EnvCfg=holding2,
+             ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES,
+             OperationalSpaceControllerCfg=_AssetNode,
+             UR10OperationalSpaceControllerActionCfg=ArmCfg),
+    ).FusionHoldingOSCV2EnvCfg
+    assert holding2.__bases__ == (holding1,)
+    assert osc2.__bases__ == (holding2,)
+    parent, child = holding2(), osc2()
+    snapshot = parent.to_dict()
+    arm = child.actions.arm_action
+    assert arm.controller_cfg.motion_stiffness_task == (80., 80., 80., 25., 25., 25.)
+    assert not arm.controller_cfg.gravity_compensation
+    assert not arm.controller_cfg.inertial_dynamics_decoupling
+    assert (arm.position_scale, arm.orientation_scale) == (.03, .15)
+    child.actions.arm_action = deepcopy(parent.actions.arm_action)
+    child.scene.robot.actuators["arm"] = deepcopy(parent.scene.robot.actuators["arm"])
+    assert child.to_dict() == snapshot
+    assert holding2().to_dict() == snapshot
+    assert parent.obstacle_observation_slots == 16

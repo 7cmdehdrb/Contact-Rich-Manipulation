@@ -1,13 +1,13 @@
-"""Change only Holding v1 arm control to the Reach OSC configuration."""
+"""Change only Holding v2 arm control to the Reach OSC configuration."""
 from isaaclab.controllers import OperationalSpaceControllerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
-from ..contact_sweep_clutter_fusion_holding_v1.env_cfg import FusionHoldingV1EnvCfg
+from ..contact_sweep_clutter_fusion_holding_v2.env_cfg import FusionHoldingV2EnvCfg
 from .actions import UR10OperationalSpaceControllerActionCfg
 
 
 @configclass
-class FusionHoldingOSCV2EnvCfg(FusionHoldingV1EnvCfg):
+class FusionHoldingOSCV2EnvCfg(FusionHoldingV2EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         eef = self.scene.ee_frame.target_frames[0]
