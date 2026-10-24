@@ -35,6 +35,7 @@ def randomize_large_prop_scene(
     visibility_threshold=0.35, visibility_flip_probability=0.01,
     observation_swap_probability=0.1,
     gray_obstacles=1, white_obstacles=1,
+    gray_red_padding_fraction=0.0,
 ):
     """Place exact active counts; layout failures never alter the sampled goal.
 
@@ -48,6 +49,8 @@ def randomize_large_prop_scene(
     count = ids.numel()
     if not count:
         return
+    if not math.isfinite(gray_red_padding_fraction) or not 0 <= gray_red_padding_fraction <= 0.15:
+        raise ValueError("Gray padding fraction must be in [0, 0.15]")
     values = (spawn_radius, goal_distance, object_radius, edge_clearance, shelf_surface_height,
               excluded_x_half_angle, observation_noise, *shelf_half_extents)
     if len(shelf_half_extents) != 2 or not all(math.isfinite(value) for value in values):
@@ -77,6 +80,9 @@ def randomize_large_prop_scene(
     distance = _goal_ray_distance(target_xy, direction_xy, goal_distance, safe_half_extents)
     displacement_xy = direction_xy * distance[:, None]
     generator = population_layout_generator(env, gray, white)
+    if gray_red_padding_fraction:
+        from ..common.contact_sweep_clutter_fusion_holding_osc_object_random_placement import padded_population_layout_generator
+        generator = padded_population_layout_generator(env, gray, white, gray_red_padding_fraction)
     from ..common.contact_sweep_clutter_fusion_holding_osc_object_random_placement import sample_layout
     obstacle_xy, yaw = sample_layout(env, ids, generator, target_xy, target_xy + displacement_xy, gray, white)
     local_positions = torch.zeros((count, capacity + 1, 3), device=env.device)

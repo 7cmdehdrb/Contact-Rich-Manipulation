@@ -120,6 +120,10 @@ class ClutterLayoutGenerator:
             )
         return scene_generator._join(parts, c)
 
+    def zone_masks(self, points, target, direction, distance, role):
+        """Override a role's zones without changing proposal/rejection rules."""
+        return scene_generator.zone_masks(points, target, direction, distance, self.config)
+
     def _construct(self, target, goal, angle, distance, direction):
         c, rng, count = self.config, self.rng, len(target)
         obstacles = np.empty((count, c.obstacles, 2))
@@ -145,8 +149,8 @@ class ClutterLayoutGenerator:
                     q = scene_generator._proposal(
                         target[waiting], direction[waiting], distance[waiting], role, rng, c,
                     )
-                    red, gray, rear = scene_generator.zone_masks(
-                        q, target[waiting], direction[waiting], distance[waiting], c,
+                    red, gray, rear = self.zone_masks(
+                        q, target[waiting], direction[waiting], distance[waiting], role,
                     )
                     valid = rear if role == "rear" else gray if role == "gray" else ~red & ~gray
                     valid &= np.all((q >= c.object_bounds[0]) & (q <= c.object_bounds[1]), axis=-1)

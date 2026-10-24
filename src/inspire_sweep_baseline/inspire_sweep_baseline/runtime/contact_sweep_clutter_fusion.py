@@ -69,4 +69,6 @@ class ContactSweepClutterFusionV1_0Env(ContactSweepClutterFusionEnv):
         if seed is not None:
             self._population_layout_seed = seed
             self._population_layout_generators.clear()
+            if hasattr(self, "_gray_padding_layout_generators"):
+                self._gray_padding_layout_generators.clear()
         return super().reset(seed=seed, env_ids=env_ids, options=options)

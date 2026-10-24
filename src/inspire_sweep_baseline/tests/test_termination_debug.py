@@ -61,9 +61,9 @@ def test_tasks_use_their_registered_runtime_family():
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionEnv",
     }
     for suffix in (
-        "v1_4", "Holding-v0", "Holding-v1", "Holding-v2",
-        "Holding-OSC-v0", "Holding-OSC-v1", "Holding-OSC-v2",
-        "Holding-OSC-ObjectRandom-v0", "Holding-OSC-ObjectRandom-v1",
+        "v1_4", "Holding-v0", "Holding-v1", "Holding-v2", "Holding-v3",
+        "Holding-OSC-v0", "Holding-OSC-v1", "Holding-OSC-v2", "Holding-OSC-v3",
+        "Holding-OSC-ObjectRandom-v0", "Holding-OSC-ObjectRandom-v1", "Holding-OSC-ObjectRandom-v2",
         "Holding-ObjectRandom-Test-v0",
     ):
         contact_runtimes[f"Isaac-Inspire-Contact-Sweep-Clutter-Fusion-{suffix}"] = (

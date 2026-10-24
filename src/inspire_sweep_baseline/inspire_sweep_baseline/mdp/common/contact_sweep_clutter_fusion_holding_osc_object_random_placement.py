@@ -3,8 +3,53 @@
 from ...assets.scenes.contact_sweep_clutter_layout import GenerationError
 from ...assets.scenes.contact_sweep_clutter_layout import generator_cm_to_shelf_xy
 from ...assets.scenes.contact_sweep_clutter_layout import shelf_xy_to_generator_cm
+from ...assets.scenes.contact_sweep_clutter_layout import ClutterLayoutGenerator, scene_generator
+from dataclasses import replace
+import math
 import numpy as np
 import torch as torch
+
+
+class GrayPaddingLayoutGenerator(ClutterLayoutGenerator):
+    """Admit Gray centers up to a fraction of the original Red radius inward.
+
+    White keeps the original Red/Gray classification. Outer Gray bounds, rear
+    quota, target/object separation and approach certificates stay unchanged.
+    """
+
+    def __init__(self, *args, gray_red_padding_fraction=0.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not math.isfinite(gray_red_padding_fraction) or not 0 <= gray_red_padding_fraction <= 0.15:
+            raise ValueError("Gray padding fraction must be in [0, 0.15]")
+        radius = 2 * self.config.radius + self.config.red_margin
+        self._gray_zone_config = replace(
+            self.config, red_margin=radius * (1 - gray_red_padding_fraction) - 2 * self.config.radius,
+        )
+        self._gray_zone_config.check()
+
+    def zone_masks(self, points, target, direction, distance, role):
+        config = self.config if role == "white" else self._gray_zone_config
+        return scene_generator.zone_masks(points, target, direction, distance, config)
+
+
+def padded_population_layout_generator(env, gray, white, padding):
+    """Cache only the current padding stage; retain a seeded RNG per population."""
+    seed = getattr(env, "_population_layout_seed", env.cfg.seed)
+    stage = (padding, seed)
+    if getattr(env, "_gray_padding_stage", None) != stage:
+        env._gray_padding_stage = stage
+        env._gray_padding_layout_generators = {}
+    key = (gray, white)
+    cache = env._gray_padding_layout_generators
+    if key not in cache:
+        from ...assets.scenes.contact_sweep_clutter_layout import DEFAULT_LAYOUT_CONFIG
+        config = replace(DEFAULT_LAYOUT_CONFIG, obstacles=gray + white,
+                         gray_obstacles=gray, rear_obstacles=min(1, gray))
+        cache[key] = GrayPaddingLayoutGenerator(
+            seed=seed, config=config,
+            max_obstacles=env.cfg.obstacle_observation_slots, gray_red_padding_fraction=padding,
+        )
+    return cache[key]
 
 def valid_layout(centers, yaw, half, gap=.002):
     axes=np.stack((np.stack((np.cos(yaw),np.sin(yaw)),-1),

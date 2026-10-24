@@ -5,6 +5,7 @@ Double settling weight and grant contact credit inside its shared radius."""
 from ..reward_functions.contact_sweep_clutter_fusion_holding import goal_settling
 from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import goal_settling as goal_settling_contact_sweep_clutter_fusion_holding_scheduled
 from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import hand_contact_or_goal
+from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import CappedGoalSettling
 from .contact_sweep_clutter_fusion import ContactSweepClutterFusionV1_0RewardsCfg
 from isaaclab.utils import configclass
 
@@ -34,4 +35,12 @@ class FusionHoldingV2RewardsCfg(FusionHoldingV0RewardsCfg):
     )
     hand_contact = FusionHoldingV0RewardsCfg().hand_contact.replace(
         func=hand_contact_or_goal, params={"threshold_n": 0.01},
+    )
+
+
+@configclass
+class FusionHoldingV3RewardsCfg(FusionHoldingV2RewardsCfg):
+    goal_hold = FusionHoldingV2RewardsCfg().goal_hold.replace(
+        func=CappedGoalSettling,
+        params={**FusionHoldingV2RewardsCfg().goal_hold.params, "max_hold_time": 3.0},
     )

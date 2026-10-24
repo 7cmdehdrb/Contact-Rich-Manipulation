@@ -5,6 +5,7 @@ from ..common.contact_sweep_clutter_fusion_holding import goal_radius
 from ..common.contact_sweep_clutter_fusion_holding import target_measurements
 import math as math
 import torch as torch
+from isaaclab.managers import ManagerTermBase
 
 def goal_settling(env, position_tolerance=0.02, speed_scale=0.05, command_name="target_goal_pos"):
     """Dense distance/speed reward, restricted to the inclusive goal radius."""
@@ -13,6 +14,36 @@ def goal_settling(env, position_tolerance=0.02, speed_scale=0.05, command_name="
     distance, speed, valid = target_measurements(env, command_name)
     score = torch.exp(-math.log(2) * ((distance / position_tolerance) ** 2 + (speed / speed_scale) ** 2))
     return torch.where(valid & (distance <= position_tolerance), score, 0.0)
+
+
+class CappedGoalSettling(ManagerTermBase):
+    """Pay the inherited rate for at most three cumulative eligible seconds.
+
+    Leaving the goal pauses the budget; only episode reset replenishes it.
+    Count paid control steps rather than reward magnitude or consecutive success
+    time. RewardManager still applies weight and step_dt exactly once.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._paid_steps = torch.zeros(env.num_envs, dtype=torch.long, device=env.device)
+
+    def reset(self, env_ids=None):
+        self._paid_steps[slice(None) if env_ids is None else env_ids] = 0
+
+    def __call__(self, env, position_tolerance=0.02, speed_scale=0.05,
+                 max_hold_time=3.0, command_name="target_goal_pos"):
+        if not math.isfinite(max_hold_time) or max_hold_time <= 0:
+            raise ValueError("Hold reward duration must be finite and positive")
+        if not math.isfinite(env.step_dt) or env.step_dt <= 0:
+            raise ValueError("Control step duration must be finite and positive")
+        rate = goal_settling(env, position_tolerance, speed_scale, command_name)
+        # Float64 avoids a missing final step at the exact 3 s boundary.
+        remaining = max_hold_time - self._paid_steps.to(torch.float64) * env.step_dt
+        fraction = (remaining / env.step_dt).clamp(0.0, 1.0)
+        eligible = (rate > 0) & (remaining > 1e-9)
+        self._paid_steps += eligible.long()
+        return torch.where(eligible, rate * fraction.to(rate.dtype), 0.0)
 
 
 def hand_contact_or_goal(env, threshold_n=0.01):

@@ -8,10 +8,12 @@ from ..assets.scenes.contact_sweep_clutter_fusion_holding_osc_object_random impo
 from ..assets.scenes.contact_sweep_clutter_fusion_holding_osc_object_random import ObjectRandomV1SceneCfg
 from ..mdp.curricula.contact_sweep_clutter_fusion_holding_osc_object_random import ObjectRandomCurriculumCfg
 from ..mdp.curricula.contact_sweep_clutter_fusion_holding_osc_object_random import ObjectRandomV1CurriculumCfg
+from ..mdp.curricula.contact_sweep_clutter_fusion_holding_osc_object_random import ObjectRandomV2CurriculumCfg
 from ..mdp.events.contact_sweep_clutter_fusion_holding_osc_object_random import ObjectRandomEventsCfg
 from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV2EnvCfg
 from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV0EnvCfg
 from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV2EnvCfg
+from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV3EnvCfg
 from isaaclab.utils import configclass
 
 @configclass
@@ -46,3 +48,13 @@ class FusionHoldingOSCObjectRandomV1EnvCfg(FusionHoldingOSCV2EnvCfg):
     scene: ObjectRandomV1SceneCfg = ObjectRandomV1SceneCfg(num_envs=4096, env_spacing=2.5)
     events: ObjectRandomEventsCfg = ObjectRandomEventsCfg()
     curriculum: ObjectRandomV1CurriculumCfg = ObjectRandomV1CurriculumCfg()
+
+
+@configclass
+class FusionHoldingOSCObjectRandomV2EnvCfg(FusionHoldingOSCV3EnvCfg):
+    # Keep the physical slot layout; curriculum limits active counts to 6/6.
+    max_gray_obstacles: int = 8
+    max_white_obstacles: int = 8
+    scene: ObjectRandomV1SceneCfg = ObjectRandomV1SceneCfg(num_envs=4096, env_spacing=2.5)
+    events: ObjectRandomEventsCfg = ObjectRandomEventsCfg()
+    curriculum: ObjectRandomV2CurriculumCfg = ObjectRandomV2CurriculumCfg()

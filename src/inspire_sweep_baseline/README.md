@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-10-24 후속: `Holding-OSC-ObjectRandom-v2`는7/7 반복 배치 검사 실패에 따라 **커리큘럼 최대치를 Gray6/White6**으로 변경했다. White11000·Gray12000에서 도달한다. 물리8/8·관측16슬롯은 유지한다. [반복 검사와 한계](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-24_object_random_v2_population_cap.md).
+
+2026-10-24 추가: `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v3` → `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v3` → `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v2`. Holding은 goal hold를 에피소드 누적3초까지 지급하고, OSC는 현재v2 제어를 재사용한다. ObjectRandom은3000부터1000 iteration마다 장애물을 교대 추가하며6000~12000의250간격으로 Gray 영역을 Red 방향 최대15%(기존Red 반경 기준1.545cm) 확장한다. [상속·수치·train.py 실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FUSION_HOLDING_V3_FAMILY.md) · [검증·미검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-24_fusion_holding_v3.md).
+
 > 현재 학습 실행 정책(2026-10-23): `scripts/train.py`를 사용한다. `train_resilient.py`는 복구 후에도 학습 중단이 반복되어 사용을 중단했으며 코드는 보존한다. 아래의 기존 자동 복구 설명·명령은 과거 이력이다. [학습 실행 정책](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md#학습-실행-정책).
 
 [활성 환경·상속·실행 안내](../../example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md) · [개발 지침](../../example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)

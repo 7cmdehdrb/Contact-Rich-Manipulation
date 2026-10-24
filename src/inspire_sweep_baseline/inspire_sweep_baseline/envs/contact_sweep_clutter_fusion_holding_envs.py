@@ -8,6 +8,7 @@ from ..mdp.curricula.contact_sweep_clutter_fusion_holding import FusionHoldingV0
 from ..mdp.curricula.contact_sweep_clutter_fusion_holding import FusionHoldingV2CurriculumCfg
 from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV0RewardsCfg
 from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV2RewardsCfg
+from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV3RewardsCfg
 from ..mdp.terminations.contact_sweep_clutter_fusion_holding import FusionHoldingV0TerminationsCfg
 from ..mdp.terminations.contact_sweep_clutter_fusion_holding import FusionHoldingV2TerminationsCfg
 from .contact_sweep_clutter_fusion_envs import ContactSweepClutterFusionV1_0EnvCfg
@@ -39,3 +40,8 @@ class FusionHoldingV2EnvCfg(FusionHoldingV1EnvCfg):
     rewards: FusionHoldingV2RewardsCfg = FusionHoldingV2RewardsCfg()
     terminations: FusionHoldingV2TerminationsCfg = FusionHoldingV2TerminationsCfg()
     curriculum: FusionHoldingV2CurriculumCfg = FusionHoldingV2CurriculumCfg()
+
+
+@configclass
+class FusionHoldingV3EnvCfg(FusionHoldingV2EnvCfg):
+    rewards: FusionHoldingV3RewardsCfg = FusionHoldingV3RewardsCfg()

@@ -8,16 +8,29 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import cli_args
+
+# Change these values to select the environment, checkpoint and duration in seconds.
+# CLI --task, --checkpoint and --seconds override these defaults. Relative paths are
+# resolved from the working directory; run this script from the workspace root.
+DEFAULT_TASK = 'Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1'
+DEFAULT_CHECKPOINT = Path('logs/TEMP/2026-10-24_02-42-20/model_12000.pt')
+DEFAULT_SECONDS = 60.0
+DEFAULT_WIDTH = 1280
+DEFAULT_HEIGHT = 720
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--checkpoint', required=True, type=Path)
-    parser.add_argument('--task', default='Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0',
-                        choices=['Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0'])
+    parser.add_argument('--checkpoint', default=DEFAULT_CHECKPOINT, type=Path,
+                        help='Checkpoint trained for --task (default: %(default)s).')
+    parser.add_argument('--task', default=DEFAULT_TASK,
+                        help='Registered Gym task matching the checkpoint (default: %(default)s).')
     parser.add_argument('--num_envs', type=int, choices=[1], default=1)
-    parser.add_argument('--seconds', type=float, default=60.)
-    parser.add_argument('--width', type=int, default=1920)
-    parser.add_argument('--height', type=int, default=1080)
+    parser.add_argument('--seconds', type=float, default=DEFAULT_SECONDS,
+                        help='Recording duration in seconds (default: %(default)s).')
+    parser.add_argument('--width', type=int, default=DEFAULT_WIDTH)
+    parser.add_argument('--height', type=int, default=DEFAULT_HEIGHT)
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--real-time', action='store_true')
     parser.add_argument('--preview-only', action='store_true', help='Save one synchronized PNG per camera, no videos.')
@@ -36,6 +49,7 @@ def main():
     output = args.output_dir or Path('outputs/three_view_recordings') / datetime.now().strftime('%Y%m%d_%H%M%S')
     output.mkdir(parents=True, exist_ok=False)
     args.enable_cameras = True
+    cli_args.apply_renderer_compatibility(args)
     app = AppLauncher(args).app
     env = None
     writers = []
@@ -54,7 +68,13 @@ def main():
         from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
         import inspire_sweep_baseline  # noqa: F401
         from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
+        from rsl_rl.runners import DistillationRunner, OnPolicyRunner
         cfg = parse_env_cfg(args.task, device=args.device or 'cuda:0', num_envs=1)
+        # Training allocates this buffer for thousands of environments. Keep
+        # single-environment recording from starving the three camera renders.
+        cfg.sim.physx.gpu_found_lost_aggregate_pairs_capacity = min(
+            cfg.sim.physx.gpu_found_lost_aggregate_pairs_capacity, 2**20)
+        report['gpu_found_lost_aggregate_pairs_capacity'] = cfg.sim.physx.gpu_found_lost_aggregate_pairs_capacity
         cfg.seed = args.seed
         cfg.log_dir = str(output.resolve())
         # World coordinates: shelf centered at x=-0.7, work surface z=1.05;
@@ -75,8 +95,15 @@ def main():
         agent = handle_deprecated_rsl_rl_cfg(agent, importlib.metadata.version('rsl-rl-lib'))
         agent.seed = args.seed
         agent.device = cfg.sim.device
+        runner_types = {
+            'CurriculumOnPolicyRunner': CurriculumOnPolicyRunner,
+            'OnPolicyRunner': OnPolicyRunner,
+            'DistillationRunner': DistillationRunner,
+        }
+        if agent.class_name not in runner_types:
+            raise ValueError(f'Unsupported runner class: {agent.class_name}')
         env = RslRlVecEnvWrapper(gym.make(args.task,cfg=cfg),clip_actions=agent.clip_actions)
-        runner = CurriculumOnPolicyRunner(env,agent.to_dict(),log_dir=None,device=agent.device)
+        runner = runner_types[agent.class_name](env,agent.to_dict(),log_dir=None,device=agent.device)
         runner.load(str(checkpoint))
         policy = runner.get_inference_policy(device=env.unwrapped.device)
         env.reset()
