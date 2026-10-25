@@ -630,3 +630,42 @@ if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V2_TASK_ID not in gym.
         },
     )
 __all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V2_TASK_ID")
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V4_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v4"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V4_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V4_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_holding_envs:FusionHoldingV4EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.contact_sweep_clutter_fusion_holding_ppo_cfg:FusionHoldingV4PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_V4_TASK_ID")
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v4"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_holding_osc_envs:FusionHoldingOSCV4EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.contact_sweep_clutter_fusion_holding_osc_ppo_cfg:FusionHoldingOSCV4PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID")
+
+CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v3"
+if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID not in gym.registry:
+    gym.register(
+        id=CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.contact_sweep_clutter_fusion_holding_osc_object_random_envs:FusionHoldingOSCObjectRandomV3EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.contact_sweep_clutter_fusion_holding_osc_object_random_ppo_cfg:FusionHoldingOSCObjectRandomV3PPORunnerCfg",
+        },
+    )
+__all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID")

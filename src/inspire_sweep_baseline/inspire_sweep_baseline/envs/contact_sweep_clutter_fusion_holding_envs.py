@@ -9,8 +9,10 @@ from ..mdp.curricula.contact_sweep_clutter_fusion_holding import FusionHoldingV2
 from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV0RewardsCfg
 from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV2RewardsCfg
 from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV3RewardsCfg
+from ..mdp.rewards.contact_sweep_clutter_fusion_holding import FusionHoldingV4RewardsCfg
 from ..mdp.terminations.contact_sweep_clutter_fusion_holding import FusionHoldingV0TerminationsCfg
 from ..mdp.terminations.contact_sweep_clutter_fusion_holding import FusionHoldingV2TerminationsCfg
+from ..mdp.terminations.contact_sweep_clutter_fusion_holding import FusionHoldingV4TerminationsCfg
 from .contact_sweep_clutter_fusion_envs import ContactSweepClutterFusionV1_0EnvCfg
 from isaaclab.utils import configclass
 
@@ -45,3 +47,9 @@ class FusionHoldingV2EnvCfg(FusionHoldingV1EnvCfg):
 @configclass
 class FusionHoldingV3EnvCfg(FusionHoldingV2EnvCfg):
     rewards: FusionHoldingV3RewardsCfg = FusionHoldingV3RewardsCfg()
+
+
+@configclass
+class FusionHoldingV4EnvCfg(FusionHoldingV3EnvCfg):
+    rewards: FusionHoldingV4RewardsCfg = FusionHoldingV4RewardsCfg()
+    terminations: FusionHoldingV4TerminationsCfg = FusionHoldingV4TerminationsCfg()

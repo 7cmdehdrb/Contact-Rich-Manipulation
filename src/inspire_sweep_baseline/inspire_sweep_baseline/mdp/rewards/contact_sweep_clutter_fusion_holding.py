@@ -6,6 +6,8 @@ from ..reward_functions.contact_sweep_clutter_fusion_holding import goal_settlin
 from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import goal_settling as goal_settling_contact_sweep_clutter_fusion_holding_scheduled
 from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import hand_contact_or_goal
 from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import CappedGoalSettling
+from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import goal_settling_centered
+from ..reward_functions.contact_sweep_clutter_fusion_holding_scheduled import ReachingOrGoal
 from .contact_sweep_clutter_fusion import ContactSweepClutterFusionV1_0RewardsCfg
 from isaaclab.utils import configclass
 
@@ -43,4 +45,13 @@ class FusionHoldingV3RewardsCfg(FusionHoldingV2RewardsCfg):
     goal_hold = FusionHoldingV2RewardsCfg().goal_hold.replace(
         func=CappedGoalSettling,
         params={**FusionHoldingV2RewardsCfg().goal_hold.params, "max_hold_time": 3.0},
+    )
+
+
+@configclass
+class FusionHoldingV4RewardsCfg(FusionHoldingV3RewardsCfg):
+    goal_hold = FusionHoldingV2RewardsCfg().goal_hold.replace(func=goal_settling_centered)
+    reaching = FusionHoldingV2RewardsCfg().reaching.replace(
+        func=ReachingOrGoal,
+        params={**FusionHoldingV2RewardsCfg().reaching.params, "goal_near_radius": 1.0},
     )

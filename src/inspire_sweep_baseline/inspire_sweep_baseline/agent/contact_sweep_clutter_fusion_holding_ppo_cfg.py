@@ -31,3 +31,8 @@ class FusionHoldingV2PPORunnerCfg(FusionHoldingV1PPORunnerCfg):
 @configclass
 class FusionHoldingV3PPORunnerCfg(FusionHoldingV2PPORunnerCfg):
     experiment_name = "inspire_contact_sweep_clutter_fusion_holding_v3"
+
+
+@configclass
+class FusionHoldingV4PPORunnerCfg(FusionHoldingV3PPORunnerCfg):
+    experiment_name = "inspire_contact_sweep_clutter_fusion_holding_v4"

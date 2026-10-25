@@ -10,6 +10,7 @@ from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV0EnvCfg
 from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV1EnvCfg
 from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV2EnvCfg
 from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV3EnvCfg
+from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV4EnvCfg
 from isaaclab.utils import configclass
 
 @configclass
@@ -39,6 +40,13 @@ class FusionHoldingOSCV2EnvCfg(FusionHoldingV2EnvCfg):
 
 @configclass
 class FusionHoldingOSCV3EnvCfg(FusionHoldingV3EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        configure_reach_osc(self)
+
+
+@configclass
+class FusionHoldingOSCV4EnvCfg(FusionHoldingV4EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         configure_reach_osc(self)

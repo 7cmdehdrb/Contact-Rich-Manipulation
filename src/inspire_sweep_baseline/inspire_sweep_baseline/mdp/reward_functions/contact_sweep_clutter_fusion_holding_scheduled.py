@@ -3,6 +3,8 @@
 from ..common.contact_sweep_clutter_fusion_contacts import whole_hand_contact_force_w
 from ..common.contact_sweep_clutter_fusion_holding import goal_radius
 from ..common.contact_sweep_clutter_fusion_holding import target_measurements
+from .dex_rewards import DexReachProgress
+from .goal_rewards import _target_state
 import math as math
 import torch as torch
 from isaaclab.managers import ManagerTermBase
@@ -14,6 +16,47 @@ def goal_settling(env, position_tolerance=0.02, speed_scale=0.05, command_name="
     distance, speed, valid = target_measurements(env, command_name)
     score = torch.exp(-math.log(2) * ((distance / position_tolerance) ** 2 + (speed / speed_scale) ** 2))
     return torch.where(valid & (distance <= position_tolerance), score, 0.0)
+
+
+def goal_settling_centered(env, position_tolerance=0.02, speed_scale=0.05,
+                          command_name="target_goal_pos"):
+    """Uncapped settling through 2r, with up to twice the rate inside r.
+
+    The multiplier is one at the boundary and two at the center; the inherited
+    distance/speed score and all validity checks still apply.
+    """
+    if not all(math.isfinite(v) and v > 0 for v in (position_tolerance, speed_scale)):
+        raise ValueError("Goal radius and speed scale must be finite and positive")
+    distance, speed, valid = target_measurements(env, command_name)
+    score = torch.exp(-math.log(2) * ((distance / position_tolerance) ** 2 + (speed / speed_scale) ** 2))
+    rate = torch.where(valid & (distance <= 2.0 * position_tolerance), score, 0.0)
+    center_bonus = (1.0 - distance / position_tolerance).clamp(0.0, 1.0).square()
+    return torch.where(distance < position_tolerance, rate * (1.0 + center_bonus), rate)
+
+
+class ReachingOrGoal(DexReachProgress):
+    """New-best approach with a relaxed near radius while the target is in goal.
+
+    Use live goal occupancy, like hand_contact_or_goal, without a speed gate or
+    episode latch. Keep a single monotonic best-distance record so toggling the
+    trigger cannot repay progress. Entering goal can pay the remaining approach
+    progress once, up to the relaxed near radius.
+    """
+
+    def __call__(self, env, near_radius=0.10, goal_near_radius=1.0, frame_name="ee_frame"):
+        if not (math.isfinite(near_radius) and near_radius > 0
+                and math.isfinite(goal_near_radius) and goal_near_radius >= near_radius):
+            raise ValueError("Reach radii must be finite, positive and goal radius >= near radius")
+        goal = env.reward_manager.get_term_cfg("goal_hold")
+        distance, _, valid = target_measurements(env, goal.params.get("command_name", "target_goal_pos"))
+        in_goal = valid & (distance <= goal_radius(env))
+        radius = torch.where(in_goal, goal_near_radius, near_radius)
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        gap = (torch.linalg.vector_norm(reference - _target_state(env)[:, :3], dim=-1) - radius).clamp_min(0.0)
+        best = torch.minimum(self._best_distance, gap)
+        increment = self._best_distance - best
+        self._best_distance[:] = best
+        return increment / env.step_dt
 
 
 class CappedGoalSettling(ManagerTermBase):

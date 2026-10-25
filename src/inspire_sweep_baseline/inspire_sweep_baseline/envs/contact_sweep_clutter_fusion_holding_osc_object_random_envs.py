@@ -14,6 +14,7 @@ from .contact_sweep_clutter_fusion_holding_envs import FusionHoldingV2EnvCfg
 from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV0EnvCfg
 from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV2EnvCfg
 from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV3EnvCfg
+from .contact_sweep_clutter_fusion_holding_osc_envs import FusionHoldingOSCV4EnvCfg
 from isaaclab.utils import configclass
 
 @configclass
@@ -53,6 +54,20 @@ class FusionHoldingOSCObjectRandomV1EnvCfg(FusionHoldingOSCV2EnvCfg):
 @configclass
 class FusionHoldingOSCObjectRandomV2EnvCfg(FusionHoldingOSCV3EnvCfg):
     # Keep the physical slot layout; curriculum limits active counts to 6/6.
+    max_gray_obstacles: int = 8
+    max_white_obstacles: int = 8
+    scene: ObjectRandomV1SceneCfg = ObjectRandomV1SceneCfg(num_envs=4096, env_spacing=2.5)
+    events: ObjectRandomEventsCfg = ObjectRandomEventsCfg()
+    curriculum: ObjectRandomV2CurriculumCfg = ObjectRandomV2CurriculumCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # TEMP SUCCESS DEBUG (disabled): preserved with the commented print block.
+        # self.terminations.success.params["debug_print"] = True
+
+
+@configclass
+class FusionHoldingOSCObjectRandomV3EnvCfg(FusionHoldingOSCV4EnvCfg):
     max_gray_obstacles: int = 8
     max_white_obstacles: int = 8
     scene: ObjectRandomV1SceneCfg = ObjectRandomV1SceneCfg(num_envs=4096, env_spacing=2.5)

@@ -8,6 +8,7 @@ from .contact_sweep_clutter_fusion_holding_ppo_cfg import FusionHoldingV0PPORunn
 from .contact_sweep_clutter_fusion_holding_ppo_cfg import FusionHoldingV1PPORunnerCfg
 from .contact_sweep_clutter_fusion_holding_ppo_cfg import FusionHoldingV2PPORunnerCfg
 from .contact_sweep_clutter_fusion_holding_ppo_cfg import FusionHoldingV3PPORunnerCfg
+from .contact_sweep_clutter_fusion_holding_ppo_cfg import FusionHoldingV4PPORunnerCfg
 from isaaclab.utils import configclass
 
 @configclass
@@ -28,3 +29,8 @@ class FusionHoldingOSCV2PPORunnerCfg(FusionHoldingV2PPORunnerCfg):
 @configclass
 class FusionHoldingOSCV3PPORunnerCfg(FusionHoldingV3PPORunnerCfg):
     experiment_name = "inspire_contact_sweep_clutter_fusion_holding_osc_v3"
+
+
+@configclass
+class FusionHoldingOSCV4PPORunnerCfg(FusionHoldingV4PPORunnerCfg):
+    experiment_name = "inspire_contact_sweep_clutter_fusion_holding_osc_v4"

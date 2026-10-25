@@ -24,3 +24,9 @@ class FusionHoldingV2TerminationsCfg(FusionHoldingV0TerminationsCfg):
         params={key: value for key, value in FusionHoldingV0TerminationsCfg().success.params.items()
                 if key != "position_tolerance"},
     )
+
+
+@configclass
+class FusionHoldingV4TerminationsCfg(FusionHoldingV2TerminationsCfg):
+    # Holding lasts until timeout unless an inherited failure ends the episode.
+    success = None
