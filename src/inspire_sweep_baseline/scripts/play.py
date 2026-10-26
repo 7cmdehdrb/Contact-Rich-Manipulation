@@ -183,6 +183,8 @@ def main(
     env_cfg.log_dir = log_dir
 
     # create isaac environment
+    if hasattr(env_cfg, 'target_bounding_box'):
+        env_cfg.target_bounding_box = True
     env = gym.make(
         args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )

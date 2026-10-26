@@ -61,7 +61,7 @@ def test_tasks_use_their_registered_runtime_family():
         "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2": "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionEnv",
     }
     for suffix in (
-        "v1_4", "Holding-v0", "Holding-v1", "Holding-v2", "Holding-v3",
+        "v1_4", "Holding-v4", "Holding-OSC-v4", "Holding-OSC-ObjectRandom-v3", "Holding-v0", "Holding-v1", "Holding-v2", "Holding-v3",
         "Holding-OSC-v0", "Holding-OSC-v1", "Holding-OSC-v2", "Holding-OSC-v3",
         "Holding-OSC-ObjectRandom-v0", "Holding-OSC-ObjectRandom-v1", "Holding-OSC-ObjectRandom-v2",
         "Holding-ObjectRandom-Test-v0",
@@ -69,6 +69,11 @@ def test_tasks_use_their_registered_runtime_family():
         contact_runtimes[f"Isaac-Inspire-Contact-Sweep-Clutter-Fusion-{suffix}"] = (
             "runtime.contact_sweep_clutter_fusion:ContactSweepClutterFusionV1_0Env"
         )
+    contact_runtimes.update({
+        "Isaac-Inspire-Final-v0": "runtime.final:FinalEnv",
+        "Isaac-Inspire-Final-v1": "runtime.final:FinalV1Env",
+        "Isaac-Inspire-Final-v2": "runtime.final:FinalV1Env",
+    })
     for task, registration in registrations.items():
         runtime = contact_runtimes.get(task, "runtime.sweep:InspireSweepEnv")
         assert registration["entry_point"] == f"inspire_sweep_baseline.{runtime}"

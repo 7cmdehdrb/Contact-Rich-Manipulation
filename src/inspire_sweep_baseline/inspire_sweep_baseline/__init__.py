@@ -657,6 +657,48 @@ if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID not in gym.registry:
     )
 __all__.append("CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_V4_TASK_ID")
 
+FINAL_V0_TASK_ID = "Isaac-Inspire-Final-v0"
+if FINAL_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalPPORunnerCfg",
+        },
+    )
+
+__all__.append("FINAL_V0_TASK_ID")
+
+FINAL_V1_TASK_ID = "Isaac-Inspire-Final-v1"
+FINAL_V2_TASK_ID = "Isaac-Inspire-Final-v2"
+for final_version, final_task_id in ((1, FINAL_V1_TASK_ID), (2, FINAL_V2_TASK_ID)):
+    if final_task_id not in gym.registry:
+        gym.register(
+            id=final_task_id,
+            entry_point="inspire_sweep_baseline.runtime.final:FinalV1Env",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": f"inspire_sweep_baseline.envs.final_envs:FinalV{final_version}EnvCfg",
+                "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.final_ppo_cfg:FinalV{final_version}PPORunnerCfg",
+            },
+        )
+__all__.extend(["FINAL_V1_TASK_ID", "FINAL_V2_TASK_ID"])
+
+FINAL_V2_TEST_TASK_ID = "Isaac-Inspire-Final-Test-v2"
+if FINAL_V2_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_V2_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalV1Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalV2TestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalV2PPORunnerCfg",
+        },
+    )
+__all__.append("FINAL_V2_TEST_TASK_ID")
+
 CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v3"
 if CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OSC_OBJECT_RANDOM_V3_TASK_ID not in gym.registry:
     gym.register(
