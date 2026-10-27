@@ -1,5 +1,13 @@
 # Inspire Sweep Baseline
 
+2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuacy-v0`는 Final v1을 상속해 목표·성공·접촉 인정 반경을 처음부터 1cm로 고정한다. 목표 유지 보상은 `d < r`에서만 지급하며 학습 지표를 `Metrics/` 아래에 기록한다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-goalaccuacy-v0--1cm-정확도) · [검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_goal_accuracy.md).
+
+2026-10-27 추가: `Isaac-Inspire-Final-Test-v1`은 Final v1의 `object_penalty`를 기울기·장애물 변위·가속도 세 로그 term으로 분리한다. 합산 보상·커리큘럼·정책 입력은 v1과 같고, PPO 로그는 `inspire_final_v1_test`로 분리한다. [계약·체크포인트 재개 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-v1-test--object_penalty-세-항-분리) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_v1_test_object_penalty.md).
+
+Final v1의 3000·9500 checkpoint 보상 내부 분해와 동일 seed·커리큘럼 교차 재생은 [진단 실행·제약](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_v1_reward_play_diagnostics.md)을 따른다.
+
+2026-10-27 추가: `Isaac-Inspire-Final-v1-1`은 Final v1을 직접 상속하고 Goal Distance만 XY 거리 기반 `1.5·exp(-d/0.05)`의 매 step 보상으로 변경한다. [수식·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-v1-1--goal-distance-지수형-근접-보상) · [검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_v1_1_goal_proximity.md).
+
 2026-10-26 추가: `Isaac-Inspire-Final-v1` → `Isaac-Inspire-Final-v2`. Final v0를 상속하여 Hand 관측2D·보상 병합·10초 성공 분류·물체 다양화와±10% 크기·20슬롯 배치 fallback을 추가한다. v2는 중앙80%의 안전영역에서 타겟을 추출한다. [환경 계약·train/play](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md) · [검증·실행 제한](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-26_final_v1_v2.md).
 
 2026-10-26 추가: `Isaac-Inspire-Final-v0`. ObjectRandom-v3와 같은 동작을 독립 Env·Scene·Manager·PPO CFG와 runtime으로 구성했다. 기존 task CFG의 상속·생성 없이 계산 함수와 실행 구성요소를 재사용한다. [구성·train/play](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V0_ENVIRONMENT.md) · [CPU 검증·GPU 실행 제한](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-26_final_v0.md).

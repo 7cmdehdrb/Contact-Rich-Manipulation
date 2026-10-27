@@ -686,6 +686,45 @@ for final_version, final_task_id in ((1, FINAL_V1_TASK_ID), (2, FINAL_V2_TASK_ID
         )
 __all__.extend(["FINAL_V1_TASK_ID", "FINAL_V2_TASK_ID"])
 
+FINAL_V1_1_TASK_ID = "Isaac-Inspire-Final-v1-1"
+if FINAL_V1_1_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_V1_1_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalV1Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalV1_1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalV1_1PPORunnerCfg",
+        },
+    )
+__all__.append("FINAL_V1_1_TASK_ID")
+
+FINAL_V1_TEST_TASK_ID = "Isaac-Inspire-Final-Test-v1"
+if FINAL_V1_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_V1_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalV1Env",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalV1TestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalV1TestPPORunnerCfg",
+        },
+    )
+__all__.append("FINAL_V1_TEST_TASK_ID")
+
+FINAL_GOAL_ACCUACY_V0_TASK_ID = "Isaac-Inspire-Final-GoalAccuacy-v0"
+if FINAL_GOAL_ACCUACY_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_GOAL_ACCUACY_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalGoalAccuracyEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalGoalAccuracyEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalGoalAccuracyPPORunnerCfg",
+        },
+    )
+__all__.append("FINAL_GOAL_ACCUACY_V0_TASK_ID")
+
 FINAL_V2_TEST_TASK_ID = "Isaac-Inspire-Final-Test-v2"
 if FINAL_V2_TEST_TASK_ID not in gym.registry:
     gym.register(

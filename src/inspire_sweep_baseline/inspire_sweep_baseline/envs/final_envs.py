@@ -77,11 +77,11 @@ class FinalEnvCfg(ManagerBasedRLEnvCfg):
 
 
 from ..assets.scenes.final import FinalV1SceneCfg
-from ..mdp.curricula.final import FinalV1CurriculumCfg
+from ..mdp.curricula.final import FinalV1CurriculumCfg, FinalV1TestCurriculumCfg, FinalGoalAccuracyCurriculumCfg
 from ..mdp.events.final import FinalV1EventsCfg, FinalV2EventsCfg
 from ..mdp.observations.final import FinalV1ObservationsCfg
-from ..mdp.rewards.final import FinalV1RewardsCfg
-from ..mdp.terminations.final import FinalV1TerminationsCfg
+from ..mdp.rewards.final import FinalV1RewardsCfg, FinalV1_1RewardsCfg, FinalV1TestRewardsCfg, FinalGoalAccuracyRewardsCfg
+from ..mdp.terminations.final import FinalV1TerminationsCfg, FinalGoalAccuracyTerminationsCfg
 
 
 @configclass
@@ -96,6 +96,26 @@ class FinalV1EnvCfg(FinalEnvCfg):
     max_gray_obstacles: int = 10
     max_white_obstacles: int = 10
     target_bounding_box: bool = False
+
+
+@configclass
+class FinalV1_1EnvCfg(FinalV1EnvCfg):
+    rewards: FinalV1_1RewardsCfg = FinalV1_1RewardsCfg()
+
+
+@configclass
+class FinalV1TestEnvCfg(FinalV1EnvCfg):
+    """Keep v1 behavior while logging its three object costs separately."""
+
+    rewards: FinalV1TestRewardsCfg = FinalV1TestRewardsCfg()
+    curriculum: FinalV1TestCurriculumCfg = FinalV1TestCurriculumCfg()
+
+
+@configclass
+class FinalGoalAccuracyEnvCfg(FinalV1EnvCfg):
+    rewards: FinalGoalAccuracyRewardsCfg = FinalGoalAccuracyRewardsCfg()
+    terminations: FinalGoalAccuracyTerminationsCfg = FinalGoalAccuracyTerminationsCfg()
+    curriculum: FinalGoalAccuracyCurriculumCfg = FinalGoalAccuracyCurriculumCfg()
 
 
 @configclass

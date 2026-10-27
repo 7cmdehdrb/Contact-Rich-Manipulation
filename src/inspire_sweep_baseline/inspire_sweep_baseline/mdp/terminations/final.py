@@ -30,6 +30,7 @@ class FinalTerminationsCfg:
 
 
 from ..termination_functions.final import shelf_termination, success_at_timeout, unsuccessful_timeout
+from ..termination_functions.final import strict_success_at_timeout, strict_unsuccessful_timeout
 
 
 @configclass
@@ -41,3 +42,9 @@ class FinalV1TerminationsCfg:
     # Both partitions remain truncations: preserve value bootstrapping at 10 s.
     success = DoneTerm(func=success_at_timeout, time_out=True)
     time_out = DoneTerm(func=unsuccessful_timeout, time_out=True)
+
+
+@configclass
+class FinalGoalAccuracyTerminationsCfg(FinalV1TerminationsCfg):
+    success = DoneTerm(func=strict_success_at_timeout, time_out=True)
+    time_out = DoneTerm(func=strict_unsuccessful_timeout, time_out=True)

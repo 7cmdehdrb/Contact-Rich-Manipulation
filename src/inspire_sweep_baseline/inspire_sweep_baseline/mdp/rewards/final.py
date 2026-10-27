@@ -5,6 +5,8 @@ from ..common.contact_sweep_clutter_fusion import arm_entity
 from ..reward_functions.contact_sweep_clutter import shelf_failure
 from ..reward_functions.contact_sweep_clutter_fusion import ObjectAccelerationPenalty
 from ..reward_functions.contact_sweep_clutter_fusion import WrenchMagnitudeChangePenalty
+from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost
+from ..reward_functions.contact_sweep_clutter_fusion import active_obstacle_displacement_cost
 from ..reward_functions.contact_sweep_clutter_fusion import combined_active_object_cost
 from ..reward_functions.contact_sweep_clutter_fusion import eef_linear_speed_cost
 from ..reward_functions.contact_sweep_clutter_fusion import obstacle_contact_force_cost
@@ -96,6 +98,8 @@ class FinalRewardsCfg:
 
 
 from ..reward_functions.final import action_rate_penalty, joint_velocity_penalty, ObjectPenalty, ShelfPenalty
+from ..reward_functions.final import exponential_planar_goal_proximity
+from ..reward_functions.final import strict_goal_settling_centered, strict_hand_contact_or_goal
 
 
 @configclass
@@ -121,3 +125,54 @@ class FinalV1RewardsCfg:
     shelf_penalty = RewTerm(func=ShelfPenalty, weight=-1.0)
     obstacle_contact_penalty = FinalRewardsCfg().obstacle_contact
     wrench_change_penalty = FinalRewardsCfg().wrench_change
+
+
+@configclass
+class FinalV1_1RewardsCfg(FinalV1RewardsCfg):
+    """Keep v1 terms and pay exponential XY proximity at every policy step."""
+
+    goal_distance = RewTerm(
+        func=exponential_planar_goal_proximity,
+        weight=1.5,
+        params={'distance_scale': 0.05},
+    )
+
+
+@configclass
+class FinalV1TestRewardsCfg(FinalV1RewardsCfg):
+    """Expose the three v1 object costs separately without changing their sum."""
+
+    object_penalty = None
+    object_tilt_penalty = RewTerm(
+        func=active_object_tilt_cost, weight=-30.0,
+        params={'free_angle': math.radians(5.0), 'fail_angle': 0.9},
+    )
+    object_displacement_penalty = RewTerm(
+        func=active_obstacle_displacement_cost, weight=-150.0,
+        params={'displacement_max_cost': 0.04},
+    )
+    object_acceleration_penalty = RewTerm(
+        func=ObjectAccelerationPenalty, weight=0.0,
+        params={'free_acceleration': 50.0, 'max_cost': 100.0},
+    )
+
+
+@configclass
+class FinalGoalAccuracyRewardsCfg(FinalV1RewardsCfg):
+    """Increase precise hold credit and offset the fixed, wider speed allowance."""
+
+    hand_reaching = RewTerm(
+        func=ReachingOrGoal, weight=30.0,
+        params={'near_radius': 0.01, 'frame_name': 'ee_frame', 'goal_near_radius': 0.01},
+    )
+    goal_hold = RewTerm(
+        func=strict_goal_settling_centered, weight=8.0,
+        params={'position_tolerance': 0.01, 'speed_scale': 0.05},
+    )
+    hand_contact = RewTerm(func=strict_hand_contact_or_goal, weight=1.45,
+                           params={'threshold_n': 0.01})
+    object_speed_penalty = None
+    target_speed_penalty = RewTerm(
+        func=exponential_pushing_speed_cost_limit, weight=-10.0,
+        params={'free_speed': 0.1, 'max_cost': 100.0},
+    )

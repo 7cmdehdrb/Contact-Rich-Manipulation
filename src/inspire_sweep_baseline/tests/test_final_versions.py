@@ -27,6 +27,140 @@ def geometry(load_mdp):
     return importlib.import_module('_baseline_cpu_pkg.mdp.common.final_geometry')
 
 
+def test_final_v1_1_exponential_xy_reward_and_v1_isolation(configs, final_rewards):
+    rewards = configs('rewards', 'final')
+    parent = rewards.FinalV1RewardsCfg()
+    child = rewards.FinalV1_1RewardsCfg()
+    assert child.goal_distance.func is final_rewards.exponential_planar_goal_proximity
+    assert child.goal_distance.weight == 1.5
+    assert child.goal_distance.params == {'distance_scale': .05}
+    assert parent.goal_distance.weight == 100.
+    assert parent.goal_distance.func is not child.goal_distance.func
+    assert set(vars(parent)) == set(vars(child))
+
+    states = torch.zeros(4, 1, 13)
+    states[:, 0, 0] = torch.tensor([0., .01, .02, .15])
+    states[:, 0, 2] = 1.
+    env = NS(num_envs=4, device='cpu', target_id=torch.zeros(4, 1, dtype=torch.long),
+             scene={'object_collection': NS(data=NS(object_link_state_w=states))},
+             command_manager=NS(get_command=lambda _: torch.tensor([[0., 0., 10.]]).expand(4, -1)),
+             step_dt=.02)
+    score = child.goal_distance.func(env, **child.goal_distance.params)
+    torch.testing.assert_close(score, torch.exp(-states[:, 0, 0] / .05))
+    assert score[0] > score[1] > score[2] > score[3]
+    states[2, 0, 0] = .14
+    far_score = child.goal_distance.func(env, **child.goal_distance.params)
+    assert score[0] - score[1] > far_score[2] - far_score[3]
+    assert 1.5 * score[0] * env.step_dt * 500 == pytest.approx(15.)
+    with pytest.raises(ValueError, match='distance_scale'):
+        child.goal_distance.func(env, distance_scale=0.)
+
+
+def test_goal_accuracy_config_and_population_boundaries(configs):
+    rewards = configs('rewards', 'final').FinalGoalAccuracyRewardsCfg()
+    curriculum = configs('curricula', 'final').FinalGoalAccuracyCurriculumCfg()
+    terminations = configs('terminations', 'final').FinalGoalAccuracyTerminationsCfg()
+    assert rewards.goal_hold.params == {'position_tolerance': .01, 'speed_scale': .05}
+    assert rewards.goal_hold.weight == 8.
+    assert rewards.hand_reaching.params['near_radius'] == .01
+    assert rewards.hand_reaching.params['goal_near_radius'] == .01
+    assert rewards.object_speed_penalty is None
+    assert rewards.target_speed_penalty.params['free_speed'] == .1
+    assert rewards.target_speed_penalty.weight == -10.
+    assert curriculum.object_free_speed is None
+    assert curriculum.goal_speed_scale is None
+    assert curriculum.goal_position_tolerance is None
+    assert terminations.success.time_out and terminations.time_out.time_out
+    spawn = NS(params={})
+    env = NS(cfg=NS(max_gray_obstacles=10, max_white_obstacles=10),
+             event_manager=NS(get_term_cfg=lambda _: spawn, set_term_cfg=lambda *_: None))
+    for iteration, expected in ((0, (1, 1)), (1999, (1, 1)), (2000, (1, 2)),
+                                (2499, (1, 2)), (2500, (2, 2)), (3000, (2, 3)),
+                                (8500, (8, 8)), (9000, (8, 8))):
+        env.learning_iteration = iteration
+        result = curriculum.obstacle_population.func(env, None, **curriculum.obstacle_population.params)
+        assert (result['gray_obstacles'], result['white_obstacles']) == expected
+
+
+def test_goal_accuracy_strict_radius_for_hold_contact_and_timeout(configs, final_rewards, monkeypatch):
+    endings = configs('termination_functions', 'final')
+    distance = torch.tensor([0., .009, .01, .011])
+    speed = torch.zeros(4)
+    valid = torch.ones(4, dtype=torch.bool)
+    monkeypatch.setattr(final_rewards, 'target_measurements', lambda *args: (distance, speed, valid))
+    monkeypatch.setattr(final_rewards, 'whole_hand_contact_force_w', lambda env: torch.zeros(4, 3))
+    monkeypatch.setattr(final_rewards, 'goal_radius', lambda env: .01)
+    monkeypatch.setattr(endings, '_object_position', lambda env: torch.stack(
+        (distance, torch.zeros_like(distance), torch.zeros_like(distance)), dim=-1))
+    monkeypatch.setattr(endings, 'goal_radius', lambda env: .01)
+    monkeypatch.setattr(endings, 'time_out', lambda env: env.timeout)
+    env = NS(sensor_data_fresh=torch.ones(4, dtype=torch.bool),
+             reward_manager=NS(get_term_cfg=lambda _: NS(params={'position_tolerance': .01})),
+             command_manager=NS(get_command=lambda _: torch.zeros(4, 3)),
+             timeout=torch.tensor([True, True, True, False]),
+             record_goal_accuracy_metrics=lambda: None)
+    rewards = configs('rewards', 'final').FinalGoalAccuracyRewardsCfg()
+    hold = final_rewards.strict_goal_settling_centered(env, **rewards.goal_hold.params)
+    contact = final_rewards.strict_hand_contact_or_goal(env)
+    success = endings.strict_success_at_timeout(env)
+    timeout = endings.strict_unsuccessful_timeout(env)
+    assert (hold > 0).tolist() == [True, True, False, False]
+    assert contact.tolist() == [1., 1., 0., 0.]
+    assert success.tolist() == [True, True, False, False]
+    assert timeout.tolist() == [False, False, True, False]
+
+
+def test_goal_accuracy_runtime_metrics_are_logged_on_reset():
+    source = MODULE_ROOT / 'runtime/final.py'
+    tree = ast.parse(source.read_text())
+    goal_class = next(node for node in tree.body if isinstance(node, ast.ClassDef)
+                      and node.name == 'FinalGoalAccuracyEnv')
+
+    class Parent:
+        def __init__(self, cfg, **kwargs):
+            self.device = 'cpu'
+            self.num_envs = cfg.scene.num_envs
+            self.extras = {'log': {}}
+
+        def _reset_idx(self, env_ids):
+            self.extras['log'] = {
+                'Curriculum/obstacle_actual_gray': torch.tensor(2.),
+                'Curriculum/obstacle_actual_white': torch.tensor(3.),
+            }
+
+    namespace = {'FinalV1Env': Parent, 'torch': torch}
+    exec(compile(ast.Module(body=[goal_class], type_ignores=[]), str(source), 'exec'), namespace)
+    env = namespace['FinalGoalAccuracyEnv'](NS(scene=NS(num_envs=2), sim=NS(device='cpu')))
+    data = NS(object_pos_w=torch.tensor([[[.01, 0., 1.05]], [[.02, 0., 1.05]]]),
+              object_lin_vel_w=torch.tensor([[[.1, 0., 0.]], [[.2, 0., 0.]]]),
+              object_com_lin_acc_w=torch.tensor([[[1., 0., 0.]], [[2., 0., 0.]]]))
+    robot = NS(body_names=['axia80_link'], data=NS(
+        body_link_pos_w=torch.zeros(2, 1, 3),
+        body_link_lin_vel_w=torch.tensor([[[.3, 0., 0.]], [[.4, 0., 0.]]]),
+        body_link_ang_vel_w=torch.zeros(2, 1, 3)))
+    env.scene = {'object_collection': NS(data=data), 'robot': robot,
+                 'ee_frame': NS(data=NS(target_pos_w=torch.zeros(2, 1, 3)))}
+    env.target_id = torch.zeros(2, 1, dtype=torch.long)
+    env.command_manager = NS(get_command=lambda _: torch.zeros(2, 3))
+    env.observation_manager = NS(cfg=NS(policy=NS(wrist_wrench=NS(
+        func=lambda _: torch.tensor([[3., 4., 0., 0., 0., 2.],
+                                     [0., 0., 6., 0., 0., 3.]])))))
+    env.record_goal_accuracy_metrics()
+    data.object_pos_w[:, 0, 0] += .01
+    env.record_goal_accuracy_metrics()
+    env._reset_idx(torch.tensor([0, 1]))
+    logs = env.extras['log']
+    assert logs['Metrics/target_goal_distance_xy_mean'] == pytest.approx(.02)
+    assert logs['Metrics/eef_linear_speed_mean'] == pytest.approx(.35)
+    assert logs['Metrics/target_linear_speed_mean'] == pytest.approx(.15)
+    assert logs['Metrics/target_linear_acceleration_mean'] == pytest.approx(1.5)
+    assert logs['Metrics/max_force'] == pytest.approx(5.5)
+    assert logs['Metrics/max_moment'] == pytest.approx(2.5)
+    assert logs['Metrics/obstacle_actual_gray'] == 2
+    assert logs['Metrics/obstacle_actual_white'] == 3
+    assert not any(key.startswith('Curriculum/obstacle_actual_') for key in logs)
+
+
 @pytest.mark.parametrize('version', [1, 2])
 @pytest.mark.parametrize('term_name', ['object_size_randomization', 'object_materials'])
 def test_final_startup_events_pass_actual_manager_argument_validation(configs, omni_config, version, term_name):
@@ -84,6 +218,65 @@ def test_object_merge_keeps_history_caps_and_partial_reset(final_rewards, make_e
         if weight:
             expected -= weight * previous(env, free_acceleration=20, max_cost=100)
         torch.testing.assert_close(merged(env, free_acceleration=20, acceleration_weight=weight), expected)
+
+
+def test_v1_test_object_terms_reconcile_with_v1_across_activation_and_masks(
+    configs, final_rewards, make_env, tensor_math,
+):
+    functions = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.contact_sweep_clutter_fusion')
+    original = configs('rewards', 'final').FinalV1RewardsCfg()
+    split = configs('rewards', 'final').FinalV1TestRewardsCfg()
+    assert split.object_penalty is None
+    terms = ('object_tilt_penalty', 'object_displacement_penalty', 'object_acceleration_penalty')
+    assert [getattr(split, name).weight for name in terms] == [-30., -150., 0.]
+
+    env = multiobject_env(make_env, count=3)
+    env.step_dt = .02
+    data = env.scene['object_collection'].data
+    env._initial_object_positions_w = data.object_pos_w.clone()
+    env._active_object_mask = torch.tensor([[True, True, False, True]] * 3)
+    data.object_pos_w[:, 0, 0] += .1  # Target movement is not displacement cost.
+    data.object_pos_w[:, 1, 0] += .02
+    data.object_pos_w[:, 3, 1] += .3  # Exercise the scene-level displacement cap.
+    data.object_pos_w[:, 2, :] = float('nan')  # Parked slots must be ignored.
+    roll = torch.tensor([[.2, .4, 0., .8], [.1, .2, 0., .3], [.0, .1, 0., .2]])
+    data.object_quat_w[:] = tensor_math.quat_from_euler_xyz(roll, torch.zeros_like(roll), torch.zeros_like(roll))
+    data.object_com_lin_acc_w = torch.zeros_like(data.object_pos_w)
+    data.object_com_lin_acc_w[:, 2, 0] = float('nan')
+    original_term = final_rewards.ObjectPenalty(NS(params=original.object_penalty.params), env)
+    acceleration = functions.ObjectAccelerationPenalty(NS(params=split.object_acceleration_penalty.params), env)
+
+    for step, weight in enumerate((0., -.02, -.02)):
+        env.common_step_counter = step
+        env._sim_step_counter = 2 * step
+        data.object_com_lin_acc_w[:, 0, 0] = 40. + 2 * step
+        data.object_com_lin_acc_w[:, 1, 0] = 35. + 2 * step
+        data.object_com_lin_acc_w[:, 3, 0] = 50. + 2 * step
+        if step == 1:
+            acceleration.reset()  # reward_schedule resets when a zero weight becomes nonzero.
+        old = -original_term(env, **{**original.object_penalty.params,
+                                    'free_acceleration': 20., 'acceleration_weight': weight}) * env.step_dt
+        tilt = split.object_tilt_penalty.weight * functions.active_object_tilt_cost(
+            env, **split.object_tilt_penalty.params) * env.step_dt
+        displacement = split.object_displacement_penalty.weight * functions.active_obstacle_displacement_cost(
+            env, **split.object_displacement_penalty.params) * env.step_dt
+        accel = (weight * acceleration(env, free_acceleration=20., max_cost=100.) * env.step_dt
+                 if weight else torch.zeros_like(tilt))
+        torch.testing.assert_close(old, tilt + displacement + accel, atol=1e-6, rtol=1e-6)
+        assert torch.isfinite(old).all()
+
+
+def test_v1_test_curriculum_targets_split_acceleration_term(configs):
+    original = configs('curricula', 'final').FinalV1CurriculumCfg()
+    split = configs('curricula', 'final').FinalV1TestCurriculumCfg()
+    for name, parameter in (('object_free_acceleration', 'free_acceleration'),
+                            ('object_acceleration_weight', None)):
+        before, after = getattr(original, name).params, getattr(split, name).params
+        assert after['term_name'] == 'object_acceleration_penalty'
+        assert after['parameter'] == parameter
+        assert after['points'] == before['points'] and after['interval'] == before['interval']
+    for name in ('goal_position_tolerance', 'goal_speed_scale', 'obstacle_population'):
+        assert getattr(split, name).params == getattr(original, name).params
 
 
 def test_action_feedback_bounds_large_commands_without_mutating_raw_actions(load_mdp):
@@ -374,7 +567,7 @@ def test_final_ppo_consumes_57_and_80_dimensions_and_updates(fusion_models, runn
     spec=importlib.util.spec_from_file_location('_final_model_compat', PROJECT_ROOT/'IsaacLab/source/isaaclab_rl/isaaclab_rl/rsl_rl/utils.py')
     compat=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(compat)
-    for cls in (module.FinalV1PPORunnerCfg,module.FinalV2PPORunnerCfg):
+    for cls in (module.FinalV1PPORunnerCfg,module.FinalV1TestPPORunnerCfg,module.FinalV2PPORunnerCfg):
         cfg=compat.handle_deprecated_rsl_rl_cfg(cls(), '5.0.1')
         alg=_algorithm(obs,cfg)
         assert alg.actor.get_latent(obs).shape==(8,73)
@@ -394,3 +587,11 @@ def test_final_ppo_consumes_57_and_80_dimensions_and_updates(fusion_models, runn
         flat=torch.cat((obs['policy'],obs['obstacles']),dim=-1)
         assert flat.shape[-1]==137
         torch.testing.assert_close(exported(flat),alg.actor(obs))
+    source_cfg=compat.handle_deprecated_rsl_rl_cfg(module.FinalV1PPORunnerCfg(), '5.0.1')
+    test_cfg=compat.handle_deprecated_rsl_rl_cfg(module.FinalV1TestPPORunnerCfg(), '5.0.1')
+    assert source_cfg.actor.to_dict()==test_cfg.actor.to_dict()
+    assert source_cfg.critic.to_dict()==test_cfg.critic.to_dict()
+    source=_algorithm(obs,source_cfg)
+    resumed=_algorithm(obs,test_cfg)
+    assert resumed.load(source.save(),None,strict=True)
+    torch.testing.assert_close(source.actor(obs),resumed.actor(obs),rtol=0,atol=0)

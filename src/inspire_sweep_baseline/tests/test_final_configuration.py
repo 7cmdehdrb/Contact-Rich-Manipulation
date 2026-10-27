@@ -76,9 +76,9 @@ def test_final_has_no_old_task_cfg_or_runtime_ancestors_or_instances():
                'ObsGroup', 'RslRlMLPModelCfg', 'RslRlOnPolicyRunnerCfg'}
     for path in paths:
         tree = ast.parse(path.read_text())
-        # v0 remains independent; v1/v2 intentionally inherit Final classes.
+        # v0 remains independent; later Final environments inherit it.
         tree.body = [node for node in tree.body if not (isinstance(node, ast.ClassDef)
-                     and node.name.startswith(('FinalV1', 'FinalV2')))]
+                     and node.name.startswith(('FinalV1', 'FinalV2', 'FinalGoalAccuracy')))]
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 assert all(isinstance(b, ast.Name) and b.id in allowed for b in node.bases), path

@@ -265,9 +265,13 @@ def main(
     if args_cli.resilient_checkpoint is not None:
         resume_path = str(args_cli.resilient_checkpoint.resolve())
     elif agent_cfg.resume or agent_cfg.algorithm.class_name == "Distillation":
-        resume_path = get_checkpoint_path(
-            log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
-        )
+        explicit_checkpoint = Path(args_cli.checkpoint).expanduser() if args_cli.checkpoint else None
+        if explicit_checkpoint is not None and explicit_checkpoint.is_file():
+            resume_path = str(explicit_checkpoint.resolve())
+        else:
+            resume_path = get_checkpoint_path(
+                log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
+            )
 
     # wrap for video recording
     if args_cli.video:

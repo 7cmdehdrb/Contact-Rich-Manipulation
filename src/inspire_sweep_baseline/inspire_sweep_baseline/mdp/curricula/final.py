@@ -217,3 +217,24 @@ class FinalV1CurriculumCfg:
         FinalCurriculumCfg().obstacle_free_force.params['points'])
     obstacle_weight = _final_schedule('obstacle_contact_penalty', None,
         FinalCurriculumCfg().obstacle_weight.params['points'])
+
+
+@configclass
+class FinalV1TestCurriculumCfg(FinalV1CurriculumCfg):
+    """Apply v1's acceleration schedule to its standalone reward term."""
+
+    object_free_acceleration = _final_schedule('object_acceleration_penalty', 'free_acceleration',
+        FinalV1CurriculumCfg().object_free_acceleration.params['points'], interval=1)
+    object_acceleration_weight = _final_schedule('object_acceleration_penalty', None,
+        FinalV1CurriculumCfg().object_acceleration_weight.params['points'], interval=1)
+
+
+@configclass
+class FinalGoalAccuracyCurriculumCfg(FinalV1CurriculumCfg):
+    obstacle_population = CurriculumTermCfg(func=obstacle_population_schedule, params={
+        'initial_gray': 1, 'initial_white': 1, 'final_gray': 8, 'final_white': 8,
+        'gray_start_iteration': 2500, 'white_start_iteration': 2000, 'interval': 1000,
+    })
+    object_free_speed = None
+    goal_speed_scale = None
+    goal_position_tolerance = None

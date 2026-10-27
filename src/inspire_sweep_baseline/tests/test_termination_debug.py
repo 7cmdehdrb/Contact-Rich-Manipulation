@@ -72,7 +72,10 @@ def test_tasks_use_their_registered_runtime_family():
     contact_runtimes.update({
         "Isaac-Inspire-Final-v0": "runtime.final:FinalEnv",
         "Isaac-Inspire-Final-v1": "runtime.final:FinalV1Env",
+        "Isaac-Inspire-Final-v1-1": "runtime.final:FinalV1Env",
+        "Isaac-Inspire-Final-Test-v1": "runtime.final:FinalV1Env",
         "Isaac-Inspire-Final-v2": "runtime.final:FinalV1Env",
+        "Isaac-Inspire-Final-Test-v2": "runtime.final:FinalV1Env",
     })
     for task, registration in registrations.items():
         runtime = contact_runtimes.get(task, "runtime.sweep:InspireSweepEnv")
