@@ -26,16 +26,11 @@ def unsuccessful_timeout(env):
     return time_out(env) & ~timeout_goal_reached(env)
 
 
-def strict_timeout_goal_reached(env):
-    goal = env.command_manager.get_command("target_goal_pos")
-    distance = (_object_position(env)[:, :2] - goal[:, :2]).norm(dim=-1)
-    return distance < goal_radius(env)
-
-
-def strict_success_at_timeout(env):
+def goal_accuracy_success_at_timeout(env):
+    """Collect metrics and use v1's inclusive timeout partition."""
     env.record_goal_accuracy_metrics()
-    return time_out(env) & strict_timeout_goal_reached(env)
+    return success_at_timeout(env)
 
 
-def strict_unsuccessful_timeout(env):
-    return time_out(env) & ~strict_timeout_goal_reached(env)
+def goal_accuracy_unsuccessful_timeout(env):
+    return unsuccessful_timeout(env)

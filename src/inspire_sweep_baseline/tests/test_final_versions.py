@@ -58,16 +58,32 @@ def test_final_v1_1_exponential_xy_reward_and_v1_isolation(configs, final_reward
 
 def test_goal_accuracy_config_and_population_boundaries(configs):
     rewards = configs('rewards', 'final').FinalGoalAccuracyRewardsCfg()
+    parent_rewards = configs('rewards', 'final').FinalV1RewardsCfg()
     curriculum = configs('curricula', 'final').FinalGoalAccuracyCurriculumCfg()
+    parent_curriculum = configs('curricula', 'final').FinalV1CurriculumCfg()
     terminations = configs('terminations', 'final').FinalGoalAccuracyTerminationsCfg()
     assert rewards.goal_hold.params == {'position_tolerance': .01, 'speed_scale': .05}
     assert rewards.goal_hold.weight == 8.
-    assert rewards.hand_reaching.params['near_radius'] == .01
-    assert rewards.hand_reaching.params['goal_near_radius'] == .01
+    assert rewards.hand_reaching.params == parent_rewards.hand_reaching.params
+    assert rewards.hand_reaching.weight == parent_rewards.hand_reaching.weight
+    assert rewards.hand_reaching.func is parent_rewards.hand_reaching.func
+    assert rewards.hand_contact.params == parent_rewards.hand_contact.params
+    assert rewards.hand_contact.weight == parent_rewards.hand_contact.weight
+    assert rewards.hand_contact.func is parent_rewards.hand_contact.func
     assert rewards.object_speed_penalty is None
-    assert rewards.target_speed_penalty.params['free_speed'] == .1
-    assert rewards.target_speed_penalty.weight == -10.
-    assert curriculum.object_free_speed is None
+    assert rewards.target_speed_penalty.params == parent_rewards.object_speed_penalty.params
+    assert rewards.target_speed_penalty.weight == parent_rewards.object_speed_penalty.weight
+    assert rewards.target_speed_penalty.func is parent_rewards.object_speed_penalty.func
+    assert curriculum.object_free_speed.params == {
+        **parent_curriculum.object_free_speed.params, 'term_name': 'target_speed_penalty'}
+    speed_term = NS(params=dict(rewards.target_speed_penalty.params))
+    speed_env = NS(learning_iteration=0, reward_manager=NS(
+        get_term_cfg=lambda name: speed_term if name == 'target_speed_penalty' else None,
+        set_term_cfg=lambda name, term: None))
+    for iteration, expected_speed in ((0, .1), (499, .1), (500, .09), (1900, .02)):
+        speed_env.learning_iteration = iteration
+        curriculum.object_free_speed.func(speed_env, None, **curriculum.object_free_speed.params)
+        assert speed_term.params['free_speed'] == pytest.approx(expected_speed)
     assert curriculum.goal_speed_scale is None
     assert curriculum.goal_position_tolerance is None
     assert terminations.success.time_out and terminations.time_out.time_out
@@ -82,14 +98,18 @@ def test_goal_accuracy_config_and_population_boundaries(configs):
         assert (result['gray_obstacles'], result['white_obstacles']) == expected
 
 
-def test_goal_accuracy_strict_radius_for_hold_contact_and_timeout(configs, final_rewards, monkeypatch):
+def test_goal_accuracy_inclusive_radius_for_hold_contact_and_timeout(
+        configs, final_rewards, load_mdp, monkeypatch):
     endings = configs('termination_functions', 'final')
+    contact_module = importlib.import_module(
+        '_baseline_cpu_pkg.mdp.reward_functions.contact_sweep_clutter_fusion_holding_scheduled')
     distance = torch.tensor([0., .009, .01, .011])
     speed = torch.zeros(4)
     valid = torch.ones(4, dtype=torch.bool)
     monkeypatch.setattr(final_rewards, 'target_measurements', lambda *args: (distance, speed, valid))
-    monkeypatch.setattr(final_rewards, 'whole_hand_contact_force_w', lambda env: torch.zeros(4, 3))
-    monkeypatch.setattr(final_rewards, 'goal_radius', lambda env: .01)
+    monkeypatch.setattr(contact_module, 'target_measurements', lambda *args: (distance, speed, valid))
+    monkeypatch.setattr(contact_module, 'whole_hand_contact_force_w', lambda env: torch.zeros(4, 3))
+    monkeypatch.setattr(contact_module, 'goal_radius', lambda env: .01)
     monkeypatch.setattr(endings, '_object_position', lambda env: torch.stack(
         (distance, torch.zeros_like(distance), torch.zeros_like(distance)), dim=-1))
     monkeypatch.setattr(endings, 'goal_radius', lambda env: .01)
@@ -97,17 +117,43 @@ def test_goal_accuracy_strict_radius_for_hold_contact_and_timeout(configs, final
     env = NS(sensor_data_fresh=torch.ones(4, dtype=torch.bool),
              reward_manager=NS(get_term_cfg=lambda _: NS(params={'position_tolerance': .01})),
              command_manager=NS(get_command=lambda _: torch.zeros(4, 3)),
-             timeout=torch.tensor([True, True, True, False]),
+             timeout=torch.ones(4, dtype=torch.bool),
              record_goal_accuracy_metrics=lambda: None)
     rewards = configs('rewards', 'final').FinalGoalAccuracyRewardsCfg()
-    hold = final_rewards.strict_goal_settling_centered(env, **rewards.goal_hold.params)
-    contact = final_rewards.strict_hand_contact_or_goal(env)
-    success = endings.strict_success_at_timeout(env)
-    timeout = endings.strict_unsuccessful_timeout(env)
-    assert (hold > 0).tolist() == [True, True, False, False]
-    assert contact.tolist() == [1., 1., 0., 0.]
-    assert success.tolist() == [True, True, False, False]
-    assert timeout.tolist() == [False, False, True, False]
+    hold = rewards.goal_hold.func(env, **rewards.goal_hold.params)
+    contact = rewards.hand_contact.func(env, **rewards.hand_contact.params)
+    success = endings.goal_accuracy_success_at_timeout(env)
+    timeout = endings.goal_accuracy_unsuccessful_timeout(env)
+    assert (hold > 0).tolist() == [True, True, True, False]
+    assert contact.tolist() == [1., 1., 1., 0.]
+    assert success.tolist() == [True, True, True, False]
+    assert timeout.tolist() == [False, False, False, True]
+
+
+def test_goal_accuracy_reaching_expands_at_inclusive_goal_boundary(configs, load_mdp, monkeypatch):
+    module = importlib.import_module(
+        '_baseline_cpu_pkg.mdp.reward_functions.contact_sweep_clutter_fusion_holding_scheduled')
+    reward = configs('rewards', 'final').FinalGoalAccuracyRewardsCfg().hand_reaching
+    distance = torch.tensor([.009, .01, .011])
+    monkeypatch.setattr(module, 'target_measurements', lambda *args: (
+        distance, torch.zeros(3), torch.ones(3, dtype=torch.bool)))
+    monkeypatch.setattr(module, 'goal_radius', lambda env: .01)
+    monkeypatch.setattr(module, '_target_state', lambda env: torch.zeros(3, 3))
+    env = NS(reward_manager=NS(get_term_cfg=lambda _: NS(params={})),
+             scene={'ee_frame': NS(data=NS(target_pos_w=torch.tensor(
+                 [[[.5, 0., 0.]], [[.5, 0., 0.]], [[.5, 0., 0.]]])))},
+             step_dt=.02)
+    term = object.__new__(module.ReachingOrGoal)
+    term._best_distance = torch.full((3,), .4)
+    first = term(env, **reward.params) * env.step_dt
+    torch.testing.assert_close(first, torch.tensor([.4, .4, 0.]))
+    distance[:] = torch.tensor([.02, .009, .009])
+    second = term(env, **reward.params) * env.step_dt
+    torch.testing.assert_close(second, torch.tensor([0., 0., .4]))
+    distance[:] = .02
+    torch.testing.assert_close(term(env, **reward.params), torch.zeros(3))
+    distance[:] = .009
+    torch.testing.assert_close(term(env, **reward.params), torch.zeros(3))
 
 
 def test_goal_accuracy_runtime_metrics_are_logged_on_reset():

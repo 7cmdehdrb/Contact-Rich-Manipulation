@@ -99,7 +99,7 @@ class FinalRewardsCfg:
 
 from ..reward_functions.final import action_rate_penalty, joint_velocity_penalty, ObjectPenalty, ShelfPenalty
 from ..reward_functions.final import exponential_planar_goal_proximity
-from ..reward_functions.final import strict_goal_settling_centered, strict_hand_contact_or_goal
+from ..reward_functions.final import goal_accuracy_settling_centered
 
 
 @configclass
@@ -159,20 +159,11 @@ class FinalV1TestRewardsCfg(FinalV1RewardsCfg):
 
 @configclass
 class FinalGoalAccuracyRewardsCfg(FinalV1RewardsCfg):
-    """Increase precise hold credit and offset the fixed, wider speed allowance."""
+    """Keep v1 reaching and speed costs with a fixed, precise hold radius."""
 
-    hand_reaching = RewTerm(
-        func=ReachingOrGoal, weight=30.0,
-        params={'near_radius': 0.01, 'frame_name': 'ee_frame', 'goal_near_radius': 0.01},
-    )
     goal_hold = RewTerm(
-        func=strict_goal_settling_centered, weight=8.0,
+        func=goal_accuracy_settling_centered, weight=8.0,
         params={'position_tolerance': 0.01, 'speed_scale': 0.05},
     )
-    hand_contact = RewTerm(func=strict_hand_contact_or_goal, weight=1.45,
-                           params={'threshold_n': 0.01})
     object_speed_penalty = None
-    target_speed_penalty = RewTerm(
-        func=exponential_pushing_speed_cost_limit, weight=-10.0,
-        params={'free_speed': 0.1, 'max_cost': 100.0},
-    )
+    target_speed_penalty = FinalV1RewardsCfg().object_speed_penalty

@@ -7,8 +7,7 @@ from .goal_rewards import _target_state, action_rate_l2, joint_vel_l2
 from .contact_sweep_clutter_fusion import combined_active_object_cost, ObjectAccelerationPenalty
 from .sweep import ShelfCollisionPenalty
 from ..termination_functions.sweep import shelf_collision
-from ..common.contact_sweep_clutter_fusion_holding import target_measurements, goal_radius
-from ..common.contact_sweep_clutter_fusion_contacts import whole_hand_contact_force_w
+from ..common.contact_sweep_clutter_fusion_holding import target_measurements
 
 
 def exponential_planar_goal_proximity(env, command_name="target_goal_pos", distance_scale=0.05):
@@ -21,29 +20,17 @@ def exponential_planar_goal_proximity(env, command_name="target_goal_pos", dista
     return torch.exp(-distance / distance_scale)
 
 
-def strict_goal_settling_centered(env, position_tolerance=0.01, speed_scale=0.05,
-                                  command_name="target_goal_pos"):
-    """Centered hold reward only for a valid target strictly inside the goal."""
+def goal_accuracy_settling_centered(env, position_tolerance=0.01, speed_scale=0.05,
+                                    command_name="target_goal_pos"):
+    """Centered hold reward only for a valid target inside the inclusive goal."""
     if not all(math.isfinite(v) and v > 0 for v in (position_tolerance, speed_scale)):
         raise ValueError("Goal radius and speed scale must be finite and positive")
     distance, speed, valid = target_measurements(env, command_name)
     score = torch.exp(-math.log(2) * ((distance / position_tolerance) ** 2
                                       + (speed / speed_scale) ** 2))
     center_bonus = (1.0 - distance / position_tolerance).clamp(0.0, 1.0).square()
-    return torch.where(valid & (distance < position_tolerance),
+    return torch.where(valid & (distance <= position_tolerance),
                        score * (1.0 + center_bonus), 0.0)
-
-
-def strict_hand_contact_or_goal(env, threshold_n=0.01):
-    """Keep measured contact credit; require strict goal occupancy for its proxy."""
-    if not math.isfinite(threshold_n) or threshold_n <= 0:
-        raise ValueError("Contact threshold must be finite and positive")
-    force = whole_hand_contact_force_w(env)
-    contact = (torch.isfinite(force).all(-1) & env.sensor_data_fresh
-               & (torch.linalg.vector_norm(force, dim=-1) >= threshold_n))
-    goal = env.reward_manager.get_term_cfg("goal_hold")
-    distance, _, valid = target_measurements(env, goal.params.get("command_name", "target_goal_pos"))
-    return (contact | (valid & (distance < goal_radius(env)))).to(force.dtype)
 
 
 def action_rate_penalty(env):
