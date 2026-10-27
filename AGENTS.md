@@ -1,20 +1,20 @@
 # Workspace 작업 지침
 
-현재 개발 대상은 `src/inspire_sweep_baseline`과 `src/axia80_feasibility`다.
-`src/trash`는 과거 구현과 자산의 보관 위치이며 빌드 및 기본 테스트 탐색에서 제외한다.
-활성 코드가 필요로 하는 보관 자산은 새 경로에서 읽기 전용으로 참조한다.
+활성 기반 패키지는 `src/inspire_sweep_baseline`이다. **Holding → Final 계열이 가장 중요한 최신 개발 대상**이며, 요청된 정확한 버전을 기준으로 작업한다. 이전 환경의 코드·자산은 현재 환경이 의존하는 경우에만 확인한다.
 
-- 작업 시작: [프로젝트 인계](example/Contact-Rich-Manipulation-Context/01_plan/00_HANDOFF_BRIEF.md)와 [Workspace 안내](example/Contact-Rich-Manipulation-Context/00_guidelines/10_WORKSPACE_GUIDE.md)를 읽는다.
-- 환경 추가·수정: [개발 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)의 Manager 기반 OOP 구성과 로그 규칙을 따르고, [활성 환경](example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)의 상속·등록·실행 안내를 갱신한다.
-- 환경 파일 추가·이동: [환경 파일 구조 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/12_ENVIRONMENT_FILE_STRUCTURE.md)에 따라 역할별 CFG·함수를 분리하고 같은 계열의 버전은 같은 파일에 모은다.
-- 연구 결정·개발 이력: 문서 전용 `example/Contact-Rich-Manipulation-Context`에서 관리한다. 내부 작업에는 그 저장소의 `AGENTS.md`도 적용한다.
-- 참고 환경 설명: `example/Sweep-Policy/docs`에서 관리한다. 일반 SSH·VPN·ROS/Python 지식은 루트 `docs`에 간략히 기록한다.
-- 검증: 현재 변경에 맞는 테스트를 실행하고 실제 실행한 명령·결과·미검증 범위를 개발 로그에 남긴다. 테스트와 실행 안내는 루트 `README.md`를 따른다.
+- 작업 시작: 
+    - [현재 인계](example/Contact-Rich-Manipulation-Context/01_plan/00_HANDOFF_BRIEF.md)를 읽고 요청 대상의 실제 코드를 확인한다. 모든 문서를 연쇄적으로 읽지 않는다.
+    - 환경 수정·추가: [개발 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md)과 [Holding·Final 환경 안내](example/Contact-Rich-Manipulation-Context/02_implementation/08_ACTIVE_ENVIRONMENTS.md)를 읽는다. 
+        - 기존 버전 수정 요청은 그 환경에 직접 적용하고, 새 환경 생성 요청은 지정 부모를 상속하여 부모의 구성·동작을 보존한다.
 
-서브모듈은 독립된 저장소다. 현재 커밋을 기준으로 읽고, 사용자 작업 중인 변경을 보존한다.
+- 구성 보존: `src/inspire_sweep_baseline/inspire_sweep_baseline`의 현재 디렉토리 구조를 유지한다. 요청한 함수·수치·일정만 변경한다. 파일 추가 또는 명시적인 구조 변경 작업에만 [파일 구조 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/12_ENVIRONMENT_FILE_STRUCTURE.md)을 추가로 읽는다.
 
-- Omni 베이스 및 모든 파생 환경(Dex Omni 포함)은 로컬 `mdp/reward_functions/goal_rewards.py`의 `action_rate_l2`·`joint_vel_l2` 페널티를 반드시 사용한다. Arm/Hand 네 항을 분리하고 raw Action 변화량·실제 관절 속도의 제곱합을 사용한다. 평균·정규화·Hand 입력 clamp를 보상 계산에 도입하거나 참고 환경에서 함수를 import하지 않는다. 계수는 Arm Action/Velocity −0.03/−0.03, Hand Action/Velocity −0.03/−0.01을 유지하며 사용자 명시 지시 없이 변경하지 않는다.
+- 기록: 매 수정의 근거·의도·변경 전후·영향·최종 대조·검증 결과와 미검증 범위를 문서 저장소의 개발 로그에 남긴다. 후속 에이전트 인계용이며 사용자에게 읽기나 승인을 요구하지 않는다.
 
-- 학습 로그 정리는 사용자가 명시적으로 요청할 때만 수행한다. 임의·자동 정리는 금지하며 `logs/rsl_rl`은 건드리지 않는다. `logs/TEMP` → `logs/backup`의 환경 ID별 이동·500 iteration 미만 run 삭제 기준은 [학습 로그 정리 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/11_TRAINING_LOG_CLEANUP.md)을 따른다.
+- 학습: `src/inspire_sweep_baseline/scripts/train.py`를 사용한다.
 
-- 학습 실행·명령 안내는 `src/inspire_sweep_baseline/scripts/train.py`를 사용한다. `train_resilient.py`는 사용하거나 권장하지 않는다. 반복 오류가 자동 복구 후에도 지속되어 사용을 중단했으며, 사용자 명시 재사용 요청 전까지 코드는 삭제하지 않고 보존한다. [학습 실행 정책](example/Contact-Rich-Manipulation-Context/00_guidelines/09_DEVELOPMENT_GUIDE.md#학습-실행-정책)을 따른다.
+- 학습 로그: 명시적 요청 없이 정리하지 않으며 `logs/rsl_rl`은 건드리지 않는다. 정리 요청에만 [로그 정리 지침](example/Contact-Rich-Manipulation-Context/00_guidelines/11_TRAINING_LOG_CLEANUP.md)을 읽는다.
+
+- 문서: `example/Contact-Rich-Manipulation-Context`에서 관리하며 내부 작업에는 그 저장소의 `AGENTS.md`를 따른다. 경로·저장소 작업에만 [Workspace 안내](example/Contact-Rich-Manipulation-Context/00_guidelines/10_WORKSPACE_GUIDE.md)를 읽는다.
+
+서브모듈은 독립 저장소다. 현재 커밋과 작업트리의 사용자 변경을 보존한다. 과거 환경 설명은 기본 컨텍스트에 넣지 않으며, 명시적으로 과거 이력을 조사할 때만 [정리 전 백업](example/Contact-Rich-Manipulation-Context/02_implementation/history/2026-10-27_agent_context/README.md)을 읽는다.
