@@ -167,3 +167,10 @@ class FinalGoalAccuracyRewardsCfg(FinalV1RewardsCfg):
     )
     object_speed_penalty = None
     target_speed_penalty = FinalV1RewardsCfg().object_speed_penalty
+
+
+@configclass
+class FinalGoalAccuracyV1RewardsCfg(FinalGoalAccuracyRewardsCfg):
+    """Restore Final v1's outer hold reward while retaining v0's radius and weight."""
+
+    goal_hold = FinalGoalAccuracyRewardsCfg().goal_hold.replace(func=goal_settling_centered)

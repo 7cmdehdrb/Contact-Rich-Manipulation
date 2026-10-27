@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuacy-v1`은 Accuracy v0를 상속하여 1cm 고정 목표를 유지하고 Final v1의 외곽 `goal_hold`와 `goal_speed_scale`을 복원한다. `object_free_speed`는 이미 활성인 v0 구성을 상속한다. weight 8·장애물 증가 일정·계측은 v0 유지. [환경 계약·Final v1 전체 대조](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCUACY_V1_ENVIRONMENT.md).
+
 2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuacy-v0`는 Final v1을 상속해 목표 XY 거리의 체류·접촉 간주·만료 성공 기준을 처음부터 `d ≤ 1cm`로 고정한다. 유효한 목표 점유 중에는 Final-v1과 같이 EEF–타겟 3D Reaching 인정 반경을 10cm에서 1m로 넓힌다. 타겟 속도 페널티는 이름만 변경하고 Final-v1의 수치·커리큘럼을 유지한다. 학습 지표는 `Metrics/` 아래에 기록한다. [독립 상세 명세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCUACY_V0_ENVIRONMENT.md) · [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-goalaccuacy-v0--1cm-정확도) · [검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_goal_accuracy.md).
 
 2026-10-27 추가: `Isaac-Inspire-Final-Test-v1`은 Final v1의 `object_penalty`를 기울기·장애물 변위·가속도 세 로그 term으로 분리한다. 합산 보상·커리큘럼·정책 입력은 v1과 같고, PPO 로그는 `inspire_final_v1_test`로 분리한다. [계약·체크포인트 재개 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-v1-test--object_penalty-세-항-분리) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_v1_test_object_penalty.md).

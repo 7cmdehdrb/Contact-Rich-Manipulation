@@ -725,6 +725,19 @@ if FINAL_GOAL_ACCUACY_V0_TASK_ID not in gym.registry:
     )
 __all__.append("FINAL_GOAL_ACCUACY_V0_TASK_ID")
 
+FINAL_GOAL_ACCUACY_V1_TASK_ID = "Isaac-Inspire-Final-GoalAccuacy-v1"
+if FINAL_GOAL_ACCUACY_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=FINAL_GOAL_ACCUACY_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.final:FinalGoalAccuracyEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.final_envs:FinalGoalAccuracyV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.final_ppo_cfg:FinalGoalAccuracyV1PPORunnerCfg",
+        },
+    )
+__all__.append("FINAL_GOAL_ACCUACY_V1_TASK_ID")
+
 FINAL_V2_TEST_TASK_ID = "Isaac-Inspire-Final-Test-v2"
 if FINAL_V2_TEST_TASK_ID not in gym.registry:
     gym.register(

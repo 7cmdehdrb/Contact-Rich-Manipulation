@@ -239,3 +239,10 @@ class FinalGoalAccuracyCurriculumCfg(FinalV1CurriculumCfg):
         FinalV1CurriculumCfg().object_free_speed.params['points'])
     goal_speed_scale = None
     goal_position_tolerance = None
+
+
+@configclass
+class FinalGoalAccuracyV1CurriculumCfg(FinalGoalAccuracyCurriculumCfg):
+    """Restore settling-speed annealing; target free-speed is already active in v0."""
+
+    goal_speed_scale = FinalV1CurriculumCfg().goal_speed_scale

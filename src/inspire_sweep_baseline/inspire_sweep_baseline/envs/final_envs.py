@@ -78,9 +78,11 @@ class FinalEnvCfg(ManagerBasedRLEnvCfg):
 
 from ..assets.scenes.final import FinalV1SceneCfg
 from ..mdp.curricula.final import FinalV1CurriculumCfg, FinalV1TestCurriculumCfg, FinalGoalAccuracyCurriculumCfg
+from ..mdp.curricula.final import FinalGoalAccuracyV1CurriculumCfg
 from ..mdp.events.final import FinalV1EventsCfg, FinalV2EventsCfg
 from ..mdp.observations.final import FinalV1ObservationsCfg
 from ..mdp.rewards.final import FinalV1RewardsCfg, FinalV1_1RewardsCfg, FinalV1TestRewardsCfg, FinalGoalAccuracyRewardsCfg
+from ..mdp.rewards.final import FinalGoalAccuracyV1RewardsCfg
 from ..mdp.terminations.final import FinalV1TerminationsCfg, FinalGoalAccuracyTerminationsCfg
 
 
@@ -116,6 +118,12 @@ class FinalGoalAccuracyEnvCfg(FinalV1EnvCfg):
     rewards: FinalGoalAccuracyRewardsCfg = FinalGoalAccuracyRewardsCfg()
     terminations: FinalGoalAccuracyTerminationsCfg = FinalGoalAccuracyTerminationsCfg()
     curriculum: FinalGoalAccuracyCurriculumCfg = FinalGoalAccuracyCurriculumCfg()
+
+
+@configclass
+class FinalGoalAccuracyV1EnvCfg(FinalGoalAccuracyEnvCfg):
+    rewards: FinalGoalAccuracyV1RewardsCfg = FinalGoalAccuracyV1RewardsCfg()
+    curriculum: FinalGoalAccuracyV1CurriculumCfg = FinalGoalAccuracyV1CurriculumCfg()
 
 
 @configclass

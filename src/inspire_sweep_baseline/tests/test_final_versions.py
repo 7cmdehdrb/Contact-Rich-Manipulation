@@ -98,6 +98,114 @@ def test_goal_accuracy_config_and_population_boundaries(configs):
         assert (result['gray_obstacles'], result['white_obstacles']) == expected
 
 
+def test_goal_accuracy_v1_complete_reward_and_curriculum_delta(configs):
+    rewards = configs('rewards', 'final')
+    curricula = configs('curricula', 'final')
+    parent = rewards.FinalGoalAccuracyRewardsCfg().to_dict()
+    child_cfg = rewards.FinalGoalAccuracyV1RewardsCfg()
+    child = child_cfg.to_dict()
+    final = rewards.FinalV1RewardsCfg().to_dict()
+    assert list(child) == list(parent)
+    expected = {**parent, 'goal_hold': {**parent['goal_hold'], 'func': final['goal_hold']['func']}}
+    assert child == expected
+    # Compare every reward against Final v1, including the renamed speed term.
+    normalized = dict(child)
+    normalized['object_speed_penalty'] = normalized.pop('target_speed_penalty')
+    assert {k for k in final if final[k] != normalized[k]} == {'goal_hold'}
+    assert normalized['goal_hold'] == {
+        **final['goal_hold'], 'weight': 8.,
+        'params': {'position_tolerance': .01, 'speed_scale': .05}}
+    parent_c = curricula.FinalGoalAccuracyCurriculumCfg().to_dict()
+    child_c_cfg = curricula.FinalGoalAccuracyV1CurriculumCfg()
+    child_c = child_c_cfg.to_dict()
+    final_c = curricula.FinalV1CurriculumCfg().to_dict()
+    assert list(child_c) == list(parent_c)
+    assert child_c == {**parent_c, 'goal_speed_scale': final_c['goal_speed_scale']}
+    assert {k for k in final_c if final_c[k] != child_c[k]} == {
+        'obstacle_population', 'object_free_speed', 'goal_position_tolerance'}
+    assert child_c['goal_position_tolerance'] is None
+    # Running schedules must not mutate class defaults or either parent.
+    child_cfg.goal_hold.params['speed_scale'] = .02
+    child_c_cfg.object_free_speed.params['points'] = ((0, 99.),)
+    assert rewards.FinalGoalAccuracyRewardsCfg().to_dict() == parent
+    assert curricula.FinalGoalAccuracyCurriculumCfg().to_dict() == parent_c
+    assert rewards.FinalV1RewardsCfg().to_dict() == final
+    assert curricula.FinalV1CurriculumCfg().to_dict() == final_c
+
+
+def test_goal_accuracy_v1_speed_schedules_update_live_terms_and_rewind(configs):
+    rewards = configs('rewards', 'final').FinalGoalAccuracyV1RewardsCfg()
+    curriculum = configs('curricula', 'final').FinalGoalAccuracyV1CurriculumCfg()
+    env = NS(reward_manager=NS(
+        get_term_cfg=lambda name: getattr(rewards, name),
+        set_term_cfg=lambda name, term: setattr(rewards, name, term)))
+    cases = {
+        'object_free_speed': [(0, .1), (499, .1), (500, .09), (749, .09),
+                              (750, .0775), (1899, .0275), (1900, .02), (20000, .02), (0, .1)],
+        'goal_speed_scale': [(0, .05), (5999, .05), (6000, .05), (6249, .05),
+                             (6250, .048125), (9999, .021875), (10000, .02), (20000, .02), (0, .05)],
+    }
+    for name, values in cases.items():
+        term = getattr(curriculum, name)
+        for iteration, expected in values:
+            env.learning_iteration = iteration
+            term.func(env, None, **term.params)
+            live = getattr(rewards, term.params['term_name'])
+            assert live.params[term.params['parameter']] == pytest.approx(expected)
+            assert rewards.goal_hold.params['position_tolerance'] == .01
+
+
+def test_goal_accuracy_v1_outer_hold_does_not_expand_success_or_contact(configs, monkeypatch):
+    module = importlib.import_module(
+        '_baseline_cpu_pkg.mdp.reward_functions.contact_sweep_clutter_fusion_holding_scheduled')
+    endings = configs('termination_functions', 'final')
+    distance = torch.tensor([0., .009999, .01, .010001, .015, .019999, .02, .020001])
+    count = len(distance)
+    valid = torch.ones(count, dtype=torch.bool)
+    monkeypatch.setattr(module, 'target_measurements', lambda *args: (distance, torch.zeros(count), valid))
+    monkeypatch.setattr(module, 'whole_hand_contact_force_w', lambda env: torch.zeros(count, 3))
+    monkeypatch.setattr(endings, '_object_position', lambda env: torch.stack(
+        (distance, torch.zeros(count), torch.zeros(count)), dim=-1))
+    monkeypatch.setattr(endings, 'time_out', lambda env: env.timeout)
+    rewards = configs('rewards', 'final').FinalGoalAccuracyV1RewardsCfg()
+    env = NS(sensor_data_fresh=torch.ones(count, dtype=torch.bool),
+             reward_manager=NS(get_term_cfg=lambda name: getattr(rewards, name)),
+             command_manager=NS(get_command=lambda _: torch.zeros(count, 3)),
+             timeout=torch.ones(count, dtype=torch.bool), record_goal_accuracy_metrics=lambda: None)
+    hold = rewards.goal_hold.func(env, **rewards.goal_hold.params)
+    assert (hold > 0).tolist() == [True] * 7 + [False]
+    assert hold[0] == 2. and hold[2] == .5 and hold[6] == .0625
+    assert rewards.hand_contact.func(env).tolist() == [1., 1., 1., 0., 0., 0., 0., 0.]
+    assert endings.goal_accuracy_success_at_timeout(env).tolist() == [True] * 3 + [False] * 5
+    env.timeout[:] = False
+    assert not endings.goal_accuracy_success_at_timeout(env).any()
+    valid[:] = False
+    assert not rewards.goal_hold.func(env, **rewards.goal_hold.params).any()
+
+
+def test_goal_accuracy_v1_registration_env_and_ppo_inheritance(configs, runner_configs):
+    import sys
+    registrations = {}
+    gym = NS(registry=registrations)
+    gym.register = lambda **kwargs: registrations.update({kwargs['id']: kwargs})
+    _execute_definitions(MODULE_ROOT / '__init__.py', {'gym': gym})
+    entry = registrations['Isaac-Inspire-Final-GoalAccuacy-v1']
+    parent = registrations['Isaac-Inspire-Final-GoalAccuacy-v0']
+    assert entry['entry_point'] == parent['entry_point']
+    assert entry['kwargs'] == {
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.final_envs:FinalGoalAccuracyV1EnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.final_ppo_cfg:FinalGoalAccuracyV1PPORunnerCfg'}
+    tree = ast.parse((MODULE_ROOT / 'envs/final_envs.py').read_text())
+    child = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'FinalGoalAccuracyV1EnvCfg')
+    assert [ast.unparse(b) for b in child.bases] == ['FinalGoalAccuracyEnvCfg']
+    assert {n.target.id: ast.unparse(n.value) for n in child.body} == {
+        'rewards': 'FinalGoalAccuracyV1RewardsCfg()', 'curriculum': 'FinalGoalAccuracyV1CurriculumCfg()'}
+    module = _execute_definitions(MODULE_ROOT / 'agent/final_ppo_cfg.py', sys.modules['isaaclab_rl.rsl_rl'].__dict__)
+    old = module.FinalGoalAccuracyPPORunnerCfg().to_dict()
+    new = module.FinalGoalAccuracyV1PPORunnerCfg().to_dict()
+    assert new == {**old, 'experiment_name': 'inspire_final_goal_accuracy_v1'}
+
+
 def test_goal_accuracy_inclusive_radius_for_hold_contact_and_timeout(
         configs, final_rewards, load_mdp, monkeypatch):
     endings = configs('termination_functions', 'final')
