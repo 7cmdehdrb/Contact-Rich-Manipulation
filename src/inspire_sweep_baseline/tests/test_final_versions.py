@@ -189,8 +189,8 @@ def test_goal_accuracy_v1_registration_env_and_ppo_inheritance(configs, runner_c
     gym = NS(registry=registrations)
     gym.register = lambda **kwargs: registrations.update({kwargs['id']: kwargs})
     _execute_definitions(MODULE_ROOT / '__init__.py', {'gym': gym})
-    entry = registrations['Isaac-Inspire-Final-GoalAccuacy-v1']
-    parent = registrations['Isaac-Inspire-Final-GoalAccuacy-v0']
+    entry = registrations['Isaac-Inspire-Final-GoalAccuracy-v1']
+    parent = registrations['Isaac-Inspire-Final-GoalAccuracy-v0']
     assert entry['entry_point'] == parent['entry_point']
     assert entry['kwargs'] == {
         'env_cfg_entry_point': 'inspire_sweep_baseline.envs.final_envs:FinalGoalAccuracyV1EnvCfg',
@@ -220,7 +220,7 @@ def test_goal_accuracy_inclusive_radius_for_hold_contact_and_timeout(
     monkeypatch.setattr(contact_module, 'goal_radius', lambda env: .01)
     monkeypatch.setattr(endings, '_object_position', lambda env: torch.stack(
         (distance, torch.zeros_like(distance), torch.zeros_like(distance)), dim=-1))
-    monkeypatch.setattr(endings, 'goal_radius', lambda env: .01)
+    monkeypatch.setattr(endings, 'goal_radius', lambda env, term_name='goal_hold': .01)
     monkeypatch.setattr(endings, 'time_out', lambda env: env.timeout)
     env = NS(sensor_data_fresh=torch.ones(4, dtype=torch.bool),
              reward_manager=NS(get_term_cfg=lambda _: NS(params={'position_tolerance': .01})),
@@ -721,7 +721,8 @@ def test_final_ppo_consumes_57_and_80_dimensions_and_updates(fusion_models, runn
     spec=importlib.util.spec_from_file_location('_final_model_compat', PROJECT_ROOT/'IsaacLab/source/isaaclab_rl/isaaclab_rl/rsl_rl/utils.py')
     compat=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(compat)
-    for cls in (module.FinalV1PPORunnerCfg,module.FinalV1TestPPORunnerCfg,module.FinalV2PPORunnerCfg):
+    for cls in (module.FinalV1PPORunnerCfg,module.FinalV1TestPPORunnerCfg,module.FinalV2PPORunnerCfg,
+                module.FinalGoalAccuracyV0_1PPORunnerCfg):
         cfg=compat.handle_deprecated_rsl_rl_cfg(cls(), '5.0.1')
         alg=_algorithm(obs,cfg)
         assert alg.actor.get_latent(obs).shape==(8,73)

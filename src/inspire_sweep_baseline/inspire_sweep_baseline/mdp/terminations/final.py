@@ -48,3 +48,21 @@ class FinalV1TerminationsCfg:
 class FinalGoalAccuracyTerminationsCfg(FinalV1TerminationsCfg):
     success = DoneTerm(func=goal_accuracy_success_at_timeout, time_out=True)
     time_out = DoneTerm(func=goal_accuracy_unsuccessful_timeout, time_out=True)
+
+
+@configclass
+class FinalGoalAccuracyV0_1TerminationsCfg(FinalGoalAccuracyTerminationsCfg):
+    object_drop = None
+    object_speed = None
+    shelf_termination = None
+    joint_velocity = None
+    success = None
+    time_out = None
+    object_fall_or_tilt = FinalGoalAccuracyTerminationsCfg().object_drop
+    target_speed = FinalGoalAccuracyTerminationsCfg().object_speed
+    shelf_failure = FinalGoalAccuracyTerminationsCfg().shelf_termination
+    arm_joint_velocity = FinalGoalAccuracyTerminationsCfg().joint_velocity
+    target_goal_success_at_timeout = FinalGoalAccuracyTerminationsCfg().success.replace(
+        params={'goal_hold_term_name': 'target_goal_hold'})
+    target_goal_miss_at_timeout = FinalGoalAccuracyTerminationsCfg().time_out.replace(
+        params={'goal_hold_term_name': 'target_goal_hold'})

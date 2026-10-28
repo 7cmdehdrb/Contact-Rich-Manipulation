@@ -23,6 +23,19 @@ def whole_hand_contact_force_w(env):
     return forces.sum(dim=1)
 
 
+def target_hand_contact_force_w(env):
+    """Select each environment's target reaction from the existing object sensors."""
+    forces = []
+    for name in env.scene['object_collection'].object_names:
+        matrix = env.scene[object_hand_sensor_name(name)].data.force_matrix_w
+        if (matrix is None or matrix.ndim != 4 or matrix.shape[0] != env.num_envs
+                or matrix.shape[1] != 1 or matrix.shape[2] < 1 or matrix.shape[-1] != 3):
+            raise RuntimeError("Object/hand sensor must provide [num_envs, 1, filters, 3] forces")
+        forces.append(-matrix.sum(dim=(1, 2)))
+    rows = torch.arange(env.num_envs, device=env.device)
+    return torch.stack(forces, dim=1)[rows, env.target_id[:, 0].long()]
+
+
 def hand_obstacle_contact_force_w(env):
     """Return only the non-target cylinders' resultant force on the hand.
 

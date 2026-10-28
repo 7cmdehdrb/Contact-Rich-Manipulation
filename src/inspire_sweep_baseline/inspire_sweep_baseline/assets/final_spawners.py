@@ -15,7 +15,7 @@ from .contact_sweep_clutter_fusion_holding_osc_object_random_geometry import fla
 from .realistic_materials import bind_role_materials, material_defaults
 
 
-def shelf_object_meshes(kind):
+def shelf_object_meshes(kind, cube_size=(0.08, 0.08, 0.08)):
     """Return closed convex pieces in metres, all supported at z=0."""
     pieces = []
 
@@ -30,7 +30,9 @@ def shelf_object_meshes(kind):
                         for x, y, z in points], counts, indices))
 
     if kind == 'cube':
-        box((0.08, 0.08, 0.08), (0, 0, 0))
+        if len(cube_size) != 3 or not all(math.isfinite(v) and v > 0 for v in cube_size):
+            raise ValueError('cube_size must contain three positive finite dimensions')
+        box(cube_size, (0, 0, 0))
     elif kind == 'bottle':
         cylinder(.03, .075, 0)
         cylinder(.03, .025, .075, top_radius=.012)
@@ -59,7 +61,7 @@ def spawn_shelf_object(prim_path, cfg, translation=None, orientation=None, **kwa
     stage = sim.get_current_stage()
     root = sim.create_prim(prim_path, 'Xform', translation=translation, orientation=orientation)
     UsdGeom.Xform.Define(stage, prim_path + '/Geometry')
-    for index, (points, counts, indices) in enumerate(shelf_object_meshes(cfg.kind)):
+    for index, (points, counts, indices) in enumerate(shelf_object_meshes(cfg.kind, cfg.cube_size)):
         path = f'{prim_path}/Geometry/Part_{index}'
         mesh = UsdGeom.Mesh.Define(stage, path)
         mesh.CreatePointsAttr(points)
@@ -84,6 +86,7 @@ def spawn_shelf_object(prim_path, cfg, translation=None, orientation=None, **kwa
 class FinalShelfObjectCfg(sim.SpawnerCfg):
     func: Callable = spawn_shelf_object
     kind: str = 'mug'
+    cube_size: tuple[float, float, float] = (0.08, 0.08, 0.08)
     color: tuple[float, float, float] = (.3, .65, .75)
     mass_props: sim.MassPropertiesCfg = sim.MassPropertiesCfg(mass=1.0)
     rigid_props: sim.RigidBodyPropertiesCfg = sim.RigidBodyPropertiesCfg()

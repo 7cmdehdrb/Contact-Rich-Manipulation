@@ -246,3 +246,39 @@ class FinalGoalAccuracyV1CurriculumCfg(FinalGoalAccuracyCurriculumCfg):
     """Restore settling-speed annealing; target free-speed is already active in v0."""
 
     goal_speed_scale = FinalV1CurriculumCfg().goal_speed_scale
+
+
+@configclass
+class FinalGoalAccuracyV0_1CurriculumCfg(FinalGoalAccuracyCurriculumCfg):
+    """Rename subjects without changing any schedule or activation boundary."""
+
+    object_free_speed = None
+    goal_deadzone = None
+    wrench_free_force_change = None
+    wrench_free_moment_change = None
+    wrench_weight = None
+    obstacle_free_force = None
+    obstacle_weight = None
+    target_free_speed = FinalGoalAccuracyCurriculumCfg().object_free_speed
+    target_goal_direction_deadzone = FinalGoalAccuracyCurriculumCfg().goal_deadzone
+    target_goal_speed_scale = None
+    target_goal_position_tolerance = None
+    wrist_wrench_free_force_change = FinalGoalAccuracyCurriculumCfg().wrench_free_force_change
+    wrist_wrench_free_moment_change = FinalGoalAccuracyCurriculumCfg().wrench_free_moment_change
+    wrist_wrench_change_weight = FinalGoalAccuracyCurriculumCfg().wrench_weight
+    obstacle_contact_free_force = FinalGoalAccuracyCurriculumCfg().obstacle_free_force
+    obstacle_contact_weight = FinalGoalAccuracyCurriculumCfg().obstacle_weight
+
+    def __post_init__(self):
+        for name in ('wrist_wrench_free_force_change', 'wrist_wrench_free_moment_change',
+                     'wrist_wrench_change_weight'):
+            getattr(self, name).params['term_name'] = 'wrist_wrench_change_penalty'
+        order = ('obstacle_population', 'obstacle_gray_zone_padding', 'target_free_speed',
+                 'object_free_acceleration', 'object_acceleration_weight',
+                 'target_goal_direction_deadzone', 'wrist_wrench_free_force_change',
+                 'wrist_wrench_free_moment_change', 'wrist_wrench_change_weight',
+                 'obstacle_contact_free_force', 'obstacle_contact_weight')
+        values = {name: self.__dict__[name] for name in order}
+        values.update(self.__dict__)
+        self.__dict__.clear()
+        self.__dict__.update(values)

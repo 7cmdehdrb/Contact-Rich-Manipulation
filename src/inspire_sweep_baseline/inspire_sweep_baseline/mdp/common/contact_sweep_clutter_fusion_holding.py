@@ -28,6 +28,6 @@ def target_measurements(env, command_name='target_goal_pos'):
     return distance, speed, valid
 
 
-def goal_radius(env):
+def goal_radius(env, term_name="goal_hold"):
     """Read the reward manager so curriculum load/rewind reaches every consumer."""
-    return env.reward_manager.get_term_cfg("goal_hold").params["position_tolerance"]
+    return env.reward_manager.get_term_cfg(term_name).params["position_tolerance"]

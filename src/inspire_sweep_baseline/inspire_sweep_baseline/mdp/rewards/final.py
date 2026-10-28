@@ -174,3 +174,44 @@ class FinalGoalAccuracyV1RewardsCfg(FinalGoalAccuracyRewardsCfg):
     """Restore Final v1's outer hold reward while retaining v0's radius and weight."""
 
     goal_hold = FinalGoalAccuracyRewardsCfg().goal_hold.replace(func=goal_settling_centered)
+
+
+from ..reward_functions.dex_rewards import DexReachProgress
+from ..reward_functions.final import goal_accuracy_outer_settling, target_contact_or_goal
+
+
+@configclass
+class FinalGoalAccuracyV0_1RewardsCfg(FinalGoalAccuracyRewardsCfg):
+    """Two-centimeter target control; renamed terms retain parent execution order."""
+
+    hand_reaching = None
+    goal_distance = None
+    goal_hold = None
+    hand_contact = None
+    action_rate_penalty = None
+    joint_velocity_penalty = None
+    wrench_change_penalty = None
+    target_reaching = RewTerm(func=DexReachProgress, weight=30.0,
+        params={'near_radius': 0.20, 'frame_name': 'ee_frame'})
+    target_goal_distance = RewTerm(func=exponential_planar_goal_proximity, weight=3.7,
+        params={'distance_scale': 0.05})
+    target_goal_hold = RewTerm(func=goal_accuracy_outer_settling, weight=8.0,
+        params={'position_tolerance': 0.02, 'outer_radius': 0.06, 'speed_scale': 0.05})
+    target_contact = FinalGoalAccuracyRewardsCfg().hand_contact.replace(func=target_contact_or_goal)
+    robot_action_rate_penalty = FinalGoalAccuracyRewardsCfg().action_rate_penalty
+    robot_joint_velocity_penalty = FinalGoalAccuracyRewardsCfg().joint_velocity_penalty
+    wrist_wrench_change_penalty = FinalGoalAccuracyRewardsCfg().wrench_change_penalty
+    shelf_penalty = FinalGoalAccuracyRewardsCfg().shelf_penalty.replace(
+        params={'termination_term_name': 'shelf_failure'})
+
+    def __post_init__(self):
+        # Dataclasses put renamed child fields after inherited fields. Managers
+        # iterate __dict__, so explicitly restore the parent's active order.
+        order = ('target_reaching', 'target_goal_distance', 'target_goal_hold',
+                 'target_contact', 'robot_action_rate_penalty', 'robot_joint_velocity_penalty',
+                 'object_penalty', 'shelf_penalty', 'obstacle_contact_penalty',
+                 'wrist_wrench_change_penalty', 'target_speed_penalty')
+        values = {name: self.__dict__[name] for name in order}
+        values.update(self.__dict__)
+        self.__dict__.clear()
+        self.__dict__.update(values)

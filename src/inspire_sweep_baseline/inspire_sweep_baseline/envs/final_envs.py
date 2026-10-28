@@ -141,3 +141,17 @@ class FinalV2TestEnvCfg(FinalV2EnvCfg):
         self.events.object_spawn.params['gray_obstacles'] = population['final_gray']
         self.events.object_spawn.params['white_obstacles'] = population['final_white']
         self.curriculum.obstacle_population = None
+
+
+from ..assets.scenes.final import FinalGoalAccuracyV0_1SceneCfg
+from ..mdp.rewards.final import FinalGoalAccuracyV0_1RewardsCfg
+from ..mdp.curricula.final import FinalGoalAccuracyV0_1CurriculumCfg
+from ..mdp.terminations.final import FinalGoalAccuracyV0_1TerminationsCfg
+
+
+@configclass
+class FinalGoalAccuracyV0_1EnvCfg(FinalGoalAccuracyEnvCfg):
+    scene: FinalGoalAccuracyV0_1SceneCfg = FinalGoalAccuracyV0_1SceneCfg(num_envs=4096, env_spacing=2.5)
+    rewards: FinalGoalAccuracyV0_1RewardsCfg = FinalGoalAccuracyV0_1RewardsCfg()
+    curriculum: FinalGoalAccuracyV0_1CurriculumCfg = FinalGoalAccuracyV0_1CurriculumCfg()
+    terminations: FinalGoalAccuracyV0_1TerminationsCfg = FinalGoalAccuracyV0_1TerminationsCfg()

@@ -8,6 +8,8 @@ from .contact_sweep_clutter_fusion import combined_active_object_cost, ObjectAcc
 from .sweep import ShelfCollisionPenalty
 from ..termination_functions.sweep import shelf_collision
 from ..common.contact_sweep_clutter_fusion_holding import target_measurements
+from ..common.contact_sweep_clutter_fusion_holding import goal_radius
+from ..common.contact_sweep_clutter_fusion_contacts import target_hand_contact_force_w
 
 
 def exponential_planar_goal_proximity(env, command_name="target_goal_pos", distance_scale=0.05):
@@ -67,11 +69,39 @@ class ObjectPenalty(ManagerTermBase):
 
 
 class ShelfPenalty(ShelfCollisionPenalty):
-    def __call__(self, env):
+    def __call__(self, env, termination_term_name='shelf_termination'):
         # The old event is collision-only, not the new collision OR movement
         # termination. Re-evaluate exactly that component with live thresholds.
-        params = env.termination_manager.get_term_cfg('shelf_termination').params
+        params = env.termination_manager.get_term_cfg(termination_term_name).params
         collision = shelf_collision(env, threshold=params.get('threshold', .1),
             check_fingers=params.get('check_fingers', False),
             wrist_clearance=params.get('wrist_clearance', .03))
         return 3.0 * collision.float() / env.step_dt + 0.5 * super().__call__(env)
+
+
+def goal_accuracy_outer_settling(env, position_tolerance=0.02, outer_radius=0.06,
+                                 speed_scale=0.05, command_name="target_goal_pos"):
+    """v0_1 raw hold rate: centered inner score joined to a quadratic outer tail."""
+    if not all(math.isfinite(v) and v > 0 for v in
+               (position_tolerance, outer_radius, speed_scale)) or outer_radius <= position_tolerance:
+        raise ValueError("Expected 0 < goal radius < outer radius and positive speed scale")
+    distance, speed, valid = target_measurements(env, command_name)
+    inner = torch.exp(-math.log(2) * (distance / position_tolerance).square())
+    inner *= 1.0 + (1.0 - distance / position_tolerance).clamp(0.0, 1.0).square()
+    outer = 0.5 * ((outer_radius - distance) / (outer_radius - position_tolerance)).clamp(0.0, 1.0).square()
+    rate = torch.where(distance <= position_tolerance, inner, outer)
+    rate *= torch.exp(-math.log(2) * (speed / speed_scale).square())
+    return torch.where(valid, rate, 0.0)
+
+
+def target_contact_or_goal(env, threshold_n=0.01, goal_hold_term_name="target_goal_hold"):
+    """Credit target/hand resultant force or valid inclusive goal occupancy once."""
+    if not math.isfinite(threshold_n) or threshold_n <= 0:
+        raise ValueError("Contact threshold must be finite and positive")
+    force = target_hand_contact_force_w(env)
+    contact = (env.sensor_data_fresh & torch.isfinite(force).all(-1)
+               & (torch.linalg.vector_norm(force, dim=-1) >= threshold_n))
+    hold = env.reward_manager.get_term_cfg(goal_hold_term_name)
+    distance, _, valid = target_measurements(env, hold.params.get('command_name', 'target_goal_pos'))
+    in_goal = valid & (distance <= goal_radius(env, goal_hold_term_name))
+    return (contact | in_goal).to(force.dtype)

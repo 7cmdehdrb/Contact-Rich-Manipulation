@@ -172,3 +172,12 @@ class FinalV1SceneCfg(FinalSceneCfg):
                 assets_cfg=final_prop_variants(original, target=name == 'mass_cylinder'),
                 random_choice=True, activate_contact_sensors=True,
             )
+
+
+@configclass
+class FinalGoalAccuracyV0_1SceneCfg(FinalV1SceneCfg):
+    def configure_population_capacity(self, max_gray_obstacles, max_white_obstacles, observation_slots=20):
+        super().configure_population_capacity(max_gray_obstacles, max_white_obstacles, observation_slots)
+        for variant in self.object_collection.rigid_objects['mass_cylinder'].spawn.assets_cfg:
+            if getattr(variant, 'kind', None) == 'cube':
+                variant.cube_size = (0.06, 0.08, 0.10)
