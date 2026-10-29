@@ -1385,3 +1385,5 @@ ObjectRandom-v1 개수 일정(2026-10-23 후속): 0~2,999는Gray1/White1,3,000�
 [상속·설정·play 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/CONTACT_SWEEP_CLUTTER_FUSION_HOLDING_OBJECT_RANDOM_TEST_V0_ENVIRONMENT.md) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-23_holding_object_random_test_v0.md).
 
 2026-10-28 추가: `Isaac-Inspire-Final-GoalAccuracy-v0_1`은 Accuracy v0를 상속한다. 2cm 목표, 타겟 접촉, 고정 20cm Reaching, 6cm 외곽 Hold, `3.7 exp(-20d)` 거리 보상과 0.06×0.08×0.10m 큐브 타겟을 적용한다. 기존 ±10% 크기 랜덤화와 reset은 유지한다. Manager 이름·검증 범위는 [구현 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_1_ENVIRONMENT.md)을 따른다. 기존 v0/v1의 Gym ID도 `Accuracy`로 교정했으며 동작은 보존한다.
+
+2026-10-29 추가: `Isaac-Inspire-Final-GoalAccuracy-v0_2`는 v0_1을 직접 상속하고, timeout 시 타겟–목표 XY 거리가 **2cm 미만**이면 마지막 transition에 **+30**을 한 번 지급한다. 다른 보상·종료·커리큘럼은 그대로 유지한다. [환경 계약 및 검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_ENVIRONMENT.md).

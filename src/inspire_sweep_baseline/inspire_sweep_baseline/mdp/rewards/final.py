@@ -231,6 +231,7 @@ from ..reward_functions.dex_rewards import DexReachProgress
 from ..reward_functions.final import (
     goal_accuracy_outer_settling,
     target_contact_or_goal,
+    target_goal_timeout_bonus,
 )
 
 
@@ -290,3 +291,14 @@ class FinalGoalAccuracyV0_1RewardsCfg(FinalGoalAccuracyRewardsCfg):
         values.update(self.__dict__)
         self.__dict__.clear()
         self.__dict__.update(values)
+
+
+@configclass
+class FinalGoalAccuracyV0_2RewardsCfg(FinalGoalAccuracyV0_1RewardsCfg):
+    """Preserve v0_1 and append a one-shot +30 reward at a successful timeout."""
+
+    target_goal_timeout_bonus = RewTerm(
+        func=target_goal_timeout_bonus,
+        weight=30.0,
+        params={"position_tolerance": 0.02},
+    )

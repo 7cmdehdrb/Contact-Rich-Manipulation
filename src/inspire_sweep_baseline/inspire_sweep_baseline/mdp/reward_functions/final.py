@@ -7,6 +7,7 @@ from .goal_rewards import _target_state, action_rate_l2, joint_vel_l2
 from .contact_sweep_clutter_fusion import combined_active_object_cost, ObjectAccelerationPenalty
 from .sweep import ShelfCollisionPenalty
 from ..termination_functions.sweep import shelf_collision
+from ..termination_functions.goal_terminations import _object_position
 from ..common.contact_sweep_clutter_fusion_holding import target_measurements
 from ..common.contact_sweep_clutter_fusion_holding import goal_radius
 from ..common.contact_sweep_clutter_fusion_contacts import target_hand_contact_force_w
@@ -105,3 +106,19 @@ def target_contact_or_goal(env, threshold_n=0.01, goal_hold_term_name="target_go
     distance, _, valid = target_measurements(env, hold.params.get('command_name', 'target_goal_pos'))
     in_goal = valid & (distance <= goal_radius(env, goal_hold_term_name))
     return (contact | in_goal).to(force.dtype)
+
+
+def target_goal_timeout_bonus(env, position_tolerance=0.02, command_name="target_goal_pos"):
+    """Unit terminal event for strict XY proximity, independent of the step size.
+
+    The timeout transition is rewarded before automatic reset, so each episode
+    can receive this event only once. No speed, height, or hold-time gate applies.
+    """
+    goal = env.command_manager.get_command(command_name)[:, :2]
+    target = _object_position(env)[:, :2]
+    distance = torch.linalg.vector_norm(target - goal, dim=-1)
+    # TerminationManager has already evaluated this step, before rewards/reset.
+    success = env.termination_manager.get_term("target_goal_success_at_timeout")
+    reached_at_timeout = success & (distance < position_tolerance)
+    # RewardManager multiplies by weight * step_dt: weight=30 pays exactly +30.
+    return reached_at_timeout.float() / env.step_dt

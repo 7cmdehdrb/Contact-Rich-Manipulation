@@ -267,3 +267,59 @@ def test_renamed_wrench_budget_preserves_order_and_cap(configs):
         totals.append(term.func._reward_budget(env, .05))
     torch.testing.assert_close(totals[0], totals[1])
     torch.testing.assert_close(totals[1], torch.tensor([150., 0.]))
+
+
+def test_v0_2_adds_only_timeout_bonus(configs, runner_configs):
+    module = configs('rewards', 'final')
+    parent = module.FinalGoalAccuracyV0_1RewardsCfg()
+    snapshot = parent.to_dict()
+    child = module.FinalGoalAccuracyV0_2RewardsCfg()
+    assert list(active(child)) == [*active(parent), 'target_goal_timeout_bonus']
+    assert_ordered_equal(
+        {k: v for k, v in child.to_dict().items() if k != 'target_goal_timeout_bonus'}, snapshot)
+    child.target_goal_hold.params['position_tolerance'] = .5
+    assert_ordered_equal(parent.to_dict(), snapshot)
+    assert_ordered_equal(module.FinalGoalAccuracyV0_1RewardsCfg().to_dict(), snapshot)
+    tree = ast.parse((MODULE_ROOT/'envs/final_envs.py').read_text())
+    cfg = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'FinalGoalAccuracyV0_2EnvCfg')
+    assert [ast.unparse(b) for b in cfg.bases] == ['FinalGoalAccuracyV0_1EnvCfg']
+    assert [n.target.id for n in cfg.body if isinstance(n, ast.AnnAssign)] == ['rewards']
+    registrations = {}
+    gym = NS(registry=registrations, register=lambda **kw: registrations.update({kw['id']: kw}))
+    _execute_definitions(MODULE_ROOT/'__init__.py', {'gym': gym})
+    entry = registrations['Isaac-Inspire-Final-GoalAccuracy-v0_2']
+    assert entry['entry_point'] == registrations['Isaac-Inspire-Final-GoalAccuracy-v0_1']['entry_point']
+    assert entry['kwargs']['env_cfg_entry_point'].endswith(':FinalGoalAccuracyV0_2EnvCfg')
+    assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':FinalGoalAccuracyV0_2PPORunnerCfg')
+    ppo = _execute_definitions(MODULE_ROOT/'agent/final_ppo_cfg.py', sys.modules['isaaclab_rl.rsl_rl'].__dict__)
+    assert ppo.FinalGoalAccuracyV0_2PPORunnerCfg().to_dict() == {
+        **ppo.FinalGoalAccuracyV0_1PPORunnerCfg().to_dict(), 'experiment_name': 'inspire_final_goal_accuracy_v0_2'}
+
+
+@pytest.mark.parametrize('dt', [.01, .02, .04])
+def test_v0_2_timeout_bonus_strict_xy_once_per_episode(configs, final_rewards, monkeypatch, dt):
+    term = configs('rewards', 'final').FinalGoalAccuracyV0_2RewardsCfg().target_goal_timeout_bonus
+    positions = torch.tensor([
+        [0., 0., 10.], [.02-1e-6, 0., 0.], [.02, 0., 0.],
+        [.02+1e-6, 0., 0.], [.015, .015, 0.], [0., -.019, -10.],
+    ])
+    monkeypatch.setattr(final_rewards, '_object_position', lambda env: positions)
+    env = NS(step_dt=dt, expired=torch.zeros(6, dtype=torch.bool),
+             command_manager=NS(get_command=lambda name: torch.zeros(6, 3)))
+    def get_term(name):
+        assert name == 'target_goal_success_at_timeout'
+        return env.expired & (torch.linalg.vector_norm(positions[:, :2], dim=-1) <= .02)
+    env.termination_manager = NS(get_term=get_term)
+    def reward():
+        return term.func(env, **term.params) * term.weight * env.step_dt
+    total = torch.zeros(6)
+    for _ in range(10):  # Goal occupancy alone must never pay the event.
+        total += reward()
+    torch.testing.assert_close(total, torch.zeros(6))
+    env.expired[:] = True
+    total += reward()
+    torch.testing.assert_close(total, torch.tensor([30., 30., 0., 0., 0., 30.]))
+    env.expired[:] = False  # Automatic reset starts a new episode.
+    torch.testing.assert_close(reward(), torch.zeros(6))
+    env.expired[0] = True  # Per-environment timeouts stay independent.
+    torch.testing.assert_close(reward(), torch.tensor([30., 0., 0., 0., 0., 0.]))
