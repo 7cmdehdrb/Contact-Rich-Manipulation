@@ -295,10 +295,22 @@ class FinalGoalAccuracyV0_1RewardsCfg(FinalGoalAccuracyRewardsCfg):
 
 @configclass
 class FinalGoalAccuracyV0_2RewardsCfg(FinalGoalAccuracyV0_1RewardsCfg):
-    """Preserve v0_1 and append a one-shot +30 reward at a successful timeout."""
+    """Preserve v0_1 and add a one-shot +30 reward at a successful timeout."""
 
     target_goal_timeout_bonus = RewTerm(
         func=target_goal_timeout_bonus,
         weight=30.0,
         params={"position_tolerance": 0.02},
     )
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Wrench's cumulative budget must see every positive reward this step.
+        bonus = self.__dict__.pop("target_goal_timeout_bonus")
+        values = {}
+        for name, value in self.__dict__.items():
+            if name == "wrist_wrench_change_penalty":
+                values["target_goal_timeout_bonus"] = bonus
+            values[name] = value
+        self.__dict__.clear()
+        self.__dict__.update(values)

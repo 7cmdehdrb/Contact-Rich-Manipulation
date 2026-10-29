@@ -274,7 +274,9 @@ def test_v0_2_adds_only_timeout_bonus(configs, runner_configs):
     parent = module.FinalGoalAccuracyV0_1RewardsCfg()
     snapshot = parent.to_dict()
     child = module.FinalGoalAccuracyV0_2RewardsCfg()
-    assert list(active(child)) == [*active(parent), 'target_goal_timeout_bonus']
+    expected_order = list(active(parent))
+    expected_order.insert(expected_order.index('wrist_wrench_change_penalty'), 'target_goal_timeout_bonus')
+    assert list(active(child)) == expected_order
     assert_ordered_equal(
         {k: v for k, v in child.to_dict().items() if k != 'target_goal_timeout_bonus'}, snapshot)
     child.target_goal_hold.params['position_tolerance'] = .5
@@ -294,6 +296,27 @@ def test_v0_2_adds_only_timeout_bonus(configs, runner_configs):
     ppo = _execute_definitions(MODULE_ROOT/'agent/final_ppo_cfg.py', sys.modules['isaaclab_rl.rsl_rl'].__dict__)
     assert ppo.FinalGoalAccuracyV0_2PPORunnerCfg().to_dict() == {
         **ppo.FinalGoalAccuracyV0_1PPORunnerCfg().to_dict(), 'experiment_name': 'inspire_final_goal_accuracy_v0_2'}
+
+
+def test_v0_2_wrench_budget_includes_same_step_timeout_bonus(configs):
+    cfg = configs('rewards', 'final').FinalGoalAccuracyV0_2RewardsCfg()
+    term = cfg.wrist_wrench_change_penalty
+    env = NS(num_envs=2, device='cpu', step_dt=.02)
+    term.func = term.func(term, env)
+    term.weight = -.1  # Exercise the guard after the curriculum enables it.
+    names = list(active(cfg))
+    sums = {name: torch.zeros(2) for name in names}
+    sums['target_reaching'][:] = 4.
+    sums['wrist_wrench_change_penalty'][:] = -.2  # Existing 5% budget exhausted.
+    env.reward_manager = NS(active_terms=names, get_term_cfg=lambda name: getattr(cfg, name),
+                            _episode_sums=sums)
+    # RewardManager updates each term's sum before computing the following term.
+    sums['target_goal_timeout_bonus'][:] = torch.tensor([30., 0.])
+    budget = term.func._reward_budget(env, .05)
+    torch.testing.assert_close(budget, torch.tensor([750., 0.]))
+    assert 'target_goal_timeout_bonus' in term.func._positive_names
+    sums['target_goal_timeout_bonus'].zero_()
+    torch.testing.assert_close(term.func._reward_budget(env, .05), torch.zeros(2))
 
 
 @pytest.mark.parametrize('dt', [.01, .02, .04])
