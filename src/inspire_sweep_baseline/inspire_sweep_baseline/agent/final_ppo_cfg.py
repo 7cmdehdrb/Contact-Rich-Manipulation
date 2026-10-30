@@ -93,5 +93,10 @@ class FinalGoalAccuracyV0_2PPORunnerCfg(FinalGoalAccuracyV0_1PPORunnerCfg):
 
 
 @configclass
+class FinalGoalAccuracyV0_3PPORunnerCfg(FinalGoalAccuracyV0_2PPORunnerCfg):
+    experiment_name = 'inspire_final_goal_accuracy_v0_3'
+
+
+@configclass
 class FinalV2PPORunnerCfg(FinalV1PPORunnerCfg):
     experiment_name = 'inspire_final_v2'

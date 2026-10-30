@@ -113,8 +113,9 @@ def test_hold_contact_and_timeout_boundaries(configs, final_rewards, monkeypatch
     assert len(calls) == 2
 
 
-def test_contact_selects_target_not_other_objects_or_shelf(configs, final_rewards, monkeypatch):
-    n = 6
+@pytest.mark.parametrize('version', ['V0_1', 'V0_3'])
+def test_contact_selects_target_not_other_objects_or_shelf(configs, final_rewards, monkeypatch, version):
+    n = 8
     matrices = [torch.zeros(n, 1, 2, 3) for _ in range(2)]
     matrices[0][0, 0, 0, 0] = 3  # non-target contact only
     matrices[1][1, 0, 0, 0] = .01  # target exactly at threshold
@@ -123,18 +124,20 @@ def test_contact_selects_target_not_other_objects_or_shelf(configs, final_reward
     matrices[0][4, 0, 0, 0] = float('nan')
     matrices[1][5, 0, 0, 0] = float('nan')  # non-target NaN must not leak
     matrices[0][5, 0, 0, 0] = 1
+    matrices[0][6, 0, 0, 0] = .01 - 1e-6  # Below the contact threshold.
+    matrices[0][7, 0, 0, 0] = .01 + 1e-6  # Above the contact threshold.
     scene = {'object_collection': NS(object_names=['a', 'b']),
              'whole_hand_contact': NS(data=NS(net_forces_w=torch.full((n, 1, 3), 100.)))}
     for name, matrix in zip(['a', 'b'], matrices):
         scene['hand_contact_'+name] = NS(data=NS(force_matrix_w=matrix))
-    cfg = configs('rewards', 'final').FinalGoalAccuracyV0_1RewardsCfg()
-    env = NS(num_envs=n, device='cpu', target_id=torch.tensor([[1], [1], [0], [0], [0], [0]]),
-             scene=scene, sensor_data_fresh=torch.tensor([1, 1, 1, 0, 1, 1], dtype=torch.bool),
+    cfg = getattr(configs('rewards', 'final'), f'FinalGoalAccuracy{version}RewardsCfg')()
+    env = NS(num_envs=n, device='cpu', target_id=torch.tensor([[1], [1], [0], [0], [0], [0], [0], [0]]),
+             scene=scene, sensor_data_fresh=torch.tensor([1, 1, 1, 0, 1, 1, 1, 1], dtype=torch.bool),
              reward_manager=NS(get_term_cfg=lambda name: getattr(cfg, name)))
     d = torch.full((n,), .1); valid = torch.zeros(n, dtype=torch.bool)
     monkeypatch.setattr(final_rewards, 'target_measurements', lambda *a: (d, d, valid))
     term = cfg.target_contact
-    assert term.func(env, **term.params).tolist() == [0, 1, 0, 0, 0, 1]
+    assert term.func(env, **term.params).tolist() == [0, 1, 0, 0, 0, 1, 0, 1]
     d[:] = .02; valid[:] = True
     assert term.func(env, **term.params).tolist() == [1]*n  # OR, no freshness/speed gate for goal
 
@@ -234,7 +237,8 @@ def test_cuboid_collision_bounds_and_legacy_cube(load_mdp, scale):
         assert placed[:, 2].min() == pytest.approx(1.05)
 
 
-def test_all_terms_pass_official_argument_validation(configs, omni_config):
+@pytest.mark.parametrize('version', ['V0_1', 'V0_3'])
+def test_all_terms_pass_official_argument_validation(configs, omni_config, version):
     import inspect
     from conftest import PROJECT_ROOT
     tree = ast.parse((PROJECT_ROOT/'IsaacLab/source/isaaclab/isaaclab/managers/manager_base.py').read_text())
@@ -245,7 +249,8 @@ def test_all_terms_pass_official_argument_validation(configs, omni_config):
     exec(compile(ast.Module(body=[fn], type_ignores=[]), 'official-validator', 'exec'), ns)
     for role, suffix, min_argc in [('rewards', 'RewardsCfg', 1), ('curricula', 'CurriculumCfg', 2),
                                   ('terminations', 'TerminationsCfg', 1)]:
-        cfg = getattr(configs(role, 'final'), 'FinalGoalAccuracyV0_1'+suffix)()
+        cfg_version = version if role == 'rewards' else 'V0_1'
+        cfg = getattr(configs(role, 'final'), 'FinalGoalAccuracy'+cfg_version+suffix)()
         for name, term in active(cfg).items():
             ns[fn.name](NS(_env=NS(sim=NS(is_playing=lambda:False))), name, term, min_argc=min_argc)
 
@@ -298,8 +303,9 @@ def test_v0_2_adds_only_timeout_bonus(configs, runner_configs):
         **ppo.FinalGoalAccuracyV0_1PPORunnerCfg().to_dict(), 'experiment_name': 'inspire_final_goal_accuracy_v0_2'}
 
 
-def test_v0_2_wrench_budget_includes_same_step_timeout_bonus(configs):
-    cfg = configs('rewards', 'final').FinalGoalAccuracyV0_2RewardsCfg()
+@pytest.mark.parametrize('version,bonus', [('V0_2', 30.), ('V0_3', 100.)])
+def test_wrench_budget_includes_same_step_timeout_bonus(configs, version, bonus):
+    cfg = getattr(configs('rewards', 'final'), f'FinalGoalAccuracy{version}RewardsCfg')()
     term = cfg.wrist_wrench_change_penalty
     env = NS(num_envs=2, device='cpu', step_dt=.02)
     term.func = term.func(term, env)
@@ -311,9 +317,9 @@ def test_v0_2_wrench_budget_includes_same_step_timeout_bonus(configs):
     env.reward_manager = NS(active_terms=names, get_term_cfg=lambda name: getattr(cfg, name),
                             _episode_sums=sums)
     # RewardManager updates each term's sum before computing the following term.
-    sums['target_goal_timeout_bonus'][:] = torch.tensor([30., 0.])
+    sums['target_goal_timeout_bonus'][:] = torch.tensor([bonus, 0.])
     budget = term.func._reward_budget(env, .05)
-    torch.testing.assert_close(budget, torch.tensor([750., 0.]))
+    torch.testing.assert_close(budget, torch.tensor([bonus * 25., 0.]))
     assert 'target_goal_timeout_bonus' in term.func._positive_names
     sums['target_goal_timeout_bonus'].zero_()
     torch.testing.assert_close(term.func._reward_budget(env, .05), torch.zeros(2))
@@ -346,3 +352,119 @@ def test_v0_2_timeout_bonus_strict_xy_once_per_episode(configs, final_rewards, m
     torch.testing.assert_close(reward(), torch.zeros(6))
     env.expired[0] = True  # Per-environment timeouts stay independent.
     torch.testing.assert_close(reward(), torch.tensor([30., 0., 0., 0., 0., 0.]))
+
+
+def test_v0_3_changes_only_four_rewards_and_isolates_parents(configs, runner_configs):
+    module = configs('rewards', 'final')
+    classes = [module.FinalGoalAccuracyRewardsCfg, module.FinalGoalAccuracyV0_1RewardsCfg,
+               module.FinalGoalAccuracyV0_2RewardsCfg, module.FinalGoalAccuracyV1RewardsCfg]
+    snapshots = [cls().to_dict() for cls in classes]
+    parent = classes[2]()
+    child = module.FinalGoalAccuracyV0_3RewardsCfg()
+    assert type(child).__bases__ == (type(parent),)
+    assert list(active(child)) == list(active(parent))
+    expected = parent.to_dict()
+    expected['target_contact']['weight'] = .3625
+    expected['target_goal_hold']['params']['position_tolerance'] = .03
+    expected['target_goal_distance'] = module.FinalRewardsCfg().goal_distance.to_dict()
+    event = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.goal_rewards').success_event
+    assert child.target_goal_timeout_bonus.func is event
+    assert child.target_goal_timeout_bonus.weight == 100.
+    assert child.target_goal_timeout_bonus.params == {'termination_name': 'target_goal_success_at_timeout'}
+    expected['target_goal_timeout_bonus'] = child.target_goal_timeout_bonus.to_dict()
+    assert_ordered_equal(child.to_dict(), expected)
+    for term in active(child).values():
+        term.params['isolation_probe'] = True
+    for cls, snapshot in zip(classes, snapshots):
+        assert_ordered_equal(cls().to_dict(), snapshot)
+
+    tree = ast.parse((MODULE_ROOT/'envs/final_envs.py').read_text())
+    cfg = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'FinalGoalAccuracyV0_3EnvCfg')
+    assert [ast.unparse(b) for b in cfg.bases] == ['FinalGoalAccuracyV0_2EnvCfg']
+    assert [n.target.id for n in cfg.body if isinstance(n, ast.AnnAssign)] == ['rewards']
+    registrations = {}
+    gym = NS(registry=registrations, register=lambda **kw: registrations.update({kw['id']: kw}))
+    _execute_definitions(MODULE_ROOT/'__init__.py', {'gym': gym})
+    entry = registrations['Isaac-Inspire-Final-GoalAccuracy-v0_3']
+    assert entry['entry_point'] == registrations['Isaac-Inspire-Final-GoalAccuracy-v0_2']['entry_point']
+    assert entry['kwargs']['env_cfg_entry_point'].endswith(':FinalGoalAccuracyV0_3EnvCfg')
+    assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':FinalGoalAccuracyV0_3PPORunnerCfg')
+    ppo = _execute_definitions(MODULE_ROOT/'agent/final_ppo_cfg.py', sys.modules['isaaclab_rl.rsl_rl'].__dict__)
+    assert ppo.FinalGoalAccuracyV0_3PPORunnerCfg().to_dict() == {
+        **ppo.FinalGoalAccuracyV0_2PPORunnerCfg().to_dict(), 'experiment_name': 'inspire_final_goal_accuracy_v0_3'}
+
+
+@pytest.mark.parametrize('dt', [.01, .02, .04])
+def test_v0_3_goal_boundary_contact_hold_and_timeout(configs, final_rewards, monkeypatch, dt):
+    cfg = configs('rewards', 'final').FinalGoalAccuracyV0_3RewardsCfg()
+    terms = configs('terminations', 'final').FinalGoalAccuracyV0_1TerminationsCfg()
+    distance = torch.tensor([0., .03-1e-6, .03, .03+1e-6, .045, .06])
+    speed = torch.zeros_like(distance)
+    valid = torch.ones_like(distance, dtype=torch.bool)
+    monkeypatch.setattr(final_rewards, 'target_measurements', lambda *a: (distance, speed, valid))
+    monkeypatch.setattr(final_rewards, 'target_hand_contact_force_w', lambda env: torch.zeros(6, 3))
+    endings = configs('termination_functions', 'final')
+    positions = torch.zeros(6, 3)
+    positions[:, 0] = distance
+    monkeypatch.setattr(endings, '_object_position', lambda env: positions)
+    monkeypatch.setattr(endings, 'time_out', lambda env: env.expired)
+    env = NS(step_dt=dt, expired=torch.zeros_like(valid), sensor_data_fresh=torch.ones_like(valid),
+             reward_manager=NS(get_term_cfg=lambda name: getattr(cfg, name)),
+             command_manager=NS(get_command=lambda name: torch.zeros(6, 3)),
+             record_goal_accuracy_metrics=lambda: None)
+    def termination(name):
+        term = getattr(terms, name)
+        return term.func(env, **term.params)
+    env.termination_manager = NS(get_term=termination)
+    def payout(name):
+        term = getattr(cfg, name)
+        return term.func(env, **term.params) * term.weight * dt
+    torch.testing.assert_close(payout('target_contact'), (distance <= .03).float() * .3625 * dt)
+    hold = payout('target_goal_hold') / dt
+    torch.testing.assert_close(hold[[0, 2, 4, 5]], torch.tensor([16., 4., 1., 0.]))
+    assert abs(hold[1]-hold[3]) < .002
+    assert not payout('target_goal_timeout_bonus').any()
+    assert not termination('target_goal_success_at_timeout').any()
+    env.expired[:] = True
+    expected = distance <= .03
+    torch.testing.assert_close(termination('target_goal_success_at_timeout'), expected)
+    torch.testing.assert_close(termination('target_goal_miss_at_timeout'), ~expected)
+    torch.testing.assert_close(payout('target_goal_timeout_bonus'), expected.float() * 100.)
+    # No speed/validity gate on success; contact's goal branch still requires validity.
+    speed[:] = .05
+    torch.testing.assert_close(payout('target_goal_hold') / dt, hold / 2)
+    valid[:] = False
+    assert not payout('target_contact').any()
+    assert not payout('target_goal_hold').any()
+    torch.testing.assert_close(payout('target_goal_timeout_bonus'), expected.float() * 100.)
+    env.expired[:] = False  # Automatic reset clears the time limit for the next episode.
+    assert not payout('target_goal_timeout_bonus').any()
+    env.expired[2] = True  # Independent environment at the exact inclusive boundary.
+    torch.testing.assert_close(payout('target_goal_timeout_bonus'), torch.tensor([0., 0., 100., 0., 0., 0.]))
+
+
+@pytest.mark.parametrize('dt', [.01, .02, .04])
+def test_v0_3_distance_pays_through_zero_and_resets_records(configs, make_env, dt):
+    cfg = configs('rewards', 'final').FinalGoalAccuracyV0_3RewardsCfg().target_goal_distance
+    env = make_env(2)
+    env.step_dt = dt
+    positions = env.scene['object_collection'].data.object_pos_w[:, 0]
+    positions[:, :2] = torch.tensor([.15, 0.])
+    goal = torch.zeros(2, 3)
+    env.command_manager.get_command = lambda name: goal
+    progress = cfg.func(cfg, env)
+    def reward():
+        return progress(env, **cfg.params) * cfg.weight * dt
+    for distance, expected in [(.03, 12.), (.02, 1.), (.025, 0.), (.02, 0.),
+                               (.001, 1.9), (0., .1), (0., 0.), (.04, 0.), (0., 0.)]:
+        positions[:, 0] = distance
+        torch.testing.assert_close(reward(), torch.full((2,), expected), atol=2e-6, rtol=1e-5)
+    positions[0, 0] = .2
+    def stale_command(name):
+        raise AssertionError('Reset must not read the old goal')
+    env.command_manager.get_command = stale_command
+    progress.reset(torch.tensor([0]))
+    goal[0, 0] = .4  # New episode command arrives after reward reset.
+    env.command_manager.get_command = lambda name: goal
+    positions[0, 0] = .3  # First transition earns its progress; other env keeps its record.
+    torch.testing.assert_close(reward(), torch.tensor([10., 0.]), atol=2e-6, rtol=1e-5)

@@ -17,6 +17,7 @@ from ..reward_functions.goal_rewards import action_rate_l2
 from ..reward_functions.goal_rewards import exponential_joint_speed_cost_limit
 from ..reward_functions.goal_rewards import exponential_pushing_speed_cost_limit
 from ..reward_functions.goal_rewards import joint_vel_l2
+from ..reward_functions.goal_rewards import success_event
 from ..reward_functions.sweep import ShelfCollisionPenalty
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
@@ -314,3 +315,23 @@ class FinalGoalAccuracyV0_2RewardsCfg(FinalGoalAccuracyV0_1RewardsCfg):
             values[name] = value
         self.__dict__.clear()
         self.__dict__.update(values)
+
+
+@configclass
+class FinalGoalAccuracyV0_3RewardsCfg(FinalGoalAccuracyV0_2RewardsCfg):
+    """Three-centimeter success with center-seeking progress and a +100 timeout."""
+
+    target_goal_distance = RewTerm(
+        func=DexPlanarGoalProgress,
+        weight=100.0,
+        params={"position_tolerance": 0.0},
+    )
+    target_goal_hold = FinalGoalAccuracyV0_2RewardsCfg().target_goal_hold.replace(
+        params={"position_tolerance": 0.03, "outer_radius": 0.06, "speed_scale": 0.05}
+    )
+    target_contact = FinalGoalAccuracyV0_2RewardsCfg().target_contact.replace(weight=0.3625)
+    target_goal_timeout_bonus = RewTerm(
+        func=success_event,
+        weight=100.0,
+        params={"termination_name": "target_goal_success_at_timeout"},
+    )
