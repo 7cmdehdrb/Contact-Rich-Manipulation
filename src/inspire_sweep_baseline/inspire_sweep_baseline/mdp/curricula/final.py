@@ -231,8 +231,9 @@ class FinalV1TestCurriculumCfg(FinalV1CurriculumCfg):
 
 @configclass
 class FinalGoalAccuracyCurriculumCfg(FinalV1CurriculumCfg):
+    # Keep every Accuracy variant at the population reached at iteration 5000.
     obstacle_population = CurriculumTermCfg(func=obstacle_population_schedule, params={
-        'initial_gray': 1, 'initial_white': 1, 'final_gray': 8, 'final_white': 8,
+        'initial_gray': 1, 'initial_white': 1, 'final_gray': 4, 'final_white': 5,
         'gray_start_iteration': 2500, 'white_start_iteration': 2000, 'interval': 1000,
     })
     object_free_speed = _final_schedule('target_speed_penalty', 'free_speed',

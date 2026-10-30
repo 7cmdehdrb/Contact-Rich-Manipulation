@@ -92,10 +92,43 @@ def test_goal_accuracy_config_and_population_boundaries(configs):
              event_manager=NS(get_term_cfg=lambda _: spawn, set_term_cfg=lambda *_: None))
     for iteration, expected in ((0, (1, 1)), (1999, (1, 1)), (2000, (1, 2)),
                                 (2499, (1, 2)), (2500, (2, 2)), (3000, (2, 3)),
-                                (8500, (8, 8)), (9000, (8, 8))):
+                                (5000, (4, 5)), (8500, (4, 5)), (9000, (4, 5))):
         env.learning_iteration = iteration
         result = curriculum.obstacle_population.func(env, None, **curriculum.obstacle_population.params)
         assert (result['gray_obstacles'], result['white_obstacles']) == expected
+
+
+@pytest.mark.parametrize('class_name', [
+    'FinalGoalAccuracyCurriculumCfg',
+    'FinalGoalAccuracyV1CurriculumCfg',
+    'FinalGoalAccuracyV0_1CurriculumCfg',  # Also used by v0_2 and v0_3 EnvCfg.
+])
+def test_accuracy_population_stops_at_5000_on_resume_and_rewind(configs, class_name):
+    module = configs('curricula', 'final')
+    term = getattr(module, class_name)().obstacle_population
+    spawn = NS(params={'gray_obstacles': 8, 'white_obstacles': 8})
+    mask = torch.ones(2, 21, dtype=torch.bool)
+    env = NS(cfg=NS(max_gray_obstacles=10, max_white_obstacles=10),
+             _active_object_mask=mask.clone(),
+             event_manager=NS(get_term_cfg=lambda _: spawn, set_term_cfg=lambda *_: None))
+    for iteration, expected in (
+        (7549, (4, 5)), (8342, (4, 5)),  # Resume from the reported late checkpoints.
+        (0, (1, 1)), (1999, (1, 1)), (2000, (1, 2)),
+        (2499, (1, 2)), (2500, (2, 2)), (3000, (2, 3)),
+        (3500, (3, 3)), (4000, (3, 4)), (4499, (3, 4)),
+        (4500, (4, 4)), (4999, (4, 4)), (5000, (4, 5)),
+        (5001, (4, 5)), (5499, (4, 5)), (5500, (4, 5)),
+        (6000, (4, 5)), (8500, (4, 5)), (90000, (4, 5)), (0, (1, 1)),
+    ):
+        env.learning_iteration = iteration
+        counts = term.func(env, None, **term.params)
+        assert (counts['gray_obstacles'], counts['white_obstacles']) == expected
+        assert (spawn.params['gray_obstacles'], spawn.params['white_obstacles']) == expected
+        torch.testing.assert_close(env._active_object_mask, mask)
+    # The Accuracy-only cap must not change Final v1's population schedule.
+    parent = module.FinalV1CurriculumCfg().obstacle_population
+    env.learning_iteration = 90000
+    assert parent.func(env, None, **parent.params) == {'gray_obstacles': 8, 'white_obstacles': 8}
 
 
 def test_goal_accuracy_v1_complete_reward_and_curriculum_delta(configs):

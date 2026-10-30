@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-10-30 후속: GoalAccuracy **v0·v1·v0_1·v0_2·v0_3 모두** 장애물 요청 수를 5000 iteration 수준인 **Gray 4 + White 5**로 제한한다. 5000 이후 물체 수는 증가하지 않는다. 기존 증가 시작·간격, 물체 용량과 관측 슬롯, 다른 커리큘럼은 유지한다. 이미 실행 중인 프로세스는 코드 변경을 자동 반영하지 않으므로 변경된 코드로 재시작/재개해야 적용된다. [변경·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-30_goal_accuracy_population_cap.md).
+
 2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuracy-v1`은 Accuracy v0를 상속하여 1cm 고정 목표를 유지하고 Final v1의 외곽 `goal_hold`와 `goal_speed_scale`을 복원한다. `object_free_speed`는 이미 활성인 v0 구성을 상속한다. weight 8·장애물 증가 일정·계측은 v0 유지. [환경 계약·Final v1 전체 대조](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V1_ENVIRONMENT.md).
 
 2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuracy-v0`는 Final v1을 상속해 목표 XY 거리의 체류·접촉 간주·만료 성공 기준을 처음부터 `d ≤ 1cm`로 고정한다. 유효한 목표 점유 중에는 Final-v1과 같이 EEF–타겟 3D Reaching 인정 반경을 10cm에서 1m로 넓힌다. 타겟 속도 페널티는 이름만 변경하고 Final-v1의 수치·커리큘럼을 유지한다. 학습 지표는 `Metrics/` 아래에 기록한다. [독립 상세 명세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_ENVIRONMENT.md) · [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_V1_V2_ENVIRONMENTS.md#final-goalaccuracy-v0--1cm-정확도) · [검증 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-27_final_goal_accuracy.md).
