@@ -77,13 +77,25 @@ class FinalEnvCfg(ManagerBasedRLEnvCfg):
 
 
 from ..assets.scenes.final import FinalV1SceneCfg
-from ..mdp.curricula.final import FinalV1CurriculumCfg, FinalV1TestCurriculumCfg, FinalGoalAccuracyCurriculumCfg
+from ..mdp.curricula.final import (
+    FinalV1CurriculumCfg,
+    FinalV1TestCurriculumCfg,
+    FinalGoalAccuracyCurriculumCfg,
+)
 from ..mdp.curricula.final import FinalGoalAccuracyV1CurriculumCfg
 from ..mdp.events.final import FinalV1EventsCfg, FinalV2EventsCfg
 from ..mdp.observations.final import FinalV1ObservationsCfg
-from ..mdp.rewards.final import FinalV1RewardsCfg, FinalV1_1RewardsCfg, FinalV1TestRewardsCfg, FinalGoalAccuracyRewardsCfg
+from ..mdp.rewards.final import (
+    FinalV1RewardsCfg,
+    FinalV1_1RewardsCfg,
+    FinalV1TestRewardsCfg,
+    FinalGoalAccuracyRewardsCfg,
+)
 from ..mdp.rewards.final import FinalGoalAccuracyV1RewardsCfg
-from ..mdp.terminations.final import FinalV1TerminationsCfg, FinalGoalAccuracyTerminationsCfg
+from ..mdp.terminations.final import (
+    FinalV1TerminationsCfg,
+    FinalGoalAccuracyTerminationsCfg,
+)
 
 
 @configclass
@@ -138,8 +150,8 @@ class FinalV2TestEnvCfg(FinalV2EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         population = self.curriculum.obstacle_population.params
-        self.events.object_spawn.params['gray_obstacles'] = population['final_gray']
-        self.events.object_spawn.params['white_obstacles'] = population['final_white']
+        self.events.object_spawn.params["gray_obstacles"] = population["final_gray"]
+        self.events.object_spawn.params["white_obstacles"] = population["final_white"]
         self.curriculum.obstacle_population = None
 
 
@@ -155,10 +167,16 @@ from ..mdp.terminations.final import FinalGoalAccuracyV0_1TerminationsCfg
 
 @configclass
 class FinalGoalAccuracyV0_1EnvCfg(FinalGoalAccuracyEnvCfg):
-    scene: FinalGoalAccuracyV0_1SceneCfg = FinalGoalAccuracyV0_1SceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: FinalGoalAccuracyV0_1SceneCfg = FinalGoalAccuracyV0_1SceneCfg(
+        num_envs=4096, env_spacing=2.5
+    )
     rewards: FinalGoalAccuracyV0_1RewardsCfg = FinalGoalAccuracyV0_1RewardsCfg()
-    curriculum: FinalGoalAccuracyV0_1CurriculumCfg = FinalGoalAccuracyV0_1CurriculumCfg()
-    terminations: FinalGoalAccuracyV0_1TerminationsCfg = FinalGoalAccuracyV0_1TerminationsCfg()
+    curriculum: FinalGoalAccuracyV0_1CurriculumCfg = (
+        FinalGoalAccuracyV0_1CurriculumCfg()
+    )
+    terminations: FinalGoalAccuracyV0_1TerminationsCfg = (
+        FinalGoalAccuracyV0_1TerminationsCfg()
+    )
 
 
 @configclass
@@ -178,6 +196,6 @@ from ..mdp.rewards.final import FinalGoalAccuracyV0_2_1RewardsCfg
 
 @configclass
 class FinalGoalAccuracyV0_2_1EnvCfg(FinalGoalAccuracyV0_2EnvCfg):
-    scene: FinalGoalAccuracyV0_2_1SceneCfg = FinalGoalAccuracyV0_2_1SceneCfg(num_envs=4096, env_spacing=2.5)
+    # scene: FinalGoalAccuracyV0_2_1SceneCfg = FinalGoalAccuracyV0_2_1SceneCfg(num_envs=4096, env_spacing=2.5)
     rewards: FinalGoalAccuracyV0_2_1RewardsCfg = FinalGoalAccuracyV0_2_1RewardsCfg()
     events: FinalGoalAccuracyV0_2_1EventsCfg = FinalGoalAccuracyV0_2_1EventsCfg()
