@@ -1390,6 +1390,8 @@ ObjectRandom-v1 개수 일정(2026-10-23 후속): 0~2,999는Gray1/White1,3,000�
 
 2026-10-29 추가: `Isaac-Inspire-Final-GoalAccuracy-v0_2`는 v0_1을 직접 상속하고, timeout 시 타겟–목표 XY 거리가 **2cm 미만**이면 마지막 transition에 **+30**을 한 번 지급한다. 다른 보상·종료·커리큘럼은 그대로 유지한다. [환경 계약 및 검증 범위](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_ENVIRONMENT.md).
 
+2026-10-31 추가: `Isaac-Inspire-Final-GoalAccuracy-v0_2_1`은 v0_2를 직접 상속한다. 실제 타겟–손 접촉만 보상하고 성공 timeout에 **+75(2cm 경계 포함)**를 지급한다. 매 reset 배치와 타겟 종류를 재추첨하며 연속 동일 종류도 허용한다. 논리 관측은 유지하지만 고정 후보 풀로 물리 물체가 21→36개가 된다. CPU 78개 및 GPU 2 env의 부분 reset·전체 16후보 검증을 통과했다. 대규모 성능과 학습 결과는 미검증이다. [구현 계약·Windows 실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_1_ENVIRONMENT.md).
+
 2026-10-30 추가: `Isaac-Inspire-Final-GoalAccuracy-v0_3`는 v0_2를 직접 상속한다. 타겟 접촉 OR 목표 점유 조건을 유지하고 contact weight를 **0.3625**로 줄인다. 목표 거리 보상은 **최단 XY 거리 갱신량 ×100**, tolerance **0**으로 바꿔 중심까지 지급한다. 목표 반경은 **3cm(경계 포함)**이며 성공 timeout에 **+100**을 지급한다. Hold 외곽 6cm, Reaching 10cm 및 다른 구성·일정은 부모와 같다. [구현 계약·검증·리뷰](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_3_ENVIRONMENT.md).
 
 ```bash

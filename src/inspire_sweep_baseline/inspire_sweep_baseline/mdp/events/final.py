@@ -55,3 +55,11 @@ class FinalV1EventsCfg(FinalEventsCfg):
 class FinalV2EventsCfg(FinalV1EventsCfg):
     object_spawn = EventTerm(func=randomize_final_scene, mode='reset',
                             params={**FinalV1EventsCfg().object_spawn.params, 'wide_target': True})
+
+
+from ..event_functions.final import randomize_final_target_scene
+
+
+@configclass
+class FinalGoalAccuracyV0_2_1EventsCfg(FinalV1EventsCfg):
+    object_spawn = FinalV1EventsCfg().object_spawn.replace(func=randomize_final_target_scene)

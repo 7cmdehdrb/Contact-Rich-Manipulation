@@ -181,3 +181,35 @@ class FinalGoalAccuracyV0_1SceneCfg(FinalV1SceneCfg):
         for variant in self.object_collection.rigid_objects['mass_cylinder'].spawn.assets_cfg:
             if getattr(variant, 'kind', None) == 'cube':
                 variant.cube_size = (0.06, 0.08, 0.10)
+
+
+@configclass
+class FinalGoalAccuracyV0_2_1SceneCfg(FinalGoalAccuracyV0_1SceneCfg):
+    """Pre-cook all target candidates; keep the first 21 slots logically unchanged."""
+
+    def configure_population_capacity(self, max_gray_obstacles, max_white_obstacles, observation_slots=20):
+        super().configure_population_capacity(max_gray_obstacles, max_white_obstacles, observation_slots)
+        objects = self.object_collection.rigid_objects
+        template = objects['mass_cylinder'].copy()
+        # Parent list repeats cylinder/cube to give each category probability 1/3.
+        variants = template.spawn.assets_cfg
+        group_size = len(variants) // 3
+        candidates = [variants[0], variants[group_size], *variants[2 * group_size:]]
+        for index, variant in enumerate(candidates):
+            name = 'mass_cylinder' if index == 0 else f'target_candidate_{index}'
+            obj = template.copy()
+            obj.prim_path = '{ENV_REGEX_NS}/' + name
+            obj.spawn = sim_utils.MultiAssetSpawnerCfg(
+                assets_cfg=[variant.copy()], random_choice=False, activate_contact_sensors=True)
+            obj.init_state.pos = (-0.7, 2.0 * index, PARKING_HEIGHT + 10.0)
+            objects[name] = obj
+            setattr(self, object_hand_sensor_name(name), ContactSensorCfg(
+                prim_path=obj.prim_path,
+                filter_prim_paths_expr=['{ENV_REGEX_NS}/Robot/' + body for body in HAND_CONTACT_BODY_NAMES],
+                update_period=0.0, history_length=0, debug_vis=False,
+                max_contact_data_count_per_prim=16 * len(HAND_CONTACT_BODY_NAMES)))
+        paths = [obj.prim_path for obj in objects.values()]
+        for parent in TACTILE_PARENT_BODY_NAMES:
+            sensor = getattr(self, parent_sensor_name(parent))
+            sensor.filter_prim_paths_expr = paths.copy()
+            sensor.max_contact_data_count_per_prim = 16 * len(paths)

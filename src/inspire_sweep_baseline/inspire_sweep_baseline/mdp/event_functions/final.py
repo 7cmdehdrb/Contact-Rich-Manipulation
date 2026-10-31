@@ -149,3 +149,37 @@ def randomize_final_scene(
     if not hasattr(env, '_final_actual_population'):
         env._final_actual_population = torch.zeros((env.num_envs, 2), dtype=torch.long, device=env.device)
     env._final_actual_population[ids] = torch.as_tensor(actual_counts, device=env.device)
+
+
+def randomize_final_target_scene(
+    env, env_ids, spawn_radius=.02, goal_distance=.15, object_radius=.04,
+    edge_clearance=.02, shelf_half_extents=(.20, .50), shelf_surface_height=1.05,
+    excluded_x_half_angle=math.radians(30), observation_noise=.01,
+    visibility_threshold=.35, visibility_flip_probability=.01, observation_swap_probability=.1,
+    gray_obstacles=1, white_obstacles=1, gray_red_padding_fraction=0., wide_target=False,
+):
+    """Select pre-cooked target geometry before the parent's geometry-aware reset."""
+    ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
+           else torch.as_tensor(env_ids, device=env.device, dtype=torch.long))
+    if ids.numel() == 0:
+        return
+    pool = env.scene['object_collection']
+    choices = env._target_choice.sample(len(ids))
+    pool.switch(ids, choices, env.scene.env_origins)
+    cpu_ids = ids.cpu().numpy()
+    physical_ids = pool.mapping[ids, 0].cpu().numpy()
+    env._final_object_bounds[cpu_ids, 0] = env._target_pool_bounds[cpu_ids, physical_ids]
+    env._final_object_scales[cpu_ids, 0] = env._target_pool_scales[cpu_ids, physical_ids]
+    # Parent physics events must scale the newly selected shape's original inertia.
+    physics = env._clutter_physics
+    rows = torch.as_tensor(physical_ids * env.num_envs + cpu_ids)
+    physics.default_mass[cpu_ids] = pool.default_pool_mass[rows]
+    physics.default_inertia[cpu_ids] = pool.default_pool_inertia[rows]
+    env.sensor_data_fresh[ids] = False
+    randomize_final_scene(
+        env, ids, spawn_radius, goal_distance, object_radius, edge_clearance,
+        shelf_half_extents, shelf_surface_height, excluded_x_half_angle,
+        observation_noise, visibility_threshold, visibility_flip_probability,
+        observation_swap_probability, gray_obstacles, white_obstacles,
+        gray_red_padding_fraction, wide_target,
+    )

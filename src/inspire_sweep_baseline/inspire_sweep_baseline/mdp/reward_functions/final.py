@@ -108,6 +108,15 @@ def target_contact_or_goal(env, threshold_n=0.01, goal_hold_term_name="target_go
     return (contact | in_goal).to(force.dtype)
 
 
+def target_contact_only(env, threshold_n=0.01):
+    """Reward fresh target/hand normal resultant contact, without a goal fallback."""
+    if not math.isfinite(threshold_n) or threshold_n <= 0:
+        raise ValueError("Contact threshold must be finite and positive")
+    force = target_hand_contact_force_w(env)
+    return (env.sensor_data_fresh & torch.isfinite(force).all(-1)
+            & (torch.linalg.vector_norm(force, dim=-1) >= threshold_n)).to(force.dtype)
+
+
 def target_goal_timeout_bonus(env, position_tolerance=0.02, command_name="target_goal_pos"):
     """Unit terminal event for strict XY proximity, independent of the step size.
 

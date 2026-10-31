@@ -232,6 +232,7 @@ from ..reward_functions.dex_rewards import DexReachProgress
 from ..reward_functions.final import (
     goal_accuracy_outer_settling,
     target_contact_or_goal,
+    target_contact_only,
     target_goal_timeout_bonus,
 )
 
@@ -333,5 +334,16 @@ class FinalGoalAccuracyV0_3RewardsCfg(FinalGoalAccuracyV0_2RewardsCfg):
     target_goal_timeout_bonus = RewTerm(
         func=success_event,
         weight=100.0,
+        params={"termination_name": "target_goal_success_at_timeout"},
+    )
+
+
+@configclass
+class FinalGoalAccuracyV0_2_1RewardsCfg(FinalGoalAccuracyV0_2RewardsCfg):
+    """Actual target contact and an inclusive, one-shot +75 timeout success."""
+
+    target_contact = FinalGoalAccuracyV0_2RewardsCfg().target_contact.replace(func=target_contact_only)
+    target_goal_timeout_bonus = RewTerm(
+        func=success_event, weight=75.0,
         params={"termination_name": "target_goal_success_at_timeout"},
     )

@@ -169,3 +169,15 @@ class FinalGoalAccuracyV0_2EnvCfg(FinalGoalAccuracyV0_1EnvCfg):
 @configclass
 class FinalGoalAccuracyV0_3EnvCfg(FinalGoalAccuracyV0_2EnvCfg):
     rewards: FinalGoalAccuracyV0_3RewardsCfg = FinalGoalAccuracyV0_3RewardsCfg()
+
+
+from ..assets.scenes.final import FinalGoalAccuracyV0_2_1SceneCfg
+from ..mdp.events.final import FinalGoalAccuracyV0_2_1EventsCfg
+from ..mdp.rewards.final import FinalGoalAccuracyV0_2_1RewardsCfg
+
+
+@configclass
+class FinalGoalAccuracyV0_2_1EnvCfg(FinalGoalAccuracyV0_2EnvCfg):
+    scene: FinalGoalAccuracyV0_2_1SceneCfg = FinalGoalAccuracyV0_2_1SceneCfg(num_envs=4096, env_spacing=2.5)
+    rewards: FinalGoalAccuracyV0_2_1RewardsCfg = FinalGoalAccuracyV0_2_1RewardsCfg()
+    events: FinalGoalAccuracyV0_2_1EventsCfg = FinalGoalAccuracyV0_2_1EventsCfg()

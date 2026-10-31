@@ -154,3 +154,39 @@ class FinalGoalAccuracyEnv(FinalV1Env):
             if old in self.extras['log']:
                 self.extras['log'][f'Metrics/obstacle_actual_{color}'] = self.extras['log'].pop(old)
         self.extras['log'].update(metrics)
+
+
+class FinalGoalAccuracyV0_2_1Env(FinalGoalAccuracyEnv):
+    """Expose the selected physical candidate as the parent's logical target 0."""
+
+    def load_managers(self):
+        from ..mdp.common.final_target_pool import (
+            LogicalTargetCollection, SelectedTargetSensor, TargetChoice,
+        )
+        from ..mdp.common.contact_sweep_clutter_fusion_contacts import object_hand_sensor_name
+
+        physical = self.scene['object_collection']
+        count = 1 + self.cfg.max_gray_obstacles + self.cfg.max_white_obstacles
+        logical = LogicalTargetCollection(physical, count)
+        self._target_choice = TargetChoice(self.cfg.seed, len(logical.pool_ids))
+        self._target_pool_bounds = self._final_object_bounds.copy()
+        self._target_pool_scales = self._final_object_scales.copy()
+        self._final_object_bounds = self._target_pool_bounds[:, :count].copy()
+        self._final_object_scales = self._target_pool_scales[:, :count].copy()
+        self._active_object_mask = self._active_object_mask[:, :count].clone()
+        self._initial_object_positions_w = self._initial_object_positions_w[:, :count].clone()
+        sensors = [self.scene[object_hand_sensor_name(physical.object_names[i])]
+                   for i in logical.pool_ids.cpu().tolist()]
+        self.scene.rigid_object_collections['object_collection'] = logical
+        self.scene.sensors[object_hand_sensor_name('mass_cylinder')] = SelectedTargetSensor(logical, sensors)
+        super().load_managers()
+
+    def reset(self, seed=None, env_ids=None, options=None):
+        if seed is not None:
+            self._target_choice.reseed(seed)
+        return super().reset(seed=seed, env_ids=env_ids, options=options)
+
+    @property
+    def target_kind_id(self):
+        """Diagnostic only; never appended to actor or critic observations."""
+        return self.scene['object_collection'].selected
