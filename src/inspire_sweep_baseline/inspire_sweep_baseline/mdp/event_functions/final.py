@@ -157,8 +157,9 @@ def randomize_final_target_scene(
     excluded_x_half_angle=math.radians(30), observation_noise=.01,
     visibility_threshold=.35, visibility_flip_probability=.01, observation_swap_probability=.1,
     gray_obstacles=1, white_obstacles=1, gray_red_padding_fraction=0., wide_target=False,
+    gray_padding=.06, finger_gap=.02, placement_candidates=32, placement_restarts=4, placement_passes=2,
 ):
-    """Select pre-cooked target geometry before the parent's geometry-aware reset."""
+    """v0_2_1: select cooked target geometry, then perform batched OBB placement."""
     ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
            else torch.as_tensor(env_ids, device=env.device, dtype=torch.long))
     if ids.numel() == 0:
@@ -170,16 +171,51 @@ def randomize_final_target_scene(
     physical_ids = pool.mapping[ids, 0].cpu().numpy()
     env._final_object_bounds[cpu_ids, 0] = env._target_pool_bounds[cpu_ids, physical_ids]
     env._final_object_scales[cpu_ids, 0] = env._target_pool_scales[cpu_ids, physical_ids]
+    env._final_object_bounds_t[ids, 0] = env._target_pool_bounds_t[ids, pool.mapping[ids, 0]]
     # Parent physics events must scale the newly selected shape's original inertia.
     physics = env._clutter_physics
     rows = torch.as_tensor(physical_ids * env.num_envs + cpu_ids)
     physics.default_mass[cpu_ids] = pool.default_pool_mass[rows]
     physics.default_inertia[cpu_ids] = pool.default_pool_inertia[rows]
     env.sensor_data_fresh[ids] = False
-    randomize_final_scene(
-        env, ids, spawn_radius, goal_distance, object_radius, edge_clearance,
-        shelf_half_extents, shelf_surface_height, excluded_x_half_angle,
-        observation_noise, visibility_threshold, visibility_flip_probability,
-        observation_swap_probability, gray_obstacles, white_obstacles,
-        gray_red_padding_fraction, wide_target,
+    from ..common.final_obb_geometry import sample_shelf_layout
+    local, yaw, active, delta, actual = sample_shelf_layout(
+        env._final_object_bounds_t[ids], env._obb_layout_rng,
+        max_gray_slots=env.cfg.max_gray_obstacles, max_white_slots=env.cfg.max_white_obstacles,
+        gray_obstacles=gray_obstacles, white_obstacles=white_obstacles,
+        gray_padding=gray_padding, finger_gap=finger_gap, gray_red_padding_fraction=gray_red_padding_fraction,
+        placement_candidates=placement_candidates, placement_restarts=placement_restarts, placement_passes=placement_passes,
+        spawn_radius=spawn_radius, goal_distance=goal_distance, edge_clearance=edge_clearance,
+        shelf_half_extents=shelf_half_extents, shelf_surface_height=shelf_surface_height,
+        excluded_x_half_angle=excluded_x_half_angle, wide_target=wide_target,
     )
+    # Preserve the parent's state, gravity, command and observation contracts.
+    count, capacity = len(ids), pool.num_objects-1
+    shelf = env.scene['shelf'].data
+    rotation = shelf.root_quat_w[ids, None].expand(-1, capacity+1, -1)
+    world = shelf.root_pos_w[ids, None] + quat_apply(rotation, local)
+    yaw_rotation = torch.zeros((count, capacity+1, 4), device=env.device)
+    yaw_rotation[..., 0], yaw_rotation[..., 3] = (yaw/2).cos(), (yaw/2).sin()
+    states = torch.cat((world, quat_mul(rotation, yaw_rotation),
+                        torch.zeros((count, capacity+1, 6), device=env.device)), -1)
+    pool.write_object_link_state_to_sim(states, env_ids=ids)
+    env._active_object_mask[ids] = active
+    apply_gravity_mask(env, ids)
+    env.target_id[ids, 0] = 0
+    target_half = env._final_object_bounds_t[ids, 0, :, :2].abs().amax(1)
+    env.target_width[ids, 0] = torch.linalg.vector_norm(target_half, dim=-1)
+    displacement = torch.zeros((count, 3), device=env.device)
+    displacement[:, :2] = delta
+    env.sweep_dir[ids] = quat_apply(shelf.root_quat_w[ids], displacement)
+    robot = env.scene['robot'].data
+    positions, _ = subtract_frame_transforms(robot.root_pos_w[ids, None].expand(-1, capacity, -1),
+        robot.root_quat_w[ids, None].expand(-1, capacity, -1), world[:, 1:])
+    positions += torch.empty_like(positions).uniform_(-observation_noise, observation_noise)
+    slots = torch.zeros((count, env.cfg.obstacle_observation_slots, 4), device=env.device)
+    slots[:, :capacity, 0] = active[:, 1:]
+    slots[:, :capacity, 1:] = torch.where(active[:, 1:, None], positions, 0.)
+    env._initial_obstacle_observation[ids] = slots.flatten(1)
+    apply_final_visibility(env, ids, visibility_threshold, visibility_flip_probability, observation_swap_probability)
+    if not hasattr(env, '_final_actual_population'):
+        env._final_actual_population = torch.zeros((env.num_envs, 2), dtype=torch.long, device=env.device)
+    env._final_actual_population[ids] = actual

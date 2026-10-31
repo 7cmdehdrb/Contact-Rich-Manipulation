@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-10-31 추가: [OBB 텐서 배치 모듈](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/BBOX_SCENE_LAYOUT.md)을 **FinalGoalAccuracyV0_2_1EnvCfg reset에 적용**했다. 물체별 회전 Bounding Box, RED/Gray/White, 최소 20mm 간격, Gray padding 및 제한 탐색의 최다 배치를 사용한다. Gray 2500 / White 2000부터 각 1000마다 증가하여 4/5에서 멈추며, 다른 환경은 유지한다. 회귀·기하 106개 및 실제 GPU reset 검증을 통과했다. [연결·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_1_obb_reset.md). 독립 생성기 측정은 `scripts/benchmark_bbox_layout.py`를 사용한다.
+
 2026-10-30 후속: GoalAccuracy **v0·v1·v0_1·v0_2·v0_3 모두** 장애물 요청 수를 5000 iteration 수준인 **Gray 4 + White 5**로 제한한다. 5000 이후 물체 수는 증가하지 않는다. 기존 증가 시작·간격, 물체 용량과 관측 슬롯, 다른 커리큘럼은 유지한다. 이미 실행 중인 프로세스는 코드 변경을 자동 반영하지 않으므로 변경된 코드로 재시작/재개해야 적용된다. [변경·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-30_goal_accuracy_population_cap.md).
 
 2026-10-27 추가: `Isaac-Inspire-Final-GoalAccuracy-v1`은 Accuracy v0를 상속하여 1cm 고정 목표를 유지하고 Final v1의 외곽 `goal_hold`와 `goal_speed_scale`을 복원한다. `object_free_speed`는 이미 활성인 v0 구성을 상속한다. weight 8·장애물 증가 일정·계측은 v0 유지. [환경 계약·Final v1 전체 대조](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V1_ENVIRONMENT.md).

@@ -62,4 +62,8 @@ from ..event_functions.final import randomize_final_target_scene
 
 @configclass
 class FinalGoalAccuracyV0_2_1EventsCfg(FinalV1EventsCfg):
-    object_spawn = FinalV1EventsCfg().object_spawn.replace(func=randomize_final_target_scene)
+    object_spawn = FinalV1EventsCfg().object_spawn.replace(
+        func=randomize_final_target_scene,
+        params={**FinalV1EventsCfg().object_spawn.params, 'gray_padding': .06, 'finger_gap': .02,
+                'placement_candidates': 32, 'placement_restarts': 4, 'placement_passes': 2},
+    )

@@ -173,6 +173,9 @@ class FinalGoalAccuracyV0_2_1Env(FinalGoalAccuracyEnv):
         self._target_pool_scales = self._final_object_scales.copy()
         self._final_object_bounds = self._target_pool_bounds[:, :count].copy()
         self._final_object_scales = self._target_pool_scales[:, :count].copy()
+        self._target_pool_bounds_t = torch.as_tensor(self._target_pool_bounds, device=self.device, dtype=torch.float32)
+        self._final_object_bounds_t = self._target_pool_bounds_t[:, :count].clone()
+        self._obb_layout_rng = torch.Generator(device=self.device).manual_seed(int(self.cfg.seed or 0))
         self._active_object_mask = self._active_object_mask[:, :count].clone()
         self._initial_object_positions_w = self._initial_object_positions_w[:, :count].clone()
         sensors = [self.scene[object_hand_sensor_name(physical.object_names[i])]
@@ -184,6 +187,7 @@ class FinalGoalAccuracyV0_2_1Env(FinalGoalAccuracyEnv):
     def reset(self, seed=None, env_ids=None, options=None):
         if seed is not None:
             self._target_choice.reseed(seed)
+            self._obb_layout_rng.manual_seed(seed)
         return super().reset(seed=seed, env_ids=env_ids, options=options)
 
     @property

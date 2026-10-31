@@ -196,6 +196,11 @@ from ..mdp.rewards.final import FinalGoalAccuracyV0_2_1RewardsCfg
 
 @configclass
 class FinalGoalAccuracyV0_2_1EnvCfg(FinalGoalAccuracyV0_2EnvCfg):
-    # scene: FinalGoalAccuracyV0_2_1SceneCfg = FinalGoalAccuracyV0_2_1SceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: FinalGoalAccuracyV0_2_1SceneCfg = FinalGoalAccuracyV0_2_1SceneCfg(num_envs=4096, env_spacing=2.5)
     rewards: FinalGoalAccuracyV0_2_1RewardsCfg = FinalGoalAccuracyV0_2_1RewardsCfg()
     events: FinalGoalAccuracyV0_2_1EventsCfg = FinalGoalAccuracyV0_2_1EventsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Explicit child cap; preserve inherited starts, interval and slot capacity.
+        self.curriculum.obstacle_population.params.update(final_gray=4, final_white=5)
