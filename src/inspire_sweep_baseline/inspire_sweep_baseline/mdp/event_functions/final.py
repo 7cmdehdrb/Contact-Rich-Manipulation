@@ -219,3 +219,84 @@ def randomize_final_target_scene(
     if not hasattr(env, '_final_actual_population'):
         env._final_actual_population = torch.zeros((env.num_envs, 2), dtype=torch.long, device=env.device)
     env._final_actual_population[ids] = actual
+
+
+def randomize_compact_object_sizes(env, env_ids, scale_range=(.9, 1.1)):
+    """Remove construction templates before PhysX starts, then preserve scaling."""
+    import isaaclab.sim as sim
+    from ...assets.final_compact_spawners import TEMPLATES
+    stage = sim.get_current_stage()
+    if stage.GetPrimAtPath(TEMPLATES):
+        stage.RemovePrim(TEMPLATES)
+    names = list(env.cfg.scene.object_collection.rigid_objects)
+    env._compact_variant_ids = torch.tensor([
+        [stage.GetPrimAtPath(f'/World/envs/env_{i}/{name}').GetCustomDataByKey('compact_variant_id')
+         for name in names] for i in range(env.num_envs)
+    ], device=env.device, dtype=torch.long)
+    randomize_object_sizes(env, env_ids, scale_range)
+
+
+def randomize_final_compact_scene(
+    env, env_ids, spawn_radius=.02, goal_distance=.15, object_radius=.04,
+    edge_clearance=.02, shelf_half_extents=(.20, .50), shelf_surface_height=1.05,
+    excluded_x_half_angle=math.radians(30), observation_noise=.01,
+    visibility_threshold=.35, visibility_flip_probability=.01, observation_swap_probability=.1,
+    gray_obstacles=1, white_obstacles=1, gray_red_padding_fraction=0., wide_target=False,
+    gray_padding=.06, finger_gap=.02, placement_candidates=32, placement_restarts=4, placement_passes=2,
+):
+    """Compact-role reset; preserve v0_2_1 geometry and observation semantics."""
+    from ..common.final_obb_geometry import sample_shelf_layout
+    ids = torch.arange(env.num_envs, device=env.device) if env_ids is None else torch.as_tensor(env_ids, device=env.device, dtype=torch.long)
+    if not len(ids):
+        return
+    pool = env.scene['object_collection']
+    pool.park(ids, env.scene.env_origins)
+    pool.select_roles(ids, env._role_rng)
+    env._role_sensor_bank.invalidate()
+    mapping = pool.mapping[ids]
+    bounds = env._target_pool_bounds_t[ids[:, None], mapping]
+    env._final_object_bounds_t[ids] = bounds
+    cpu_ids, cpu_mapping = ids.cpu().numpy(), mapping.cpu().numpy()
+    env._final_object_bounds[cpu_ids] = env._target_pool_bounds[cpu_ids[:, None], cpu_mapping]
+    env._final_object_scales[cpu_ids] = env._target_pool_scales[cpu_ids[:, None], cpu_mapping]
+    rows = (mapping.cpu().T * env.num_envs + ids.cpu()).flatten()
+    logical_rows = (torch.arange(10)[:, None] * env.num_envs + ids.cpu()).flatten()
+    env._clutter_physics.default_mass[logical_rows] = pool.original_mass[rows]
+    env._clutter_physics.default_inertia[logical_rows] = pool.original_inertia[rows]
+    # Preserve the chosen body's restitution/shape properties when roles move.
+    env._clutter_physics.materials[1].properties[logical_rows] = pool.root_physx_view.buffers['material_properties'][rows]
+    env.sensor_data_fresh[ids] = False
+    local, yaw, active, delta, actual = sample_shelf_layout(bounds, env._obb_layout_rng,
+        max_gray_slots=4, max_white_slots=5, gray_obstacles=gray_obstacles, white_obstacles=white_obstacles,
+        gray_padding=gray_padding, finger_gap=finger_gap, gray_red_padding_fraction=gray_red_padding_fraction,
+        placement_candidates=placement_candidates, placement_restarts=placement_restarts, placement_passes=placement_passes,
+        spawn_radius=spawn_radius, goal_distance=goal_distance, edge_clearance=edge_clearance,
+        shelf_half_extents=shelf_half_extents, shelf_surface_height=shelf_surface_height,
+        excluded_x_half_angle=excluded_x_half_angle, wide_target=wide_target)
+    count, capacity = len(ids), 9
+    shelf = env.scene['shelf'].data
+    rotation = shelf.root_quat_w[ids, None].expand(-1, 10, -1)
+    world = shelf.root_pos_w[ids, None] + quat_apply(rotation, local)
+    yaw_rotation = torch.zeros((count, 10, 4), device=env.device)
+    yaw_rotation[..., 0], yaw_rotation[..., 3] = (yaw/2).cos(), (yaw/2).sin()
+    pool.write_object_link_state_to_sim(torch.cat((world, quat_mul(rotation, yaw_rotation),
+        torch.zeros((count, 10, 6), device=env.device)), -1), env_ids=ids)
+    env._active_object_mask[ids] = active
+    apply_gravity_mask(env, ids)
+    env.target_id[ids, 0] = 0
+    env.target_width[ids, 0] = torch.linalg.vector_norm(bounds[:, 0, :, :2].abs().amax(1), dim=-1)
+    displacement = torch.zeros((count, 3), device=env.device)
+    displacement[:, :2] = delta
+    env.sweep_dir[ids] = quat_apply(shelf.root_quat_w[ids], displacement)
+    robot = env.scene['robot'].data
+    positions, _ = subtract_frame_transforms(robot.root_pos_w[ids, None].expand(-1, capacity, -1),
+        robot.root_quat_w[ids, None].expand(-1, capacity, -1), world[:, 1:])
+    positions += torch.empty_like(positions).uniform_(-observation_noise, observation_noise)
+    slots = torch.zeros((count, env.cfg.obstacle_observation_slots, 4), device=env.device)
+    slots[:, :capacity, 0] = active[:, 1:]
+    slots[:, :capacity, 1:] = torch.where(active[:, 1:, None], positions, 0.)
+    env._initial_obstacle_observation[ids] = slots.flatten(1)
+    apply_final_visibility(env, ids, visibility_threshold, visibility_flip_probability, observation_swap_probability)
+    if not hasattr(env, '_final_actual_population'):
+        env._final_actual_population = torch.zeros((env.num_envs, 2), dtype=torch.long, device=env.device)
+    env._final_actual_population[ids] = actual

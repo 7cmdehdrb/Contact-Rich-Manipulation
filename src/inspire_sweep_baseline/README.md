@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-10-31 추가: [GoalAccuracy v0_2_2](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_2_ENVIRONMENT.md)는 v0_2_1을 보존한 새 환경이다. 물리 객체를 환경당 36→12개로 줄이고, 초기 형상 prototype·물리 재질을 재사용하며 reset에서 타겟/장애물 역할을 텐서로 재할당한다. 보상·관측·OBB 배치·Gray 4/White 5 일정은 유지한다. 환경별 보유 형상은 초기 생성 때 정해지므로 단일 환경의 타겟 후보 지원 범위는 부모와 다르다. [검증·성능 비교·제한](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_2_compact_scene.md).
+
 2026-10-31 추가: [OBB 텐서 배치 모듈](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/BBOX_SCENE_LAYOUT.md)을 **FinalGoalAccuracyV0_2_1EnvCfg reset에 적용**했다. 물체별 회전 Bounding Box, RED/Gray/White, 최소 20mm 간격, Gray padding 및 제한 탐색의 최다 배치를 사용한다. Gray 2500 / White 2000부터 각 1000마다 증가하여 4/5에서 멈추며, 다른 환경은 유지한다. 회귀·기하 106개 및 실제 GPU reset 검증을 통과했다. [연결·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_1_obb_reset.md). 독립 생성기 측정은 `scripts/benchmark_bbox_layout.py`를 사용한다.
 
 2026-10-30 후속: GoalAccuracy **v0·v1·v0_1·v0_2·v0_3 모두** 장애물 요청 수를 5000 iteration 수준인 **Gray 4 + White 5**로 제한한다. 5000 이후 물체 수는 증가하지 않는다. 기존 증가 시작·간격, 물체 용량과 관측 슬롯, 다른 커리큘럼은 유지한다. 이미 실행 중인 프로세스는 코드 변경을 자동 반영하지 않으므로 변경된 코드로 재시작/재개해야 적용된다. [변경·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-30_goal_accuracy_population_cap.md).

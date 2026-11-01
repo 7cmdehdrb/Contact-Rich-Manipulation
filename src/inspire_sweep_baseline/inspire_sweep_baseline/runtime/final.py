@@ -194,3 +194,41 @@ class FinalGoalAccuracyV0_2_1Env(FinalGoalAccuracyEnv):
     def target_kind_id(self):
         """Diagnostic only; never appended to actor or critic observations."""
         return self.scene['object_collection'].selected
+
+
+class FinalGoalAccuracyV0_2_2Env(FinalGoalAccuracyV0_2_1Env):
+    """Compact physical roster with vectorized role reassignment on reset."""
+
+    def load_managers(self):
+        from ..mdp.common.final_compact_pool import CompactRoleCollection, RoleSensorBank, RoleSensor
+        from ..mdp.common.contact_sweep_clutter_fusion_contacts import object_hand_sensor_name
+        physical = self.scene['object_collection']
+        logical = CompactRoleCollection(physical)
+        self._target_pool_bounds = self._final_object_bounds.copy()
+        self._target_pool_scales = self._final_object_scales.copy()
+        self._target_pool_bounds_t = torch.as_tensor(self._target_pool_bounds, device=self.device, dtype=torch.float32)
+        self._final_object_bounds = self._target_pool_bounds[:, :10].copy()
+        self._final_object_scales = self._target_pool_scales[:, :10].copy()
+        self._final_object_bounds_t = self._target_pool_bounds_t[:, :10].clone()
+        self._active_object_mask = self._active_object_mask[:, :10].clone()
+        self._initial_object_positions_w = self._initial_object_positions_w[:, :10].clone()
+        self._role_rng = torch.Generator(device=self.device).manual_seed(int(self.cfg.seed or 0)+2122)
+        self._obb_layout_rng = torch.Generator(device=self.device).manual_seed(int(self.cfg.seed or 0))
+        sensors = [self.scene[object_hand_sensor_name(name)] for name in physical.object_names]
+        self._role_sensor_bank = RoleSensorBank(logical, sensors)
+        self.scene.rigid_object_collections['object_collection'] = logical
+        for column, name in enumerate(logical.object_names):
+            self.scene.sensors[object_hand_sensor_name(name)] = RoleSensor(self._role_sensor_bank, column)
+        # Bypass the parent's 16-target-pool installer, retaining its managers.
+        FinalGoalAccuracyEnv.load_managers(self)
+
+    def reset(self, seed=None, env_ids=None, options=None):
+        if seed is not None:
+            self._role_rng.manual_seed(seed+2122)
+            self._obb_layout_rng.manual_seed(seed)
+        return FinalGoalAccuracyEnv.reset(self, seed=seed, env_ids=env_ids, options=options)
+
+    @property
+    def target_kind_id(self):
+        pool = self.scene['object_collection']
+        return self._compact_variant_ids[pool.env_rows, pool.mapping[:, 0]]

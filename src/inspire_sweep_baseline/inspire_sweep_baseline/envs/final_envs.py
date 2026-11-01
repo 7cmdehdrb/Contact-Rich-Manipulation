@@ -204,3 +204,21 @@ class FinalGoalAccuracyV0_2_1EnvCfg(FinalGoalAccuracyV0_2EnvCfg):
         super().__post_init__()
         # Explicit child cap; preserve inherited starts, interval and slot capacity.
         self.curriculum.obstacle_population.params.update(final_gray=4, final_white=5)
+
+
+from ..assets.scenes.final import FinalGoalAccuracyV0_2_2SceneCfg
+from ..mdp.events.final import FinalGoalAccuracyV0_2_2EventsCfg
+
+
+@configclass
+class FinalGoalAccuracyV0_2_2EnvCfg(FinalGoalAccuracyV0_2_1EnvCfg):
+    scene: FinalGoalAccuracyV0_2_2SceneCfg = FinalGoalAccuracyV0_2_2SceneCfg(num_envs=4096, env_spacing=2.5)
+    events: FinalGoalAccuracyV0_2_2EventsCfg = FinalGoalAccuracyV0_2_2EventsCfg()
+    max_gray_obstacles: int = 4
+    max_white_obstacles: int = 5
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..assets.final_compact_spawners import spawn_shared_robot, spawn_shared_shelf
+        self.scene.robot.spawn.func = spawn_shared_robot
+        self.scene.shelf.spawn.func = spawn_shared_shelf

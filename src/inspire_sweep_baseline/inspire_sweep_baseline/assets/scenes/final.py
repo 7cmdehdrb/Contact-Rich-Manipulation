@@ -213,3 +213,36 @@ class FinalGoalAccuracyV0_2_1SceneCfg(FinalGoalAccuracyV0_1SceneCfg):
             sensor = getattr(self, parent_sensor_name(parent))
             sensor.filter_prim_paths_expr = paths.copy()
             sensor.max_contact_data_count_per_prim = 16 * len(paths)
+
+
+@configclass
+class FinalGoalAccuracyV0_2_2SceneCfg(FinalGoalAccuracyV0_1SceneCfg):
+    """Two special targets plus ten role-sharing props, rather than 36 bodies."""
+
+    def configure_population_capacity(self, max_gray_obstacles, max_white_obstacles, observation_slots=20):
+        from ..final_compact_spawners import CachedFinalObjectsCfg
+        # Base __post_init__ supplies legacy capacities; the compact roster is fixed.
+        super().configure_population_capacity(4, 5, observation_slots)
+        template = self.object_collection.rigid_objects['mass_cylinder'].copy()
+        variants = template.spawn.assets_cfg
+        size = len(variants)//3
+        candidates = [variants[0], variants[size], *variants[2*size:]]
+        objects = {}
+        for index in range(12):
+            name = 'mass_cylinder' if index == 0 else f'obstacle_{index-1}'
+            obj = template.copy()
+            obj.prim_path = '{ENV_REGEX_NS}/' + name
+            variant_ids = (index,) if index < 2 else tuple(range(2, 16))
+            obj.spawn = CachedFinalObjectsCfg(assets_cfg=[candidates[i].copy() for i in variant_ids],
+                variant_ids=variant_ids, activate_contact_sensors=True)
+            obj.init_state.pos = (-.7, index*2., PARKING_HEIGHT+10.)
+            objects[name] = obj
+            setattr(self, object_hand_sensor_name(name), ContactSensorCfg(prim_path=obj.prim_path,
+                filter_prim_paths_expr=['{ENV_REGEX_NS}/Robot/'+body for body in HAND_CONTACT_BODY_NAMES],
+                update_period=0., history_length=0, debug_vis=False,
+                max_contact_data_count_per_prim=16*len(HAND_CONTACT_BODY_NAMES)))
+        self.object_collection.rigid_objects = objects
+        for parent in TACTILE_PARENT_BODY_NAMES:
+            sensor = getattr(self, parent_sensor_name(parent))
+            sensor.filter_prim_paths_expr = [obj.prim_path for obj in objects.values()]
+            sensor.max_contact_data_count_per_prim = 16*len(objects)

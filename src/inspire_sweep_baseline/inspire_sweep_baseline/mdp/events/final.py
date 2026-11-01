@@ -67,3 +67,12 @@ class FinalGoalAccuracyV0_2_1EventsCfg(FinalV1EventsCfg):
         params={**FinalV1EventsCfg().object_spawn.params, 'gray_padding': .06, 'finger_gap': .02,
                 'placement_candidates': 32, 'placement_restarts': 4, 'placement_passes': 2},
     )
+
+
+from ..event_functions.final import randomize_compact_object_sizes, randomize_final_compact_scene
+
+
+@configclass
+class FinalGoalAccuracyV0_2_2EventsCfg(FinalGoalAccuracyV0_2_1EventsCfg):
+    object_spawn = FinalGoalAccuracyV0_2_1EventsCfg().object_spawn.replace(func=randomize_final_compact_scene)
+    object_size_randomization = FinalGoalAccuracyV0_2_1EventsCfg().object_size_randomization.replace(func=randomize_compact_object_sizes)
