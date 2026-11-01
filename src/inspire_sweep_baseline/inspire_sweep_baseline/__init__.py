@@ -2,6 +2,18 @@
 
 import gymnasium as gym
 
+REVISION_V0_TASK_ID = "Isaac-Inspire-Revision-v0"
+if REVISION_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=REVISION_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.revision:RevisionEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.revision_envs:RevisionEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.revision_ppo_cfg:RevisionPPORunnerCfg",
+        },
+    )
+
 TASK_ID = "Isaac-Inspire-Sweep-Baseline-v0"
 CONTACT_SWEEP_TASK_ID = "Isaac-Inspire-Contact-Sweep-v0"
 CONTACT_SWEEP_CLUTTER_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v0"
@@ -446,6 +458,7 @@ if DEX_TACTILE_OMNI_RENEWAL_V2_OSC_TASK_ID not in gym.registry:
     )
 
 __all__ = [
+    "REVISION_V0_TASK_ID",
     "CONTACT_SWEEP_CLUTTER_FUSION_TASK_ID",
     "CONTACT_SWEEP_TASK_ID",
     "CONTACT_SWEEP_CLUTTER_TASK_ID",
