@@ -85,3 +85,10 @@ class RevisionSceneCfg(InteractiveSceneCfg):
                 update_period=0., history_length=0, debug_vis=False,
                 max_contact_data_count_per_prim=16 * len(HAND_CONTACT_BODY_NAMES),
             ))
+
+
+@configclass
+class RevisionV1TestSceneCfg(RevisionSceneCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.object_collection.rigid_objects["mass_cylinder"].spawn.kind_override = "cylinder"

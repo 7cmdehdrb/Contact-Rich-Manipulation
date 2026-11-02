@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-02: `Isaac-Inspire-Revision-v1`과 `Isaac-Inspire-Revision-Test-v1`을 추가했다. v0 직접 상속으로 비용 3분리·10k 고정값·교대 장애물 증가·3cm 내부 Hold·최초 진입 +30/timeout +40을 적용하고, Test는 타겟 형상만 cylinder로 고정한다. [구현 계약과 학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V1_ENVIRONMENT.md) · [리뷰·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-02_revision_v1_implementation.md).
+
 2026-10-31 추가: [GoalAccuracy v0_2_2](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_2_ENVIRONMENT.md)는 v0_2_1을 보존한 새 환경이다. 물리 객체를 환경당 36→12개로 줄이고, 초기 형상 prototype·물리 재질을 재사용하며 reset에서 타겟/장애물 역할을 텐서로 재할당한다. 보상·관측·OBB 배치·Gray 4/White 5 일정은 유지한다. 환경별 보유 형상은 초기 생성 때 정해지므로 단일 환경의 타겟 후보 지원 범위는 부모와 다르다. [검증·성능 비교·제한](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_2_compact_scene.md).
 
 2026-10-31 추가: [OBB 텐서 배치 모듈](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/BBOX_SCENE_LAYOUT.md)을 **FinalGoalAccuracyV0_2_1EnvCfg reset에 적용**했다. 물체별 회전 Bounding Box, RED/Gray/White, 최소 20mm 간격, Gray padding 및 제한 탐색의 최다 배치를 사용한다. Gray 2500 / White 2000부터 각 1000마다 증가하여 4/5에서 멈추며, 다른 환경은 유지한다. 회귀·기하 106개 및 실제 GPU reset 검증을 통과했다. [연결·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_1_obb_reset.md). 독립 생성기 측정은 `scripts/benchmark_bbox_layout.py`를 사용한다.

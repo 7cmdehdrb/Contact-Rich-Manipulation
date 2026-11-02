@@ -37,3 +37,13 @@ class RevisionPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         learning_rate=0.001, schedule="adaptive", gamma=0.98, lam=0.95,
         desired_kl=0.02, max_grad_norm=1.0,
     )
+
+
+@configclass
+class RevisionV1PPORunnerCfg(RevisionPPORunnerCfg):
+    experiment_name = "inspire_revision_v1"
+
+
+@configclass
+class RevisionV1TestPPORunnerCfg(RevisionV1PPORunnerCfg):
+    experiment_name = "inspire_revision_test_v1"

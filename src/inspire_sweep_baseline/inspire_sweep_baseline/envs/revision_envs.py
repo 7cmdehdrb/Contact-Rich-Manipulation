@@ -4,14 +4,14 @@ from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 
 from ..assets.robot import ARM_JOINT_NAMES
-from ..assets.scenes.revision import RevisionSceneCfg
+from ..assets.scenes.revision import RevisionSceneCfg, RevisionV1TestSceneCfg
 from ..mdp.actions.revision import RevisionActionsCfg, RevisionOSCActionCfg
 from ..mdp.commands.revision import RevisionCommandsCfg
 from ..mdp.common.revision_goal import CONTACT_HEIGHT_LIMIT, GOAL_SUCCESS_RADIUS, HOLD_OUTER_RADIUS
-from ..mdp.curricula.revision import RevisionCurriculumCfg
+from ..mdp.curricula.revision import RevisionCurriculumCfg, RevisionV1CurriculumCfg
 from ..mdp.events.revision import RevisionEventsCfg
 from ..mdp.observations.revision import RevisionObservationsCfg
-from ..mdp.rewards.revision import RevisionRewardsCfg
+from ..mdp.rewards.revision import RevisionRewardsCfg, RevisionV1RewardsCfg
 from ..mdp.terminations.revision import RevisionTerminationsCfg
 
 
@@ -68,3 +68,23 @@ class RevisionEnvCfg(ManagerBasedRLEnvCfg):
         self.actions.arm_action.body_offset = RevisionOSCActionCfg.OffsetCfg(pos=eef.offset.pos, rot=eef.offset.rot)
         self.scene.robot.actuators["arm"].stiffness = 0.0
         self.scene.robot.actuators["arm"].damping = 0.0
+
+
+@configclass
+class RevisionV1EnvCfg(RevisionEnvCfg):
+    rewards: RevisionV1RewardsCfg = RevisionV1RewardsCfg()
+    curriculum: RevisionV1CurriculumCfg = RevisionV1CurriculumCfg()
+    # Compatibility field only; v1 has no outer Hold tail.
+    goal_hold_outer_radius: float | None = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params.update(gray_obstacles=3, white_obstacles=3)
+        self.rewards.target_goal_hold.params = {
+            "position_tolerance": self.goal_success_radius, "free_speed": 0.05, "speed_scale": 0.05,
+        }
+
+
+@configclass
+class RevisionV1TestEnvCfg(RevisionV1EnvCfg):
+    scene: RevisionV1TestSceneCfg = RevisionV1TestSceneCfg(num_envs=2048, env_spacing=2.5)

@@ -16,7 +16,7 @@ def definitions(relative, **bindings):
     path = PACKAGE / relative
     tree = ast.parse(path.read_text(encoding="utf-8"))
     tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
-    namespace = {"torch": torch, "math": math, **bindings}
+    namespace = {"torch": torch, "math": math, "ManagerTermBase": object, **bindings}
     exec(compile(tree, str(path), "exec"), namespace)
     return namespace
 

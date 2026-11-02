@@ -14,6 +14,23 @@ if REVISION_V0_TASK_ID not in gym.registry:
         },
     )
 
+REVISION_V1_TASK_ID = "Isaac-Inspire-Revision-v1"
+REVISION_V1_TEST_TASK_ID = "Isaac-Inspire-Revision-Test-v1"
+for task_id, env_cfg, runner_cfg in (
+    (REVISION_V1_TASK_ID, "RevisionV1EnvCfg", "RevisionV1PPORunnerCfg"),
+    (REVISION_V1_TEST_TASK_ID, "RevisionV1TestEnvCfg", "RevisionV1TestPPORunnerCfg"),
+):
+    if task_id not in gym.registry:
+        gym.register(
+            id=task_id,
+            entry_point="inspire_sweep_baseline.runtime.revision:RevisionEnv",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": f"inspire_sweep_baseline.envs.revision_envs:{env_cfg}",
+                "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.revision_ppo_cfg:{runner_cfg}",
+            },
+        )
+
 TASK_ID = "Isaac-Inspire-Sweep-Baseline-v0"
 CONTACT_SWEEP_TASK_ID = "Isaac-Inspire-Contact-Sweep-v0"
 CONTACT_SWEEP_CLUTTER_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v0"

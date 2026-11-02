@@ -200,6 +200,10 @@ def spawn_revision_objects(prim_path, cfg, translation=None, orientation=None, *
     prototypes = _prototypes(stage, cfg)
     paths = [f"{parent}/{name}" for parent in parents]
     choices = [random.randrange(len(REVISION_OBJECT_KINDS)) for _ in paths]
+    # Consume the same draws before overriding so target-only experiments do
+    # not shift the scale or obstacle random streams.
+    if cfg.kind_override is not None:
+        choices = [REVISION_OBJECT_KINDS.index(cfg.kind_override)] * len(paths)
     scales = [random.uniform(*cfg.scale_range) for _ in paths]
     with Sdf.ChangeBlock():
         for path, kind in zip(paths, choices):
@@ -237,6 +241,7 @@ def spawn_revision_objects(prim_path, cfg, translation=None, orientation=None, *
 @configclass
 class RevisionObjectSpawnerCfg(RigidObjectSpawnerCfg):
     func: Callable = spawn_revision_objects
+    kind_override: str | None = None
     scale_range: tuple[float, float] = (.9, 1.1)
     activate_contact_sensors: bool = True
     mass_props: sim.MassPropertiesCfg = sim.MassPropertiesCfg(mass=OBJECT_MASS)

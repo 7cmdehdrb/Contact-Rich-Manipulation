@@ -42,3 +42,21 @@ class RevisionCurriculumCfg:
         ((0, 80.0), (3000, 80.0), (6000, 50.0), (10000, 50.0), (12000, 30.0)))
     obstacle_contact_weight = _schedule("obstacle_contact_penalty", None,
         ((0, 0.0), (1000, 0.0), (3000, -0.02), (6000, -0.05), (10000, -0.05), (12000, -0.1)))
+
+
+@configclass
+class RevisionV1CurriculumCfg(RevisionCurriculumCfg):
+    obstacle_population = CurriculumTermCfg(
+        func=obstacle_population_schedule,
+        params={
+            "initial_gray": 3, "initial_white": 3, "final_gray": 4, "final_white": 5,
+            "gray_start_iteration": 12000, "white_start_iteration": 10000, "interval": 4000,
+        },
+    )
+    object_acceleration_weight = None
+    object_free_acceleration = None
+    obstacle_contact_free_force = None
+    obstacle_contact_weight = None
+    wrist_wrench_change_weight = None
+    wrist_wrench_free_force_change = None
+    wrist_wrench_free_moment_change = None
