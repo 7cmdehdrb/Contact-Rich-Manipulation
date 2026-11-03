@@ -44,11 +44,11 @@ def target_contact_below_height(env, threshold_n=0.01, frame_name="ee_frame"):
         raise ValueError("Contact height limit must be finite and positive")
     force = target_hand_contact_force_w(env)
     eef_z = env.scene[frame_name].data.target_pos_w[:, 0, 2]
-    # TEMP: enabled only by RevisionV1TestEnvCfg.debug_print_eef_height.
-    if getattr(env.cfg, "debug_print_eef_height", False):
-        height_mm = (eef_z - env._revision_initial_shelf_pos[:, 2] - SHELF_SURFACE_HEIGHT) * 1000.0
-        values = ", ".join(f"env{i}={height:.1f} mm" for i, height in enumerate(height_mm.tolist()))
-        print(f"[EEF height above initial shelf surface] {values}", flush=True)
+    # TEMP disabled after height tuning.
+    # if getattr(env.cfg, "debug_print_eef_height", False):
+    #     height_mm = (eef_z - env._revision_initial_shelf_pos[:, 2] - SHELF_SURFACE_HEIGHT) * 1000.0
+    #     values = ", ".join(f"env{i}={height:.1f} mm" for i, height in enumerate(height_mm.tolist()))
+    #     print(f"[EEF height above initial shelf surface] {values}", flush=True)
     ceiling = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT + height_limit
     contact = (
         env.sensor_data_fresh

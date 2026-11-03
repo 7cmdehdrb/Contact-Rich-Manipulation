@@ -88,8 +88,8 @@ class RevisionV1EnvCfg(RevisionEnvCfg):
 @configclass
 class RevisionV1TestEnvCfg(RevisionV1EnvCfg):
     scene: RevisionV1TestSceneCfg = RevisionV1TestSceneCfg(num_envs=2048, env_spacing=2.5)
-    # TEMP: comment out this line after checking EEF height during play.
-    debug_print_eef_height: bool = True
+    # TEMP disabled after height tuning.
+    # debug_print_eef_height: bool = True
 
 
 @configclass
