@@ -89,6 +89,24 @@ class RevisionModel(MLPModel):
         return _ExportRevisionModel(self, verbose=verbose)
 
 
+class RevisionGTModel(RevisionModel):
+    """Add the existing live target XYZ to the Actor, keeping its obstacle encoder.
+
+    Direct input is [policy57, target3]; latent/export widths become 76/124.
+    Critic behavior and the parent's strict non-GT Actor contract stay unchanged.
+    """
+
+    def _get_obs_dim(self, obs, obs_groups, obs_set):
+        if obs_set != "actor":
+            return super()._get_obs_dim(obs, obs_groups, obs_set)
+        if obs_groups[obs_set] != ["policy", "privileged", "obstacles"]:
+            raise ValueError("GT Actor requires policy, privileged, obstacles in order")
+        direct, dimension = super()._get_obs_dim(obs, {"actor": ["policy", "obstacles"]}, obs_set)
+        if obs["privileged"].ndim != 2 or obs["privileged"].shape[-1] != 3:
+            raise ValueError("GT current target position must have shape (num_envs, 3)")
+        return [*direct, "privileged"], dimension + 3
+
+
 class _ExportRevisionModel(nn.Module):
     """Export the Actor with only its 121D [policy57, initial obstacles64]."""
 

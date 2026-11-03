@@ -47,3 +47,29 @@ class RevisionV1PPORunnerCfg(RevisionPPORunnerCfg):
 @configclass
 class RevisionV1TestPPORunnerCfg(RevisionV1PPORunnerCfg):
     experiment_name = "inspire_revision_test_v1"
+
+
+@configclass
+class RevisionV2PPORunnerCfg(RevisionV1PPORunnerCfg):
+    experiment_name = "inspire_revision_v2"
+
+
+@configclass
+class RevisionV2TestPPORunnerCfg(RevisionV2PPORunnerCfg):
+    experiment_name = "inspire_revision_test_v2"
+
+
+@configclass
+class RevisionGTModelCfg(RevisionModelCfg):
+    class_name = "inspire_sweep_baseline.agent.revision_models:RevisionGTModel"
+
+
+@configclass
+class RevisionV2TestGTPPORunnerCfg(RevisionV2TestPPORunnerCfg):
+    experiment_name = "inspire_revision_test_v2_gt"
+    # Reuse the Critic's exact live XYZ tensor; keep the Actor's initial obstacles.
+    obs_groups = {
+        "actor": ["policy", "privileged", "obstacles"],
+        "critic": ["policy", "privileged", "critic_obstacles"],
+    }
+    actor = RevisionGTModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))

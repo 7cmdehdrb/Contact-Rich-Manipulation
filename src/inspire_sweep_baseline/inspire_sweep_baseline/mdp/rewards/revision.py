@@ -21,6 +21,7 @@ from ..reward_functions.goal_rewards import exponential_pushing_speed_cost_limit
 from ..reward_functions.revision import (
     goal_hold, successful_timeout_bonus, target_contact_below_height, goal_hold_v1,
     FirstGoalEntryBonus, IndependentWrenchMagnitudeChangePenalty,
+    goal_distance_v2, goal_hold_v2, FirstGoalEntryBonusV2,
 )
 
 
@@ -127,3 +128,18 @@ class RevisionV1RewardsCfg(RevisionRewardsCfg):
             if name == "target_goal_timeout_bonus":
                 self.__dict__["target_goal_first_entry_bonus"] = terms["target_goal_first_entry_bonus"]
             self.__dict__[name] = term
+
+
+@configclass
+class RevisionV2RewardsCfg(RevisionV1RewardsCfg):
+    target_goal_distance = RewTerm(func=goal_distance_v2, weight=3.7, params={"distance_scale": 0.05})
+    target_goal_hold = RewTerm(
+        func=goal_hold_v2, weight=10.0, params={"full_reward_radius": 0.025, "outer_radius": 0.035},
+    )
+    target_goal_first_entry_bonus = RewTerm(
+        func=FirstGoalEntryBonusV2, weight=25.0, params={"free_speed": 0.01, "speed_scale": 0.02},
+    )
+    target_goal_timeout_bonus = RewTerm(func=successful_timeout_bonus, weight=75.0)
+    object_acceleration_penalty = RewTerm(
+        func=ObjectAccelerationPenalty, weight=-0.05, params={"free_acceleration": 15.0, "max_cost": 100.0},
+    )

@@ -92,3 +92,41 @@ class RevisionV1TestSceneCfg(RevisionSceneCfg):
     def __post_init__(self):
         super().__post_init__()
         self.object_collection.rigid_objects["mass_cylinder"].spawn.kind_override = "cylinder"
+        _add_temporary_eef_height_guides(self)  # TEMP: comment out to hide all three guides.
+
+
+def _add_temporary_eef_height_guides(scene):
+    """TEMP visualization only: remove this helper and its call after height tuning."""
+    from ...mdp.common.contact_sweep_clutter_fusion import SHELF_HALF_EXTENTS, SHELF_SURFACE_HEIGHT
+
+    shelf_x, shelf_y, shelf_z = scene.shelf.init_state.pos
+    # Surface-relative center heights; colors ordered from bottom to top.
+    for height_mm, color in (
+        (90, (0.15, 0.45, 1.0)),
+        (95, (0.15, 1.0, 0.35)),
+        (100, (1.0, 0.65, 0.1)),
+    ):
+        setattr(scene, f"temp_eef_height_{height_mm}mm", AssetBaseCfg(
+            # Regex spawners require an existing parent; env prims already exist.
+            prim_path=f"{{ENV_REGEX_NS}}/TempEEFHeight_{height_mm}mm",
+            spawn=sim.CuboidCfg(
+                size=(2 * SHELF_HALF_EXTENTS[0], 2 * SHELF_HALF_EXTENTS[1], 0.0005),
+                collision_props=None,
+                rigid_props=None,
+                mass_props=None,
+                activate_contact_sensors=False,
+                visual_material=sim.PreviewSurfaceCfg(
+                    diffuse_color=color, opacity=0.90, roughness=1.0,
+                ),
+            ),
+            init_state=AssetBaseCfg.InitialStateCfg(
+                pos=(shelf_x, shelf_y, shelf_z + SHELF_SURFACE_HEIGHT + height_mm / 1000.0),
+            ),
+        ))
+
+
+@configclass
+class RevisionV2TestSceneCfg(RevisionSceneCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.object_collection.rigid_objects["mass_cylinder"].spawn.kind_override = "cylinder"

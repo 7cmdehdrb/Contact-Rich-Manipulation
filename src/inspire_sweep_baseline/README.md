@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-03: `Isaac-Inspire-Revision-Test-v2-GT`는 Test-v2를 직접 상속하며 Actor에 실시간 타겟 XYZ3D만 추가한다. Actor의 초기 장애물 관측과 Critic·보상·PPO는 유지한다. [GT 관측 계약·실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V2_ENVIRONMENT.md#test-v2-gt-실시간-타겟-위치-대조-실험).
+
+2026-11-03: `Isaac-Inspire-Revision-v2` / `Isaac-Inspire-Revision-Test-v2`를 추가했다. v1→v2→Test 직접 상속이며 거리·Hold·접촉에 EEF95mm 미만 조건, Smoothstep Hold weight10, 속도 감쇠 최초 진입 최대+25, timeout+75, free acceleration15m/s²를 적용한다. Test는 타겟 형상만 cylinder다. [구현 계약·학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V2_ENVIRONMENT.md) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-03_revision_v2_implementation.md).
+
 2026-11-02: `Isaac-Inspire-Revision-v1`과 `Isaac-Inspire-Revision-Test-v1`을 추가했다. v0 직접 상속으로 비용 3분리·10k 고정값·교대 장애물 증가·3cm 내부 Hold·최초 진입 +30/timeout +40을 적용하고, Test는 타겟 형상만 cylinder로 고정한다. [구현 계약과 학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V1_ENVIRONMENT.md) · [리뷰·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-02_revision_v1_implementation.md).
 
 2026-10-31 추가: [GoalAccuracy v0_2_2](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/FINAL_GOAL_ACCURACY_V0_2_2_ENVIRONMENT.md)는 v0_2_1을 보존한 새 환경이다. 물리 객체를 환경당 36→12개로 줄이고, 초기 형상 prototype·물리 재질을 재사용하며 reset에서 타겟/장애물 역할을 텐서로 재할당한다. 보상·관측·OBB 배치·Gray 4/White 5 일정은 유지한다. 환경별 보유 형상은 초기 생성 때 정해지므로 단일 환경의 타겟 후보 지원 범위는 부모와 다르다. [검증·성능 비교·제한](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-10-31_final_v0_2_2_compact_scene.md).

@@ -10,6 +10,7 @@ from ..termination_functions.goal_terminations import _object_position
 from ..common.contact_sweep_clutter_fusion import SHELF_SURFACE_HEIGHT
 from ..common.contact_sweep_clutter_fusion_contacts import target_hand_contact_force_w
 from ..common.revision_goal import GOAL_SUCCESS_RADIUS, HOLD_OUTER_RADIUS, target_measurements
+from .final import exponential_planar_goal_proximity
 
 
 def goal_hold(env, position_tolerance=GOAL_SUCCESS_RADIUS, outer_radius=HOLD_OUTER_RADIUS,
@@ -43,6 +44,11 @@ def target_contact_below_height(env, threshold_n=0.01, frame_name="ee_frame"):
         raise ValueError("Contact height limit must be finite and positive")
     force = target_hand_contact_force_w(env)
     eef_z = env.scene[frame_name].data.target_pos_w[:, 0, 2]
+    # TEMP: enabled only by RevisionV1TestEnvCfg.debug_print_eef_height.
+    if getattr(env.cfg, "debug_print_eef_height", False):
+        height_mm = (eef_z - env._revision_initial_shelf_pos[:, 2] - SHELF_SURFACE_HEIGHT) * 1000.0
+        values = ", ".join(f"env{i}={height:.1f} mm" for i, height in enumerate(height_mm.tolist()))
+        print(f"[EEF height above initial shelf surface] {values}", flush=True)
     ceiling = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT + height_limit
     contact = (
         env.sensor_data_fresh
@@ -163,3 +169,53 @@ class IndependentWrenchMagnitudeChangePenalty(ManagerTermBase):
             self._previous_valid[:] = fresh & finite
             self._cached_key = key
         return self._cached_raw.clone()
+
+
+def goal_reward_height_valid(env, frame_name="ee_frame"):
+    """Revision-v2 uses the same strict world-Z ceiling as target contact."""
+    limit = float(env.cfg.goal_reward_height_limit)
+    if not math.isfinite(limit) or limit <= 0.0:
+        raise ValueError("Goal reward height limit must be finite and positive")
+    eef_z = env.scene[frame_name].data.target_pos_w[:, 0, 2]
+    surface_z = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT
+    return torch.isfinite(eef_z) & torch.isfinite(surface_z) & (eef_z < surface_z + limit)
+
+
+def goal_distance_v2(env, distance_scale=0.05, command_name="target_goal_pos"):
+    raw = exponential_planar_goal_proximity(env, command_name=command_name, distance_scale=distance_scale)
+    return torch.where(goal_reward_height_valid(env), raw, 0.0)
+
+
+def goal_hold_v2(env, full_reward_radius=0.025, outer_radius=0.035, command_name="target_goal_pos"):
+    """Smoothstep occupancy with physical validity and no velocity attenuation."""
+    if not all(math.isfinite(v) and v > 0 for v in (full_reward_radius, outer_radius)) or outer_radius <= full_reward_radius:
+        raise ValueError("Expected 0 < full reward radius < outer radius")
+    distance, _, valid = target_measurements(env, command_name)
+    u = ((distance - full_reward_radius) / (outer_radius - full_reward_radius)).clamp(0.0, 1.0)
+    position = 1.0 - 3.0 * u.square() + 2.0 * u.pow(3)
+    return torch.where(valid & goal_reward_height_valid(env), position, 0.0)
+
+
+class FirstGoalEntryBonusV2(FirstGoalEntryBonus):
+    """Latch the first inside sample regardless of its speed-scaled payout."""
+
+    def __call__(self, env, free_speed=0.01, speed_scale=0.02, command_name="target_goal_pos"):
+        if not math.isfinite(free_speed) or free_speed < 0.0:
+            raise ValueError("Entry free speed must be finite and nonnegative")
+        if not math.isfinite(speed_scale) or speed_scale <= 0.0:
+            raise ValueError("Entry speed scale must be finite and positive")
+        key = (env.common_step_counter, env._sim_step_counter)
+        if key != self._cached_key:
+            goal = env.command_manager.get_command(command_name)
+            distance = torch.linalg.vector_norm(_object_position(env)[:, :2] - goal[:, :2], dim=-1)
+            inside = torch.isfinite(distance) & (distance < env.cfg.goal_success_radius)
+            rows = torch.arange(env.num_envs, device=env.device)
+            velocity = env.scene["object_collection"].data.object_lin_vel_w[rows, env.target_id[:, 0].long()]
+            speed = torch.linalg.vector_norm(velocity, dim=-1)
+            finite = torch.isfinite(speed)
+            safe_speed = torch.where(finite, speed, 0.0)
+            damping = torch.exp(-((safe_speed - free_speed).clamp_min(0.0) / speed_scale).square())
+            self._cached_event[:] = torch.where(inside & ~self._entered & finite, damping, 0.0)
+            self._entered |= inside
+            self._cached_key = key
+        return self._cached_event / env.step_dt

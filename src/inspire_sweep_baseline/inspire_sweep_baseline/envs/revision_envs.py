@@ -4,14 +4,14 @@ from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 
 from ..assets.robot import ARM_JOINT_NAMES
-from ..assets.scenes.revision import RevisionSceneCfg, RevisionV1TestSceneCfg
+from ..assets.scenes.revision import RevisionSceneCfg, RevisionV1TestSceneCfg, RevisionV2TestSceneCfg
 from ..mdp.actions.revision import RevisionActionsCfg, RevisionOSCActionCfg
 from ..mdp.commands.revision import RevisionCommandsCfg
 from ..mdp.common.revision_goal import CONTACT_HEIGHT_LIMIT, GOAL_SUCCESS_RADIUS, HOLD_OUTER_RADIUS
 from ..mdp.curricula.revision import RevisionCurriculumCfg, RevisionV1CurriculumCfg
 from ..mdp.events.revision import RevisionEventsCfg
 from ..mdp.observations.revision import RevisionObservationsCfg
-from ..mdp.rewards.revision import RevisionRewardsCfg, RevisionV1RewardsCfg
+from ..mdp.rewards.revision import RevisionRewardsCfg, RevisionV1RewardsCfg, RevisionV2RewardsCfg
 from ..mdp.terminations.revision import RevisionTerminationsCfg
 
 
@@ -88,3 +88,27 @@ class RevisionV1EnvCfg(RevisionEnvCfg):
 @configclass
 class RevisionV1TestEnvCfg(RevisionV1EnvCfg):
     scene: RevisionV1TestSceneCfg = RevisionV1TestSceneCfg(num_envs=2048, env_spacing=2.5)
+    # TEMP: comment out this line after checking EEF height during play.
+    debug_print_eef_height: bool = True
+
+
+@configclass
+class RevisionV2EnvCfg(RevisionV1EnvCfg):
+    rewards: RevisionV2RewardsCfg = RevisionV2RewardsCfg()
+    goal_reward_height_limit: float = 0.095
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.contact_height_limit = self.goal_reward_height_limit
+        # Replace the Gaussian parameters assigned by the v1 post-init.
+        self.rewards.target_goal_hold.params = {"full_reward_radius": 0.025, "outer_radius": 0.035}
+
+
+@configclass
+class RevisionV2TestEnvCfg(RevisionV2EnvCfg):
+    scene: RevisionV2TestSceneCfg = RevisionV2TestSceneCfg(num_envs=2048, env_spacing=2.5)
+
+
+@configclass
+class RevisionV2TestGTEnvCfg(RevisionV2TestEnvCfg):
+    """Same task; the GT runner also routes live target position to the Actor."""

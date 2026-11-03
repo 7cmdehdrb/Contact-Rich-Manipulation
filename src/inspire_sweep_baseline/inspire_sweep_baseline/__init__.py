@@ -31,6 +31,35 @@ for task_id, env_cfg, runner_cfg in (
             },
         )
 
+REVISION_V2_TASK_ID = "Isaac-Inspire-Revision-v2"
+REVISION_V2_TEST_TASK_ID = "Isaac-Inspire-Revision-Test-v2"
+for task_id, env_cfg, runner_cfg in (
+    (REVISION_V2_TASK_ID, "RevisionV2EnvCfg", "RevisionV2PPORunnerCfg"),
+    (REVISION_V2_TEST_TASK_ID, "RevisionV2TestEnvCfg", "RevisionV2TestPPORunnerCfg"),
+):
+    if task_id not in gym.registry:
+        gym.register(
+            id=task_id,
+            entry_point="inspire_sweep_baseline.runtime.revision:RevisionEnv",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": f"inspire_sweep_baseline.envs.revision_envs:{env_cfg}",
+                "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.revision_ppo_cfg:{runner_cfg}",
+            },
+        )
+
+REVISION_V2_TEST_GT_TASK_ID = "Isaac-Inspire-Revision-Test-v2-GT"
+if REVISION_V2_TEST_GT_TASK_ID not in gym.registry:
+    gym.register(
+        id=REVISION_V2_TEST_GT_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.revision:RevisionEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.revision_envs:RevisionV2TestGTEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.revision_ppo_cfg:RevisionV2TestGTPPORunnerCfg",
+        },
+    )
+
 TASK_ID = "Isaac-Inspire-Sweep-Baseline-v0"
 CONTACT_SWEEP_TASK_ID = "Isaac-Inspire-Contact-Sweep-v0"
 CONTACT_SWEEP_CLUTTER_TASK_ID = "Isaac-Inspire-Contact-Sweep-Clutter-v0"

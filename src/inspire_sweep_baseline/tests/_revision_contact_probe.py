@@ -21,6 +21,7 @@ from cli_args import apply_renderer_compatibility
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--num_envs", type=int, default=4)
+parser.add_argument("--revision-v2", action="store_true", help="Validate Test-v2's shared 95 mm ceiling")
 parser.add_argument("--output", type=Path, default=Path("outputs/revision_validation/contact_physics.json"))
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
@@ -37,17 +38,22 @@ try:
     from isaaclab.utils.math import axis_angle_from_quat, quat_apply, quat_conjugate, quat_mul, skew_symmetric_matrix
     import inspire_sweep_baseline
     from inspire_sweep_baseline.assets.robot import ARM_JOINT_NAMES
-    from inspire_sweep_baseline.envs.revision_envs import RevisionEnvCfg
+    from inspire_sweep_baseline.envs.revision_envs import RevisionEnvCfg, RevisionV2TestEnvCfg
     from inspire_sweep_baseline.mdp.common.contact_sweep_clutter_fusion_contacts import target_hand_contact_force_w, whole_hand_contact_force_w
-    from inspire_sweep_baseline.mdp.reward_functions.revision import target_contact_below_height
+    from inspire_sweep_baseline.mdp.reward_functions.revision import (
+        target_contact_below_height, goal_distance_v2, goal_hold_v2,
+    )
     from revision_contact_geometry_probe import _body_collider_points, _rotation, measure_contact_height_geometry
 
-    cfg = RevisionEnvCfg()
+    cfg = RevisionV2TestEnvCfg() if args.revision_v2 else RevisionEnvCfg()
     cfg.scene.num_envs = args.num_envs
     cfg.sim.device = args.device
     cfg.seed = 42
     cfg.log_dir = str(args.output.parent)
-    wrapped = gym.make("Isaac-Inspire-Revision-v0", cfg=cfg)
+    task = "Isaac-Inspire-Revision-Test-v2" if args.revision_v2 else "Isaac-Inspire-Revision-v0"
+    wrapped = gym.make(task, cfg=cfg)
+    report["task"] = task
+    report["height_limit_m"] = cfg.contact_height_limit
     env = wrapped.unwrapped
     env.reset(seed=42)
     robot, objects = env.scene["robot"], env.scene["object_collection"]
@@ -89,14 +95,14 @@ try:
         env._active_object_mask[:, 0] = True
         refresh()
 
-    def solve_pose(desired_position, desired_quaternion):
+    def solve_pose(desired_position, desired_quaternion, tolerance=2.e-4):
         """Damped least-squares IK on actual PhysX Jacobians, no root edits."""
         for iteration in range(120):
             current = env.scene["ee_frame"].data
             current_pos, current_quat = current.target_pos_w[:, 0], current.target_quat_w[:, 0]
             rotation_error = axis_angle_from_quat(quat_mul(desired_quaternion, quat_conjugate(current_quat)))
             error = torch.cat((desired_position - current_pos, rotation_error), dim=-1)
-            if float(error[:, :3].norm(dim=-1).max()) < 2.e-4 and float(error[:, 3:].norm(dim=-1).max()) < 2.e-3:
+            if float(error[:, :3].norm(dim=-1).max()) < tolerance and float(error[:, 3:].norm(dim=-1).max()) < 2.e-3:
                 break
             jacobian = robot.root_physx_view.get_jacobians()[:, jacobian_index, :, joint_ids].clone()
             offset = current_pos - robot.data.body_link_pos_w[:, body_index]
@@ -155,7 +161,44 @@ try:
         env.sensor_data_fresh[:] = True
 
     with torch.inference_mode():
-        for mode, height, airborne in (("low", .095, False), ("high", .15, True)):
+        if args.revision_v2:
+            # Actual FrameTransformer readings on either side of the ceiling;
+            # retain a normal grounded target and align its goal at d=0.
+            for height, expected in ((.0949, 1.), (.0951, 0.)):
+                env.reset(seed=42)
+                grounded = objects.data.object_link_state_w[:, 0].clone()
+                park_objects()
+                desired = env._revision_initial_shelf_pos.clone()
+                desired[:, 2] = surface + height
+                ik = solve_pose(desired, initial_eef_quat, tolerance=1.e-6)
+                states = objects.data.object_link_state_w.clone()
+                states[:, 0] = grounded
+                states[:, 0, 7:] = 0.
+                objects.write_object_link_state_to_sim(states)
+                refresh()
+                env.command_manager.get_term("target_goal_pos").pos_command_w[:, :2] = objects.data.object_pos_w[:, 0, :2]
+                distance, hold = goal_distance_v2(env), goal_hold_v2(env)
+                measured = env.scene["ee_frame"].data.target_pos_w[:, 0, 2] - surface
+                torch.testing.assert_close(distance, torch.full_like(distance, expected))
+                torch.testing.assert_close(hold, torch.full_like(hold, expected))
+                report.setdefault("goal_height_boundary", []).append({
+                    "requested_height_m": height, "measured_height_m": measured.tolist(),
+                    "distance_raw": distance.tolist(), "hold_raw": hold.tolist(), "ik": ik,
+                })
+                if expected == 1.:
+                    paid = []
+                    goal = env.command_manager.get_term("target_goal_pos").pos_command_w
+                    hold_index = env.reward_manager.active_terms.index("target_goal_hold")
+                    for d, expected_amount in ((0., .2), (.03, .1), (.035, 0.)):
+                        goal[:, :2] = objects.data.object_pos_w[:, 0, :2]
+                        goal[:, 0] += d
+                        env.reward_manager.compute(env.step_dt)
+                        amount = env.reward_manager._step_reward[:, hold_index] * env.step_dt
+                        torch.testing.assert_close(amount, torch.full_like(amount, expected_amount), atol=1.e-5, rtol=0.)
+                        paid.append({"distance_m": d, "step_reward": amount.tolist()})
+                    report["hold_manager_payments"] = paid
+        poses = (("low", .085, False), ("high", .105, True)) if args.revision_v2 else (("low", .095, False), ("high", .15, True))
+        for mode, height, airborne in poses:
             env.reset(seed=42)
             park_objects()
             desired = env._revision_initial_shelf_pos.clone()
@@ -188,13 +231,13 @@ try:
         torch.testing.assert_close(robot.data.root_pos_w, initial_root, atol=1.e-6, rtol=0.)
         low = [row for row in report["samples"] if row["mode"] == "low"]
         high = [row for row in report["samples"] if row["mode"] == "high"]
-        low_hits = sum(force >= .01 and h < .12 and value == 1.
+        low_hits = sum(force >= .01 and h < cfg.contact_height_limit and value == 1.
                        for row in low for force, h, value in zip(row["force_norm_n"], row["eef_heights_m"], row["reward"]))
-        high_hits = sum(force >= .01 and h >= .12 and value == 0.
+        high_hits = sum(force >= .01 and h >= cfg.contact_height_limit and value == 0.
                         for row in high for force, h, value in zip(row["force_norm_n"], row["eef_heights_m"], row["reward"]))
         wrong = [(row["mode"], force, h, value) for row in report["samples"]
                  for force, h, value in zip(row["force_norm_n"], row["eef_heights_m"], row["reward"])
-                 if value != float(force >= .01 and h < .12)]
+                 if value != float(force >= .01 and h < cfg.contact_height_limit)]
         report["result"] = {"low_contact_reward_one_samples": low_hits,
                             "high_contact_reward_zero_samples": high_hits,
                             "incorrect_gate_samples": wrong, "robot_root_unchanged": True,
