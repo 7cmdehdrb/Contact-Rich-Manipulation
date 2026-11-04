@@ -1,5 +1,7 @@
 """Wrench-v0 directly composes the Test-v2 contract without environment inheritance."""
 
+import math
+
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
@@ -10,10 +12,10 @@ from ..mdp.actions.wrench import (
     WrenchV1ActionsCfg,
 )
 from ..mdp.commands.wrench import WrenchCommandsCfg
-from ..mdp.curricula.wrench import WrenchCurriculumCfg
+from ..mdp.curricula.wrench import WrenchCurriculumCfg, WrenchV0_1CurriculumCfg
 from ..mdp.events.wrench import WrenchEventsCfg
 from ..mdp.observations.wrench import WrenchObservationsCfg
-from ..mdp.rewards.wrench import WrenchRewardsCfg, WrenchV1RewardsCfg
+from ..mdp.rewards.wrench import WrenchRewardsCfg, WrenchV0_1RewardsCfg, WrenchV1RewardsCfg
 from ..mdp.terminations.wrench import WrenchTerminationsCfg
 
 
@@ -86,6 +88,24 @@ class WrenchEnvCfg(ManagerBasedRLEnvCfg):
 
 
 @configclass
+class WrenchV0_1EnvCfg(WrenchEnvCfg):
+    """Contact/angle feasibility variant with a fixed 40-degree goal deadzone."""
+
+    rewards: WrenchV0_1RewardsCfg = WrenchV0_1RewardsCfg()
+    curriculum: WrenchV0_1CurriculumCfg = WrenchV0_1CurriculumCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params.update(
+            excluded_x_half_angle=math.radians(40.0), goal_distance=0.075,
+        )
+        self.events.layout_bank.params.update(
+            stages=((40, 3, 3), (40, 3, 4), (40, 4, 4), (40, 4, 5)),
+            min_goal_distance=0.025,
+        )
+
+
+@configclass
 class WrenchV1EnvCfg(WrenchEnvCfg):
     """Sensor-frame wrench OSC with normalized desired-wrench action-rate cost."""
 
@@ -98,3 +118,21 @@ class WrenchV1EnvCfg(WrenchEnvCfg):
         # ee_frame stays unchanged for observations, height rewards and telemetry.
         self.actions.arm_action.body_name = "axia80_link"
         self.actions.arm_action.body_offset = None
+
+
+@configclass
+class WrenchV2EnvCfg(WrenchV1EnvCfg):
+    """One tenth of v1's desired and corrected Arm wrench ranges.
+
+    The inherited action-rate cost normalizes by this policy target range;
+    its physical scale cancels, so the same relative change keeps its cost.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.actions.arm_action.wrench_scale = tuple(
+            value / 10.0 for value in self.actions.arm_action.wrench_scale
+        )
+        self.actions.arm_action.commanded_wrench_limit = tuple(
+            value / 10.0 for value in self.actions.arm_action.commanded_wrench_limit
+        )

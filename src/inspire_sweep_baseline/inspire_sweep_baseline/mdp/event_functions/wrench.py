@@ -3,17 +3,18 @@
 import math
 import torch
 from isaaclab.utils.math import quat_apply, quat_mul, subtract_frame_transforms
-from ..common.wrench_layout import WrenchLayoutBank
+from ..common.wrench_layout import LAYOUT_STAGES, WrenchLayoutBank
 from .revision import initialize_revision_geometry
 from .final import apply_final_visibility
 
 
-def initialize_wrench_layouts(env, env_ids=None):
+def initialize_wrench_layouts(env, env_ids, stages=LAYOUT_STAGES, min_goal_distance=0.05):
     del env_ids
     params = env.cfg.events.object_spawn.params
     env._wrench_layout_bank = WrenchLayoutBank(
         env._revision_bounds_t, env._revision_layout_rng,
         size=env.cfg.layout_bank_size, batch_size=env.cfg.layout_build_batch_size,
+        stages=stages, min_goal_distance=min_goal_distance,
         red_margin=env.cfg.red_margin, rear_offset=env.cfg.rear_offset,
         spawn_radius=params['spawn_radius'], goal_distance=params['goal_distance'],
         edge_clearance=params['edge_clearance'])

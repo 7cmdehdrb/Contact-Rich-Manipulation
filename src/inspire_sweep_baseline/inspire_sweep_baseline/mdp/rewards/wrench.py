@@ -20,7 +20,9 @@ from ..reward_functions.revision import (
     goal_distance_v2, goal_hold_v2, FirstGoalEntryBonusV2,
 )
 
-from ..reward_functions.wrench import settled_success_bonus, desired_wrench_action_rate_penalty
+from ..reward_functions.wrench import (
+    settled_success_bonus, desired_wrench_action_rate_penalty, WrenchV0_1GoalDistance,
+)
 
 
 @configclass
@@ -74,6 +76,15 @@ class WrenchRewardsCfg:
     target_speed_penalty = RewTerm(
         func=exponential_pushing_speed_cost_limit, weight=-5.0,
         params={"free_speed": 0.1, "max_cost": 100.0},
+    )
+
+
+@configclass
+class WrenchV0_1RewardsCfg(WrenchRewardsCfg):
+    target_contact = None
+    target_goal_distance = RewTerm(
+        func=WrenchV0_1GoalDistance, weight=3.7,
+        params={"distance_scale": 0.05, "threshold_n": 0.01},
     )
 
 

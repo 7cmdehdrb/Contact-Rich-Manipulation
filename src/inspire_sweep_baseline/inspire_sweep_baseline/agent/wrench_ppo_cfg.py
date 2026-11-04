@@ -37,5 +37,15 @@ class WrenchPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
+class WrenchV0_1PPORunnerCfg(WrenchPPORunnerCfg):
+    experiment_name = "inspire_wrench_v0_1"
+
+
+@configclass
 class WrenchV1PPORunnerCfg(WrenchPPORunnerCfg):
     experiment_name = "inspire_wrench_v1"
+
+
+@configclass
+class WrenchV2PPORunnerCfg(WrenchV1PPORunnerCfg):
+    experiment_name = "inspire_wrench_v2"

@@ -15,6 +15,23 @@ from test_fusion_holding_osc import osc
 from test_revision_layout import bounds
 
 
+@pytest.mark.parametrize('params', [{}, {'stages': ((40, 3, 3),), 'min_goal_distance': .025}])
+def test_layout_startup_passes_real_manager_argument_validation(configs, params):
+    import inspect
+
+    manager_path = MODULE_ROOT.parents[2] / 'IsaacLab/source/isaaclab/isaaclab/managers/manager_base.py'
+    tree = ast.parse(manager_path.read_text())
+    manager = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'ManagerBase')
+    resolver = next(n for n in manager.body if isinstance(n, ast.FunctionDef)
+                    and n.name == '_resolve_common_term_cfg')
+    namespace = {'inspect': inspect, 'ManagerTermBaseCfg': NS, 'ManagerTermBase': object}
+    exec(compile(ast.Module(body=[resolver], type_ignores=[]), str(manager_path), 'exec'), namespace)
+    events = configs('event_functions', 'wrench')
+    term = NS(func=events.initialize_wrench_layouts, params=params)
+    owner = NS(_env=NS(sim=NS(is_playing=lambda: False)))
+    namespace['_resolve_common_term_cfg'](owner, 'layout_bank', term, min_argc=2)
+
+
 def test_manager_contracts_and_isolation(configs):
     for role, old_name, new_name in [
         ('rewards', 'RevisionV2RewardsCfg', 'WrenchRewardsCfg'),
@@ -66,7 +83,7 @@ def test_observations_actions_commands_and_ppo_preserve_source_contract():
         new_tree = ast.parse(new)
         # New v1 is intentionally derived; this comparison guards the independent v0 declarations.
         new_tree.body = [n for n in new_tree.body if not (
-            isinstance(n, ast.ClassDef) and n.name.startswith('WrenchV1')
+            isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2'))
             or isinstance(n, ast.ImportFrom) and n.module == 'action_functions.wrench')]
         assert ast.dump(ast.parse(old)) == ast.dump(new_tree)
     old_tree = ast.parse((MODULE_ROOT/'agent/revision_ppo_cfg.py').read_text())
@@ -75,7 +92,7 @@ def test_observations_actions_commands_and_ppo_preserve_source_contract():
         'inspire_wrench_v0','inspire_revision_v0'))
     old_classes = {n.name: ast.dump(n) for n in old_tree.body if isinstance(n,ast.ClassDef)}
     for n in new_tree.body:
-        if isinstance(n, ast.ClassDef) and not n.name.startswith('WrenchV1'):
+        if isinstance(n, ast.ClassDef) and not n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2')):
             assert ast.dump(n) == old_classes[n.name]
 
 
@@ -88,7 +105,7 @@ def test_no_old_environment_ancestors_or_cfg_instances():
                'ObsGroup','RslRlMLPModelCfg','RslRlOnPolicyRunnerCfg','ManagerTermBase','ActionTerm'}
     for path in files:
         tree = ast.parse(path.read_text())
-        tree.body = [n for n in tree.body if not (isinstance(n, ast.ClassDef) and n.name.startswith('WrenchV1'))]
+        tree.body = [n for n in tree.body if not (isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2')))]
         for n in ast.walk(tree):
             if isinstance(n, ast.ClassDef):
                 assert all(ast.unparse(b) in allowed for b in n.bases), (path,n.name)

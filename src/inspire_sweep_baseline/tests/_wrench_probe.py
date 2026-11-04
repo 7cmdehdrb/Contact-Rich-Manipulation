@@ -14,7 +14,7 @@ from isaaclab.app import AppLauncher
 from cli_args import apply_renderer_compatibility
 
 parser=argparse.ArgumentParser()
-parser.add_argument('--version', choices=('v0', 'v1'), default='v0')
+parser.add_argument('--version', choices=('v0', 'v0_1', 'v1', 'v2'), default='v0')
 parser.add_argument('--num_envs',type=int,default=64)
 parser.add_argument('--collections',type=int,default=5)
 parser.add_argument('--output',type=Path,default=Path('outputs/wrench_validation'))
@@ -29,9 +29,9 @@ try:
     import torch
     import inspire_sweep_baseline
     from inspire_sweep_baseline.envs.revision_envs import RevisionV2TestEnvCfg
-    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV1EnvCfg
+    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV0_1EnvCfg, WrenchV1EnvCfg, WrenchV2EnvCfg
     from inspire_sweep_baseline.agent.revision_ppo_cfg import RevisionV2TestPPORunnerCfg
-    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV1PPORunnerCfg
+    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV0_1PPORunnerCfg, WrenchV1PPORunnerCfg, WrenchV2PPORunnerCfg
 
     def differences(a,b,prefix=''):
         if isinstance(a,dict) and isinstance(b,dict):
@@ -42,9 +42,9 @@ try:
             return out
         return [] if a==b else [prefix]
 
-    parent=RevisionV2TestEnvCfg() if args.version == 'v0' else WrenchEnvCfg()
+    parent={'v0': RevisionV2TestEnvCfg, 'v0_1': WrenchEnvCfg, 'v1': WrenchEnvCfg, 'v2': WrenchV1EnvCfg}[args.version]()
     baseline=parent.to_dict()
-    cfg=WrenchEnvCfg() if args.version == 'v0' else WrenchV1EnvCfg()
+    cfg={'v0': WrenchEnvCfg, 'v0_1': WrenchV0_1EnvCfg, 'v1': WrenchV1EnvCfg, 'v2': WrenchV2EnvCfg}[args.version]()
     config_diff=differences(baseline,cfg.to_dict())
     allowed=(
         'goal_reward_height_limit','contact_height_limit','layout_bank_size','layout_build_batch_size',
@@ -54,12 +54,20 @@ try:
         'events.object_spawn.func','events.object_physics_randomization.mode',
         'curriculum.target_goal_direction_deadzone.',
     )
+    if args.version == 'v0_1':
+        allowed = ('rewards.target_contact', 'rewards.target_goal_distance.',
+                   'curriculum.target_goal_direction_deadzone', 'events.layout_bank.params',
+                   'events.object_spawn.params.goal_distance', 'events.object_spawn.params.excluded_x_half_angle')
     if args.version == 'v1':
         allowed = ('actions.arm_action.', 'rewards.robot_action_rate_penalty.func')
+    if args.version == 'v2':
+        allowed = ('actions.arm_action.wrench_scale', 'actions.arm_action.commanded_wrench_limit')
     assert all(path.startswith(allowed) for path in config_diff),config_diff
     assert type(parent)().to_dict()==baseline
     assert differences(RevisionV2TestPPORunnerCfg().to_dict(),WrenchPPORunnerCfg().to_dict())==['experiment_name']
     assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV1PPORunnerCfg().to_dict())==['experiment_name']
+    assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV0_1PPORunnerCfg().to_dict())==['experiment_name']
+    assert differences(WrenchV1PPORunnerCfg().to_dict(),WrenchV2PPORunnerCfg().to_dict())==['experiment_name']
     cfg.scene.num_envs=args.num_envs
     cfg.sim.device=args.device
     cfg.seed=42
@@ -73,9 +81,12 @@ try:
     assert {k:v.shape[-1] for k,v in obs.items()}=={'policy':57,'obstacles':64,'privileged':3,'critic_obstacles':64}
     assert raw.scene['object_collection'].num_objects==10
     assert np.all(np.asarray(raw._revision_object_kinds)[:,0]==0)
-    assert len(raw.reward_manager.active_terms)==15
+    assert len(raw.reward_manager.active_terms)==(14 if args.version == 'v0_1' else 15)
+    if args.version == 'v0_1':
+        assert 'target_contact' not in raw.reward_manager.active_terms
+        assert 'target_goal_direction_deadzone' not in raw.curriculum_manager.active_terms
     arm = raw.action_manager.get_term('arm_action')
-    if args.version == 'v1':
+    if args.version in ('v1', 'v2'):
         assert arm.cfg.body_offset is None and arm.cfg.body_name == 'axia80_link'
         assert arm.action_dim == 6
     mass=raw._clutter_physics.mass_buffer.clone()
@@ -104,7 +115,7 @@ try:
                 obs,reward,terminated,truncated,_=env.step(actions)
                 assert torch.isfinite(reward).all()
                 assert all(torch.isfinite(v).all() for v in obs.values())
-                if args.version == 'v1':
+                if args.version in ('v1', 'v2'):
                     assert torch.isfinite(arm.current_wrench_s).all()
                     assert torch.isfinite(arm.joint_efforts).all()
                     limits = raw.scene['robot'].data.joint_effort_limits[:, arm._joint_ids]
@@ -116,7 +127,7 @@ try:
                 collection_36_steps=measurements,
                 scope='Zero actions with finite checks; excludes policy inference and PPO updates')
     args.output.mkdir(parents=True,exist_ok=True)
-    suffix = '' if args.version == 'v0' else '_v1'
+    suffix = '' if args.version == 'v0' else '_' + args.version
     (args.output/f'gpu_probe{suffix}_{args.num_envs}.json').write_text(json.dumps(report,indent=2))
     print(json.dumps(report,indent=2))
 finally:

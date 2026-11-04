@@ -7,11 +7,13 @@ from .bbox_scene_layout import LayoutConfig, footprint_from_bounds, generate_lay
 
 
 def sample_revision_commands(bounds, generator, spawn_radius=.02, goal_distance=.15,
-                             edge_clearance=.02, excluded_x_half_angle=math.pi / 6):
-    """Retain v0_2's central disk and feasible 5--15 cm ray with actual bounds."""
+                             edge_clearance=.02, excluded_x_half_angle=math.pi / 6,
+                             min_goal_distance=.05):
+    """Central disk and feasible bounded ray; default range remains 5--15 cm."""
     if not 0 <= excluded_x_half_angle < math.pi / 2:
         raise ValueError('Goal direction exclusion must be in [0, pi/2)')
-    if spawn_radius < 0 or goal_distance < .05 or edge_clearance < 0:
+    if (not math.isfinite(min_goal_distance) or min_goal_distance <= 0
+            or spawn_radius < 0 or goal_distance < min_goal_distance or edge_clearance < 0):
         raise ValueError('Invalid Revision command distances')
     device, dtype = bounds.device, bounds.dtype
     half = bounds[:, :, :2].abs().amax(1)
@@ -30,16 +32,16 @@ def sample_revision_commands(bounds, generator, spawn_radius=.02, goal_distance=
     direction = torch.stack((angles.cos(), angles.sin()), -1)
     room = (safe[:, None] - direction.sign() * target[:, None]) / direction.abs().clamp_min(1e-12)
     distance = room.amin(-1).clamp_max(goal_distance)
-    feasible = distance >= .05
+    feasible = distance >= min_goal_distance
     # Central disk has a guaranteed feasible +/-Y fallback for supported sizes.
     fallback = torch.zeros((len(bounds), 1, 2), device=device, dtype=dtype)
     fallback[:, 0, 1] = torch.where(target[:, 1] > 0, -1., 1.)
     fallback_distance = (safe[:, 1] + target[:, 1].abs()).clamp_max(goal_distance)
     direction = torch.cat((direction, fallback), 1)
     distance = torch.cat((distance, fallback_distance[:, None]), 1)
-    feasible = torch.cat((feasible, fallback_distance[:, None] >= .05), 1)
+    feasible = torch.cat((feasible, fallback_distance[:, None] >= min_goal_distance), 1)
     if not bool(feasible.any(-1).all()):
-        raise ValueError('No valid goal ray of at least five centimetres')
+        raise ValueError(f'No valid goal ray of at least {min_goal_distance} metres')
     index = feasible.to(torch.int64).argmax(-1)
     rows = torch.arange(len(bounds), device=device)
     goal = target + direction[rows, index] * distance[rows, index, None]

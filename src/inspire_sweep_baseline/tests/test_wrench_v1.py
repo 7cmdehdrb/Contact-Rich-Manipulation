@@ -184,12 +184,14 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
             self.ee_frame=_AssetNode(target_frames=[_AssetNode(prim_path='Robot/axia80_link',offset=_AssetNode(pos=(0,0,.1427),rot=(1,0,0,0)))])
         def configure_population_capacity(self,*args): assert args==(4,5,16)
     ns=dict(vars(omni_config.baseline));ns.update(vars(action_configs))
-    ns.update(WrenchSceneCfg=Scene,WrenchObservationsCfg=_AssetNode,
+    ns.update(math=math,WrenchSceneCfg=Scene,WrenchObservationsCfg=_AssetNode,
               WrenchCommandsCfg=lambda:_AssetNode(target_goal_pos=_AssetNode()))
     for role,name in [('rewards','WrenchRewardsCfg'),('terminations','WrenchTerminationsCfg'),
                       ('events','WrenchEventsCfg'),('curricula','WrenchCurriculumCfg')]:
         ns[name]=getattr(configs(role,'wrench'),name)
     ns["WrenchV1RewardsCfg"] = configs("rewards", "wrench").WrenchV1RewardsCfg
+    ns["WrenchV0_1RewardsCfg"] = configs("rewards", "wrench").WrenchV0_1RewardsCfg
+    ns["WrenchV0_1CurriculumCfg"] = configs("curricula", "wrench").WrenchV0_1CurriculumCfg
     m=_execute_definitions(MODULE_ROOT/'envs/wrench_envs.py',ns)
     parent=m.WrenchEnvCfg();before=parent.to_dict();child=m.WrenchV1EnvCfg()
     assert type(child).__bases__==(type(parent),)
@@ -200,10 +202,53 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
     child.rewards.robot_action_rate_penalty=deepcopy(parent.rewards.robot_action_rate_penalty)
     assert_ordered_equal(child.to_dict(),before)
     assert m.WrenchEnvCfg().to_dict()==before
+    v1 = m.WrenchV1EnvCfg()
+    v1_before = v1.to_dict()
+    v2 = m.WrenchV2EnvCfg()
+    assert type(v2).__bases__ == (type(v1),)
+    assert v2.actions.arm_action.wrench_scale == (10., 10., 10., .5, .5, .5)
+    assert v2.actions.arm_action.commanded_wrench_limit == (12., 12., 12., .6, .6, .6)
+    v2.actions.arm_action.wrench_scale = v1.actions.arm_action.wrench_scale
+    v2.actions.arm_action.commanded_wrench_limit = v1.actions.arm_action.commanded_wrench_limit
+    assert_ordered_equal(v2.to_dict(), v1_before)
+    assert m.WrenchV1EnvCfg().to_dict() == v1_before
+    assert m.WrenchV2EnvCfg().actions.arm_action.wrench_scale == (10., 10., 10., .5, .5, .5)
+
+    feasibility = m.WrenchV0_1EnvCfg()
+    assert type(feasibility).__bases__ == (type(parent),)
+    assert feasibility.rewards.target_contact is None
+    term = feasibility.rewards.target_goal_distance
+    assert term.func.__name__ == 'WrenchV0_1GoalDistance'
+    assert term.weight == 3.7 and term.params == {'distance_scale': .05, 'threshold_n': .01}
+    assert feasibility.curriculum.target_goal_direction_deadzone is None
+    assert feasibility.events.object_spawn.params == {
+        **parent.events.object_spawn.params, 'goal_distance': .075,
+        'excluded_x_half_angle': math.radians(40),
+    }
+    assert feasibility.events.layout_bank.params == {
+        'stages': ((40,3,3), (40,3,4), (40,4,4), (40,4,5)), 'min_goal_distance': .025,
+    }
+    # Restore only requested differences, then compare the entire ordered config.
+    feasibility.rewards.target_contact = deepcopy(parent.rewards.target_contact)
+    feasibility.rewards.target_goal_distance = deepcopy(parent.rewards.target_goal_distance)
+    feasibility.curriculum.target_goal_direction_deadzone = deepcopy(parent.curriculum.target_goal_direction_deadzone)
+    feasibility.events.object_spawn.params = deepcopy(parent.events.object_spawn.params)
+    feasibility.events.layout_bank.params = deepcopy(parent.events.layout_bank.params)
+    assert_ordered_equal(feasibility.to_dict(), before)
+    assert m.WrenchEnvCfg().to_dict() == before
+
     registry={};gym=NS(registry=registry,register=lambda **kw:registry.update({kw['id']:kw}))
     _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':gym})
+    entry = registry['Inspire-Wrench-v0_1']
+    assert entry['entry_point'] == registry['Inspire-Wrench-v0']['entry_point']
+    assert entry['kwargs']['env_cfg_entry_point'].endswith(':WrenchV0_1EnvCfg')
+    assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':WrenchV0_1PPORunnerCfg')
     assert registry['Inspire-Wrench-v1']['entry_point']==registry['Inspire-Wrench-v0']['entry_point']
     assert registry['Inspire-Wrench-v1']['kwargs']['env_cfg_entry_point'].endswith(':WrenchV1EnvCfg')
+    assert registry['Inspire-Wrench-v2']['entry_point'] == registry['Inspire-Wrench-v1']['entry_point']
+    assert registry['Inspire-Wrench-v2']['kwargs']['env_cfg_entry_point'].endswith(':WrenchV2EnvCfg')
+    assert registry['Inspire-Wrench-v2']['kwargs']['rsl_rl_cfg_entry_point'].endswith(':WrenchV2PPORunnerCfg')
+
 
 
 def test_ppo_only_changes_experiment_name(omni_config):
@@ -283,3 +328,47 @@ def test_normalized_desired_wrench_rate_clips_targets_and_preserves_hand(configs
     env.action_manager.prev_action = previous * 2
     # Hand stays raw, so its cost scales by four.
     torch.testing.assert_close(fn(env), torch.tensor([.48,.12,.015]))
+
+
+def test_v2_scaled_execution_and_normalized_action_rate(control, action_configs, configs):
+    action, env, robot, jacobian, gravity, captured = make_action(control, action_configs)
+    cfg = deepcopy(action.cfg)
+    cfg.wrench_scale = tuple(v / 10 for v in cfg.wrench_scale)
+    cfg.commanded_wrench_limit = tuple(v / 10 for v in cfg.commanded_wrench_limit)
+    small = control.SensorFrameWrenchAction(cfg, env)
+    raw = torch.tensor([[.5, 0, 0, .5, 0, 0, 0, 0]]).repeat(2, 1)
+    rate = configs('reward_functions', 'wrench').desired_wrench_action_rate_penalty
+    env.action_manager = NS(action=raw, prev_action=torch.zeros_like(raw), get_term=lambda name:small)
+    small.process_actions(raw[:, :6])
+    assert small.processed_actions[0].tolist() == [5., 0, 0, .25, 0, 0]
+    torch.testing.assert_close(rate(env), torch.full((2,), .015))
+    # Same relative v1 target: 50N / 2.5Nm, equal normalized cost.
+    env.action_manager.get_term = lambda name:action
+    action.process_actions(raw[:, :6])
+    assert action.processed_actions[0].tolist() == [50., 0, 0, 2.5, 0, 0]
+    torch.testing.assert_close(rate(env), torch.full((2,), .015))
+    # Opposing measured contact cannot escape v2's corrected command limits.
+    robot.data.joint_effort_limits[:] = 1000.
+    child = robot.body_names.index('inspire_base_link')
+    robot.data.body_incoming_joint_wrench_b[:, child, 0] = -100.
+    robot.data.body_incoming_joint_wrench_b[:, child, 3] = -10.
+    small.process_actions(torch.ones(2, 6))
+    env._sim_step_counter = 2
+    small.apply_actions()
+    assert small.joint_efforts[0, 0].item() == pytest.approx(12.)
+    assert small.joint_efforts[0, 3].item() == pytest.approx(.6)
+
+
+def test_v2_runner_only_changes_experiment_name(omni_config):
+    cc = omni_config.baseline.configclass
+    @cc
+    class Parent:
+        experiment_name = 'inspire_wrench_v1'
+        settings = {'gamma': .98, 'steps': 36}
+    m = _execute_definitions(MODULE_ROOT/'agent/wrench_ppo_cfg.py',
+                            dict(configclass=cc, WrenchV1PPORunnerCfg=Parent), {'WrenchV2PPORunnerCfg'})
+    parent = Parent(); child = m.WrenchV2PPORunnerCfg()
+    assert type(child).__bases__ == (Parent,)
+    assert child.experiment_name == 'inspire_wrench_v2'
+    child.experiment_name = parent.experiment_name
+    assert child.to_dict() == parent.to_dict()

@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-04: `Inspire-Wrench-v0_1`은 v0 직접 상속 feasibility 환경이다. 독립 contact 보상을 제거하고 거리 보상에 연속 접촉·cosine을 적용한다. 거리3cm 미만 alpha=1, deadzone40° 고정, 목표 허용 거리2.5–7.5cm다. CPU76개 통과, GPU/학습 미검증. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_1_ENVIRONMENT.md).
+
+2026-11-04: `Inspire-Wrench-v2`는 v1을 직접 상속하고 Arm 목표/보정 후 명령 범위만1/10로 줄인다: ±10N/±0.5Nm, 보정 후 ±12N/±0.6Nm. 축소 범위 기준 action-rate 정규화·Hand·나머지 환경은 유지한다. [v2 상세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_V1_ENVIRONMENT.md#13-inspire-wrench-v2-v1의-arm-범위를110로-축소).
+
 [Wrench-v0 전체 환경과 Wrench-v1 변경점 — 최종 통합 명세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_V1_ENVIRONMENT.md): 초기화/reset 랜덤화, Actor/Critic 관측, 액션, 보상15항, 커리큘럼, 성공·실패, PPO와 최신 wrench 제어 설정.
 
 2026-11-04 후속: Wrench-v1의 robot_action_rate_penalty는 Arm Desired Wrench를 정책 목표 범위로 정규화한 [-1,1] 변화량을 사용한다. Hand raw 계산과 계수는 유지하며 CPU44개 통과. v0는 보존했다.
