@@ -26,6 +26,7 @@ class LayoutConfig:
     candidates: int = 32
     restarts: int = 4
     passes: int = 2
+    rear_offset: float = 0.0
 
     def __post_init__(self):
         if len(self.board) != 4 or not all(math.isfinite(x) for x in self.board):
@@ -33,7 +34,7 @@ class LayoutConfig:
         if not self.board[0] < self.board[1] or not self.board[2] < self.board[3]:
             raise ValueError('board must have positive area')
         for name in ('wall_margin', 'finger_gap', 'red_margin', 'gray_padding',
-                     'rear_length', 'rear_width'):
+                     'rear_length', 'rear_width', 'rear_offset'):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) < 0:
                 raise ValueError(f'{name} must be finite and nonnegative')
         for name in ('max_gray', 'max_white', 'candidates', 'restarts', 'passes'):
@@ -124,7 +125,7 @@ def zone_masks(centers, half, yaw, target, goal, target_half, target_yaw, cfg):
     motion = goal - target
     angle = torch.atan2(motion[:, 1], motion[:, 0])
     direction = axes(angle)[:, 0]
-    rear_center = target - direction * cfg.rear_length / 2
+    rear_center = target - direction * (cfg.rear_length / 2 + cfg.rear_offset)
     rear_half = torch.empty_like(target)
     rear_half[:, 0], rear_half[:, 1] = cfg.rear_length / 2, cfg.rear_width / 2
     rear = ~separated(centers, half, yaw, rear_center[:, None], rear_half[:, None], angle[:, None])

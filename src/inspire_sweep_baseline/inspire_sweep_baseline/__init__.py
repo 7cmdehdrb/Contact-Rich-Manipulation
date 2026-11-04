@@ -2,6 +2,30 @@
 
 import gymnasium as gym
 
+WRENCH_V0_TASK_ID = "Inspire-Wrench-v0"
+if WRENCH_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench:WrenchEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_envs:WrenchEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_ppo_cfg:WrenchPPORunnerCfg",
+        },
+    )
+
+WRENCH_V1_TASK_ID = "Inspire-Wrench-v1"
+if WRENCH_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench:WrenchEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_envs:WrenchV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_ppo_cfg:WrenchV1PPORunnerCfg",
+        },
+    )
+
 REVISION_V0_TASK_ID = "Isaac-Inspire-Revision-v0"
 if REVISION_V0_TASK_ID not in gym.registry:
     gym.register(

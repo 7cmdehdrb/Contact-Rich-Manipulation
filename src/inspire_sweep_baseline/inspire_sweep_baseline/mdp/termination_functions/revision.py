@@ -19,6 +19,30 @@ def any_active_object_fall_or_tilt(env, bottom_clearance=0.01, fail_angle=0.9):
         | (bottom < SHELF_SURFACE_HEIGHT - bottom_clearance)
         | (all_object_tilt_angles(env) >= fail_angle)
     )
+    # TEMP per-step Test-v2 diagnostics: comment out this block to disable.
+    if type(env.cfg).__name__ == "RevisionV2TestEnvCfg":
+        tilt = all_object_tilt_angles(env)
+        active = active_object_mask(env, position)
+        for env_id in range(env.num_envs):
+            print(
+                f"[Revision-Test-v2 object_fall_or_tilt] env={env_id} "
+                f"step={int(env.episode_length_buf[env_id])} "
+                f"terminated={bool((failed[env_id] & active[env_id]).any())}",
+                flush=True,
+            )
+            for object_id in active[env_id].nonzero(as_tuple=False).flatten().tolist():
+                z = float(bottom[env_id, object_id])
+                angle = float(tilt[env_id, object_id])
+                print(
+                    f"  object={object_id} target={object_id == int(env.target_id[env_id, 0])} "
+                    f"bottom_shelf={z:.6f}m < {SHELF_SURFACE_HEIGHT - bottom_clearance:.6f}m "
+                    f"-> {z < SHELF_SURFACE_HEIGHT - bottom_clearance}; "
+                    f"bottom_nonfinite={not bool(torch.isfinite(bottom[env_id, object_id]))}; "
+                    f"tilt_shelf={angle:.6f}rad >= {fail_angle:.6f}rad -> {angle >= fail_angle}; "
+                    f"failed={bool(failed[env_id, object_id])}",
+                    flush=True,
+                )
+    # END TEMP per-step Test-v2 diagnostics.
     return (failed & active_object_mask(env, position)).any(dim=-1)
 
 

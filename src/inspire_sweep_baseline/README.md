@@ -1,5 +1,13 @@
 # Inspire Sweep Baseline
 
+[Wrench-v0 전체 환경과 Wrench-v1 변경점 — 최종 통합 명세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_V1_ENVIRONMENT.md): 초기화/reset 랜덤화, Actor/Critic 관측, 액션, 보상15항, 커리큘럼, 성공·실패, PPO와 최신 wrench 제어 설정.
+
+2026-11-04 후속: Wrench-v1의 robot_action_rate_penalty는 Arm Desired Wrench를 정책 목표 범위로 정규화한 [-1,1] 변화량을 사용한다. Hand raw 계산과 계수는 유지하며 CPU44개 통과. v0는 보존했다.
+
+2026-11-04: `Inspire-Wrench-v1`은 Wrench-v0 직접 상속이며 arm OSC만 sensor-center6축 closed-loop wrench 제어로 변경한다. `wrench_abs`, motion축0/wrench축1, gain0.2, 명령목표 ±100N/±5Nm, 보정 후 명령 제한 ±120N/±6Nm, gravity보상을 사용한다. 기존 Scene·관측·보상·PPO는 유지한다. [파라미터·프레임·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V1_ENVIRONMENT.md). CPU80개 통과, 실제 GPU 추종/학습은 미검증.
+
+2026-11-04: `Inspire-Wrench-v0`는 Test-v2를 기능 기준으로 한 독립 환경이다. 높이120mm·3cm/0.005m/s 연속3초 성공(+75)·RED20mm 확장/후방 Gray20mm 후퇴·startup 배치 bank/물성 고정·10k 시작3k 간격 Dead Zone을 적용한다. CPU82개 통과, GPU collection1~2초는 미검증이다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_ENVIRONMENT.md).
+
 2026-11-03: `Isaac-Inspire-Revision-Test-v2-GT`는 Test-v2를 직접 상속하며 Actor에 실시간 타겟 XYZ3D만 추가한다. Actor의 초기 장애물 관측과 Critic·보상·PPO는 유지한다. [GT 관측 계약·실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V2_ENVIRONMENT.md#test-v2-gt-실시간-타겟-위치-대조-실험).
 
 2026-11-03: `Isaac-Inspire-Revision-v2` / `Isaac-Inspire-Revision-Test-v2`를 추가했다. v1→v2→Test 직접 상속이며 거리·Hold·접촉에 EEF95mm 미만 조건, Smoothstep Hold weight10, 속도 감쇠 최초 진입 최대+25, timeout+75, free acceleration15m/s²를 적용한다. Test는 타겟 형상만 cylinder다. [구현 계약·학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/REVISION_V2_ENVIRONMENT.md) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-03_revision_v2_implementation.md).

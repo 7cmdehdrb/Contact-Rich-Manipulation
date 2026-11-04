@@ -85,6 +85,21 @@ class RevisionEnv(ManagerBasedRLEnv):
         self._moment_samples |= moment_valid
 
     def _reset_idx(self, env_ids):
+        # TEMP termination print: comment out this block after Test-v2 debugging.
+        if type(self.cfg).__name__ == 'RevisionV2TestEnvCfg':
+            for env_id in env_ids.tolist():
+                reasons = [
+                    name for name in self.termination_manager.active_terms
+                    if bool(self.termination_manager.get_term(name)[env_id])
+                ]
+                if reasons:
+                    print(
+                        f'[Revision-Test-v2 termination] env={env_id} '
+                        f'step={int(self.episode_length_buf[env_id])} '
+                        f'reasons={", ".join(reasons)}',
+                        flush=True,
+                    )
+        # END TEMP termination print.
         metrics = {}
         for key in self._mean_metrics:
             sampled = self._metric_counts[key][env_ids] > 0
