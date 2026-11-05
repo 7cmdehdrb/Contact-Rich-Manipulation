@@ -6,6 +6,28 @@
 
 **환경 바로가기:** [v0](06_fusion.md#env-contactsweepclutterfusionenvcfg) · [v2](06_fusion.md#env-contactsweepclutterfusionv2envcfg) · [v3](06_fusion.md#env-contactsweepclutterfusionv3envcfg) · [v1_0](06_fusion.md#env-contactsweepclutterfusionv1_0envcfg) · [v1_1](06_fusion.md#env-contactsweepclutterfusionv1_1envcfg) · [v1_1_1](06_fusion.md#env-contactsweepclutterfusionv1_1_1envcfg) · [v1_1_2](06_fusion.md#env-contactsweepclutterfusionv1_1_2envcfg) · [v1_2](06_fusion.md#env-contactsweepclutterfusionv1_2envcfg) · [v1_3](06_fusion.md#env-contactsweepclutterfusionv1_3envcfg) · [v1_3_1](06_fusion.md#env-contactsweepclutterfusionv1_3_1envcfg) · [v1_4](06_fusion.md#env-contactsweepclutterfusionv1_4envcfg)
 
+## 최종 환경과 상태 요약
+
+이 문서의 **Fusion 계열에서 마지막 버전은 `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4`**다. 직접 부모는 **v1_0**이며, 상속 경로는 **v0 → v2 → v3 → v1_0 → v1_4**다. v1_1~v1_3_1의 실험을 모두 합친 환경은 아니다. 후속 [Holding 계열](07_holding.md)도 v1_4가 아닌 v1_0에서 별도로 분기한다.
+
+아래는 v1_4를 부모까지 합쳐 읽었을 때의 구성이다. 「최종값」은 커리큘럼이 끝났을 때의 설정값이며 학습 성능을 뜻하지 않는다.
+
+| 구분 | v1_4의 상태 |
+| --- | --- |
+| 과제·장면 | 원통 타겟을 평면 목표로 밀고 목표 안에서 유지. Gray/White 활성 장애물은 각각 1개에서 최대 5개로 증가하며 비활성 물체는 보상·실패 검사에서 제외한다. Reset 때 배치·물성을 랜덤화한다. |
+| 제어·시간 | Arm 관절 위치 6D + Hand 개방 2D = **8D 행동**. 기본 4096개 환경, 물리 100Hz·정책 50Hz, 최대 10초. |
+| 관측 | 직접 관측 **55D** = Arm 위치·속도 12 + 이전 행동 8 + 초기 타겟 XYZ 3 + EEF pose 7 + 초기 목표 극좌표 2 + 촉각 17 + 보정 F/T 6. 초기 장애물 10슬롯×4 = 40D, Critic에는 현재 타겟 XYZ 3D 추가. **Actor/Critic 원시 95/98D, 인코딩 후 71/74D**. |
+| 양의 보상 | `reaching` 30: 새 최단 접근 거리 진전. `goal_distance` 100: 목표까지의 새 최단 거리 진전(허용 거리 1cm). `goal_hold` 9: 현재 Hold 반경 안 점유. `hand_contact` 1.45: 실제 손 접촉(문턱 0.01N, 목표 근처 fade 없음). |
+| 비용 | `arm_action_rate` −0.03, `hand_action_rate` −0.03, `arm_joint_velocity` −0.03, `hand_joint_velocity` −0.01. `object` −30(활성 물체 기울기·장애물 변위), `shelf_collision` −0.5, `shelf_failure` −3. `pushing_speed` −5, `arm_speed_excess` −1, `eef_linear_speed` −1, `obstacle_contact` −1, `object_acceleration` −1, `wrench_change` −0.1. EEF 방향 비용은 없다. |
+| 성공 종료 | `success`: **현재 Hold 반경 안에서 연속 3초** 유지하면 terminated. 동시에 실패 조건이 발생하면 성공에서 제외한다. Hold 반경 0인 초기 구간에는 비활성이다. 별도의 목표 속도 조건은 없으며 최종 반경은 **5mm**다. |
+| 실패·시간 종료 | `object_drop`: 활성 물체 높이 1.04m 미만 또는 기울기 0.9rad 이상. `push_fast`: 타겟 속도 1m/s 초과. `shelf_collision`: 선반 운동/손목 여유 3cm 검사(손가락 검사 없음). `hand_velocity`: 실제로는 Arm 각속도 5rad/s 초과. `shelf_displacement`: 선반 변위 5cm 초과. `time_out`: 10초 truncation. |
+| 장애물·목표 일정 | `obstacle_population`: White는 3000, Gray는 4500부터 각각 3000 iteration마다 +1, 최종 **5/5**. `goal_deadzone`: 제외 반각 30°를 3000까지 유지한 뒤 3500부터 500마다 5° 감소하여 최종 **0°**. |
+| Hold·속도 일정 | `goal_hold_tolerance`: 5000 전에는 0(비활성), 5000에 1cm로 켠 뒤 10000까지 **5mm**로 축소. `pushing_free_speed`: 0.1→**0.02m/s**(1900). `arm_free_speed`: 1→**0.7rad/s**(3300). `eef_free_speed`: 1.5→**0.2m/s**(13300). 각 ramp는 250 iteration 격자와 명시된 끝점을 사용한다. |
+| 충격 비용 일정 | `object_free_acceleration`: 100→50(10000)→**10m/s²**(18000). `wrench_free_force_change`: 5000→200(10000)→**100N**(18000). `wrench_free_moment_change`: 500→30(10000)→**20Nm**(18000). 마지막 감소 구간은 12000~18000이다. 장애물 접촉력 허용값은 **2000N 고정**이며, wrench 비용의 양의 누적 보상 5% 예산 제한은 유지한다. |
+| 백업 상태 | 2026-11-05 확인한 `logs/backup`에는 **v1_4 체크포인트가 없다**. 위 내용은 코드 구성 요약이며 학습 완료·성능 검증을 의미하지 않는다. |
+
+v1_0 대비 변경 항목별 전후 값은 아래 [v1_4 절](#env-contactsweepclutterfusionv1_4envcfg)에 정리되어 있다.
+
 <a id="env-contactsweepclutterfusionenvcfg"></a>
 
 ## 베이스: Contact-Sweep-Clutter-Fusion-v0
