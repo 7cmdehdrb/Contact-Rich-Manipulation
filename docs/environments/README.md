@@ -1,6 +1,6 @@
 # Inspire Sweep 환경 통합 안내
 
-2026-11-05 현재 `src/inspire_sweep_baseline/inspire_sweep_baseline`의 실제 등록·설정·함수 기준. **75개 등록 환경을 13개 계열 문서**로 정리했다. 기본 환경의 구성과 파생 환경의 직접 부모·변경점을 설명하고, **모든 버전의 관측·보상·터미네이션·커리큘럼 전체 항목을 표로 제공한다.**
+2026-11-05 현재 `src/inspire_sweep_baseline/inspire_sweep_baseline`의 실제 등록·설정·함수 기준. **75개 등록 환경을 13개 계열 문서**로 정리했다. **베이스 환경은 관측·보상·터미네이션·커리큘럼 전체 표로, 파생 환경은 환경별 독립 절에서 직접 부모 대비 변경점으로 설명한다.**
 
 ## 문서 지도
 
@@ -22,8 +22,10 @@
 
 ## 읽는 기준
 
-- 각 계열 상단의 바로가기로 전체 항목표를 볼 수 있다. **동일한 유효 구성을 쓰는 버전은 표 하나를 공유**하며, 각 표의 `적용`에 대상 버전을 명시한다. 부모의 항목과 EnvCfg 후처리 변경까지 반영했다.
-- 표에는 코드의 정확한 항목명·의미와 구현 링크를 적었다. 관측은 그룹·차원·노이즈, 보상은 초기 weight·조건, 터미네이션은 종료 유형·조건, 커리큘럼은 변경 대상·일정을 포함한다. `None`으로 제거된 항목은 별도 표시하며 **weight 0인 항목도 생략하지 않는다**.
+- 각 계열 상단의 바로가기와 아래 등록 ID 색인에서 개별 환경 절로 이동한다. **베이스의 전체 표 → 원하는 환경의 직접 부모 → 해당 환경의 변경점** 순서로 읽는다. 여러 환경을 한 표에 묶지 않는다.
+- 파생 절의 표는 `항목명 / 추가·삭제·수정 / 부모 / 이 환경 / 의미` 순서다. 변경하지 않은 항목은 직접 부모에서 상속한다. 다른 계열에서 분기하는 환경도 문서의 베이스가 아닌 **실제 직접 부모**와 비교한다.
+- 장면·제어·리셋·runtime/PPO 변경은 각 환경의 「이 환경에서 바뀐 점」에 적는다. 네 Manager의 변경이 없더라도 해당 환경의 별도 절에서 변경 목적과 부모를 확인할 수 있다.
+- 표에는 코드의 정확한 항목명·의미와 구현 링크를 적었다. 관측은 그룹·차원·노이즈, 보상은 초기 weight·조건, 터미네이션은 종료 유형·조건, 커리큘럼은 변경 대상·일정을 포함한다. 삭제는 변경표에 표시하며 **weight 0인 항목도 설정된 항목으로 취급한다**.
 
 - **부모는 EnvCfg의 직접 Python 상속 기준**이다. Scene/보상 Cfg/runtime/PPO의 상속은 다를 수 있다. Final-v0·Revision-v0·Wrench-v0는 이전 환경을 기능 기준으로 삼았어도 각각 `ManagerBasedRLEnvCfg`에서 독립 구성한다.
 - 관측 **원시 차원**은 모델에 전달하는 선택 그룹의 합이다. **MLP 차원**은 장애물 `[존재, x, y, z]` 슬롯을 16D로 압축한 뒤의 입력이다. 물리 물체 개수와 관측 슬롯 개수는 다르다.
@@ -63,81 +65,81 @@ ManagerBasedRLEnvCfg
 
 | Gym ID | EnvCfg | 직접 부모 EnvCfg | 문서 |
 | --- | --- | --- | --- |
-| `Isaac-Inspire-Sweep-Baseline-v0` | `InspireSweepEnvCfg` | `ManagerBasedRLEnvCfg` | [Sweep Baseline 계열](01_sweep.md) |
-| `Isaac-Inspire-Sweep-Realistic-Physics-v0` | `InspireSweepRealisticPhysicsEnvCfg` | `InspireSweepEnvCfg` | [Sweep Baseline 계열](01_sweep.md) |
-| `Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0` | `InspireSweepRealisticInitialPrivilegedEnvCfg` | `InspireSweepRealisticPhysicsEnvCfg` | [Sweep Baseline 계열](01_sweep.md) |
-| `Isaac-Inspire-Sweep-Baseline-Tactile-v0` | `InspireSweepTactileEnvCfg` | `InspireSweepEnvCfg` | [Sweep Baseline 계열](01_sweep.md) |
-| `Isaac-Inspire-Sweep-Omni-v0` | `InspireSweepOmniEnvCfg` | `InspireSweepEnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Sweep-Omni-v1` | `InspireSweepOmniV1EnvCfg` | `InspireSweepOmniEnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Sweep-Omni-v2` | `InspireSweepOmniV2EnvCfg` | `InspireSweepOmniV1EnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Dex-Omni-v0` | `InspireDexOmniEnvCfg` | `InspireSweepOmniV2EnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Sweep-Omni-v3` | `InspireSweepOmniV3EnvCfg` | `InspireSweepOmniV2EnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Sweep-Omni-v4` | `InspireSweepOmniV4EnvCfg` | `InspireSweepOmniV3EnvCfg` | [Sweep Omni 계열](02_omni.md) |
-| `Isaac-Inspire-Sweep-Omni-Renewal-v0` | `InspireSweepOmniRenewalEnvCfg` | `InspireSweepEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0` | `InspireSweepOmniRenewalOSCEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0` | `InspireDexSweepOmniRenewalEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0` | `InspireTactileSweepOmniRenewalEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0` | `InspireDexTactileSweepOmniRenewalEnvCfg` | `InspireDexSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | `InspireDexTactileSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2` | `InspireDexTactileSweepOmniRenewalV2EnvCfg` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3` | `InspireDexTactileSweepOmniRenewalV3EnvCfg` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2` | `InspireDexTactileSweepOmniRenewalV2OSCEnvCfg` | `InspireDexTactileSweepOmniRenewalV2EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md) |
-| `Isaac-Inspire-Contact-Sweep-v0` | `ContactSweepEnvCfg` | `ManagerBasedRLEnvCfg` | [Contact Sweep 계열](04_contact_sweep.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0` | `ContactSweepClutterFTTestEnvCfg` | `ContactSweepClutterV1CurriculumEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1` | `ContactSweepClutterV1CurriculumEnvCfg` | `ContactSweepClutterV1EnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-v2` | `ContactSweepClutterV2EnvCfg` | `ContactSweepClutterV1EnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-v1` | `ContactSweepClutterV1EnvCfg` | `ContactSweepClutterEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-v0` | `ContactSweepClutterEnvCfg` | `ContactSweepEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1` | `ContactSweepClutterFusionV1_1_1EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2` | `ContactSweepClutterFusionV1_1_2EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4` | `ContactSweepClutterFusionV1_4EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3` | `ContactSweepClutterFusionV1_3EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1` | `ContactSweepClutterFusionV1_3_1EnvCfg` | `ContactSweepClutterFusionV1_3EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1` | `ContactSweepClutterFusionV1_1EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2` | `ContactSweepClutterFusionV1_2EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0` | `ContactSweepClutterFusionV1_0EnvCfg` | `ContactSweepClutterFusionV3EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2` | `ContactSweepClutterFusionV2EnvCfg` | `ContactSweepClutterFusionEnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3` | `ContactSweepClutterFusionV3EnvCfg` | `ContactSweepClutterFusionV2EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0` | `ContactSweepClutterFusionEnvCfg` | `ManagerBasedRLEnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0` | `FusionHoldingV0EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Holding 계열](07_holding.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1` | `FusionHoldingV1EnvCfg` | `FusionHoldingV0EnvCfg` | [Holding 계열](07_holding.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2` | `FusionHoldingV2EnvCfg` | `FusionHoldingV1EnvCfg` | [Holding 계열](07_holding.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v3` | `FusionHoldingV3EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding 계열](07_holding.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v4` | `FusionHoldingV4EnvCfg` | `FusionHoldingV3EnvCfg` | [Holding 계열](07_holding.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0` | `FusionHoldingOSCV0EnvCfg` | `FusionHoldingV0EnvCfg` | [Holding OSC 계열](08_holding_osc.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1` | `FusionHoldingOSCV1EnvCfg` | `FusionHoldingV1EnvCfg` | [Holding OSC 계열](08_holding_osc.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2` | `FusionHoldingOSCV2EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding OSC 계열](08_holding_osc.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v3` | `FusionHoldingOSCV3EnvCfg` | `FusionHoldingV3EnvCfg` | [Holding OSC 계열](08_holding_osc.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v4` | `FusionHoldingOSCV4EnvCfg` | `FusionHoldingV4EnvCfg` | [Holding OSC 계열](08_holding_osc.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v0` | `FusionHoldingOSCObjectRandomV0EnvCfg` | `FusionHoldingOSCV0EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | `FusionHoldingOSCObjectRandomV1EnvCfg` | `FusionHoldingOSCV2EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0` | `FusionHoldingObjectRandomTestV0EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v2` | `FusionHoldingOSCObjectRandomV2EnvCfg` | `FusionHoldingOSCV3EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md) |
-| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v3` | `FusionHoldingOSCObjectRandomV3EnvCfg` | `FusionHoldingOSCV4EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md) |
-| `Isaac-Inspire-Final-v0` | `FinalEnvCfg` | `ManagerBasedRLEnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-v1` | `FinalV1EnvCfg` | `FinalEnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-v2` | `FinalV2EnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-v1-1` | `FinalV1_1EnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-Test-v1` | `FinalV1TestEnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-Test-v2` | `FinalV2TestEnvCfg` | `FinalV2EnvCfg` | [Final 계열](10_final.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0` | `FinalGoalAccuracyEnvCfg` | `FinalV1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v1` | `FinalGoalAccuracyV1EnvCfg` | `FinalGoalAccuracyEnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0_1` | `FinalGoalAccuracyV0_1EnvCfg` | `FinalGoalAccuracyEnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0_2` | `FinalGoalAccuracyV0_2EnvCfg` | `FinalGoalAccuracyV0_1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0_3` | `FinalGoalAccuracyV0_3EnvCfg` | `FinalGoalAccuracyV0_2EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0_2_1` | `FinalGoalAccuracyV0_2_1EnvCfg` | `FinalGoalAccuracyV0_2EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Final-GoalAccuracy-v0_2_2` | `FinalGoalAccuracyV0_2_2EnvCfg` | `FinalGoalAccuracyV0_2_1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md) |
-| `Isaac-Inspire-Revision-v0` | `RevisionEnvCfg` | `ManagerBasedRLEnvCfg` | [Revision 계열](12_revision.md) |
-| `Isaac-Inspire-Revision-v1` | `RevisionV1EnvCfg` | `RevisionEnvCfg` | [Revision 계열](12_revision.md) |
-| `Isaac-Inspire-Revision-Test-v1` | `RevisionV1TestEnvCfg` | `RevisionV1EnvCfg` | [Revision 계열](12_revision.md) |
-| `Isaac-Inspire-Revision-v2` | `RevisionV2EnvCfg` | `RevisionV1EnvCfg` | [Revision 계열](12_revision.md) |
-| `Isaac-Inspire-Revision-Test-v2` | `RevisionV2TestEnvCfg` | `RevisionV2EnvCfg` | [Revision 계열](12_revision.md) |
-| `Isaac-Inspire-Revision-Test-v2-GT` | `RevisionV2TestGTEnvCfg` | `RevisionV2TestEnvCfg` | [Revision 계열](12_revision.md) |
-| `Inspire-Wrench-v0` | `WrenchEnvCfg` | `ManagerBasedRLEnvCfg` | [Wrench 계열](13_wrench.md) |
-| `Inspire-Wrench-v0_1` | `WrenchV0_1EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md) |
-| `Inspire-Wrench-v1` | `WrenchV1EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md) |
-| `Inspire-Wrench-v2` | `WrenchV2EnvCfg` | `WrenchV1EnvCfg` | [Wrench 계열](13_wrench.md) |
-| `Inspire-Wrench-v0_2` | `WrenchV0_2EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md) |
+| `Isaac-Inspire-Sweep-Baseline-v0` | `InspireSweepEnvCfg` | `ManagerBasedRLEnvCfg` | [Sweep Baseline 계열](01_sweep.md#env-inspiresweepenvcfg) |
+| `Isaac-Inspire-Sweep-Realistic-Physics-v0` | `InspireSweepRealisticPhysicsEnvCfg` | `InspireSweepEnvCfg` | [Sweep Baseline 계열](01_sweep.md#env-inspiresweeprealisticphysicsenvcfg) |
+| `Isaac-Inspire-Sweep-Realistic-Physics-Initial-Privileged-v0` | `InspireSweepRealisticInitialPrivilegedEnvCfg` | `InspireSweepRealisticPhysicsEnvCfg` | [Sweep Baseline 계열](01_sweep.md#env-inspiresweeprealisticinitialprivilegedenvcfg) |
+| `Isaac-Inspire-Sweep-Baseline-Tactile-v0` | `InspireSweepTactileEnvCfg` | `InspireSweepEnvCfg` | [Sweep Baseline 계열](01_sweep.md#env-inspiresweeptactileenvcfg) |
+| `Isaac-Inspire-Sweep-Omni-v0` | `InspireSweepOmniEnvCfg` | `InspireSweepEnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiresweepomnienvcfg) |
+| `Isaac-Inspire-Sweep-Omni-v1` | `InspireSweepOmniV1EnvCfg` | `InspireSweepOmniEnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiresweepomniv1envcfg) |
+| `Isaac-Inspire-Sweep-Omni-v2` | `InspireSweepOmniV2EnvCfg` | `InspireSweepOmniV1EnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiresweepomniv2envcfg) |
+| `Isaac-Inspire-Dex-Omni-v0` | `InspireDexOmniEnvCfg` | `InspireSweepOmniV2EnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiredexomnienvcfg) |
+| `Isaac-Inspire-Sweep-Omni-v3` | `InspireSweepOmniV3EnvCfg` | `InspireSweepOmniV2EnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiresweepomniv3envcfg) |
+| `Isaac-Inspire-Sweep-Omni-v4` | `InspireSweepOmniV4EnvCfg` | `InspireSweepOmniV3EnvCfg` | [Sweep Omni 계열](02_omni.md#env-inspiresweepomniv4envcfg) |
+| `Isaac-Inspire-Sweep-Omni-Renewal-v0` | `InspireSweepOmniRenewalEnvCfg` | `InspireSweepEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiresweepomnirenewalenvcfg) |
+| `Isaac-Inspire-Sweep-Omni-Renewal-OSC-v0` | `InspireSweepOmniRenewalOSCEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiresweepomnirenewaloscenvcfg) |
+| `Isaac-Inspire-Dex-Sweep-Omni-Renewal-v0` | `InspireDexSweepOmniRenewalEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredexsweepomnirenewalenvcfg) |
+| `Isaac-Inspire-Tactile-Sweep-Omni-Renewal-v0` | `InspireTactileSweepOmniRenewalEnvCfg` | `InspireSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiretactilesweepomnirenewalenvcfg) |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v0` | `InspireDexTactileSweepOmniRenewalEnvCfg` | `InspireDexSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredextactilesweepomnirenewalenvcfg) |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v1` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | `InspireDexTactileSweepOmniRenewalEnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredextactilesweepomnirenewalv1envcfg) |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v2` | `InspireDexTactileSweepOmniRenewalV2EnvCfg` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredextactilesweepomnirenewalv2envcfg) |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-v3` | `InspireDexTactileSweepOmniRenewalV3EnvCfg` | `InspireDexTactileSweepOmniRenewalV1EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredextactilesweepomnirenewalv3envcfg) |
+| `Isaac-Inspire-Dex-Tactile-Sweep-Omni-Renewal-OSC-v2` | `InspireDexTactileSweepOmniRenewalV2OSCEnvCfg` | `InspireDexTactileSweepOmniRenewalV2EnvCfg` | [Sweep Omni Renewal 계열](03_renewal.md#env-inspiredextactilesweepomnirenewalv2oscenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-v0` | `ContactSweepEnvCfg` | `ManagerBasedRLEnvCfg` | [Contact Sweep 계열](04_contact_sweep.md#env-contactsweepenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-FT-Test-v0` | `ContactSweepClutterFTTestEnvCfg` | `ContactSweepClutterV1CurriculumEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md#env-contactsweepclutterfttestenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Curriculum-v1` | `ContactSweepClutterV1CurriculumEnvCfg` | `ContactSweepClutterV1EnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md#env-contactsweepclutterv1curriculumenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-v2` | `ContactSweepClutterV2EnvCfg` | `ContactSweepClutterV1EnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md#env-contactsweepclutterv2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-v1` | `ContactSweepClutterV1EnvCfg` | `ContactSweepClutterEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md#env-contactsweepclutterv1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-v0` | `ContactSweepClutterEnvCfg` | `ContactSweepEnvCfg` | [Contact Sweep Clutter 계열](05_clutter.md#env-contactsweepclutterenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_1` | `ContactSweepClutterFusionV1_1_1EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_1_1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1_2` | `ContactSweepClutterFusionV1_1_2EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_1_2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_4` | `ContactSweepClutterFusionV1_4EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_4envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3` | `ContactSweepClutterFusionV1_3EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_3envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_3_1` | `ContactSweepClutterFusionV1_3_1EnvCfg` | `ContactSweepClutterFusionV1_3EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_3_1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_1` | `ContactSweepClutterFusionV1_1EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_2` | `ContactSweepClutterFusionV1_2EnvCfg` | `ContactSweepClutterFusionV1_1EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v1_0` | `ContactSweepClutterFusionV1_0EnvCfg` | `ContactSweepClutterFusionV3EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv1_0envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v2` | `ContactSweepClutterFusionV2EnvCfg` | `ContactSweepClutterFusionEnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v3` | `ContactSweepClutterFusionV3EnvCfg` | `ContactSweepClutterFusionV2EnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionv3envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-v0` | `ContactSweepClutterFusionEnvCfg` | `ManagerBasedRLEnvCfg` | [Contact Sweep Clutter Fusion 계열](06_fusion.md#env-contactsweepclutterfusionenvcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v0` | `FusionHoldingV0EnvCfg` | `ContactSweepClutterFusionV1_0EnvCfg` | [Holding 계열](07_holding.md#env-fusionholdingv0envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v1` | `FusionHoldingV1EnvCfg` | `FusionHoldingV0EnvCfg` | [Holding 계열](07_holding.md#env-fusionholdingv1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v2` | `FusionHoldingV2EnvCfg` | `FusionHoldingV1EnvCfg` | [Holding 계열](07_holding.md#env-fusionholdingv2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v3` | `FusionHoldingV3EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding 계열](07_holding.md#env-fusionholdingv3envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-v4` | `FusionHoldingV4EnvCfg` | `FusionHoldingV3EnvCfg` | [Holding 계열](07_holding.md#env-fusionholdingv4envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v0` | `FusionHoldingOSCV0EnvCfg` | `FusionHoldingV0EnvCfg` | [Holding OSC 계열](08_holding_osc.md#env-fusionholdingoscv0envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v1` | `FusionHoldingOSCV1EnvCfg` | `FusionHoldingV1EnvCfg` | [Holding OSC 계열](08_holding_osc.md#env-fusionholdingoscv1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v2` | `FusionHoldingOSCV2EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding OSC 계열](08_holding_osc.md#env-fusionholdingoscv2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v3` | `FusionHoldingOSCV3EnvCfg` | `FusionHoldingV3EnvCfg` | [Holding OSC 계열](08_holding_osc.md#env-fusionholdingoscv3envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-v4` | `FusionHoldingOSCV4EnvCfg` | `FusionHoldingV4EnvCfg` | [Holding OSC 계열](08_holding_osc.md#env-fusionholdingoscv4envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v0` | `FusionHoldingOSCObjectRandomV0EnvCfg` | `FusionHoldingOSCV0EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md#env-fusionholdingoscobjectrandomv0envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v1` | `FusionHoldingOSCObjectRandomV1EnvCfg` | `FusionHoldingOSCV2EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md#env-fusionholdingoscobjectrandomv1envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-ObjectRandom-Test-v0` | `FusionHoldingObjectRandomTestV0EnvCfg` | `FusionHoldingV2EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md#env-fusionholdingobjectrandomtestv0envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v2` | `FusionHoldingOSCObjectRandomV2EnvCfg` | `FusionHoldingOSCV3EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md#env-fusionholdingoscobjectrandomv2envcfg) |
+| `Isaac-Inspire-Contact-Sweep-Clutter-Fusion-Holding-OSC-ObjectRandom-v3` | `FusionHoldingOSCObjectRandomV3EnvCfg` | `FusionHoldingOSCV4EnvCfg` | [Holding ObjectRandom 계열](09_object_random.md#env-fusionholdingoscobjectrandomv3envcfg) |
+| `Isaac-Inspire-Final-v0` | `FinalEnvCfg` | `ManagerBasedRLEnvCfg` | [Final 계열](10_final.md#env-finalenvcfg) |
+| `Isaac-Inspire-Final-v1` | `FinalV1EnvCfg` | `FinalEnvCfg` | [Final 계열](10_final.md#env-finalv1envcfg) |
+| `Isaac-Inspire-Final-v2` | `FinalV2EnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md#env-finalv2envcfg) |
+| `Isaac-Inspire-Final-v1-1` | `FinalV1_1EnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md#env-finalv1_1envcfg) |
+| `Isaac-Inspire-Final-Test-v1` | `FinalV1TestEnvCfg` | `FinalV1EnvCfg` | [Final 계열](10_final.md#env-finalv1testenvcfg) |
+| `Isaac-Inspire-Final-Test-v2` | `FinalV2TestEnvCfg` | `FinalV2EnvCfg` | [Final 계열](10_final.md#env-finalv2testenvcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0` | `FinalGoalAccuracyEnvCfg` | `FinalV1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyenvcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v1` | `FinalGoalAccuracyV1EnvCfg` | `FinalGoalAccuracyEnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv1envcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0_1` | `FinalGoalAccuracyV0_1EnvCfg` | `FinalGoalAccuracyEnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv0_1envcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0_2` | `FinalGoalAccuracyV0_2EnvCfg` | `FinalGoalAccuracyV0_1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv0_2envcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0_3` | `FinalGoalAccuracyV0_3EnvCfg` | `FinalGoalAccuracyV0_2EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv0_3envcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0_2_1` | `FinalGoalAccuracyV0_2_1EnvCfg` | `FinalGoalAccuracyV0_2EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv0_2_1envcfg) |
+| `Isaac-Inspire-Final-GoalAccuracy-v0_2_2` | `FinalGoalAccuracyV0_2_2EnvCfg` | `FinalGoalAccuracyV0_2_1EnvCfg` | [Final GoalAccuracy 계열](11_goal_accuracy.md#env-finalgoalaccuracyv0_2_2envcfg) |
+| `Isaac-Inspire-Revision-v0` | `RevisionEnvCfg` | `ManagerBasedRLEnvCfg` | [Revision 계열](12_revision.md#env-revisionenvcfg) |
+| `Isaac-Inspire-Revision-v1` | `RevisionV1EnvCfg` | `RevisionEnvCfg` | [Revision 계열](12_revision.md#env-revisionv1envcfg) |
+| `Isaac-Inspire-Revision-Test-v1` | `RevisionV1TestEnvCfg` | `RevisionV1EnvCfg` | [Revision 계열](12_revision.md#env-revisionv1testenvcfg) |
+| `Isaac-Inspire-Revision-v2` | `RevisionV2EnvCfg` | `RevisionV1EnvCfg` | [Revision 계열](12_revision.md#env-revisionv2envcfg) |
+| `Isaac-Inspire-Revision-Test-v2` | `RevisionV2TestEnvCfg` | `RevisionV2EnvCfg` | [Revision 계열](12_revision.md#env-revisionv2testenvcfg) |
+| `Isaac-Inspire-Revision-Test-v2-GT` | `RevisionV2TestGTEnvCfg` | `RevisionV2TestEnvCfg` | [Revision 계열](12_revision.md#env-revisionv2testgtenvcfg) |
+| `Inspire-Wrench-v0` | `WrenchEnvCfg` | `ManagerBasedRLEnvCfg` | [Wrench 계열](13_wrench.md#env-wrenchenvcfg) |
+| `Inspire-Wrench-v0_1` | `WrenchV0_1EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md#env-wrenchv0_1envcfg) |
+| `Inspire-Wrench-v1` | `WrenchV1EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md#env-wrenchv1envcfg) |
+| `Inspire-Wrench-v2` | `WrenchV2EnvCfg` | `WrenchV1EnvCfg` | [Wrench 계열](13_wrench.md#env-wrenchv2envcfg) |
+| `Inspire-Wrench-v0_2` | `WrenchV0_2EnvCfg` | `WrenchEnvCfg` | [Wrench 계열](13_wrench.md#env-wrenchv0_2envcfg) |
 
 ## 코드와 상세 기록
 
