@@ -2,6 +2,8 @@
 
 [통합 안내](README.md) · 2026-11-05 현재 코드 기준
 
+[전체 관측표](#전체-관측-항목) · [전체 보상표](#전체-보상-항목) · [전체 터미네이션표](#전체-터미네이션-항목) · [전체 커리큘럼표](#전체-커리큘럼-항목)
+
 ## 베이스: Inspire-Wrench-v0
 
 `WrenchEnvCfg`는 `ManagerBasedRLEnvCfg`를 직접 상속한다. Revision-Test-v2를 기준으로 독립 구성했다. **v0의 Arm은 pose OSC**이며 실제 wrench 제어는 v1부터다. Gym ID에는 `Isaac-` 접두사가 없다.
@@ -38,6 +40,179 @@
 | Inspire-Wrench-v2 | **Wrench-v1** | 목표 범위를 ±10N/±0.5Nm, 보정 cap을 ±12N/±0.6Nm로 1/10 축소. 정규화 action-rate와 나머지 구성은 상속. |
 
 v0_2 접촉 count는 불인정 step에는 지급하지 않되 4회까지 보존한다. 목표 내부 판정은 접촉력이 없어도 인정되며, 실제 접촉 경로에는 높이 조건이 적용된다. 50Hz에서 최대 지급은 `1.45×10×0.02=0.29/step`이다. v0_1/v0_2는 v1의 wrench 제어를 상속하지 않는다.
+
+
+
+
+
+<!-- TERM_TABLES_START -->
+## 버전별 전체 Manager 항목
+
+이하 표는 **부모 상속과 EnvCfg의 후처리까지 반영한 전체 구성**이다. 동일한 구성을 쓰는 버전은 표 하나를 공유한다. 표의 항목명은 코드/학습 로그의 이름이며 구현 함수 링크로 계산을 확인할 수 있다. 보상 weight는 커리큘럼 적용 전 설정값이다. **weight 0은 설정된 항목이고, `None`은 제거된 항목**이다. 일정은 학습 iteration 기준이다.
+
+[관측](#전체-관측-항목) · [보상](#전체-보상-항목) · [터미네이션](#전체-터미네이션-항목) · [커리큘럼](#전체-커리큘럼-항목)
+
+### 전체 관측 항목
+
+#### 관측 구성 1
+
+적용: `Inspire-Wrench-v0`, `Inspire-Wrench-v0_1`, `Inspire-Wrench-v1`, `Inspire-Wrench-v2`, `Inspire-Wrench-v0_2`.
+
+| 그룹.항목명 | 차원 | 의미 | 처리·조건 | 구현 함수 |
+| --- | ---: | --- | --- | --- |
+| `policy.joint_pos` | 6 | Arm 6개 관절의 실제 각도. 기본 자세를 빼지 않는다. | 추가 ObservationTerm 노이즈 없음<br>추가 수치 설정 없음(생략값은 함수 기본값) | [arm_joint_positions](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/revision.py) |
+| `policy.joint_vel` | 6 | Arm 6개 관절의 실제 각속도. | 추가 ObservationTerm 노이즈 없음<br>추가 수치 설정 없음(생략값은 함수 기본값) | [arm_joint_velocities](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/revision.py) |
+| `policy.hand_configuration` | 2 | 실제 손 관절에서 역산한 굽힘·대립 개방도. 각 채널을 [0,1]로 제한. | 추가 ObservationTerm 노이즈 없음<br>추가 수치 설정 없음(생략값은 함수 기본값) | [hand_configuration](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/final.py) |
+| `policy.ee_pose` | 7 | 현재 EEF의 robot-root 기준 XYZ 3 + quaternion 4. | 추가 ObservationTerm 노이즈 없음 | [eef_pose_in_root](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/sweep.py) |
+| `policy.target_obs_state` | 3 | reset 직후 타겟 XYZ를 robot-root 좌표계로 저장하여 에피소드 동안 고정. | 초기 ±0.01m 오차를 에피소드 동안 고정<br>추가 수치 설정 없음(생략값은 함수 기본값) | [InitialObjectPositionInRoot](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/asymmetric_observations.py) |
+| `policy.goal_pos` | 2 | 초기 타겟에서 목표까지의 평면 거리(m)와 로봇 root 기준 시계 방향각(rad). | 추가 ObservationTerm 노이즈 없음<br>추가 수치 설정 없음(생략값은 함수 기본값) | [initial_goal_polar_in_root](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/contact_sweep_clutter_fusion.py) |
+| `policy.actions` | 8 | 직전 raw 정책 행동 8개에 tanh를 적용한 관측. 실제 행동·action-rate 계산용 raw 값은 변경하지 않는다. | 추가 ObservationTerm 노이즈 없음 | [previous_action_command](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/final.py) |
+| `policy.tactile` | 17 | 정책과 보상이 공유하는 최신 촉각 샘플의 17개 접촉 bit. | 각 bit 1% 확률 반전<br>sensor_name: `hand_tactile`<br>접촉 문턱(N): `0.01` | [SharedTactileContactBits](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/contact_sweep_clutter.py) |
+| `policy.wrist_wrench` | 6 | 중력·관성 등을 보정하고 EEF 기준으로 표현한 힘 3 + 모멘트 3. | 힘 σ=0.05N, 모멘트 σ=0.005Nm Gaussian | [PureWristWrench](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/contact_sweep_clutter.py) |
+| `obstacles.initial_positions` | 64 | reset에서 저장한 초기 장애물 [존재 여부, x, y, z] 슬롯. 초기 가시성/위치 오차가 반영된 값을 유지. | 추가 ObservationTerm 노이즈 없음; 16D로 인코딩 | [initial_obstacle_positions](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/revision.py) |
+| `privileged.target_position` | 3 | 현재 타겟 XYZ, robot-root 좌표계. | 추가 ObservationTerm 노이즈 없음; Critic 전용 | [object_position_in_root](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/sweep.py) |
+| `critic_obstacles.current_positions` | 64 | 매 step 현재 활성 장애물 [존재 여부, x, y, z]. 주차/비활성 물체 제외, 가시성 누락 없이 제공. | 추가 ObservationTerm 노이즈 없음<br>adjacent_swap_probability: `0.1`; Critic 전용 | [current_obstacle_positions](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/observation_functions/revision.py) |
+
+### 전체 보상 항목
+
+#### 보상 구성 1
+
+적용: `Inspire-Wrench-v0`.
+
+| 항목명 | weight | 의미 | 설정값·조건 | 구현 함수 |
+| --- | ---: | --- | --- | --- |
+| `target_reaching` | 30 | 타겟 접근 반경 밖의 새 최단 거리 감소량에 비례한 보상. 되돌아갔다 재접근해도 중복 지급하지 않음. | 접근 반경(m): `0.1`<br>기준 frame: `ee_frame` | [DexReachProgress](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/dex_rewards.py) |
+| `target_goal_distance` | 3.7 | EEF 높이 제한 미만일 때만 exp(−d/distance_scale) 거리 보상. EEF 높이 제한 120mm. | 거리 scale(m): `0.05` | [goal_distance_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_hold` | 10 | EEF 높이 제한 미만에서 full_reward_radius까지 1, outer_radius까지 Smoothstep으로 0으로 감소. 속도 감쇠 없음. EEF 높이 제한 120mm. | 최대 Hold 반경(m): `0.025`<br>외곽 반경(m): `0.035` | [goal_hold_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_contact` | 1.45 | 실제 손-타겟 접촉 AND 초기 선반 기준 EEF 높이 제한 미만에서만 보상. EEF 높이 제한 120mm. | 접촉 문턱(N): `0.01` | [target_contact_below_height](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `robot_action_rate_penalty` | -1 | Arm·Hand 행동 변화 제곱합 비용을 각 0.03 계수로 합산. | 추가 수치 설정 없음(생략값은 함수 기본값) | [action_rate_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `robot_joint_velocity_penalty` | -1 | Arm 속도 제곱합×0.03 + Hand 속도 제곱합×0.01. | 추가 수치 설정 없음(생략값은 함수 기본값) | [joint_velocity_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `object_tilt_penalty` | -30 | 활성 타겟/장애물만 대상으로 기울기 초과의 제한된 제곱 비용 합. | 무비용 기울기(rad): `0.0872665`<br>실패 기울기(rad): `0.9` | [active_object_tilt_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `obstacle_displacement_penalty` | -150 | 활성 비타겟 장애물의 초기 위치 대비 3D 변위 제곱합. 주차된 물체 제외. | 변위 제곱합 상한: `0.04` | [active_obstacle_displacement_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `object_acceleration_penalty` | -0.05 | 활성 물체별 PhysX COM 가속도의 허용값 초과 지수 비용을 각각 상한 처리하여 합산. Reset/활성화 직후 첫 샘플 제외. | 자유 가속도(m/s²): `15`<br>raw 상한: `100` | [ObjectAccelerationPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `shelf_penalty` | -1 | 선반 충돌/근접 비용×0.5 + 선반 실패 이벤트 3. 이벤트 부분은 dt 상쇄. | 실패 term: `shelf_failure` | [ShelfPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `obstacle_contact_penalty` | -0.05 | 손-장애물 접촉력의 허용 힘 초과 비용, max_cost 적용. | 허용 접촉력(N): `50`<br>raw 상한: `100` | [obstacle_contact_force_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `target_goal_first_entry_bonus` | 25 | 최초 목표 내부 진입에 속도 감쇠를 곱한 일회 보상. 높이 조건 없음, 지급액과 무관하게 기회 소진. | 자유 속도(m/s 또는 관절 rad/s): `0.01`<br>속도 scale(m/s): `0.02` | [FirstGoalEntryBonusV2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_success_bonus` | 75 | 3초 안정 유지 성공 종료에 한 번 지급하는 보너스. timeout 보너스가 아님. | 추가 수치 설정 없음(생략값은 함수 기본값) | [settled_success_bonus](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `wrist_wrench_change_penalty` | -0.1 | 힘·모멘트 변화량 크기의 제한된 비용. 양의 보상 예산 제한은 없음. | 허용 힘 변화(N): `20`<br>허용 모멘트 변화(Nm): `2`<br>포화 비율: `2.5`<br>곡선 기울기: `3` | [IndependentWrenchMagnitudeChangePenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_speed_penalty` | -5 | 타겟 3D 선속도의 자유 속도 초과에 대한 지수 비용, raw cap 적용. | 자유 속도(m/s 또는 관절 rad/s): `0.1`<br>raw 상한: `100` | [exponential_pushing_speed_cost_limit](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/goal_rewards.py) |
+
+#### 보상 구성 2
+
+적용: `Inspire-Wrench-v0_1`.
+
+| 항목명 | weight | 의미 | 설정값·조건 | 구현 함수 |
+| --- | ---: | --- | --- | --- |
+| `target_reaching` | 30 | 타겟 접근 반경 밖의 새 최단 거리 감소량에 비례한 보상. 되돌아갔다 재접근해도 중복 지급하지 않음. | 접근 반경(m): `0.1`<br>기준 frame: `ee_frame` | [DexReachProgress](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/dex_rewards.py) |
+| `target_goal_distance` | 3.7 | 높이 조건부 거리 점수×signed cosine×연속 2step 타겟 접촉. 거리 3cm 미만에서는 cosine=1. EEF 높이 제한 120mm. | 거리 scale(m): `0.05`<br>접촉 문턱(N): `0.01` | [WrenchV0_1GoalDistance](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `target_goal_hold` | 10 | EEF 높이 제한 미만에서 full_reward_radius까지 1, outer_radius까지 Smoothstep으로 0으로 감소. 속도 감쇠 없음. EEF 높이 제한 120mm. | 최대 Hold 반경(m): `0.025`<br>외곽 반경(m): `0.035` | [goal_hold_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `robot_action_rate_penalty` | -1 | Arm·Hand 행동 변화 제곱합 비용을 각 0.03 계수로 합산. | 추가 수치 설정 없음(생략값은 함수 기본값) | [action_rate_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `robot_joint_velocity_penalty` | -1 | Arm 속도 제곱합×0.03 + Hand 속도 제곱합×0.01. | 추가 수치 설정 없음(생략값은 함수 기본값) | [joint_velocity_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `object_tilt_penalty` | -30 | 활성 타겟/장애물만 대상으로 기울기 초과의 제한된 제곱 비용 합. | 무비용 기울기(rad): `0.0872665`<br>실패 기울기(rad): `0.9` | [active_object_tilt_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `obstacle_displacement_penalty` | -150 | 활성 비타겟 장애물의 초기 위치 대비 3D 변위 제곱합. 주차된 물체 제외. | 변위 제곱합 상한: `0.04` | [active_obstacle_displacement_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `object_acceleration_penalty` | -0.05 | 활성 물체별 PhysX COM 가속도의 허용값 초과 지수 비용을 각각 상한 처리하여 합산. Reset/활성화 직후 첫 샘플 제외. | 자유 가속도(m/s²): `15`<br>raw 상한: `100` | [ObjectAccelerationPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `shelf_penalty` | -1 | 선반 충돌/근접 비용×0.5 + 선반 실패 이벤트 3. 이벤트 부분은 dt 상쇄. | 실패 term: `shelf_failure` | [ShelfPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `obstacle_contact_penalty` | -0.05 | 손-장애물 접촉력의 허용 힘 초과 비용, max_cost 적용. | 허용 접촉력(N): `50`<br>raw 상한: `100` | [obstacle_contact_force_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `target_goal_first_entry_bonus` | 25 | 최초 목표 내부 진입에 속도 감쇠를 곱한 일회 보상. 높이 조건 없음, 지급액과 무관하게 기회 소진. | 자유 속도(m/s 또는 관절 rad/s): `0.01`<br>속도 scale(m/s): `0.02` | [FirstGoalEntryBonusV2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_success_bonus` | 75 | 3초 안정 유지 성공 종료에 한 번 지급하는 보너스. timeout 보너스가 아님. | 추가 수치 설정 없음(생략값은 함수 기본값) | [settled_success_bonus](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `wrist_wrench_change_penalty` | -0.1 | 힘·모멘트 변화량 크기의 제한된 비용. 양의 보상 예산 제한은 없음. | 허용 힘 변화(N): `20`<br>허용 모멘트 변화(Nm): `2`<br>포화 비율: `2.5`<br>곡선 기울기: `3` | [IndependentWrenchMagnitudeChangePenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_speed_penalty` | -5 | 타겟 3D 선속도의 자유 속도 초과에 대한 지수 비용, raw cap 적용. | 자유 속도(m/s 또는 관절 rad/s): `0.1`<br>raw 상한: `100` | [exponential_pushing_speed_cost_limit](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/goal_rewards.py) |
+
+`None`으로 비활성: `target_contact`.
+
+#### 보상 구성 3
+
+적용: `Inspire-Wrench-v1`, `Inspire-Wrench-v2`.
+
+| 항목명 | weight | 의미 | 설정값·조건 | 구현 함수 |
+| --- | ---: | --- | --- | --- |
+| `target_reaching` | 30 | 타겟 접근 반경 밖의 새 최단 거리 감소량에 비례한 보상. 되돌아갔다 재접근해도 중복 지급하지 않음. | 접근 반경(m): `0.1`<br>기준 frame: `ee_frame` | [DexReachProgress](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/dex_rewards.py) |
+| `target_goal_distance` | 3.7 | EEF 높이 제한 미만일 때만 exp(−d/distance_scale) 거리 보상. EEF 높이 제한 120mm. | 거리 scale(m): `0.05` | [goal_distance_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_hold` | 10 | EEF 높이 제한 미만에서 full_reward_radius까지 1, outer_radius까지 Smoothstep으로 0으로 감소. 속도 감쇠 없음. EEF 높이 제한 120mm. | 최대 Hold 반경(m): `0.025`<br>외곽 반경(m): `0.035` | [goal_hold_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_contact` | 1.45 | 실제 손-타겟 접촉 AND 초기 선반 기준 EEF 높이 제한 미만에서만 보상. EEF 높이 제한 120mm. | 접촉 문턱(N): `0.01` | [target_contact_below_height](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `robot_action_rate_penalty` | -1 | Arm 목표 wrench를 목표 범위로 정규화한 변화 제곱합×0.03 + raw Hand 변화 제곱합×0.03. | 추가 수치 설정 없음(생략값은 함수 기본값) | [desired_wrench_action_rate_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `robot_joint_velocity_penalty` | -1 | Arm 속도 제곱합×0.03 + Hand 속도 제곱합×0.01. | 추가 수치 설정 없음(생략값은 함수 기본값) | [joint_velocity_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `object_tilt_penalty` | -30 | 활성 타겟/장애물만 대상으로 기울기 초과의 제한된 제곱 비용 합. | 무비용 기울기(rad): `0.0872665`<br>실패 기울기(rad): `0.9` | [active_object_tilt_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `obstacle_displacement_penalty` | -150 | 활성 비타겟 장애물의 초기 위치 대비 3D 변위 제곱합. 주차된 물체 제외. | 변위 제곱합 상한: `0.04` | [active_obstacle_displacement_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `object_acceleration_penalty` | -0.05 | 활성 물체별 PhysX COM 가속도의 허용값 초과 지수 비용을 각각 상한 처리하여 합산. Reset/활성화 직후 첫 샘플 제외. | 자유 가속도(m/s²): `15`<br>raw 상한: `100` | [ObjectAccelerationPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `shelf_penalty` | -1 | 선반 충돌/근접 비용×0.5 + 선반 실패 이벤트 3. 이벤트 부분은 dt 상쇄. | 실패 term: `shelf_failure` | [ShelfPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `obstacle_contact_penalty` | -0.05 | 손-장애물 접촉력의 허용 힘 초과 비용, max_cost 적용. | 허용 접촉력(N): `50`<br>raw 상한: `100` | [obstacle_contact_force_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `target_goal_first_entry_bonus` | 25 | 최초 목표 내부 진입에 속도 감쇠를 곱한 일회 보상. 높이 조건 없음, 지급액과 무관하게 기회 소진. | 자유 속도(m/s 또는 관절 rad/s): `0.01`<br>속도 scale(m/s): `0.02` | [FirstGoalEntryBonusV2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_success_bonus` | 75 | 3초 안정 유지 성공 종료에 한 번 지급하는 보너스. timeout 보너스가 아님. | 추가 수치 설정 없음(생략값은 함수 기본값) | [settled_success_bonus](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `wrist_wrench_change_penalty` | -0.1 | 힘·모멘트 변화량 크기의 제한된 비용. 양의 보상 예산 제한은 없음. | 허용 힘 변화(N): `20`<br>허용 모멘트 변화(Nm): `2`<br>포화 비율: `2.5`<br>곡선 기울기: `3` | [IndependentWrenchMagnitudeChangePenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_speed_penalty` | -5 | 타겟 3D 선속도의 자유 속도 초과에 대한 지수 비용, raw cap 적용. | 자유 속도(m/s 또는 관절 rad/s): `0.1`<br>raw 상한: `100` | [exponential_pushing_speed_cost_limit](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/goal_rewards.py) |
+
+#### 보상 구성 4
+
+적용: `Inspire-Wrench-v0_2`.
+
+| 항목명 | weight | 의미 | 설정값·조건 | 구현 함수 |
+| --- | ---: | --- | --- | --- |
+| `target_reaching` | 30 | 타겟 접근 반경 밖의 새 최단 거리 감소량에 비례한 보상. 되돌아갔다 재접근해도 중복 지급하지 않음. | 접근 반경(m): `0.1`<br>기준 frame: `ee_frame` | [DexReachProgress](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/dex_rewards.py) |
+| `target_goal_distance` | 3.7 | 높이 조건부 거리 점수×signed cosine. 접촉 조건 없음, 거리 3cm 미만에서는 cosine=1. EEF 높이 제한 120mm. | 거리 scale(m): `0.05` | [goal_distance_cosine](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `target_goal_hold` | 10 | EEF 높이 제한 미만에서 full_reward_radius까지 1, outer_radius까지 Smoothstep으로 0으로 감소. 속도 감쇠 없음. EEF 높이 제한 120mm. | 최대 Hold 반경(m): `0.025`<br>외곽 반경(m): `0.035` | [goal_hold_v2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_contact` | 0.1 | 최근 3step 중 2회 접촉 인정 또는 목표 3cm 내부면 누적 count 지급(최대 10). 불인정 5회 연속이면 count 초기화. 실제 접촉 경로에만 EEF 높이 제한 120mm(목표 점유는 예외). | 접촉 문턱(N): `0.01` | [WrenchV0_2ContactMaintenance](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `robot_action_rate_penalty` | -1 | Arm·Hand 행동 변화 제곱합 비용을 각 0.03 계수로 합산. | 추가 수치 설정 없음(생략값은 함수 기본값) | [action_rate_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `robot_joint_velocity_penalty` | -1 | Arm 속도 제곱합×0.03 + Hand 속도 제곱합×0.01. | 추가 수치 설정 없음(생략값은 함수 기본값) | [joint_velocity_penalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `object_tilt_penalty` | -30 | 활성 타겟/장애물만 대상으로 기울기 초과의 제한된 제곱 비용 합. | 무비용 기울기(rad): `0.0872665`<br>실패 기울기(rad): `0.9` | [active_object_tilt_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `obstacle_displacement_penalty` | -150 | 활성 비타겟 장애물의 초기 위치 대비 3D 변위 제곱합. 주차된 물체 제외. | 변위 제곱합 상한: `0.04` | [active_obstacle_displacement_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `object_acceleration_penalty` | -0.05 | 활성 물체별 PhysX COM 가속도의 허용값 초과 지수 비용을 각각 상한 처리하여 합산. Reset/활성화 직후 첫 샘플 제외. | 자유 가속도(m/s²): `15`<br>raw 상한: `100` | [ObjectAccelerationPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `shelf_penalty` | -1 | 선반 충돌/근접 비용×0.5 + 선반 실패 이벤트 3. 이벤트 부분은 dt 상쇄. | 실패 term: `shelf_failure` | [ShelfPenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/final.py) |
+| `obstacle_contact_penalty` | -0.05 | 손-장애물 접촉력의 허용 힘 초과 비용, max_cost 적용. | 허용 접촉력(N): `50`<br>raw 상한: `100` | [obstacle_contact_force_cost](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/contact_sweep_clutter_fusion.py) |
+| `target_goal_first_entry_bonus` | 25 | 최초 목표 내부 진입에 속도 감쇠를 곱한 일회 보상. 높이 조건 없음, 지급액과 무관하게 기회 소진. | 자유 속도(m/s 또는 관절 rad/s): `0.01`<br>속도 scale(m/s): `0.02` | [FirstGoalEntryBonusV2](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_goal_success_bonus` | 75 | 3초 안정 유지 성공 종료에 한 번 지급하는 보너스. timeout 보너스가 아님. | 추가 수치 설정 없음(생략값은 함수 기본값) | [settled_success_bonus](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/wrench.py) |
+| `wrist_wrench_change_penalty` | -0.1 | 힘·모멘트 변화량 크기의 제한된 비용. 양의 보상 예산 제한은 없음. | 허용 힘 변화(N): `20`<br>허용 모멘트 변화(Nm): `2`<br>포화 비율: `2.5`<br>곡선 기울기: `3` | [IndependentWrenchMagnitudeChangePenalty](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/revision.py) |
+| `target_speed_penalty` | -5 | 타겟 3D 선속도의 자유 속도 초과에 대한 지수 비용, raw cap 적용. | 자유 속도(m/s 또는 관절 rad/s): `0.1`<br>raw 상한: `100` | [exponential_pushing_speed_cost_limit](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/reward_functions/goal_rewards.py) |
+
+### 전체 터미네이션 항목
+
+#### 터미네이션 구성 1
+
+적용: `Inspire-Wrench-v0`, `Inspire-Wrench-v0_1`, `Inspire-Wrench-v1`, `Inspire-Wrench-v2`, `Inspire-Wrench-v0_2`.
+
+| 항목명 | 종료 유형 | 의미 | 설정값·조건 | 구현 함수 |
+| --- | --- | --- | --- | --- |
+| `object_fall_or_tilt` | terminated | 활성 타겟/장애물 중 하나라도 낙하/기울기 조건을 넘으면 실패. 비활성 물체 제외. 크기/회전을 반영한 물체 바닥 높이로 검사. | bottom_clearance: `0.01`<br>실패 기울기(rad): `0.9` | [any_active_object_fall_or_tilt](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/revision.py) |
+| `target_speed` | terminated | 타겟 3D 선속도가 허용 속도를 초과하면 실패. | 타겟 종료 속도(m/s): `1` | [push_fast](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/sweep.py) |
+| `shelf_failure` | terminated | 선반 충돌/손목 여유 위반 OR 선반 변위 초과를 하나로 합친 실패. | 추가 수치 설정 없음(생략값은 함수 기본값) | [shelf_termination](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/final.py) |
+| `arm_joint_velocity` | terminated | Arm 6개 관절 중 하나라도 절대 각속도가 문턱을 초과하면 실패. hand_velocity라는 이름이어도 Arm 검사. | threshold: `5` | [arm_velocity](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/sweep.py) |
+| `target_goal_success` | terminated | 목표 XY 거리·3D 속도 한계를 duration 동안 연속 만족하면 성공 종료. 동시 실패 제외. | 목표 반경(m): `0.03`<br>속도 한계(m/s): `0.005`<br>연속 유지(s): `3` | [SettledGoalSuccess](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/wrench.py) |
+| `target_goal_miss_at_timeout` | truncated | 시간 제한 도달 시 성공 조건이 성립하지 않는 timeout. 초기 반경 3cm(반경 일정이 있으면 갱신값 사용). | 추가 수치 설정 없음(생략값은 함수 기본값) | [unsuccessful_timeout](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/termination_functions/wrench.py) |
+
+### 전체 커리큘럼 항목
+
+#### 커리큘럼 구성 1
+
+적용: `Inspire-Wrench-v0`, `Inspire-Wrench-v1`, `Inspire-Wrench-v2`.
+
+| 항목명 | 의미·변경 대상 | 일정 | 구현 함수 |
+| --- | --- | --- | --- |
+| `obstacle_population` | 활성 Gray/White 장애물 요청 개수를 단계적으로 증가. | Gray 3→4, 12000부터 / White 3→5, 10000부터 / 각 4000 iter마다 +1 | [obstacle_population_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/contact_sweep_clutter_fusion.py) |
+| `target_free_speed` | `target_speed_penalty`의 자유 속도(m/s 또는 관절 rad/s) (`free_speed`)를 변경. | 0: 0.1 → 499: 0.1 → 500: 0.09 → 1900: 0.02; 갱신 간격 250 iter | [reward_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/contact_sweep_clutter_fusion_holding.py) |
+| `target_goal_direction_deadzone` | 목표 방향에서 제외하는 ±X 반각을 점차 줄임. | 30° 시작; 10000에서 첫 −5°, 이후 3000마다 감소, 하한 0° | [goal_deadzone_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/wrench.py) |
+
+#### 커리큘럼 구성 2
+
+적용: `Inspire-Wrench-v0_1`.
+
+| 항목명 | 의미·변경 대상 | 일정 | 구현 함수 |
+| --- | --- | --- | --- |
+| `obstacle_population` | 활성 Gray/White 장애물 요청 개수를 단계적으로 증가. | Gray 3→4, 12000부터 / White 3→5, 10000부터 / 각 4000 iter마다 +1 | [obstacle_population_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/contact_sweep_clutter_fusion.py) |
+| `target_free_speed` | `target_speed_penalty`의 자유 속도(m/s 또는 관절 rad/s) (`free_speed`)를 변경. | 0: 0.1 → 499: 0.1 → 500: 0.09 → 1900: 0.02; 갱신 간격 250 iter | [reward_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/contact_sweep_clutter_fusion_holding.py) |
+
+`None`으로 비활성: `target_goal_direction_deadzone`.
+
+#### 커리큘럼 구성 3
+
+적용: `Inspire-Wrench-v0_2`.
+
+| 항목명 | 의미·변경 대상 | 일정 | 구현 함수 |
+| --- | --- | --- | --- |
+| `obstacle_population` | Gray/White 장애물 기준 개수 증가와 reset ±1 랜덤화의 기준값 설정. | −1/−1 시작; 2000에 White 먼저 +1, 이후 3000마다 교대. 상한 4/5; 실제 샘플은 음수를 0으로 제한. | [feasibility_obstacle_population_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/wrench.py) |
+| `target_free_speed` | `target_speed_penalty`의 자유 속도(m/s 또는 관절 rad/s) (`free_speed`)를 변경. | 0: 0.1 → 499: 0.1 → 500: 0.09 → 1900: 0.02; 갱신 간격 250 iter | [reward_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/contact_sweep_clutter_fusion_holding.py) |
+| `target_goal_direction_deadzone` | 목표 방향에서 제외하는 ±X 반각을 점차 줄임. | 30° 시작; 10000에서 첫 −5°, 이후 3000마다 감소, 하한 0° | [goal_deadzone_schedule](../../src/inspire_sweep_baseline/inspire_sweep_baseline/mdp/curriculum_functions/wrench.py) |
+
+<!-- TERM_TABLES_END -->
 
 ## 코드 위치
 
