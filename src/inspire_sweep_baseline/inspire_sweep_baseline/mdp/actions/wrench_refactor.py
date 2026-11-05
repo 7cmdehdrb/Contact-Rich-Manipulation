@@ -1,4 +1,4 @@
-"""Independent Wrench action configuration with EEF-relative bounded OSC."""
+"""Independent Wrench action configuration with Final/Revision root-frame bounded OSC."""
 
 from isaaclab.controllers import OperationalSpaceControllerCfg
 from isaaclab.envs.mdp.actions import OperationalSpaceControllerActionCfg
@@ -6,13 +6,13 @@ from isaaclab.managers import ActionTermCfg
 from isaaclab.utils import configclass
 
 from ...assets.robot import ARM_JOINT_NAMES
-from ..action_functions.wrench_refactor import WrenchRefactorOSCAction
+from ..action_functions.contact_sweep_clutter_fusion_holding_osc import UR10OperationalSpaceControllerAction
 from ..action_functions.hand_openness import HandOpennessAction
 
 
 @configclass
 class WrenchRefactorOSCActionCfg(OperationalSpaceControllerActionCfg):
-    class_type: type = WrenchRefactorOSCAction
+    class_type: type = UR10OperationalSpaceControllerAction
     effort_limit_scale: float = 1.0
     minimum_effort_limit: float = 1.0e-6
     saturation_tolerance: float = 1.0e-6

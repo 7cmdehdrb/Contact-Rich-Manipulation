@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import json
 import math
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
@@ -46,10 +47,10 @@ def test_uniform_angle_and_conditional_distance(load_mdp, degrees):
     assert ((histogram / len(b) - .1).abs() < .005).all()
     safe = torch.tensor([.2, .5]) - b[:, :, :2].abs().amax(1) - .02
     maximum = ((safe - direction.sign() * target) / direction.abs().clamp_min(1e-12)).amin(-1)
-    unit_distance = distance / maximum
+    unit_distance = (distance - .05) / (maximum - .05)
     assert unit_distance.mean().item() == pytest.approx(.5, abs=.005)
     assert unit_distance.std().item() == pytest.approx(1 / math.sqrt(12), abs=.003)
-    assert (distance > .15).any() and (distance < .03).any()
+    assert (distance > .15).any() and (distance >= .05 - 1e-7).all()
     assert (goal.abs() <= safe + 1e-6).all()
 
 
@@ -230,7 +231,11 @@ def test_cfg_and_runtime_have_no_task_parents():
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.ClassDef):
-                v1_parents = {'WrenchRefactorV1EnvCfg':'WrenchRefactorEnvCfg',
+                v1_parents = {'WrenchRefactorV3EnvCfg':'WrenchRefactorV2EnvCfg',
+                              'WrenchRefactorV3PPORunnerCfg':'WrenchRefactorV2PPORunnerCfg',
+                              'WrenchRefactorV2EnvCfg':'WrenchRefactorEnvCfg',
+                              'WrenchRefactorV2RewardsCfg':'WrenchRefactorRewardsCfg',
+                              'WrenchRefactorV2PPORunnerCfg':'WrenchRefactorPPORunnerCfg','WrenchRefactorV1EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorV1RewardsCfg':'WrenchRefactorRewardsCfg',
                               'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
                 if node.name in v1_parents:
@@ -278,6 +283,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
               WrenchRefactorOSCActionCfg=NS(OffsetCfg=_AssetNode))
     for role, name in [('commands','Commands'),('observations','Observations'),('rewards','Rewards'),('events','Events'),('terminations','Terminations'),('curricula','Curriculum')]:
         ns[f'WrenchRefactor{name}Cfg'] = getattr(configs(role,'wrench_refactor'),f'WrenchRefactor{name}Cfg')
+    ns['WrenchRefactorV2RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV2RewardsCfg
     ns['WrenchRefactorV1RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg
     cfg = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py',ns).WrenchRefactorEnvCfg()
     assert cfg.goal_reward_height_limit == cfg.contact_height_limit == .14
@@ -519,3 +525,65 @@ def test_v1_distance_requires_current_contact_and_strict_height(configs,force,he
     assert cfg.func(env,**cfg.params).item() == 1.
     forces.zero_()
     assert cfg.func(env,**cfg.params).item() == 0.
+
+
+def test_v2_only_changes_distance_callable(configs):
+    m = configs('rewards', 'wrench_refactor')
+    parent = m.WrenchRefactorRewardsCfg()
+    before = copy.deepcopy(parent.to_dict())
+    child = m.WrenchRefactorV2RewardsCfg()
+    assert child.__class__.__bases__ == (m.WrenchRefactorRewardsCfg,)
+    assert child.target_contact is not None
+    assert child.target_goal_distance.weight == 5.
+    assert child.target_goal_distance.params == {'distance_scale': .05}
+    expected = copy.deepcopy(before)
+    expected['target_goal_distance']['func'] = child.target_goal_distance.to_dict()['func']
+    assert_ordered_equal(child.to_dict(), expected)
+    child.target_goal_distance.params['distance_scale'] = 1.
+    assert_ordered_equal(parent.to_dict(), before)
+
+
+@pytest.mark.parametrize('xy,alpha', [
+    ((.02,0.),1.), ((.02,.02),2**-.5), ((0.,.02),0.),
+    ((-.02,.02),-2**-.5), ((-.02,0.),-1.), ((0.,0.),0.),
+    ((.2,0.),1.), ((float('nan'),0.),0.), ((float('inf'),0.),0.),
+])
+def test_v2_cumulative_displacement_cosine(configs,xy,alpha):
+    cfg = configs('rewards','wrench_refactor').WrenchRefactorV2RewardsCfg().target_goal_distance
+    env,pos,forces = reward_env()
+    env.cfg.contact_height_limit = env.cfg.goal_reward_height_limit = .14
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.18
+    env._initial_object_positions_w = torch.zeros_like(pos)
+    goal = env.command_manager.get_command('target_goal_pos')
+    goal[:,0] = .1
+    env.command_manager.get_command = lambda _: goal
+    pos[0,0,:2] = torch.tensor(xy)
+    distance = math.hypot(xy[0]-.1,xy[1])
+    expected = math.exp(-distance/.05)*alpha if math.isfinite(distance) else 0.
+    assert cfg.func(env,**cfg.params).item() == pytest.approx(expected)
+    # Static displacement is enough; no instantaneous velocity field is used.
+    forces.zero_()
+    assert cfg.func(env,**cfg.params).item() == pytest.approx(expected)
+    env.sensor_data_fresh[:] = False
+    assert cfg.func(env,**cfg.params).item() == pytest.approx(expected)
+    forces[0,0,0,0] = .02
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.19
+    assert cfg.func(env,**cfg.params).item() == 0.
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.18
+    goal.zero_()  # Coincident start/goal has no defined direction.
+    assert cfg.func(env,**cfg.params).item() == 0.
+
+
+def test_active_refactor_osc_matches_final_and_revision():
+    root = Path(__file__).parents[1] / 'inspire_sweep_baseline/mdp/actions'
+    calls = []
+    for family in ('wrench_refactor', 'final', 'revision'):
+        tree = ast.parse((root / (family + '.py')).read_text())
+        cfg = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name.endswith('OSCActionCfg'))
+        class_type = next(n.value for n in cfg.body if isinstance(n, ast.AnnAssign) and n.target.id == 'class_type')
+        assert class_type.id == 'UR10OperationalSpaceControllerAction'
+        actions = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name.endswith('ActionsCfg'))
+        arm = next(n.value for n in actions.body if isinstance(n, ast.Assign) and n.targets[0].id == 'arm_action')
+        arm.func = ast.Name(id='CommonOSC', ctx=ast.Load())
+        calls.append(ast.dump(arm))
+    assert calls[0] == calls[1] == calls[2]

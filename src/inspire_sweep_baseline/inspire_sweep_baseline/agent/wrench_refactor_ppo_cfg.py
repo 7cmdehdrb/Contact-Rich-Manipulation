@@ -39,3 +39,13 @@ class WrenchRefactorPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class WrenchRefactorV1PPORunnerCfg(WrenchRefactorPPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_v1"
+
+
+@configclass
+class WrenchRefactorV2PPORunnerCfg(WrenchRefactorPPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v2"
+
+
+@configclass
+class WrenchRefactorV3PPORunnerCfg(WrenchRefactorV2PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v3"

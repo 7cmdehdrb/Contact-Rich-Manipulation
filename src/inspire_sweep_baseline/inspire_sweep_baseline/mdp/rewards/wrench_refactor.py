@@ -20,7 +20,7 @@ from ..reward_functions.revision import (
     goal_hold_v2,
 )
 
-from ..reward_functions.wrench_refactor import contact_gated_goal_distance
+from ..reward_functions.wrench_refactor import contact_gated_goal_distance, displacement_cosine_goal_distance
 from ..reward_functions.wrench import settled_success_bonus
 from ..reward_functions.wrench_refactor import RefactorContactMaintenance, RefactorActionRatePenalty, RefactorFirstEntry
 
@@ -106,4 +106,13 @@ class WrenchRefactorV1RewardsCfg(WrenchRefactorRewardsCfg):
     target_goal_distance = RewTerm(
         func=contact_gated_goal_distance, weight=25.0,
         params={"distance_scale": 0.05, "threshold_n": 0.01},
+    )
+
+
+@configclass
+class WrenchRefactorV2RewardsCfg(WrenchRefactorRewardsCfg):
+    """Preserve v0 contact reward and multiply distance by displacement cosine."""
+    target_goal_distance = RewTerm(
+        func=displacement_cosine_goal_distance, weight=5.0,
+        params={"distance_scale": 0.05},
     )

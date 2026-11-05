@@ -5,20 +5,24 @@ from .bbox_scene_layout import LayoutConfig, footprint_from_bounds, generate_lay
 
 
 def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
-                    excluded_x_half_angle=math.pi / 6):
-    """Uniform allowed angle, then uniform distance from zero to the safe edge.
+                    excluded_x_half_angle=math.pi / 6, min_goal_distance=.05):
+    """Uniform allowed angle, then uniform distance from min_goal_distance to the safe edge.
 
     Shelf-local +/-X are 12/6 o'clock; +/-Y are the two lateral directions.
-    No ray clipping to 15 cm, minimum push length or direction fallback.
+    No ray clipping to 15 cm or direction fallback; the inner disk is excluded.
     """
     if not math.isfinite(excluded_x_half_angle) or not 0 <= excluded_x_half_angle < math.pi / 2:
         raise ValueError('Invalid direction deadzone')
     if not math.isfinite(spawn_radius) or spawn_radius < 0 or not math.isfinite(edge_clearance) or edge_clearance < .005:
         raise ValueError('Invalid spawn disk or edge clearance')
+    if not math.isfinite(min_goal_distance) or min_goal_distance < 0:
+        raise ValueError('Invalid minimum goal distance')
     half = bounds[:, :, :2].abs().amax(1)
     safe = bounds.new_tensor([.20, .50]) - half - edge_clearance
     if bool((safe <= spawn_radius).any()):
         raise ValueError('Target footprint leaves no central spawn disk')
+    if bool((safe - spawn_radius < min_goal_distance).any()):
+        raise ValueError('Minimum goal distance must fit every direction from the spawn disk')
     draws = torch.rand((len(bounds), 4), device=bounds.device, dtype=bounds.dtype, generator=generator)
     angle = 2 * math.pi * draws[:, 0]
     target = spawn_radius * draws[:, 1:2].sqrt() * torch.stack((angle.cos(), angle.sin()), -1)
@@ -26,7 +30,7 @@ def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
     theta = excluded_x_half_angle + (2 * draws[:, 2] % 1) * (math.pi - 2 * excluded_x_half_angle) + side * math.pi
     direction = torch.stack((theta.cos(), theta.sin()), -1)
     maximum = ((safe - direction.sign() * target) / direction.abs().clamp_min(1e-12)).amin(-1)
-    distance = maximum * draws[:, 3]
+    distance = min_goal_distance + (maximum - min_goal_distance) * draws[:, 3]
     return target, target + direction * distance[:, None]
 
 

@@ -6,7 +6,7 @@ from ..assets.scenes.wrench_refactor import WrenchRefactorSceneCfg
 from ..mdp.actions.wrench_refactor import WrenchRefactorActionsCfg, WrenchRefactorOSCActionCfg
 from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg
 from ..mdp.commands.wrench_refactor import WrenchRefactorCommandsCfg
-from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg
+from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg
 from ..mdp.terminations.wrench_refactor import WrenchRefactorTerminationsCfg
 from ..mdp.events.wrench_refactor import WrenchRefactorEventsCfg
 from ..mdp.curricula.wrench_refactor import WrenchRefactorCurriculumCfg
@@ -80,3 +80,18 @@ class WrenchRefactorEnvCfg(ManagerBasedRLEnvCfg):
 class WrenchRefactorV1EnvCfg(WrenchRefactorEnvCfg):
     """Direct v0 child; change only contact-maintenance and goal-distance rewards."""
     rewards: WrenchRefactorV1RewardsCfg = WrenchRefactorV1RewardsCfg()
+
+
+@configclass
+class WrenchRefactorV2EnvCfg(WrenchRefactorEnvCfg):
+    """Direct v0 child with signed cumulative-displacement distance reward."""
+    rewards: WrenchRefactorV2RewardsCfg = WrenchRefactorV2RewardsCfg()
+
+
+@configclass
+class WrenchRefactorV3EnvCfg(WrenchRefactorV2EnvCfg):
+    """Preserve v2 rewards; restore the offset EEF task frame and kinematics."""
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.action_functions.wrench_refactor import WrenchRefactorOSCAction
+        self.actions.arm_action.class_type = WrenchRefactorOSCAction

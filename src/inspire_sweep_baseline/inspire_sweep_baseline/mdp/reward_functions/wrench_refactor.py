@@ -115,3 +115,29 @@ def contact_gated_goal_distance(env, distance_scale=0.05, threshold_n=0.01,
     contact = target_contact_below_height(env, threshold_n=threshold_n).bool()
     distance_reward = goal_distance_v2(env, distance_scale=distance_scale, command_name=command_name)
     return torch.where(contact, distance_reward, 0.0)
+
+
+def displacement_cosine_goal_distance(env, distance_scale=0.05,
+                                     command_name="target_goal_pos"):
+    """v0 distance times signed XY alignment of goal and displacement from reset.
+
+    This measures cumulative displacement, not instantaneous velocity. Retreat
+    on the goal side and collinear overshoot retain positive alignment. Vectors
+    shorter than 1e-8 m (including coincident start/goal) have undefined direction
+    and pay zero. No goal-radius override is applied.
+    """
+    rows = torch.arange(env.num_envs, device=env.device)
+    start = env._initial_object_positions_w[rows, env.target_id[:, 0].long(), :2]
+    goal_vector = env.command_manager.get_command(command_name)[:, :2] - start
+    displacement = _object_position(env)[:, :2] - start
+    goal_norm = torch.linalg.vector_norm(goal_vector, dim=-1)
+    move_norm = torch.linalg.vector_norm(displacement, dim=-1)
+    valid = (goal_norm > 1e-8) & (move_norm > 1e-8)
+    cosine = ((goal_vector / goal_norm.clamp_min(1e-8).unsqueeze(-1)) *
+              (displacement / move_norm.clamp_min(1e-8).unsqueeze(-1))).sum(-1).clamp(-1., 1.)
+    from .revision import goal_distance_v2
+    reward = goal_distance_v2(
+        env, distance_scale=distance_scale,
+        command_name=command_name,
+    ) * cosine
+    return torch.where(valid & torch.isfinite(reward), reward, 0.0)

@@ -1,5 +1,11 @@
 # Inspire Sweep Baseline
 
+2026-11-06: **Refactor-v2←v0**로 정정(접촉 보상 별도·거리weight5×cosine). **Refactor-v3←v2**는 EEF 기준 OSC를 사용한다. [v3 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V3_ENVIRONMENT.md).
+
+2026-11-06 Refactor 기반 후속: v0/v1/v2는 Final·Revision과 동일한 **root-frame OSC**를 사용하며 목표 최소 거리는 **시작점에서5cm**다. 오른손 자산과 EEF offset은 유지한다. [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_root_osc_min_goal.md).
+
+2026-11-06: **Inspire-Wrench-Refactor-v2**는 v0을 직접 상속하고 거리 보상에 시작점 기준 XY 누적 변위 코사인을 곱한다. 별도 접촉 보상·높이 조건과 거리weight5는 유지한다. [환경 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V2_ENVIRONMENT.md).
+
 2026-11-06: **Inspire-Wrench-Refactor-v1**은v0직접상속으로 `target_contact` 유지보상을제거하고거리보상에현재step접촉조건(.01N)을추가한다. weight5→25,EEF14cm제한유지. [환경 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V1_ENVIRONMENT.md).
 
 2026-11-05: **`Inspire-Wrench-Refactor-v0`** 독립 CFG/runtime: 오른손 ZIP 원본,8종×2장애물+원통타겟의17개 고정풀,초기 균등 물성 고정,목표 방향/거리 균등,앞뒤 tactile34,Actor/Critic raw74→MLP90. [전체 계약·실행·변경 대조](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V0_ENVIRONMENT.md). CPU160개/오른손USD/실제 설정 import 및 GUI32환경 검증 통과. 2026-11-06 후속으로 Wrist3−π/2·관절속도 종료3rad/s를 적용했다. 7168reset,140만 방위샘플,32/32 목표도달·21/32 안정유지 성공과 센서/보상 기록은 [GUI 시험 결과](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_gui_validation.md)를 따른다. 초기 GPU부재 판단은 sandbox 접근 제한으로 정정했고2048환경/학습은 미검증이다.

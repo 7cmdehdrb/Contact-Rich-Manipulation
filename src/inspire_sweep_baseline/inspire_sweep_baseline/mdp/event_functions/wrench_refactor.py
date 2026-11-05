@@ -78,7 +78,7 @@ def initialize_physics(env, env_ids, mass_scale=1.5):
 
 
 def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
-                excluded_x_half_angle=math.pi / 6, observation_noise=.01,
+                excluded_x_half_angle=math.pi / 6, min_goal_distance=.05, observation_noise=.01,
                 visibility_threshold=.35, visibility_flip_probability=.01,
                 observation_swap_probability=.1):
     ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
@@ -90,7 +90,7 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
         env._revision_bounds_t[ids], env._refactor_spawn_z[ids], env._revision_layout_rng, counts,
         red_margin=env.cfg.red_margin, rear_offset=env.cfg.rear_offset,
         spawn_radius=spawn_radius, edge_clearance=edge_clearance,
-        excluded_x_half_angle=excluded_x_half_angle)
+        excluded_x_half_angle=excluded_x_half_angle, min_goal_distance=min_goal_distance)
     shelf = env.scene['shelf'].data
     rotation = shelf.root_quat_w[ids, None].expand(-1, 17, -1)
     world = shelf.root_pos_w[ids, None] + quat_apply(rotation, local)
