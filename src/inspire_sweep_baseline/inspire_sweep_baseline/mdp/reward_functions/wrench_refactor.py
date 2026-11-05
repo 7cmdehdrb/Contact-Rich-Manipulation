@@ -106,3 +106,12 @@ class RefactorFirstEntry(ManagerTermBase):
             self._entered |= inside
             self._key = key
         return self._event.clone() / env.step_dt
+
+
+def contact_gated_goal_distance(env, distance_scale=0.05, threshold_n=0.01,
+                                command_name="target_goal_pos"):
+    """Current target-hand contact only: no history/count or goal-inside bypass."""
+    from .revision import goal_distance_v2, target_contact_below_height
+    contact = target_contact_below_height(env, threshold_n=threshold_n).bool()
+    distance_reward = goal_distance_v2(env, distance_scale=distance_scale, command_name=command_name)
+    return torch.where(contact, distance_reward, 0.0)

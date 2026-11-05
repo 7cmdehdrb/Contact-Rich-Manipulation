@@ -20,6 +20,7 @@ from ..reward_functions.revision import (
     goal_hold_v2,
 )
 
+from ..reward_functions.wrench_refactor import contact_gated_goal_distance
 from ..reward_functions.wrench import settled_success_bonus
 from ..reward_functions.wrench_refactor import RefactorContactMaintenance, RefactorActionRatePenalty, RefactorFirstEntry
 
@@ -95,4 +96,14 @@ class WrenchRefactorRewardsCfg:
             "saturation_ratio": 2.5,
             "sharpness": 3.0,
         },
+    )
+
+
+@configclass
+class WrenchRefactorV1RewardsCfg(WrenchRefactorRewardsCfg):
+    """Remove contact-maintenance reward and gate amplified distance by current contact."""
+    target_contact = None
+    target_goal_distance = RewTerm(
+        func=contact_gated_goal_distance, weight=25.0,
+        params={"distance_scale": 0.05, "threshold_n": 0.01},
     )

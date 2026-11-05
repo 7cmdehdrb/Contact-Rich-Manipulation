@@ -11,6 +11,7 @@ from isaaclab.app import AppLauncher
 from cli_args import apply_renderer_compatibility
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--task', choices=['Inspire-Wrench-Refactor-v0','Inspire-Wrench-Refactor-v1'], default='Inspire-Wrench-Refactor-v0')
 parser.add_argument('--num_envs', type=int, default=64)
 parser.add_argument('--config-only', action='store_true')
 parser.add_argument('--output', type=Path, default=Path('outputs/wrench_refactor_validation'))
@@ -25,12 +26,35 @@ try:
     import torch
     import inspire_sweep_baseline
     from inspire_sweep_baseline.envs.wrench_refactor_envs import WrenchRefactorEnvCfg
-    cfg = WrenchRefactorEnvCfg()
+    if args.task.endswith('v1'):
+        from inspire_sweep_baseline.envs.wrench_refactor_envs import WrenchRefactorV1EnvCfg
+        cfg = WrenchRefactorV1EnvCfg()
+    else:
+        cfg = WrenchRefactorEnvCfg()
     cfg.scene.num_envs, cfg.sim.device, cfg.seed = args.num_envs, args.device, 42
     cfg.log_dir = str(args.output)
+    if args.task.endswith('v1'):
+        parent = WrenchRefactorEnvCfg()
+        parent.scene.num_envs, parent.sim.device, parent.seed = args.num_envs, args.device, 42
+        parent.log_dir = str(args.output)
+        before = parent.to_dict()
+        expected = parent.to_dict()
+        expected['rewards']['target_contact'] = None
+        expected['rewards']['target_goal_distance'] = cfg.rewards.target_goal_distance.to_dict()
+        assert cfg.to_dict() == expected, 'Unexpected v1 environment delta'
+        assert parent.to_dict() == before, 'v1 construction changed v0'
+        assert cfg.__class__.__bases__ == (WrenchRefactorEnvCfg,)
+        print('V1_CONFIG_DIFF_OK: contact removed; distance function/params/weight only', flush=True)
     if args.config_only:
         from inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg import WrenchRefactorPPORunnerCfg
-        runner = WrenchRefactorPPORunnerCfg()
+        if args.task.endswith('v1'):
+            from inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg import WrenchRefactorV1PPORunnerCfg
+            runner = WrenchRefactorV1PPORunnerCfg()
+            expected_runner = WrenchRefactorPPORunnerCfg().to_dict()
+            expected_runner['experiment_name'] = 'inspire_wrench_refactor_v1'
+            assert runner.to_dict() == expected_runner
+        else:
+            runner = WrenchRefactorPPORunnerCfg()
         def symbolic(value):
             if callable(value):
                 return f'{value.__module__}:{value.__qualname__}'
@@ -45,7 +69,7 @@ try:
         import os
         os._exit(0)
     started = time.perf_counter()
-    env = gym.make('Inspire-Wrench-Refactor-v0', cfg=cfg)
+    env = gym.make(args.task, cfg=cfg)
     raw = env.unwrapped
     obs, _ = env.reset(seed=42)
     assert {k: v.shape[-1] for k, v in obs.items()} == {'policy':74, 'critic':74, 'obstacles':64, 'critic_obstacles':64}
@@ -82,7 +106,7 @@ try:
         assert torch.equal(raw._clutter_physics.mass_buffer, mass)
         assert torch.equal(raw._revision_bounds_t, bounds)
         assert all(torch.equal(m.properties, old) for m, old in zip(raw._clutter_physics.materials, materials))
-    report = {'task':'Inspire-Wrench-Refactor-v0', 'num_envs':args.num_envs, 'elapsed_s':time.perf_counter()-started,
+    report = {'task':args.task, 'num_envs':args.num_envs, 'elapsed_s':time.perf_counter()-started,
               'reset_seconds':timings, 'fixed_physics':True, 'partial_reset':True, 'finite_rollout':True}
     args.output.mkdir(parents=True,exist_ok=True)
     (args.output / f'probe_{args.num_envs}.json').write_text(json.dumps(report,indent=2))

@@ -230,7 +230,13 @@ def test_cfg_and_runtime_have_no_task_parents():
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.ClassDef):
-                assert all(isinstance(b, ast.Name) and b.id in allowed for b in node.bases), path
+                v1_parents = {'WrenchRefactorV1EnvCfg':'WrenchRefactorEnvCfg',
+                              'WrenchRefactorV1RewardsCfg':'WrenchRefactorRewardsCfg',
+                              'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
+                if node.name in v1_parents:
+                    assert [b.id for b in node.bases] == [v1_parents[node.name]]
+                else:
+                    assert all(isinstance(b, ast.Name) and b.id in allowed for b in node.bases), path
 
 
 def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
@@ -272,6 +278,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
               WrenchRefactorOSCActionCfg=NS(OffsetCfg=_AssetNode))
     for role, name in [('commands','Commands'),('observations','Observations'),('rewards','Rewards'),('events','Events'),('terminations','Terminations'),('curricula','Curriculum')]:
         ns[f'WrenchRefactor{name}Cfg'] = getattr(configs(role,'wrench_refactor'),f'WrenchRefactor{name}Cfg')
+    ns['WrenchRefactorV1RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg
     cfg = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py',ns).WrenchRefactorEnvCfg()
     assert cfg.goal_reward_height_limit == cfg.contact_height_limit == .14
     assert cfg.commands.target_goal_pos.goal_radius == .03
@@ -469,3 +476,46 @@ def test_hand_velocity_penalty_ignores_mimic_followers(configs):
     vel[:,:6] = 1.
     assert cfg.func(env,**params).item() == pytest.approx(.24)
     assert cfg.weight == -1.
+
+
+def test_v1_only_changes_contact_and_distance_rewards(configs):
+    m = configs('rewards','wrench_refactor')
+    parent = m.WrenchRefactorRewardsCfg()
+    before = copy.deepcopy(parent.to_dict())
+    child = m.WrenchRefactorV1RewardsCfg()
+    assert m.WrenchRefactorV1RewardsCfg.__bases__ == (m.WrenchRefactorRewardsCfg,)
+    assert child.target_contact is None
+    assert child.target_goal_distance.weight == 25.
+    assert child.target_goal_distance.params == {'distance_scale':.05,'threshold_n':.01}
+    assert len([v for v in vars(child).values() if hasattr(v,'weight')]) == 12
+    for name in before:
+        if name not in ('target_contact','target_goal_distance'):
+            assert_ordered_equal(child.to_dict()[name],before[name])
+    child.target_goal_hold.params['full_reward_radius'] = .123
+    assert_ordered_equal(parent.to_dict(),before)
+
+
+@pytest.mark.parametrize('force,height,fresh,expected',[
+    (.009999,1.18,True,False),(.01,1.18,True,True),(.010001,1.18,True,True),
+    (.02,1.19,True,False),(.02,1.190001,True,False),(.02,1.18,False,False),
+    (float('nan'),1.18,True,False),(.02,float('nan'),True,False),
+])
+def test_v1_distance_requires_current_contact_and_strict_height(configs,force,height,fresh,expected):
+    cfg = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg().target_goal_distance
+    env,pos,forces = reward_env()
+    env.cfg.contact_height_limit = env.cfg.goal_reward_height_limit = .14
+    env.scene['ee_frame'].data.target_pos_w[...,2] = height
+    env.sensor_data_fresh[:] = fresh
+    forces.zero_();forces[0,0,0,0] = force
+    value = cfg.func(env,**cfg.params)*cfg.weight*.02
+    assert value.item() == pytest.approx(.5*math.exp(-1) if expected else 0.)
+    # Even inside the goal there is no contact-free exception.
+    pos.zero_();forces.zero_()
+    assert cfg.func(env,**cfg.params).item() == 0.
+    # A single fresh contact step pays immediately; losing contact stops immediately.
+    env.sensor_data_fresh[:] = True
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.18
+    forces[0,0,0,0] = .02
+    assert cfg.func(env,**cfg.params).item() == 1.
+    forces.zero_()
+    assert cfg.func(env,**cfg.params).item() == 0.

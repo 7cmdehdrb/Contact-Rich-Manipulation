@@ -6,7 +6,7 @@ from ..assets.scenes.wrench_refactor import WrenchRefactorSceneCfg
 from ..mdp.actions.wrench_refactor import WrenchRefactorActionsCfg, WrenchRefactorOSCActionCfg
 from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg
 from ..mdp.commands.wrench_refactor import WrenchRefactorCommandsCfg
-from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg
+from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg
 from ..mdp.terminations.wrench_refactor import WrenchRefactorTerminationsCfg
 from ..mdp.events.wrench_refactor import WrenchRefactorEventsCfg
 from ..mdp.curricula.wrench_refactor import WrenchRefactorCurriculumCfg
@@ -74,3 +74,9 @@ class WrenchRefactorEnvCfg(ManagerBasedRLEnvCfg):
         self.scene.robot.actuators["arm"].stiffness = 0.0
         self.scene.robot.actuators["arm"].damping = 0.0
 
+
+
+@configclass
+class WrenchRefactorV1EnvCfg(WrenchRefactorEnvCfg):
+    """Direct v0 child; change only contact-maintenance and goal-distance rewards."""
+    rewards: WrenchRefactorV1RewardsCfg = WrenchRefactorV1RewardsCfg()
