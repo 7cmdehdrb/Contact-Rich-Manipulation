@@ -91,7 +91,7 @@ def test_stale_high_and_cancelled_force_do_not_count(configs):
     term(env); env.common_step_counter += 1
     assert term(env).tolist() == [0,0,0,1]
 
-
+d
 @pytest.mark.parametrize('goal_override', [False, True])
 def test_contact_count_caps_at_ten_and_recovers_after_reset(configs, goal_override, capsys):
     env, pos, force = contact_env()
