@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-05: `Inspire-Wrench-v0_3`는 v0_2를, `Inspire-Wrench-v0_4`는 v0_3을 직접 상속한다. v0_3은 장애물0–4 균등·속도 기준0.02 고정·EEF14cm·OSC 출력 토크 정규화 변화량·최초 진입4cm/s, v0_4는 높이 조건이 있는 최단 거리 개선량을 적용한다. CPU103개 통과, GPU/학습 미실행. [환경·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_3_V0_4_ENVIRONMENTS.md).
+
 2026-11-05: `Inspire-Wrench-v0_2`는 v0 직접 상속 feasibility 환경이다. 거리×cosine(3cm 미만1, 접촉 조건 없음), 2-of-3 접촉 누적·불인정5회 초기화, 초기 무장애물·2k부터3k 교대 증가·reset±1 랜덤화를 적용한다. CPU87개 통과, GPU/학습 미검증. [환경·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_2_ENVIRONMENT.md).
 
 2026-11-04: `Inspire-Wrench-v0_1`은 v0 직접 상속 feasibility 환경이다. 독립 contact 보상을 제거하고 거리 보상에 연속 접촉·cosine을 적용한다. 거리3cm 미만 alpha=1, deadzone40° 고정, 목표 허용 거리4.0–7.5cm다. CPU78개 통과, GPU/학습 미검증. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_1_ENVIRONMENT.md).

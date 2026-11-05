@@ -8,6 +8,7 @@ from isaaclab.managers import ManagerTermBase
 from ..common.contact_sweep_clutter_fusion_contacts import target_hand_contact_force_w
 from ..termination_functions.goal_terminations import _object_position
 from .revision import goal_distance_v2
+from .dex_rewards import DexPlanarGoalProgress
 
 
 class WrenchV0_1GoalDistance(ManagerTermBase):
@@ -54,6 +55,57 @@ class WrenchV0_1GoalDistance(ManagerTermBase):
             self._previous_contact[:] = contact
             self._cached_step = step
         return self._cached_reward.clone()
+
+
+class WrenchV0_3ActionRatePenalty(ManagerTermBase):
+    """Policy-step change of bounded OSC output torques and raw Hand actions.
+
+    Sample the final physics substep's applied Arm efforts. Normalize by the
+    same per-joint bounds as the OSC action; keep the parent's 0.03 coefficients
+    and group caps. Reset starts the selected Arm histories at zero.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._previous_arm = torch.zeros((env.num_envs, 6), device=env.device)
+        self._cached_cost = torch.zeros(env.num_envs, device=env.device)
+        self._cached_step = None
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        self._previous_arm[ids] = 0.0
+        self._cached_cost[ids] = 0.0
+
+    def __call__(self, env):
+        from .goal_rewards import action_rate_l2
+
+        if env.common_step_counter != self._cached_step:
+            arm = env.action_manager.get_term("arm_action")
+            limits = (arm._asset.data.joint_effort_limits[:, arm._joint_ids]
+                      * arm.cfg.effort_limit_scale).clamp_min(arm.cfg.minimum_effort_limit)
+            current = (arm.joint_efforts / limits).clamp(-1.0, 1.0)
+            arm_cost = (current - self._previous_arm).square().sum(-1).clamp_max(100.0)
+            self._cached_cost[:] = 0.03 * arm_cost + 0.03 * action_rate_l2(
+                env, action_group="hand", max_cost=100.0
+            )
+            self._previous_arm[:] = current
+            self._cached_step = env.common_step_counter
+        return self._cached_cost.clone()
+
+
+class WrenchV0_4GoalProgress(DexPlanarGoalProgress):
+    """Holding's meter-valued episode-best XY improvement, gated by EEF height.
+
+    Track the true episode best even above the ceiling, so lowering the EEF
+    later cannot cash in progress made while the height condition was false.
+    The parent cancels RewardManager's dt multiplier and handles partial resets.
+    """
+
+    def __call__(self, env, command_name="target_goal_pos", position_tolerance=0.0):
+        from .revision import goal_reward_height_valid
+
+        raw = super().__call__(env, command_name, position_tolerance)
+        return torch.where(goal_reward_height_valid(env), raw, 0.0)
 
 
 def settled_success_bonus(env):

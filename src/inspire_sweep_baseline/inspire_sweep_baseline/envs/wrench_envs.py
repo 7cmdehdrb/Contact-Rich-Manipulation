@@ -19,6 +19,9 @@ from ..mdp.event_functions.wrench import reset_wrench_feasibility_scene
 from ..mdp.observations.wrench import WrenchObservationsCfg
 from ..mdp.rewards.wrench import WrenchRewardsCfg, WrenchV0_1RewardsCfg, WrenchV0_2RewardsCfg, WrenchV1RewardsCfg
 from ..mdp.terminations.wrench import WrenchTerminationsCfg
+from ..mdp.curricula.wrench import WrenchV0_3CurriculumCfg
+from ..mdp.event_functions.wrench import reset_wrench_uniform_scene
+from ..mdp.rewards.wrench import WrenchV0_3RewardsCfg, WrenchV0_4RewardsCfg
 
 
 @configclass
@@ -152,3 +155,30 @@ class WrenchV0_2EnvCfg(WrenchEnvCfg):
         self.events.object_spawn.func = reset_wrench_feasibility_scene
         self.events.object_spawn.params.update(gray_obstacles=-1, white_obstacles=-1)
         self.events.layout_bank.params.update(stages=feasibility_layout_stages())
+
+
+@configclass
+class WrenchV0_3EnvCfg(WrenchV0_2EnvCfg):
+    """Uniform obstacle counts, fixed free speed and normalized OSC effort cost."""
+
+    rewards: WrenchV0_3RewardsCfg = WrenchV0_3RewardsCfg()
+    curriculum: WrenchV0_3CurriculumCfg = WrenchV0_3CurriculumCfg()
+    goal_reward_height_limit: float = 0.14
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.func = reset_wrench_uniform_scene
+        self.events.object_spawn.params.pop("gray_obstacles")
+        self.events.object_spawn.params.pop("white_obstacles")
+        # Every count pair is reachable at every inherited deadzone stage.
+        self.events.layout_bank.params.update(
+            stages=tuple((angle, gray, white) for angle in range(0, 31, 5)
+                         for gray in range(5) for white in range(5))
+        )
+
+
+@configclass
+class WrenchV0_4EnvCfg(WrenchV0_3EnvCfg):
+    """Replace proximity with height-gated episode-best distance improvement."""
+
+    rewards: WrenchV0_4RewardsCfg = WrenchV0_4RewardsCfg()

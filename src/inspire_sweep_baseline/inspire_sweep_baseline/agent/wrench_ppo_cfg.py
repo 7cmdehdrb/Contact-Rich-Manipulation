@@ -54,3 +54,13 @@ class WrenchV2PPORunnerCfg(WrenchV1PPORunnerCfg):
 @configclass
 class WrenchV0_2PPORunnerCfg(WrenchPPORunnerCfg):
     experiment_name = "inspire_wrench_v0_2"
+
+
+@configclass
+class WrenchV0_3PPORunnerCfg(WrenchV0_2PPORunnerCfg):
+    experiment_name = "inspire_wrench_v0_3"
+
+
+@configclass
+class WrenchV0_4PPORunnerCfg(WrenchV0_3PPORunnerCfg):
+    experiment_name = "inspire_wrench_v0_4"

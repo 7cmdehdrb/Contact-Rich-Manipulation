@@ -949,3 +949,31 @@ if WRENCH_V0_2_TASK_ID not in gym.registry:
             "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_ppo_cfg:WrenchV0_2PPORunnerCfg",
         },
     )
+
+
+WRENCH_V0_3_TASK_ID = "Inspire-Wrench-v0_3"
+if WRENCH_V0_3_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_V0_3_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench:WrenchEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_envs:WrenchV0_3EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_ppo_cfg:WrenchV0_3PPORunnerCfg",
+        },
+    )
+__all__.append("WRENCH_V0_3_TASK_ID")
+
+
+WRENCH_V0_4_TASK_ID = "Inspire-Wrench-v0_4"
+if WRENCH_V0_4_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_V0_4_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench:WrenchEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_envs:WrenchV0_4EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_ppo_cfg:WrenchV0_4PPORunnerCfg",
+        },
+    )
+__all__.append("WRENCH_V0_4_TASK_ID")

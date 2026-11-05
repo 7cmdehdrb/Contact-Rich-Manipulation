@@ -51,3 +51,34 @@ inspire_wrench_v0_1 를 상속한, inspire_wrench_v0_2 를 만들어줘.
     - 시뮬레이션 특성 상, 연속된 접촉을 바로 만드는 것은 힘들 수도 있기에, 3스탭을 평가하여, 그 중 2스탭 이상 접촉을 연속 보상으로 정의하는 것 (접촉 인정 조건)
 - 추가적으로, 접촉 인지 조건이 타겟 물체와 로봇 핸드 사이의 발생하는 힘이 0.01N 이상인 것인지 더블 체크해라.
 
+
+
+---
+
+inspire_wrench_v0_2 를 상속받는 inspire_wrench_v0_3 환경을 만들어줘.
+
+1. 커리큘럼의 변경
+
+- obstacle_population 커리큘럼을 삭제하고, 장애물 물체가 White 0-4 균등 샘플링, Gray 0-4 균등 샘플링 되도록 변경할 것
+- target_free_speed 커리큘럼을 삭제하고, Reward의 기준도 0.02로 고정할 것
+
+2. EEF 높이 조건의 완화
+
+- 12cm -> 14cm 으로 완화한다.
+
+3. robot_action_rate_penalty 의 변경
+
+- Arm의 경우, OSC가 출력할 수 있는 범위 내에서 -1.0~1.0 사이로 정규화 한 Action의 변화량을 사용하도록 변경.
+- Hand의 경우는, 이미 정규화 되었음으로, 해당 변화량을 그대로 사용하도록 변경.
+
+4. target_goal_first_entry_bonus 의 변경
+
+- 최초 진입 감쇄를, 1cm/s -> 4cm/s 로 다소 빠른 속도를 허용하도록 변경한다.
+
+---
+
+inspire_wrench_v0_3 를 상속받는 inspire_wrench_v0_4 환경을 만들어줘.
+
+1. target_goal_distance 의 변경
+
+Holding v0~v4, 대응 OSC·ObjectRandom 계열에서 사용하던, 에피소드 최단 거리 개선량을 사용한 함수로 변경한다. 다만, EEF 높이 조건은 추가한다.

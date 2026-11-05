@@ -196,6 +196,10 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
     ns["WrenchV0_2CurriculumCfg"] = configs("curricula", "wrench").WrenchV0_2CurriculumCfg
     ns["feasibility_layout_stages"] = configs("curriculum_functions", "wrench").feasibility_layout_stages
     ns["reset_wrench_feasibility_scene"] = configs("event_functions", "wrench").reset_wrench_feasibility_scene
+    for name in ('WrenchV0_3RewardsCfg', 'WrenchV0_4RewardsCfg'):
+        ns[name] = getattr(configs('rewards', 'wrench'), name)
+    ns['WrenchV0_3CurriculumCfg'] = configs('curricula', 'wrench').WrenchV0_3CurriculumCfg
+    ns['reset_wrench_uniform_scene'] = configs('event_functions', 'wrench').reset_wrench_uniform_scene
     m=_execute_definitions(MODULE_ROOT/'envs/wrench_envs.py',ns)
     parent=m.WrenchEnvCfg();before=parent.to_dict();child=m.WrenchV1EnvCfg()
     assert type(child).__bases__==(type(parent),)
@@ -252,15 +256,55 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
     assert sparse.curriculum.obstacle_population.func.__name__ == 'feasibility_obstacle_population_schedule'
     # Every other manager, numerical parameter, scene and action stays identical.
     sparse.rewards.target_goal_distance.func = parent.rewards.target_goal_distance.func
-    sparse.rewards.target_contact.func = parent.rewards.target_contact.func
+    assert sparse.rewards.target_contact.weight == 0.1
+    sparse.rewards.target_contact = deepcopy(parent.rewards.target_contact)
     sparse.events.object_spawn = deepcopy(parent.events.object_spawn)
     sparse.events.layout_bank = deepcopy(parent.events.layout_bank)
     sparse.curriculum.obstacle_population = deepcopy(parent.curriculum.obstacle_population)
     assert_ordered_equal(sparse.to_dict(), before)
     assert m.WrenchEnvCfg().to_dict() == before
 
+    v0_2 = m.WrenchV0_2EnvCfg()
+    baseline = v0_2.to_dict()
+    v0_3 = m.WrenchV0_3EnvCfg()
+    assert type(v0_3).__bases__ == (type(v0_2),)
+    assert v0_3.goal_reward_height_limit == v0_3.contact_height_limit == .14
+    assert v0_3.curriculum.obstacle_population is None
+    assert v0_3.curriculum.target_free_speed is None
+    assert v0_3.rewards.target_speed_penalty.params == {'free_speed': .02, 'max_cost': 100.}
+    assert v0_3.rewards.target_goal_first_entry_bonus.params == {'free_speed': .04, 'speed_scale': .02}
+    assert v0_3.rewards.robot_action_rate_penalty.func.__name__ == 'WrenchV0_3ActionRatePenalty'
+    assert v0_3.events.object_spawn.func is ns['reset_wrench_uniform_scene']
+    assert v0_3.events.object_spawn.params == {k:v for k,v in v0_2.events.object_spawn.params.items()
+                                             if k not in ('gray_obstacles', 'white_obstacles')}
+    assert set(v0_3.events.layout_bank.params['stages']) == {
+        (a,g,w) for a in range(0,31,5) for g in range(5) for w in range(5)}
+    v0_4 = m.WrenchV0_4EnvCfg()
+    assert type(v0_4).__bases__ == (type(v0_3),)
+    distance = v0_4.rewards.target_goal_distance
+    assert distance.func.__name__ == 'WrenchV0_4GoalProgress'
+    assert distance.weight == 3.7 and distance.params == {'position_tolerance': 0.}
+    v0_4.rewards.target_goal_distance = deepcopy(v0_3.rewards.target_goal_distance)
+    assert_ordered_equal(v0_4.to_dict(), v0_3.to_dict())
+    # Restore exactly the requested differences and compare every remaining field/order.
+    for key in ('goal_reward_height_limit', 'contact_height_limit'):
+        setattr(v0_3, key, getattr(v0_2, key))
+    for key in ('obstacle_population', 'target_free_speed'):
+        setattr(v0_3.curriculum, key, deepcopy(getattr(v0_2.curriculum, key)))
+    for key in ('target_speed_penalty', 'target_goal_first_entry_bonus', 'robot_action_rate_penalty'):
+        setattr(v0_3.rewards, key, deepcopy(getattr(v0_2.rewards, key)))
+    for key in ('object_spawn', 'layout_bank'):
+        setattr(v0_3.events, key, deepcopy(getattr(v0_2.events, key)))
+    assert_ordered_equal(v0_3.to_dict(), baseline)
+    assert m.WrenchV0_2EnvCfg().to_dict() == baseline
+
     registry={};gym=NS(registry=registry,register=lambda **kw:registry.update({kw['id']:kw}))
     _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':gym})
+    for version in ('3', '4'):
+        entry = registry[f'Inspire-Wrench-v0_{version}']
+        assert entry['entry_point'] == registry['Inspire-Wrench-v0_2']['entry_point']
+        assert entry['kwargs']['env_cfg_entry_point'].endswith(f':WrenchV0_{version}EnvCfg')
+        assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(f':WrenchV0_{version}PPORunnerCfg')
     assert registry['Inspire-Wrench-v0_2']['kwargs']['env_cfg_entry_point'].endswith(':WrenchV0_2EnvCfg')
     assert registry['Inspire-Wrench-v0_2']['kwargs']['rsl_rl_cfg_entry_point'].endswith(':WrenchV0_2PPORunnerCfg')
     entry = registry['Inspire-Wrench-v0_1']

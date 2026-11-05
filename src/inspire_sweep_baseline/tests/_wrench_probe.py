@@ -14,7 +14,7 @@ from isaaclab.app import AppLauncher
 from cli_args import apply_renderer_compatibility
 
 parser=argparse.ArgumentParser()
-parser.add_argument('--version', choices=('v0', 'v0_1', 'v0_2', 'v1', 'v2'), default='v0')
+parser.add_argument('--version', choices=('v0', 'v0_1', 'v0_2', 'v0_3', 'v0_4', 'v1', 'v2'), default='v0')
 parser.add_argument('--num_envs',type=int,default=64)
 parser.add_argument('--collections',type=int,default=5)
 parser.add_argument('--output',type=Path,default=Path('outputs/wrench_validation'))
@@ -29,9 +29,9 @@ try:
     import torch
     import inspire_sweep_baseline
     from inspire_sweep_baseline.envs.revision_envs import RevisionV2TestEnvCfg
-    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV0_1EnvCfg, WrenchV0_2EnvCfg, WrenchV1EnvCfg, WrenchV2EnvCfg
+    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV0_1EnvCfg, WrenchV0_2EnvCfg, WrenchV0_3EnvCfg, WrenchV0_4EnvCfg, WrenchV1EnvCfg, WrenchV2EnvCfg
     from inspire_sweep_baseline.agent.revision_ppo_cfg import RevisionV2TestPPORunnerCfg
-    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV0_1PPORunnerCfg, WrenchV0_2PPORunnerCfg, WrenchV1PPORunnerCfg, WrenchV2PPORunnerCfg
+    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV0_1PPORunnerCfg, WrenchV0_2PPORunnerCfg, WrenchV0_3PPORunnerCfg, WrenchV0_4PPORunnerCfg, WrenchV1PPORunnerCfg, WrenchV2PPORunnerCfg
 
     def differences(a,b,prefix=''):
         if isinstance(a,dict) and isinstance(b,dict):
@@ -42,9 +42,9 @@ try:
             return out
         return [] if a==b else [prefix]
 
-    parent={'v0': RevisionV2TestEnvCfg, 'v0_1': WrenchEnvCfg, 'v0_2': WrenchEnvCfg, 'v1': WrenchEnvCfg, 'v2': WrenchV1EnvCfg}[args.version]()
+    parent={'v0': RevisionV2TestEnvCfg, 'v0_1': WrenchEnvCfg, 'v0_2': WrenchEnvCfg, 'v0_3': WrenchV0_2EnvCfg, 'v0_4': WrenchV0_3EnvCfg, 'v1': WrenchEnvCfg, 'v2': WrenchV1EnvCfg}[args.version]()
     baseline=parent.to_dict()
-    cfg={'v0': WrenchEnvCfg, 'v0_1': WrenchV0_1EnvCfg, 'v0_2': WrenchV0_2EnvCfg, 'v1': WrenchV1EnvCfg, 'v2': WrenchV2EnvCfg}[args.version]()
+    cfg={'v0': WrenchEnvCfg, 'v0_1': WrenchV0_1EnvCfg, 'v0_2': WrenchV0_2EnvCfg, 'v0_3': WrenchV0_3EnvCfg, 'v0_4': WrenchV0_4EnvCfg, 'v1': WrenchV1EnvCfg, 'v2': WrenchV2EnvCfg}[args.version]()
     config_diff=differences(baseline,cfg.to_dict())
     allowed=(
         'goal_reward_height_limit','contact_height_limit','layout_bank_size','layout_build_batch_size',
@@ -59,10 +59,20 @@ try:
                    'curriculum.target_goal_direction_deadzone', 'events.layout_bank.params',
                    'events.object_spawn.params.goal_distance', 'events.object_spawn.params.excluded_x_half_angle')
     if args.version == 'v0_2':
-        allowed = ('rewards.target_goal_distance.func', 'rewards.target_contact.func',
+        allowed = ('rewards.target_goal_distance.func', 'rewards.target_contact.func', 'rewards.target_contact.weight',
                    'curriculum.obstacle_population.', 'events.layout_bank.params',
                    'events.object_spawn.func', 'events.object_spawn.params.gray_obstacles',
                    'events.object_spawn.params.white_obstacles')
+    if args.version == 'v0_3':
+        allowed = ('goal_reward_height_limit', 'contact_height_limit',
+                   'curriculum.obstacle_population', 'curriculum.target_free_speed',
+                   'rewards.robot_action_rate_penalty.func',
+                   'rewards.target_speed_penalty.params.free_speed',
+                   'rewards.target_goal_first_entry_bonus.params.free_speed',
+                   'events.object_spawn.func', 'events.object_spawn.params.gray_obstacles',
+                   'events.object_spawn.params.white_obstacles', 'events.layout_bank.params.stages')
+    if args.version == 'v0_4':
+        allowed = ('rewards.target_goal_distance.func', 'rewards.target_goal_distance.params')
     if args.version == 'v1':
         allowed = ('actions.arm_action.', 'rewards.robot_action_rate_penalty.func')
     if args.version == 'v2':
@@ -74,6 +84,8 @@ try:
     assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV0_1PPORunnerCfg().to_dict())==['experiment_name']
     assert differences(WrenchV1PPORunnerCfg().to_dict(),WrenchV2PPORunnerCfg().to_dict())==['experiment_name']
     assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV0_2PPORunnerCfg().to_dict())==['experiment_name']
+    assert differences(WrenchV0_2PPORunnerCfg().to_dict(),WrenchV0_3PPORunnerCfg().to_dict())==['experiment_name']
+    assert differences(WrenchV0_3PPORunnerCfg().to_dict(),WrenchV0_4PPORunnerCfg().to_dict())==['experiment_name']
     cfg.scene.num_envs=args.num_envs
     cfg.sim.device=args.device
     cfg.seed=42
@@ -91,6 +103,10 @@ try:
     if args.version == 'v0_1':
         assert 'target_contact' not in raw.reward_manager.active_terms
         assert 'target_goal_direction_deadzone' not in raw.curriculum_manager.active_terms
+    if args.version in ('v0_3', 'v0_4'):
+        assert raw.curriculum_manager.active_terms == ['target_goal_direction_deadzone']
+        assert raw.cfg.goal_reward_height_limit == raw.cfg.contact_height_limit == .14
+        assert raw.reward_manager.get_term_cfg('target_speed_penalty').params['free_speed'] == .02
     arm = raw.action_manager.get_term('arm_action')
     if args.version in ('v1', 'v2'):
         assert arm.cfg.body_offset is None and arm.cfg.body_name == 'axia80_link'
@@ -119,6 +135,9 @@ try:
         env.reset()
         if args.version == 'v0_2' and iteration < 2000:
             assert not raw._final_actual_population.any()
+        if args.version in ('v0_3', 'v0_4'):
+            assert (raw._final_actual_population >= 0).all() and (raw._final_actual_population <= 4).all()
+            assert raw.reward_manager.get_term_cfg('target_speed_penalty').params['free_speed'] == .02
         for _ in range(args.collections):
             torch.cuda.synchronize()
             started=time.perf_counter()

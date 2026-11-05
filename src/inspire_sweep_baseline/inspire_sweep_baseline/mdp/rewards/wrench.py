@@ -32,6 +32,8 @@ from ..reward_functions.wrench import (
     WrenchV0_1GoalDistance,
     goal_distance_cosine,
     WrenchV0_2ContactMaintenance,
+    WrenchV0_3ActionRatePenalty,
+    WrenchV0_4GoalProgress,
 )
 
 
@@ -138,4 +140,22 @@ class WrenchV0_2RewardsCfg(WrenchRewardsCfg):
     )
     target_contact = RewTerm(
         func=WrenchV0_2ContactMaintenance, weight=0.1, params={"threshold_n": 0.01}
+    )
+
+
+@configclass
+class WrenchV0_3RewardsCfg(WrenchV0_2RewardsCfg):
+    robot_action_rate_penalty = RewTerm(func=WrenchV0_3ActionRatePenalty, weight=-1.0)
+    target_speed_penalty = WrenchV0_2RewardsCfg().target_speed_penalty.replace(
+        params={"free_speed": 0.02, "max_cost": 100.0}
+    )
+    target_goal_first_entry_bonus = WrenchV0_2RewardsCfg().target_goal_first_entry_bonus.replace(
+        params={"free_speed": 0.04, "speed_scale": 0.02}
+    )
+
+
+@configclass
+class WrenchV0_4RewardsCfg(WrenchV0_3RewardsCfg):
+    target_goal_distance = RewTerm(
+        func=WrenchV0_4GoalProgress, weight=3.7, params={"position_tolerance": 0.0}
     )

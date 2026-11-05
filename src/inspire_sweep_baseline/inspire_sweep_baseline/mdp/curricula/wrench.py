@@ -30,3 +30,9 @@ class WrenchV0_1CurriculumCfg(WrenchCurriculumCfg):
 @configclass
 class WrenchV0_2CurriculumCfg(WrenchCurriculumCfg):
     obstacle_population = CurriculumTermCfg(func=feasibility_obstacle_population_schedule)
+
+
+@configclass
+class WrenchV0_3CurriculumCfg(WrenchV0_2CurriculumCfg):
+    obstacle_population = None
+    target_free_speed = None

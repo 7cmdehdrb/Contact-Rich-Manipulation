@@ -100,3 +100,25 @@ def reset_wrench_feasibility_scene(env, env_ids, gray_obstacles=-1, white_obstac
             visibility_threshold=visibility_threshold, visibility_flip_probability=visibility_flip_probability,
             observation_swap_probability=observation_swap_probability, gray_padding=gray_padding,
         )
+
+
+def reset_wrench_uniform_scene(env, env_ids, spawn_radius=.02, goal_distance=.15,
+                               edge_clearance=.02, excluded_x_half_angle=math.pi / 6,
+                               observation_noise=.01, visibility_threshold=.35,
+                               visibility_flip_probability=.01,
+                               observation_swap_probability=.1, gray_padding=.065):
+    """Independently sample Gray and White counts uniformly from 0 through 4."""
+    ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
+           else torch.as_tensor(env_ids, device=env.device, dtype=torch.long))
+    if not ids.numel():
+        return
+    counts = torch.randint(0, 5, (len(ids), 2), device=env.device, generator=env._revision_layout_rng)
+    for gray, white in counts.unique(dim=0).tolist():
+        selected = ids[(counts[:, 0] == gray) & (counts[:, 1] == white)]
+        reset_wrench_scene(
+            env, selected, gray_obstacles=gray, white_obstacles=white,
+            spawn_radius=spawn_radius, goal_distance=goal_distance, edge_clearance=edge_clearance,
+            excluded_x_half_angle=excluded_x_half_angle, observation_noise=observation_noise,
+            visibility_threshold=visibility_threshold, visibility_flip_probability=visibility_flip_probability,
+            observation_swap_probability=observation_swap_probability, gray_padding=gray_padding,
+        )
