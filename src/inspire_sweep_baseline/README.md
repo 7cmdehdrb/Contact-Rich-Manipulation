@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-05: **`Inspire-Wrench-Refactor-v0`** 독립 CFG/runtime: 오른손 ZIP 원본,8종×2장애물+원통타겟의17개 고정풀,초기 균등 물성 고정,목표 방향/거리 균등,앞뒤 tactile34,Actor/Critic raw74→MLP90. [전체 계약·실행·변경 대조](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V0_ENVIRONMENT.md). CPU160개/오른손USD/실제 설정 import 및 GUI32환경 검증 통과. 2026-11-06 후속으로 Wrist3−π/2·관절속도 종료3rad/s를 적용했다. 7168reset,140만 방위샘플,32/32 목표도달·21/32 안정유지 성공과 센서/보상 기록은 [GUI 시험 결과](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_gui_validation.md)를 따른다. 초기 GPU부재 판단은 sandbox 접근 제한으로 정정했고2048환경/학습은 미검증이다.
+
+2026-11-05: [Wrench v0 계열 상세 명세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_FAMILY_ENVIRONMENTS.md)는 v0·v0_1·v0_2·v0_3·v0_4의 공통 환경 전체와 버전 차이를 설명한다. 관측·액션·15개 보상·커리큘럼·종료·reset·PPO·로그 해석 및 검증 한계를 포함한다.
+
 2026-11-05: `Inspire-Wrench-v0_3`는 v0_2를, `Inspire-Wrench-v0_4`는 v0_3을 직접 상속한다. v0_3은 장애물0–4 균등·속도 기준0.02 고정·EEF14cm·OSC 출력 토크 정규화 변화량·최초 진입4cm/s, v0_4는 높이 조건이 있는 최단 거리 개선량을 적용한다. CPU103개 통과, GPU/학습 미실행. [환경·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_3_V0_4_ENVIRONMENTS.md).
 
 2026-11-05: `Inspire-Wrench-v0_2`는 v0 직접 상속 feasibility 환경이다. 거리×cosine(3cm 미만1, 접촉 조건 없음), 2-of-3 접촉 누적·불인정5회 초기화, 초기 무장애물·2k부터3k 교대 증가·reset±1 랜덤화를 적용한다. CPU87개 통과, GPU/학습 미검증. [환경·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_2_ENVIRONMENT.md).
