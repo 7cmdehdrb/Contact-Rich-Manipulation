@@ -1,6 +1,8 @@
 # Inspire Sweep Baseline
 
-2026-11-04: `Inspire-Wrench-v0_1`은 v0 직접 상속 feasibility 환경이다. 독립 contact 보상을 제거하고 거리 보상에 연속 접촉·cosine을 적용한다. 거리3cm 미만 alpha=1, deadzone40° 고정, 목표 허용 거리2.5–7.5cm다. CPU76개 통과, GPU/학습 미검증. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_1_ENVIRONMENT.md).
+2026-11-05: `Inspire-Wrench-v0_2`는 v0 직접 상속 feasibility 환경이다. 거리×cosine(3cm 미만1, 접촉 조건 없음), 2-of-3 접촉 누적·불인정5회 초기화, 초기 무장애물·2k부터3k 교대 증가·reset±1 랜덤화를 적용한다. CPU87개 통과, GPU/학습 미검증. [환경·실행 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_2_ENVIRONMENT.md).
+
+2026-11-04: `Inspire-Wrench-v0_1`은 v0 직접 상속 feasibility 환경이다. 독립 contact 보상을 제거하고 거리 보상에 연속 접촉·cosine을 적용한다. 거리3cm 미만 alpha=1, deadzone40° 고정, 목표 허용 거리4.0–7.5cm다. CPU78개 통과, GPU/학습 미검증. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_1_ENVIRONMENT.md).
 
 2026-11-04: `Inspire-Wrench-v2`는 v1을 직접 상속하고 Arm 목표/보정 후 명령 범위만1/10로 줄인다: ±10N/±0.5Nm, 보정 후 ±12N/±0.6Nm. 축소 범위 기준 action-rate 정규화·Hand·나머지 환경은 유지한다. [v2 상세](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_V0_V1_ENVIRONMENT.md#13-inspire-wrench-v2-v1의-arm-범위를110로-축소).
 

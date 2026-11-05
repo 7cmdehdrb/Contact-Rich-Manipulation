@@ -79,3 +79,61 @@ def desired_wrench_action_rate_penalty(env):
     previous_arm = previous[:, :6].clamp(-limit, limit) / limit
     arm_cost = (current_arm - previous_arm).square().sum(dim=-1).clamp_max(100.0)
     return 0.03 * arm_cost + 0.03 * action_rate_l2(env, action_group="hand", max_cost=100.0)
+
+
+def goal_distance_cosine(env, distance_scale=0.05, command_name="target_goal_pos"):
+    """v0 proximity times signed initial/current goal-vector cosine, without contact."""
+    goal = env.command_manager.get_command(command_name)[:, :2]
+    rows = torch.arange(env.num_envs, device=env.device)
+    initial = env._initial_object_positions_w[rows, env.target_id[:, 0].long(), :2]
+    current = _object_position(env)[:, :2]
+    alpha = torch.nn.functional.cosine_similarity(initial - goal, current - goal, dim=-1)
+    distance = torch.linalg.vector_norm(current - goal, dim=-1)
+    alpha = torch.where(distance < 0.03, 1.0, alpha)
+    raw = goal_distance_v2(env, distance_scale=distance_scale, command_name=command_name) * alpha
+    return torch.where(torch.isfinite(raw), raw, 0.0)
+
+
+class WrenchV0_2ContactMaintenance(ManagerTermBase):
+    """Accumulate 2-of-3 contact windows; clear after five rejected windows.
+
+    Rejected windows pay zero but retain the count for four steps. Goal occupancy
+    immediately qualifies, even with no force/history. RewardManager applies dt.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._history = torch.zeros((env.num_envs, 3), dtype=torch.bool, device=env.device)
+        self._count = torch.zeros(env.num_envs, dtype=torch.long, device=env.device)
+        self._misses = torch.zeros_like(self._count)
+        self._cached_reward = torch.zeros(env.num_envs, device=env.device)
+        self._cached_step = None
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        self._history[ids] = False
+        self._count[ids] = 0
+        self._misses[ids] = 0
+        self._cached_reward[ids] = 0.0
+
+    def __call__(self, env, threshold_n=0.01, command_name="target_goal_pos"):
+        from .revision import target_contact_below_height
+
+        step = env.common_step_counter
+        if step != self._cached_step:
+            # Missing evaluations cannot establish a consecutive sliding window.
+            if self._cached_step is not None and step != self._cached_step + 1:
+                self.reset()
+            contact = target_contact_below_height(env, threshold_n=threshold_n).bool()
+            goal = env.command_manager.get_command(command_name)[:, :2]
+            distance = torch.linalg.vector_norm(_object_position(env)[:, :2] - goal, dim=-1)
+            inside = torch.isfinite(distance) & (distance < 0.03)
+            self._history[:, :2] = self._history[:, 1:].clone()
+            self._history[:, 2] = contact | inside
+            accepted = inside | (self._history.sum(-1) >= 2)
+            self._misses[:] = torch.where(accepted, 0, self._misses + 1)
+            self._count += accepted.long()
+            self._count[self._misses >= 5] = 0
+            self._cached_reward[:] = torch.where(accepted, self._count, 0).float()
+            self._cached_step = step
+        return self._cached_reward.clone()

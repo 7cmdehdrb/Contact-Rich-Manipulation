@@ -22,6 +22,7 @@ from ..reward_functions.revision import (
 
 from ..reward_functions.wrench import (
     settled_success_bonus, desired_wrench_action_rate_penalty, WrenchV0_1GoalDistance,
+    goal_distance_cosine, WrenchV0_2ContactMaintenance,
 )
 
 
@@ -91,3 +92,9 @@ class WrenchV0_1RewardsCfg(WrenchRewardsCfg):
 @configclass
 class WrenchV1RewardsCfg(WrenchRewardsCfg):
     robot_action_rate_penalty = RewTerm(func=desired_wrench_action_rate_penalty, weight=-1.0)
+
+
+@configclass
+class WrenchV0_2RewardsCfg(WrenchRewardsCfg):
+    target_goal_distance = RewTerm(func=goal_distance_cosine, weight=3.7, params={"distance_scale": 0.05})
+    target_contact = RewTerm(func=WrenchV0_2ContactMaintenance, weight=1.45, params={"threshold_n": 0.01})

@@ -4,7 +4,7 @@ from isaaclab.managers import CurriculumTermCfg
 from isaaclab.utils import configclass
 from ..curriculum_functions.contact_sweep_clutter_fusion import obstacle_population_schedule
 from ..curriculum_functions.contact_sweep_clutter_fusion_holding import reward_schedule
-from ..curriculum_functions.wrench import goal_deadzone_schedule
+from ..curriculum_functions.wrench import goal_deadzone_schedule, feasibility_obstacle_population_schedule
 
 
 @configclass
@@ -25,3 +25,8 @@ class WrenchCurriculumCfg:
 @configclass
 class WrenchV0_1CurriculumCfg(WrenchCurriculumCfg):
     target_goal_direction_deadzone = None
+
+
+@configclass
+class WrenchV0_2CurriculumCfg(WrenchCurriculumCfg):
+    obstacle_population = CurriculumTermCfg(func=feasibility_obstacle_population_schedule)

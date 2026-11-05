@@ -12,10 +12,12 @@ from ..mdp.actions.wrench import (
     WrenchV1ActionsCfg,
 )
 from ..mdp.commands.wrench import WrenchCommandsCfg
-from ..mdp.curricula.wrench import WrenchCurriculumCfg, WrenchV0_1CurriculumCfg
+from ..mdp.curricula.wrench import WrenchCurriculumCfg, WrenchV0_1CurriculumCfg, WrenchV0_2CurriculumCfg
 from ..mdp.events.wrench import WrenchEventsCfg
+from ..mdp.curriculum_functions.wrench import feasibility_layout_stages
+from ..mdp.event_functions.wrench import reset_wrench_feasibility_scene
 from ..mdp.observations.wrench import WrenchObservationsCfg
-from ..mdp.rewards.wrench import WrenchRewardsCfg, WrenchV0_1RewardsCfg, WrenchV1RewardsCfg
+from ..mdp.rewards.wrench import WrenchRewardsCfg, WrenchV0_1RewardsCfg, WrenchV0_2RewardsCfg, WrenchV1RewardsCfg
 from ..mdp.terminations.wrench import WrenchTerminationsCfg
 
 
@@ -101,7 +103,7 @@ class WrenchV0_1EnvCfg(WrenchEnvCfg):
         )
         self.events.layout_bank.params.update(
             stages=((40, 3, 3), (40, 3, 4), (40, 4, 4), (40, 4, 5)),
-            min_goal_distance=0.025,
+            min_goal_distance=0.04,
         )
 
 
@@ -136,3 +138,17 @@ class WrenchV2EnvCfg(WrenchV1EnvCfg):
         self.actions.arm_action.commanded_wrench_limit = tuple(
             value / 10.0 for value in self.actions.arm_action.commanded_wrench_limit
         )
+
+
+@configclass
+class WrenchV0_2EnvCfg(WrenchEnvCfg):
+    """Cosine distance, sparse randomized obstacles and accumulated contact."""
+
+    rewards: WrenchV0_2RewardsCfg = WrenchV0_2RewardsCfg()
+    curriculum: WrenchV0_2CurriculumCfg = WrenchV0_2CurriculumCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.func = reset_wrench_feasibility_scene
+        self.events.object_spawn.params.update(gray_obstacles=-1, white_obstacles=-1)
+        self.events.layout_bank.params.update(stages=feasibility_layout_stages())

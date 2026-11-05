@@ -83,7 +83,7 @@ def test_observations_actions_commands_and_ppo_preserve_source_contract():
         new_tree = ast.parse(new)
         # New v1 is intentionally derived; this comparison guards the independent v0 declarations.
         new_tree.body = [n for n in new_tree.body if not (
-            isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2'))
+            isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV0_2', 'WrenchV1', 'WrenchV2'))
             or isinstance(n, ast.ImportFrom) and n.module == 'action_functions.wrench')]
         assert ast.dump(ast.parse(old)) == ast.dump(new_tree)
     old_tree = ast.parse((MODULE_ROOT/'agent/revision_ppo_cfg.py').read_text())
@@ -92,7 +92,7 @@ def test_observations_actions_commands_and_ppo_preserve_source_contract():
         'inspire_wrench_v0','inspire_revision_v0'))
     old_classes = {n.name: ast.dump(n) for n in old_tree.body if isinstance(n,ast.ClassDef)}
     for n in new_tree.body:
-        if isinstance(n, ast.ClassDef) and not n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2')):
+        if isinstance(n, ast.ClassDef) and not n.name.startswith(('WrenchV0_1', 'WrenchV0_2', 'WrenchV1', 'WrenchV2')):
             assert ast.dump(n) == old_classes[n.name]
 
 
@@ -105,7 +105,7 @@ def test_no_old_environment_ancestors_or_cfg_instances():
                'ObsGroup','RslRlMLPModelCfg','RslRlOnPolicyRunnerCfg','ManagerTermBase','ActionTerm'}
     for path in files:
         tree = ast.parse(path.read_text())
-        tree.body = [n for n in tree.body if not (isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV1', 'WrenchV2')))]
+        tree.body = [n for n in tree.body if not (isinstance(n, ast.ClassDef) and n.name.startswith(('WrenchV0_1', 'WrenchV0_2', 'WrenchV1', 'WrenchV2')))]
         for n in ast.walk(tree):
             if isinstance(n, ast.ClassDef):
                 assert all(ast.unparse(b) in allowed for b in n.bases), (path,n.name)

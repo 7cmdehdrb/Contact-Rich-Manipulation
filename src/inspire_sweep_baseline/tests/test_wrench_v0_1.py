@@ -149,7 +149,7 @@ def test_fixed_angle_bank_startup_and_all_population_transitions(configs, load_m
                     layout_build_batch_size=8,red_margin=.023,rear_offset=.02,
                     max_gray_obstacles=4,max_white_obstacles=5),
              event_manager=NS(get_term_cfg=lambda _:spawn,set_term_cfg=lambda *a:None))
-    events.initialize_wrench_layouts(env, None, stages=stages, min_goal_distance=.025)
+    events.initialize_wrench_layouts(env, None, stages=stages, min_goal_distance=.04)
     bank = env._wrench_layout_bank
     assert bank.stages == stages
     assert curriculum.target_goal_direction_deadzone is None
@@ -162,17 +162,21 @@ def test_fixed_angle_bank_startup_and_all_population_transitions(configs, load_m
                               spawn.params['gray_obstacles'], spawn.params['white_obstacles'],
                               spawn.params['excluded_x_half_angle'])
         delta = sampled[3]; distance = delta.norm(dim=-1)
-        assert ((distance >= .025-1e-6) & (distance <= .075+1e-6)).all()
+        assert ((distance >= .04-1e-6) & (distance <= .075+1e-6)).all()
+        assert (distance > .03).all()  # no initial sample within the success radius
         assert (delta[:,1].abs()/distance >= math.sin(math.radians(40))-1e-6).all()
 
 
-def test_sampler_minimum_halved_and_parent_default_unchanged(load_mdp):
+def test_sampler_minimum_outside_success_and_parent_default_unchanged(load_mdp):
     m = importlib.import_module('_baseline_cpu_pkg.mdp.common.revision_layout')
     b = bounds(256)[:,0]
-    for limit in (.025, .075):
+    for limit in (.04, .075):
         start, goal = m.sample_revision_commands(b, torch.Generator().manual_seed(9),
-            goal_distance=limit, min_goal_distance=.025, excluded_x_half_angle=math.radians(40))
+            goal_distance=limit, min_goal_distance=.04, excluded_x_half_angle=math.radians(40))
         torch.testing.assert_close((goal-start).norm(dim=-1), torch.full((256,),limit))
+    with pytest.raises(ValueError):
+        m.sample_revision_commands(b, torch.Generator().manual_seed(9),
+                                   goal_distance=.04-1e-9, min_goal_distance=.04)
     with pytest.raises(ValueError):
         m.sample_revision_commands(b, torch.Generator().manual_seed(9), goal_distance=.025)
     start, goal = m.sample_revision_commands(b, torch.Generator().manual_seed(9))

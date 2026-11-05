@@ -192,6 +192,10 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
     ns["WrenchV1RewardsCfg"] = configs("rewards", "wrench").WrenchV1RewardsCfg
     ns["WrenchV0_1RewardsCfg"] = configs("rewards", "wrench").WrenchV0_1RewardsCfg
     ns["WrenchV0_1CurriculumCfg"] = configs("curricula", "wrench").WrenchV0_1CurriculumCfg
+    ns["WrenchV0_2RewardsCfg"] = configs("rewards", "wrench").WrenchV0_2RewardsCfg
+    ns["WrenchV0_2CurriculumCfg"] = configs("curricula", "wrench").WrenchV0_2CurriculumCfg
+    ns["feasibility_layout_stages"] = configs("curriculum_functions", "wrench").feasibility_layout_stages
+    ns["reset_wrench_feasibility_scene"] = configs("event_functions", "wrench").reset_wrench_feasibility_scene
     m=_execute_definitions(MODULE_ROOT/'envs/wrench_envs.py',ns)
     parent=m.WrenchEnvCfg();before=parent.to_dict();child=m.WrenchV1EnvCfg()
     assert type(child).__bases__==(type(parent),)
@@ -226,7 +230,7 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
         'excluded_x_half_angle': math.radians(40),
     }
     assert feasibility.events.layout_bank.params == {
-        'stages': ((40,3,3), (40,3,4), (40,4,4), (40,4,5)), 'min_goal_distance': .025,
+        'stages': ((40,3,3), (40,3,4), (40,4,4), (40,4,5)), 'min_goal_distance': .04,
     }
     # Restore only requested differences, then compare the entire ordered config.
     feasibility.rewards.target_contact = deepcopy(parent.rewards.target_contact)
@@ -237,8 +241,28 @@ def test_env_inherits_v0_and_only_arm_config_changes(configs,omni_config,action_
     assert_ordered_equal(feasibility.to_dict(), before)
     assert m.WrenchEnvCfg().to_dict() == before
 
+    sparse = m.WrenchV0_2EnvCfg()
+    assert type(sparse).__bases__ == (type(parent),)
+    assert sparse.rewards.target_goal_distance.func.__name__ == 'goal_distance_cosine'
+    assert sparse.rewards.target_contact.func.__name__ == 'WrenchV0_2ContactMaintenance'
+    assert sparse.events.object_spawn.params == {**parent.events.object_spawn.params,
+                                                'gray_obstacles': -1, 'white_obstacles': -1}
+    assert sparse.events.object_spawn.func is ns['reset_wrench_feasibility_scene']
+    assert sparse.events.layout_bank.params == {'stages': ns['feasibility_layout_stages']()}
+    assert sparse.curriculum.obstacle_population.func.__name__ == 'feasibility_obstacle_population_schedule'
+    # Every other manager, numerical parameter, scene and action stays identical.
+    sparse.rewards.target_goal_distance.func = parent.rewards.target_goal_distance.func
+    sparse.rewards.target_contact.func = parent.rewards.target_contact.func
+    sparse.events.object_spawn = deepcopy(parent.events.object_spawn)
+    sparse.events.layout_bank = deepcopy(parent.events.layout_bank)
+    sparse.curriculum.obstacle_population = deepcopy(parent.curriculum.obstacle_population)
+    assert_ordered_equal(sparse.to_dict(), before)
+    assert m.WrenchEnvCfg().to_dict() == before
+
     registry={};gym=NS(registry=registry,register=lambda **kw:registry.update({kw['id']:kw}))
     _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':gym})
+    assert registry['Inspire-Wrench-v0_2']['kwargs']['env_cfg_entry_point'].endswith(':WrenchV0_2EnvCfg')
+    assert registry['Inspire-Wrench-v0_2']['kwargs']['rsl_rl_cfg_entry_point'].endswith(':WrenchV0_2PPORunnerCfg')
     entry = registry['Inspire-Wrench-v0_1']
     assert entry['entry_point'] == registry['Inspire-Wrench-v0']['entry_point']
     assert entry['kwargs']['env_cfg_entry_point'].endswith(':WrenchV0_1EnvCfg')

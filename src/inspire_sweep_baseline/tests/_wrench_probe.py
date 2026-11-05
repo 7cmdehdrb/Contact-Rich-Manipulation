@@ -14,7 +14,7 @@ from isaaclab.app import AppLauncher
 from cli_args import apply_renderer_compatibility
 
 parser=argparse.ArgumentParser()
-parser.add_argument('--version', choices=('v0', 'v0_1', 'v1', 'v2'), default='v0')
+parser.add_argument('--version', choices=('v0', 'v0_1', 'v0_2', 'v1', 'v2'), default='v0')
 parser.add_argument('--num_envs',type=int,default=64)
 parser.add_argument('--collections',type=int,default=5)
 parser.add_argument('--output',type=Path,default=Path('outputs/wrench_validation'))
@@ -29,9 +29,9 @@ try:
     import torch
     import inspire_sweep_baseline
     from inspire_sweep_baseline.envs.revision_envs import RevisionV2TestEnvCfg
-    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV0_1EnvCfg, WrenchV1EnvCfg, WrenchV2EnvCfg
+    from inspire_sweep_baseline.envs.wrench_envs import WrenchEnvCfg, WrenchV0_1EnvCfg, WrenchV0_2EnvCfg, WrenchV1EnvCfg, WrenchV2EnvCfg
     from inspire_sweep_baseline.agent.revision_ppo_cfg import RevisionV2TestPPORunnerCfg
-    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV0_1PPORunnerCfg, WrenchV1PPORunnerCfg, WrenchV2PPORunnerCfg
+    from inspire_sweep_baseline.agent.wrench_ppo_cfg import WrenchPPORunnerCfg, WrenchV0_1PPORunnerCfg, WrenchV0_2PPORunnerCfg, WrenchV1PPORunnerCfg, WrenchV2PPORunnerCfg
 
     def differences(a,b,prefix=''):
         if isinstance(a,dict) and isinstance(b,dict):
@@ -42,9 +42,9 @@ try:
             return out
         return [] if a==b else [prefix]
 
-    parent={'v0': RevisionV2TestEnvCfg, 'v0_1': WrenchEnvCfg, 'v1': WrenchEnvCfg, 'v2': WrenchV1EnvCfg}[args.version]()
+    parent={'v0': RevisionV2TestEnvCfg, 'v0_1': WrenchEnvCfg, 'v0_2': WrenchEnvCfg, 'v1': WrenchEnvCfg, 'v2': WrenchV1EnvCfg}[args.version]()
     baseline=parent.to_dict()
-    cfg={'v0': WrenchEnvCfg, 'v0_1': WrenchV0_1EnvCfg, 'v1': WrenchV1EnvCfg, 'v2': WrenchV2EnvCfg}[args.version]()
+    cfg={'v0': WrenchEnvCfg, 'v0_1': WrenchV0_1EnvCfg, 'v0_2': WrenchV0_2EnvCfg, 'v1': WrenchV1EnvCfg, 'v2': WrenchV2EnvCfg}[args.version]()
     config_diff=differences(baseline,cfg.to_dict())
     allowed=(
         'goal_reward_height_limit','contact_height_limit','layout_bank_size','layout_build_batch_size',
@@ -58,6 +58,11 @@ try:
         allowed = ('rewards.target_contact', 'rewards.target_goal_distance.',
                    'curriculum.target_goal_direction_deadzone', 'events.layout_bank.params',
                    'events.object_spawn.params.goal_distance', 'events.object_spawn.params.excluded_x_half_angle')
+    if args.version == 'v0_2':
+        allowed = ('rewards.target_goal_distance.func', 'rewards.target_contact.func',
+                   'curriculum.obstacle_population.', 'events.layout_bank.params',
+                   'events.object_spawn.func', 'events.object_spawn.params.gray_obstacles',
+                   'events.object_spawn.params.white_obstacles')
     if args.version == 'v1':
         allowed = ('actions.arm_action.', 'rewards.robot_action_rate_penalty.func')
     if args.version == 'v2':
@@ -68,6 +73,7 @@ try:
     assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV1PPORunnerCfg().to_dict())==['experiment_name']
     assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV0_1PPORunnerCfg().to_dict())==['experiment_name']
     assert differences(WrenchV1PPORunnerCfg().to_dict(),WrenchV2PPORunnerCfg().to_dict())==['experiment_name']
+    assert differences(WrenchPPORunnerCfg().to_dict(),WrenchV0_2PPORunnerCfg().to_dict())==['experiment_name']
     cfg.scene.num_envs=args.num_envs
     cfg.sim.device=args.device
     cfg.seed=42
@@ -105,9 +111,14 @@ try:
     actions=torch.zeros(args.num_envs,raw.action_manager.total_action_dim,device=raw.device)
     actions[:,-2:]=1
     measurements=[]
-    for iteration in (0,10000,12000,13000,14000,16000,19000,22000,25000):
+    iterations = (0,10000,12000,13000,14000,16000,19000,22000,25000)
+    if args.version == 'v0_2':
+        iterations = sorted({0,1999, *range(2000,32001,3000), *range(10000,25001,3000)})
+    for iteration in iterations:
         raw.set_learning_iteration(iteration)
         env.reset()
+        if args.version == 'v0_2' and iteration < 2000:
+            assert not raw._final_actual_population.any()
         for _ in range(args.collections):
             torch.cuda.synchronize()
             started=time.perf_counter()
