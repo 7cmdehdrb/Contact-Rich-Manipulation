@@ -92,6 +92,33 @@ def test_stale_high_and_cancelled_force_do_not_count(configs):
     assert term(env).tolist() == [0,0,0,1]
 
 
+@pytest.mark.parametrize('goal_override', [False, True])
+def test_contact_count_caps_at_ten_and_recovers_after_reset(configs, goal_override, capsys):
+    env, pos, force = contact_env()
+    if goal_override:
+        pos[0, 0, :2] = 0
+        force.zero_()
+    term = configs('reward_functions', 'wrench').WrenchV0_2ContactMaintenance(NS(params={}), env)
+    for step in range(1, 25):
+        env.common_step_counter = step
+        expected = min(step if goal_override else max(0, step - 1), 10)
+        assert term(env).item() == expected
+        assert term._count.item() == expected
+    assert capsys.readouterr().out == ''
+    # Five rejected windows clear the saturated count; contact history has a tail.
+    force.zero_()
+    pos[0, 0, 0] = .05
+    for step in range(25, 32):
+        env.common_step_counter = step
+        term(env)
+    assert term._count.item() == 0
+    force[:, :, 0, 0] = .01
+    env.common_step_counter = 32
+    assert term(env).item() == 0
+    env.common_step_counter = 33
+    assert term(env).item() == 1
+
+
 def test_all_schedule_boundaries_randomization_bank_coverage_and_rewind(configs):
     m = configs('curriculum_functions','wrench')
     stages = set(m.feasibility_layout_stages())

@@ -95,7 +95,7 @@ def goal_distance_cosine(env, distance_scale=0.05, command_name="target_goal_pos
 
 
 class WrenchV0_2ContactMaintenance(ManagerTermBase):
-    """Accumulate 2-of-3 contact windows; clear after five rejected windows.
+    """Accumulate 2-of-3 contact windows up to 10; clear after five rejected windows.
 
     Rejected windows pay zero but retain the count for four steps. Goal occupancy
     immediately qualifies, even with no force/history. RewardManager applies dt.
@@ -133,7 +133,22 @@ class WrenchV0_2ContactMaintenance(ManagerTermBase):
             accepted = inside | (self._history.sum(-1) >= 2)
             self._misses[:] = torch.where(accepted, 0, self._misses + 1)
             self._count += accepted.long()
+            self._count.clamp_(max=10)
             self._count[self._misses >= 5] = 0
             self._cached_reward[:] = torch.where(accepted, self._count, 0).float()
             self._cached_step = step
+            # TEMP v0_2 diagnostics: inspect env 0 once per control step.
+            # Keep this inside the cache update so repeated queries do not print twice.
+            # contact_now, goal_inside, window_hits, qualifies, misses, count, reward = torch.stack((
+            #     contact[0].long(), inside[0].long(), self._history[0].sum(),
+            #     accepted[0].long(), self._misses[0], self._count[0],
+            #     self._cached_reward[0].long(),
+            # )).tolist()
+            # print(
+            #     f"[Wrench-v0_2 Contact Count] step={step} env=0 count={count} "
+            #     f"contact={contact_now} goal_inside={goal_inside} "
+            #     f"window_hits={window_hits}/3 accepted={qualifies} "
+            #     f"misses={misses} reward_raw={reward}",
+            #     flush=True,
+            # )
         return self._cached_reward.clone()

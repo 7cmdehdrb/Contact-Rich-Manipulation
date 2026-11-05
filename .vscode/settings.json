@@ -638,4 +638,11 @@
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "cmake.ignoreCMakeListsMissing": true,
+    "python-envs.pythonProjects": [
+        {
+            "path": "logs/TEMP/wr/wrench_v0/2026-11-04_18-47-31",
+            "envManager": "ms-python.python:conda",
+            "packageManager": "ms-python.python:conda"
+        }
+    ],
 }
