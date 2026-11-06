@@ -255,6 +255,10 @@ def test_cfg_and_runtime_have_no_task_parents():
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.ClassDef):
                 v1_parents = {'WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
+                              'WrenchRefactorRelativeEnvCfg':'WrenchRefactorV3_1EnvCfg',
+                              'WrenchRefactorRelativePPORunnerCfg':'WrenchRefactorV3_1PPORunnerCfg',
+                              'WrenchRefactorRelativeModelCfg':'WrenchRefactorModelCfg',
+                              'WrenchRefactorRelativeObservationsCfg':'WrenchRefactorObservationsCfg',
                               'WrenchRefactorV0_1PPORunnerCfg':'WrenchRefactorPPORunnerCfg',
                               'WrenchRefactorV1_1EnvCfg':'WrenchRefactorV1EnvCfg',
                               'WrenchRefactorV1_1PPORunnerCfg':'WrenchRefactorV1PPORunnerCfg',
@@ -272,7 +276,9 @@ def test_cfg_and_runtime_have_no_task_parents():
                               'WrenchRefactorV1RewardsCfg':'WrenchRefactorRewardsCfg',
                               'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
                 if node.name in v1_parents:
-                    assert [b.id for b in node.bases] == [v1_parents[node.name]]
+                    assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
+                elif node.name in ('PolicyCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
+                    assert ast.unparse(node.bases[0]) == f'WrenchRefactorObservationsCfg.{node.name}'
                 else:
                     assert all(isinstance(b, ast.Name) and b.id in allowed for b in node.bases), path
 
@@ -318,6 +324,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
         ns[f'WrenchRefactor{name}Cfg'] = getattr(configs(role,'wrench_refactor'),f'WrenchRefactor{name}Cfg')
     ns['WrenchRefactorV2RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV2RewardsCfg
     ns['WrenchRefactorV1RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg
+    ns['WrenchRefactorRelativeObservationsCfg'] = configs('observations','wrench_refactor').WrenchRefactorRelativeObservationsCfg
     cfg = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py',ns).WrenchRefactorEnvCfg()
     assert cfg.goal_reward_height_limit == cfg.contact_height_limit == .14
     assert cfg.commands.target_goal_pos.goal_radius == .03

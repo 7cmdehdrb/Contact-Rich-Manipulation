@@ -33,6 +33,9 @@ class WrenchRefactorModel(MLPModel):
     No Final/Holding configuration or model class appears in the inheritance.
     """
 
+    raw_observation_dim = 74
+    observation_groups = {'actor': ('policy', 'obstacles'), 'critic': ('critic', 'critic_obstacles')}
+
     def __init__(
         self, obs: TensorDict, obs_groups: dict[str, list[str]], obs_set: str,
         output_dim: int, hidden_dims=(256, 128, 64), activation="elu",
@@ -42,7 +45,7 @@ class WrenchRefactorModel(MLPModel):
     ):
         if obs_set not in ("actor", "critic"):
             raise ValueError("Refactor observation set must be actor or critic")
-        required_obstacle_group = "obstacles" if obs_set == "actor" else "critic_obstacles"
+        required_obstacle_group = self.observation_groups[obs_set][1]
         if obstacle_group is not None and obstacle_group != required_obstacle_group:
             raise ValueError(f"{obs_set} must use {required_obstacle_group}")
         if obstacle_observation_slots != 16 or embedding_dim != 16:
@@ -59,12 +62,12 @@ class WrenchRefactorModel(MLPModel):
         )
 
     def _get_obs_dim(self, obs, obs_groups, obs_set):
-        raw_group = "policy" if obs_set == "actor" else "critic"
+        raw_group = self.observation_groups[obs_set][0]
         expected = [raw_group, self.obstacle_group]
         if obs_groups[obs_set] != expected:
             raise ValueError(f"{obs_set} observation groups must be {expected} in order")
-        if obs[raw_group].ndim != 2 or obs[raw_group].shape[-1] != 74:
-            raise ValueError("Refactor requires 74D policy observations")
+        if obs[raw_group].ndim != 2 or obs[raw_group].shape[-1] != self.raw_observation_dim:
+            raise ValueError(f"Refactor requires {self.raw_observation_dim}D policy observations")
         obstacles = obs[self.obstacle_group]
         if obstacles.ndim != 2 or obstacles.shape[-1] != 64:
             raise ValueError("Refactor requires 64D obstacle observations")
@@ -86,8 +89,15 @@ class WrenchRefactorModel(MLPModel):
         return _ExportWrenchRefactorModel(self, verbose=verbose)
 
 
+class WrenchRefactorRelativeModel(WrenchRefactorModel):
+    """Independent Actor/Critic MLPs trained from the same stored input tensors."""
+
+    raw_observation_dim = 58
+    observation_groups = {'actor': ('policy', 'obstacles'), 'critic': ('policy', 'obstacles')}
+
+
 class _ExportWrenchRefactorModel(nn.Module):
-    """Export the Actor with only its 138D [policy74, initial obstacles64]."""
+    """Export policy + initial obstacles: 138D for Refactor, 122D for Relative."""
 
     is_recurrent: bool = False
 

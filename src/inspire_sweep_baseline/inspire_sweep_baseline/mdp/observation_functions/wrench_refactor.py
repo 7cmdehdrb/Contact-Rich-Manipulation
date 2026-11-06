@@ -2,11 +2,13 @@
 import json
 from pathlib import Path
 import torch
-from isaaclab.utils.math import quat_apply_inverse
+from isaaclab.utils.math import quat_apply, quat_apply_inverse
 from ...assets.robot import PALM_SENSOR_BODY_NAMES
 from ...assets.tactile_regions import parent_sensor_name
 from ..common.sensors import contact_magnitudes_and_bits
 from .tactile_observations import TactileContactBits, unpack_contact_points
+from .asymmetric_observations import InitialObjectPositionInRoot
+from .final import tactile_observation_noise
 
 
 class PairedContactRegions:
@@ -114,3 +116,70 @@ class RightHandTactile(TactileContactBits):
         bits = ((magnitude >= threshold_n) & env.sensor_data_fresh[:, None]).float()
         env._refactor_tactile_sample = (key, bits)
         return bits.clone()
+
+
+def root_positions_in_eef(env, positions):
+    """Transform fixed-base positions into the current offset EEF frame."""
+    robot, eef = env.scene['robot'].data, env.scene['ee_frame'].data
+    root_p, root_q = robot.root_pos_w, robot.root_quat_w
+    eef_p, eef_q = eef.target_pos_w[:, 0], eef.target_quat_w[:, 0]
+    if positions.ndim == 3:
+        root_p, root_q = root_p[:, None], root_q[:, None]
+        eef_p, eef_q = eef_p[:, None], eef_q[:, None]
+    world = root_p + quat_apply(root_q.expand(*positions.shape[:-1], 4), positions)
+    return quat_apply_inverse(eef_q.expand(*positions.shape[:-1], 4), world - eef_p)
+
+
+class InitialObjectPositionInEEF(InitialObjectPositionInRoot):
+    """Re-express the Actor snapshot, including its fixed root-frame bias.
+
+    Bias is sampled once per reset, before changing frames. Repeated EEF
+    motion cannot expose live target state or resample the visual estimate.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._bias_b = torch.zeros_like(self._position_b)
+
+    def __call__(self, env, command_name='target_goal_pos', coordinate_noise=.01):
+        ids = self._pending.nonzero(as_tuple=False).flatten()
+        if ids.numel():
+            self._bias_b[ids] = (2 * torch.rand_like(self._bias_b[ids]) - 1) * coordinate_noise
+        position = super().__call__(env, command_name)
+        if env.cfg.observations.policy.enable_corruption:
+            position = position + self._bias_b
+        return root_positions_in_eef(env, position)
+
+
+def goal_position_in_eef(env, command_name='target_goal_pos'):
+    """Episode-fixed goal XYZ relative to the current EEF, without live target GT."""
+    eef = env.scene['ee_frame'].data
+    goal = env.command_manager.get_command(command_name)[:, :3]
+    return quat_apply_inverse(eef.target_quat_w[:, 0], goal - eef.target_pos_w[:, 0])
+
+
+def initial_obstacle_positions_in_eef(env):
+    """Change only snapshot coordinates; preserve visibility, noise and row order."""
+    rows = env._initial_obstacle_observation.unflatten(-1, (16, 4))
+    positions = root_positions_in_eef(env, rows[..., 1:])
+    relative = torch.cat((rows[..., :1], positions), dim=-1)
+    return torch.where(rows[..., :1] > .5, relative, 0.).flatten(1)
+
+
+def encode_paired_tactile(bits):
+    palm, dorsal = bits[..., :17], bits[..., 17:]
+    return palm - dorsal + 2 * palm * dorsal
+
+
+class RelativeRightHandTactile(RightHandTactile):
+    """Seventeen paired states: none=0, palm=1, dorsal=-1, both=2."""
+
+    def __call__(self, env, sensor_name='hand_tactile', threshold_n=.05):
+        return encode_paired_tactile(super().__call__(env, sensor_name, threshold_n))
+
+
+def paired_tactile_observation_noise(data, cfg):
+    """Preserve the parent's independent 1% bit flips before paired encoding."""
+    palm = ((data == 1) | (data == 2)).to(data.dtype)
+    dorsal = ((data == -1) | (data == 2)).to(data.dtype)
+    return encode_paired_tactile(tactile_observation_noise(torch.cat((palm, dorsal), -1), cfg))

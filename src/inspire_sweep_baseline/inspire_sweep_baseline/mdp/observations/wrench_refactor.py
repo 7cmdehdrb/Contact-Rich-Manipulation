@@ -120,3 +120,36 @@ class WrenchRefactorObservationsCfg:
     obstacles: ObstaclesCfg = ObstaclesCfg()
     critic: CriticCfg = CriticCfg()
     critic_obstacles: CriticObstaclesCfg = CriticObstaclesCfg()
+
+
+@configclass
+class WrenchRefactorRelativeObservationsCfg(WrenchRefactorObservationsCfg):
+    """One shared 58D policy + 64D obstacle sample for Actor and Critic."""
+
+    @configclass
+    class PolicyCfg(WrenchRefactorObservationsCfg.PolicyCfg):
+        def __post_init__(self):
+            super().__post_init__()
+            from ..observation_functions.wrench_refactor import (
+                InitialObjectPositionInEEF, RelativeRightHandTactile,
+                goal_position_in_eef, paired_tactile_observation_noise,
+            )
+            self.target_obs_state.func = InitialObjectPositionInEEF
+            self.target_obs_state.params['coordinate_noise'] = .01
+            # Apply the parent's reset-fixed visual bias before frame conversion.
+            self.target_obs_state.noise = None
+            self.goal_pos.func = goal_position_in_eef
+            self.tactile.func = RelativeRightHandTactile
+            self.tactile.noise = NoiseCfg(func=paired_tactile_observation_noise)
+
+    @configclass
+    class ObstaclesCfg(WrenchRefactorObservationsCfg.ObstaclesCfg):
+        def __post_init__(self):
+            super().__post_init__()
+            from ..observation_functions.wrench_refactor import initial_obstacle_positions_in_eef
+            self.initial_positions.func = initial_obstacle_positions_in_eef
+
+    policy: PolicyCfg = PolicyCfg()
+    obstacles: ObstaclesCfg = ObstaclesCfg()
+    critic = None
+    critic_obstacles = None

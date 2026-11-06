@@ -1,5 +1,41 @@
 # Inspire Sweep Baseline
 
+## Refactor-Relative-v0
+
+`Inspire-Wrench-Refactor-Relative-v0`는 v3_1을 직접 상속한다. EEF 상대 초기 타겟·장애물, goal XYZ, 촉각17D를 Actor/Critic 공통 관측으로 사용한다. EEF pose는 base 기준이다. URDF Hand effort10Nm·최초 진입+10 외 물리 생성/reset·제어·보상·일정은 부모와 같다. [전체 계약·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V0_ENVIRONMENT.md).
+
+```bash
+python src/inspire_sweep_baseline/scripts/train.py --task Inspire-Wrench-Refactor-Relative-v0 --num_envs 2048 --headless
+```
+
+## Refactor 수동 조작
+
+`wrench_refactor_envs.py:WrenchRefactorEnvCfg`의 오른손·선반·17개 물체·손가락 2D 제어를 사용하는 실행기다. Arm은 같은 Refactor v3의 EEF 보정 OSC를 재사용한다. 체크포인트 없이 한 환경을 띄우며, 기존 학습 환경 정의는 변경하지 않는다. Workspace 루트의 Isaac Lab Python에서 실행한다.
+
+```bash
+env -u PYTHONPATH -u ROS_PACKAGE_PATH -u AMENT_PREFIX_PATH \
+  /home/min/miniconda3/envs/env_isaaclab/bin/python \
+  src/inspire_sweep_baseline/scripts/manual_wrench_refactor.py
+```
+
+Isaac Lab Python이 활성화된 다른 PC에서는 `python src/inspire_sweep_baseline/scripts/manual_wrench_refactor.py`로 실행한다. 원래 선반의 로컬 복사본을 쓰려면 `--shelf-usd /path/to/speedrack_shape.usd`를 추가한다.
+
+**Wrench Refactor - Manual Control** 창에서 world 기준 XYZ(m)·RPY(deg)를 입력하고 **Apply XYZ / RPY**를 누른다. 축별 ± 버튼은 기본 5mm/2°씩 목표를 바꾼다. 두 Hand 슬라이더는 즉시 적용되며, 각각 손가락 굽힘과 엄지 opposition의 openness(0 닫힘, 1 열림)다. EEF 목표는 기존 OSC에 전달하며, 목표 궤적은 기본 0.04m/s·0.4rad/s로 변화시킨다. 이는 실제 로봇 속도의 보장값이 아니다.
+
+| 버튼 | 동작 |
+| --- | --- |
+| Reset ALL | 로봇 초기 자세 + 새 선반 배치·목표 + 새 복원 지점 |
+| Reset SHELF | 선반·물체·목표만 새로 초기화하고 복원 지점 갱신; 로봇 유지 |
+| Restore shelf snapshot | 저장된 선반·물체 위치/자세/속도·활성 구성·목표 복원; 로봇 유지 |
+| Save shelf snapshot | 현재 선반 상태를 새 복원 지점으로 저장 |
+| Reset ROBOT pose | 로봇 초기 자세·속도 0·손 열림; 선반·물체·목표·복원 지점 유지 |
+| Hold actual EEF | EEF 목표를 현재 실제 자세로 교체 |
+| Pause / Resume physics | 물리 일시정지·재개 |
+
+Reset과 복원 직후에는 물리가 일시정지되므로 **Resume physics**로 재개한다. 최초 실행과 전체/선반 reset 때 복원 지점을 자동 저장하며, 선반 내 조작 후 **Restore shelf snapshot**을 반복해서 눌러 조작 전 상태로 돌아갈 수 있다. 새 배치를 만들면 이전 복원 지점은 교체된다. 물리 solver의 내부 contact cache까지 저장하는 결정적 replay는 아니다.
+
+수동 실행은 ActionManager와 물리만 진행한다. 학습용 보상·종료·시간 제한·커리큘럼 step을 실행하지 않아, 실패하거나 10초가 지나도 장면이 자동으로 교체되지 않는다. 패널 또는 앱을 닫아 종료한다. 실행과 검증 상세는 [개발 로그](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_manual.md)를 따른다.
+
 2026-11-06: Refactor `v0_1/v1_1/v2_1/v3_1`은 각각 원본v0–v3를 직접 상속하며 Action Rate를 상한 없는 raw 정책 출력 변화 비용으로 교체한다. [등록·계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_POLICY_RATE_ENVIRONMENTS.md).
 
 2026-11-06: `Inspire-Wrench-Refactor-v3-Test`는 v3를 직접 상속한 왼쪽(world −Y) 목표 전용 임시 환경이다. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_v3_test_left.md).

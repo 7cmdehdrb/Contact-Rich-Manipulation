@@ -4,7 +4,7 @@ from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
 from ..assets.scenes.wrench_refactor import WrenchRefactorSceneCfg
 from ..mdp.actions.wrench_refactor import WrenchRefactorActionsCfg, WrenchRefactorOSCActionCfg
-from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg
+from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg, WrenchRefactorRelativeObservationsCfg
 from ..mdp.commands.wrench_refactor import WrenchRefactorCommandsCfg
 from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg
 from ..mdp.terminations.wrench_refactor import WrenchRefactorTerminationsCfg
@@ -140,3 +140,15 @@ class WrenchRefactorV3_1EnvCfg(WrenchRefactorV3EnvCfg):
         super().__post_init__()
         from ..mdp.reward_functions.wrench_refactor import policy_action_rate_penalty
         self.rewards.robot_action_rate_penalty.func = policy_action_rate_penalty
+
+
+@configclass
+class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
+    """v3_1 physics/reset with shared, predominantly EEF-relative observations."""
+    observations: WrenchRefactorRelativeObservationsCfg = WrenchRefactorRelativeObservationsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Vendor right-hand URDF: all twelve revolute joints effort=10, velocity=1.
+        self.scene.robot.actuators['hand'].effort_limit_sim = 10.0
+        self.rewards.target_goal_first_entry_bonus.weight = 10.0

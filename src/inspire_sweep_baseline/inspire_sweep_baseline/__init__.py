@@ -1094,3 +1094,16 @@ if WRENCH_REFACTOR_V3_1_TASK_ID not in gym.registry:
             "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorV3_1PPORunnerCfg",
         },
     )
+
+
+WRENCH_REFACTOR_RELATIVE_TASK_ID = "Inspire-Wrench-Refactor-Relative-v0"
+if WRENCH_REFACTOR_RELATIVE_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativePPORunnerCfg",
+        },
+    )
