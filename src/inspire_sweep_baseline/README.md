@@ -1,5 +1,11 @@
 # Inspire Sweep Baseline
 
+2026-11-06: Refactor `v0_1/v1_1/v2_1/v3_1`은 각각 원본v0–v3를 직접 상속하며 Action Rate를 상한 없는 raw 정책 출력 변화 비용으로 교체한다. [등록·계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_POLICY_RATE_ENVIRONMENTS.md).
+
+2026-11-06: `Inspire-Wrench-Refactor-v3-Test`는 v3를 직접 상속한 왼쪽(world −Y) 목표 전용 임시 환경이다. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_v3_test_left.md).
+
+2026-11-06 Refactor-v0/v1/v2/v3 공통: 목표 중심은 물체 시작점에서 **6–12cm**, 허용 방위 균등·거리 균등으로 샘플링한다. [최종 영역·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_goal_annulus.md).
+
 2026-11-06: **Refactor-v2←v0**로 정정(접촉 보상 별도·거리weight5×cosine). **Refactor-v3←v2**는 EEF 기준 OSC를 사용한다. [v3 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_V3_ENVIRONMENT.md).
 
 2026-11-06 Refactor 기반 후속: v0/v1/v2는 Final·Revision과 동일한 **root-frame OSC**를 사용하며 목표 최소 거리는 **시작점에서5cm**다. 오른손 자산과 EEF offset은 유지한다. [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_wrench_refactor_root_osc_min_goal.md).

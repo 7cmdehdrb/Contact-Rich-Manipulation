@@ -95,3 +95,48 @@ class WrenchRefactorV3EnvCfg(WrenchRefactorV2EnvCfg):
         super().__post_init__()
         from ..mdp.action_functions.wrench_refactor import WrenchRefactorOSCAction
         self.actions.arm_action.class_type = WrenchRefactorOSCAction
+
+
+@configclass
+class WrenchRefactorV3TestEnvCfg(WrenchRefactorV3EnvCfg):
+    """Temporary v3 diagnostic: sample only leftward (shelf -Y) goals."""
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['sweep_direction'] = 'left'
+        self.terminations.arm_joint_velocity = None
+
+
+@configclass
+class WrenchRefactorV0_1EnvCfg(WrenchRefactorEnvCfg):
+    """Direct v0 child with uncapped policy-input action-rate cost."""
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import policy_action_rate_penalty
+        self.rewards.robot_action_rate_penalty.func = policy_action_rate_penalty
+
+
+@configclass
+class WrenchRefactorV1_1EnvCfg(WrenchRefactorV1EnvCfg):
+    """Direct v1 child with uncapped policy-input action-rate cost."""
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import policy_action_rate_penalty
+        self.rewards.robot_action_rate_penalty.func = policy_action_rate_penalty
+
+
+@configclass
+class WrenchRefactorV2_1EnvCfg(WrenchRefactorV2EnvCfg):
+    """Direct v2 child with uncapped policy-input action-rate cost."""
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import policy_action_rate_penalty
+        self.rewards.robot_action_rate_penalty.func = policy_action_rate_penalty
+
+
+@configclass
+class WrenchRefactorV3_1EnvCfg(WrenchRefactorV3EnvCfg):
+    """Direct v3 child with uncapped policy-input action-rate cost."""
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import policy_action_rate_penalty
+        self.rewards.robot_action_rate_penalty.func = policy_action_rate_penalty

@@ -47,22 +47,45 @@ def test_uniform_angle_and_conditional_distance(load_mdp, degrees):
     assert ((histogram / len(b) - .1).abs() < .005).all()
     safe = torch.tensor([.2, .5]) - b[:, :, :2].abs().amax(1) - .02
     maximum = ((safe - direction.sign() * target) / direction.abs().clamp_min(1e-12)).amin(-1)
-    unit_distance = (distance - .05) / (maximum - .05)
+    maximum = maximum.clamp_max(.12)
+    unit_distance = (distance - .06) / (maximum - .06)
     assert unit_distance.mean().item() == pytest.approx(.5, abs=.005)
     assert unit_distance.std().item() == pytest.approx(1 / math.sqrt(12), abs=.003)
-    assert (distance > .15).any() and (distance >= .05 - 1e-7).all()
+    assert (distance <= .12 + 1e-7).all() and (distance >= .06 - 1e-7).all()
     assert (goal.abs() <= safe + 1e-6).all()
 
 
+@pytest.mark.parametrize('degrees', [0, 5, 10, 15, 20, 25, 30])
+def test_left_only_uniform_angle_and_distance(load_mdp, degrees):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    b = pool_bounds(20000)[:, 0]
+    alpha = math.radians(degrees)
+    target, goal = m.sample_commands(b, torch.Generator().manual_seed(42),
+        excluded_x_half_angle=alpha, sweep_direction='left')
+    delta = goal - target
+    assert (delta[:, 1] < 0).all()
+    theta = torch.atan2(delta[:, 1], delta[:, 0]).remainder(2 * math.pi)
+    u = (theta - math.pi - alpha) / (math.pi - 2 * alpha)
+    assert ((u >= -1e-6) & (u <= 1 + 1e-6)).all()
+    assert ((torch.histc(u, bins=10, min=0, max=1) / len(b) - .1).abs() < .008).all()
+    distance = delta.norm(dim=-1)
+    assert (distance >= .06 - 1e-7).all() and (distance <= .12 + 1e-7).all()
+    # The shelf has room for the full 12 cm annulus at every allowed angle.
+    assert ((distance - .06) / .06).mean().item() == pytest.approx(.5, abs=.008)
+
+
 @pytest.mark.parametrize('degrees', [0, 30])
-def test_pool_exact_counts_bottom_gaps_and_parking(load_mdp, degrees):
+@pytest.mark.parametrize('sweep_direction', ['both', 'left'])
+def test_pool_exact_counts_bottom_gaps_and_parking(load_mdp, degrees, sweep_direction):
     m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
     obb = importlib.import_module('_baseline_cpu_pkg.mdp.common.bbox_scene_layout')
     b = pool_bounds(128)
     req = torch.tensor([(g, w) for g in range(4) for w in range(4)] * 8)
     local, yaw, active, delta, actual = m.fixed_pool_layout(
         b, 1.05 - b[..., 0, 2], torch.Generator().manual_seed(10), req,
-        excluded_x_half_angle=math.radians(degrees))
+        excluded_x_half_angle=math.radians(degrees), sweep_direction=sweep_direction)
+    if sweep_direction == 'left':
+        assert (delta[:, 1] < 0).all()
     assert torch.equal(req, actual)
     assert torch.equal(active.sum(-1), req.sum(-1) + 1)
     assert active[:, 1:].any(0).all()  # every fixed physical slot can be selected
@@ -231,7 +254,17 @@ def test_cfg_and_runtime_have_no_task_parents():
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.ClassDef):
-                v1_parents = {'WrenchRefactorV3EnvCfg':'WrenchRefactorV2EnvCfg',
+                v1_parents = {'WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
+                              'WrenchRefactorV0_1PPORunnerCfg':'WrenchRefactorPPORunnerCfg',
+                              'WrenchRefactorV1_1EnvCfg':'WrenchRefactorV1EnvCfg',
+                              'WrenchRefactorV1_1PPORunnerCfg':'WrenchRefactorV1PPORunnerCfg',
+                              'WrenchRefactorV2_1EnvCfg':'WrenchRefactorV2EnvCfg',
+                              'WrenchRefactorV2_1PPORunnerCfg':'WrenchRefactorV2PPORunnerCfg',
+                              'WrenchRefactorV3_1EnvCfg':'WrenchRefactorV3EnvCfg',
+                              'WrenchRefactorV3_1PPORunnerCfg':'WrenchRefactorV3PPORunnerCfg',
+                              'WrenchRefactorV3TestEnvCfg':'WrenchRefactorV3EnvCfg',
+                              'WrenchRefactorV3TestPPORunnerCfg':'WrenchRefactorV3PPORunnerCfg',
+                              'WrenchRefactorV3EnvCfg':'WrenchRefactorV2EnvCfg',
                               'WrenchRefactorV3PPORunnerCfg':'WrenchRefactorV2PPORunnerCfg',
                               'WrenchRefactorV2EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorV2RewardsCfg':'WrenchRefactorRewardsCfg',
@@ -587,3 +620,36 @@ def test_active_refactor_osc_matches_final_and_revision():
         arm.func = ast.Name(id='CommonOSC', ctx=ast.Load())
         calls.append(ast.dump(arm))
     assert calls[0] == calls[1] == calls[2]
+
+
+@pytest.mark.parametrize('radius', [.06, .12])
+def test_goal_annulus_exact_radius_boundaries(load_mdp, radius):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    target, goal = m.sample_commands(pool_bounds(64)[:,0], torch.Generator().manual_seed(11),
+                                    min_goal_distance=radius, max_goal_distance=radius)
+    torch.testing.assert_close((goal-target).norm(dim=-1), torch.full((64,),radius), atol=1e-7, rtol=0.)
+
+
+@pytest.mark.parametrize('maximum', [.059, float('nan'), float('inf')])
+def test_goal_annulus_rejects_invalid_maximum(load_mdp, maximum):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    with pytest.raises(ValueError, match='Maximum goal distance'):
+        m.sample_commands(pool_bounds(1)[:,0], torch.Generator(), max_goal_distance=maximum)
+
+
+def test_policy_action_rate_is_uncapped_and_preserves_hand_clamping(configs):
+    func = configs('reward_functions', 'wrench_refactor').policy_action_rate_penalty
+    action = torch.tensor([[0., 20., 0., 0., 0., 0., 2., -1.],
+                           [0., 0., 0., 0., 0., -10., .5, .25]])
+    previous = torch.zeros_like(action)
+    env = NS(action_manager=NS(action=action, prev_action=previous))
+    # Both physical scales normalize back to raw action, so translation and
+    # rotation raw changes of the same size carry the same cost.
+    torch.testing.assert_close(func(env), torch.tensor([12.03, 3.009375]))
+    assert func(env)[0] > 3.  # No former Arm sum cap100.
+    saved = action.clone()
+    previous[0] = action[0]  # One env can stay unchanged independently.
+    assert func(env)[0] == 0 and func(env)[1] > 3.
+    torch.testing.assert_close(action, saved)
+    previous.zero_()  # Reset action history, not stale torque history.
+    torch.testing.assert_close(func(env), torch.tensor([12.03, 3.009375]))

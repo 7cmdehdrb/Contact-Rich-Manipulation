@@ -39,6 +39,7 @@ parser.add_argument(
 parser.add_argument(
     "--num_envs", type=int, default=None, help="Number of environments to simulate."
 )
+parser.add_argument("--max_steps", type=int, default=None, help="Stop after this many policy steps.")
 parser.add_argument("--task", type=str, default="Isaac-Inspire-Sweep-Baseline-v0", help="Name of the task.")
 parser.add_argument("--sweep-direction", choices=("both", "left", "right"), default=None,
                     help="Reset-event sweep direction; default is both.")
@@ -74,6 +75,8 @@ cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
+if args_cli.max_steps is not None and args_cli.max_steps <= 0:
+    parser.error("--max_steps must be positive")
 if not (0.0 < args_cli.playback_speed < float("inf")):
     parser.error("--playback-speed must be finite and greater than zero")
 # always enable cameras to record video
@@ -288,8 +291,10 @@ def main(
                 policy.reset(dones)
             else:
                 policy_nn.reset(dones)
+        timestep += 1
+        if args_cli.max_steps is not None and timestep >= args_cli.max_steps:
+            break
         if args_cli.video:
-            timestep += 1
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break

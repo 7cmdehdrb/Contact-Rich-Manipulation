@@ -4,6 +4,15 @@ from isaaclab.managers import ManagerTermBase
 from ..termination_functions.goal_terminations import _object_position
 
 
+def policy_action_rate_penalty(env):
+    """Uncapped raw Arm policy-action change and clamped Hand openness change."""
+    action = env.action_manager.action
+    previous = env.action_manager.prev_action
+    arm_delta = action[:, :6] - previous[:, :6]
+    hand_delta = action[:, -2:].clamp(0., 1.) - previous[:, -2:].clamp(0., 1.)
+    return 0.03 * arm_delta.square().sum(-1) + 0.03 * hand_delta.square().sum(-1)
+
+
 class RefactorActionRatePenalty(ManagerTermBase):
     """Policy-step change of normalized OSC output torques and clamped Hand openness.
 
@@ -32,6 +41,35 @@ class RefactorActionRatePenalty(ManagerTermBase):
             arm_cost = (current - self._previous_arm).square().sum(-1).clamp_max(100.0)
             hand_delta = env.action_manager.action[:, -2:].clamp(0., 1.) - env.action_manager.prev_action[:, -2:].clamp(0., 1.)
             self._cached_cost[:] = 0.03 * arm_cost + 0.03 * hand_delta.square().sum(-1)
+            # TEMP paired diagnostic only: keep the original returned reward.
+            if type(getattr(env, 'cfg', None)).__name__ == 'WrenchRefactorV3TestEnvCfg':
+                import json
+                action_delta = env.action_manager.action[:, :6] - env.action_manager.prev_action[:, :6]
+                proposed_axes = 0.03 * action_delta.square()
+                old_axes = 0.03 * (current - self._previous_arm).square()
+                hand_cost = 0.03 * hand_delta.square().sum(-1)
+                proposed = proposed_axes.sum(-1) + hand_cost
+                fields = {
+                    'old_cost': self._cached_cost,
+                    'proposed_cost': proposed,
+                    'proposed_cost_with_arm_cap100': 0.03 * action_delta.square().sum(-1).clamp_max(100.) + hand_cost,
+                    'old_arm_axes': old_axes,
+                    'proposed_position_cost': proposed_axes[:, :3].sum(-1),
+                    'proposed_rotation_cost': proposed_axes[:, 3:].sum(-1),
+                    'proposed_arm_axes': proposed_axes,
+                    'hand_cost': hand_cost,
+                    'policy_arm': env.action_manager.action[:, :6],
+                    'policy_arm_delta': action_delta,
+                    'normalized_torque': current,
+                    'old_step_reward': -env.step_dt * self._cached_cost,
+                    'proposed_step_reward': -env.step_dt * proposed,
+                }
+                batches = {key: value.tolist() for key, value in fields.items()}
+                steps = env.episode_length_buf.tolist()
+                for env_id in range(env.num_envs):
+                    payload = {key: value[env_id] for key, value in batches.items()}
+                    payload.update(env=env_id, step=steps[env_id], policy_step=env.common_step_counter)
+                    print('[Wrench-Refactor-v3-Test action_penalty] ' + json.dumps(payload), flush=True)
             self._previous_arm[:] = current
             self._cached_step = env.common_step_counter
         return self._cached_cost.clone()

@@ -11,7 +11,7 @@ class WrenchRefactorEventsCfg:
     object_physics = EventTerm(func=initialize_physics, mode='startup', params={'mass_scale': 1.5})
     reset_all = EventTerm(func=reset_scene_to_default, mode='reset')
     object_spawn = EventTerm(func=reset_scene, mode='reset', params={
-        'spawn_radius': .02, 'edge_clearance': .02, 'min_goal_distance': .05,
+        'spawn_radius': .02, 'edge_clearance': .02, 'min_goal_distance': .06, 'max_goal_distance': .12,
         'excluded_x_half_angle': 0.5235987755982988, 'observation_noise': .01,
         'visibility_threshold': .35, 'visibility_flip_probability': .01,
         'observation_swap_probability': .1,

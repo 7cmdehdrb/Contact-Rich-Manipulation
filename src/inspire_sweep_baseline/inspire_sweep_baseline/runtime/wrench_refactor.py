@@ -87,6 +87,21 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
         self._moment_samples |= moment_valid
 
     def _reset_idx(self, env_ids):
+        # TEMP v3-Test diagnostics: read evaluated terms before reset clears them.
+        if type(self.cfg).__name__ == 'WrenchRefactorV3TestEnvCfg':
+            for env_id in env_ids.tolist():
+                reasons = [
+                    name for name in self.termination_manager.active_terms
+                    if bool(self.termination_manager.get_term(name)[env_id])
+                ]
+                if reasons:
+                    print(
+                        f'[Wrench-Refactor-v3-Test termination] env={env_id} '
+                        f'step={int(self.episode_length_buf[env_id])} '
+                        f'reasons={", ".join(reasons)}',
+                        flush=True,
+                    )
+        # END TEMP v3-Test diagnostics.
         metrics = {}
         for key in self._mean_metrics:
             sampled = self._metric_counts[key][env_ids] > 0

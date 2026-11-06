@@ -49,3 +49,28 @@ class WrenchRefactorV2PPORunnerCfg(WrenchRefactorPPORunnerCfg):
 @configclass
 class WrenchRefactorV3PPORunnerCfg(WrenchRefactorV2PPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_v3"
+
+
+@configclass
+class WrenchRefactorV3TestPPORunnerCfg(WrenchRefactorV3PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v3_test"
+
+
+@configclass
+class WrenchRefactorV0_1PPORunnerCfg(WrenchRefactorPPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v0_1"
+
+
+@configclass
+class WrenchRefactorV1_1PPORunnerCfg(WrenchRefactorV1PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v1_1"
+
+
+@configclass
+class WrenchRefactorV2_1PPORunnerCfg(WrenchRefactorV2PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v2_1"
+
+
+@configclass
+class WrenchRefactorV3_1PPORunnerCfg(WrenchRefactorV3PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_v3_1"

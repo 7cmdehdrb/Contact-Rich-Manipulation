@@ -77,6 +77,25 @@ class UR10OperationalSpaceControllerAction(OperationalSpaceControllerAction):
         self._compute_ee_force()
         self._compute_joint_states()
 
+        # TEMP full OSC I/O trace, restricted to the left-only diagnostic task.
+        debug_osc = type(getattr(getattr(self, '_env', None), 'cfg', None)).__name__ == 'WrenchRefactorV3TestEnvCfg'
+        if debug_osc:
+            debug_inputs = {
+                'action_raw': self._raw_actions.clone(),
+                'command_processed': self._processed_actions.clone(),
+                'task_frame_pose_b': self._task_frame_pose_b,
+                'desired_ee_pose_b': self._osc.desired_ee_pose_b,
+                'jacobian_b': self._jacobian_b.clone(),
+                'current_ee_pose_b': self._ee_pose_b.clone(),
+                'current_ee_vel_b': self._ee_vel_b.clone(),
+                'current_ee_force_b': self._ee_force_b.clone(),
+                'mass_matrix': self._mass_matrix.clone(),
+                'gravity': self._gravity.clone(),
+                'current_joint_pos': self._joint_pos.clone(),
+                'current_joint_vel': self._joint_vel.clone(),
+                'nullspace_joint_pos_target': self._nullspace_joint_pos_target,
+            }
+
         self._joint_efforts[:] = self._osc.compute(
             jacobian_b=self._jacobian_b,
             current_ee_pose_b=self._ee_pose_b,
@@ -88,6 +107,8 @@ class UR10OperationalSpaceControllerAction(OperationalSpaceControllerAction):
             current_joint_vel=self._joint_vel,
             nullspace_joint_pos_target=self._nullspace_joint_pos_target,
         )
+        if debug_osc:
+            raw_efforts = self._joint_efforts.clone()
 
         finite_efforts = torch.isfinite(self._joint_efforts).all(dim=1)
         self._joint_efforts[:] = torch.where(finite_efforts.unsqueeze(-1), self._joint_efforts, 0.0)
@@ -101,3 +122,31 @@ class UR10OperationalSpaceControllerAction(OperationalSpaceControllerAction):
         self._joint_efforts[:] = clamped_efforts
 
         self._asset.set_joint_effort_target(self._joint_efforts, joint_ids=self._joint_ids)
+        if debug_osc:
+            import json
+            debug_values = {
+                **debug_inputs,
+                'motion_p_gains_b': self._osc._motion_p_gains_b,
+                'motion_d_gains_b': self._osc._motion_d_gains_b,
+                'torque_raw_Nm': raw_efforts,
+                'torque_command_Nm': self._joint_efforts,
+                'effort_limits_Nm': effort_limits,
+                'finite_efforts': finite_efforts,
+                'torque_saturated': self._torque_saturated,
+            }
+            batches = {key: value.tolist() if isinstance(value, torch.Tensor) else value
+                       for key, value in debug_values.items()}
+            steps = self._env.episode_length_buf.tolist()
+            for env_id in range(self.num_envs):
+                payload = {key: value[env_id] if value is not None else None
+                           for key, value in batches.items()}
+                payload.update(
+                    env=env_id, step=steps[env_id] + 1,
+                    physics_step=self._env._sim_step_counter,
+                    physics_dt=self._sim_dt, joints=self._joint_names,
+                    body_name=self.cfg.body_name,
+                    body_offset_pos=self.cfg.body_offset.pos,
+                    body_offset_rot=self.cfg.body_offset.rot,
+                    units='SI: m, rad, s, N, Nm; pose quaternion wxyz; _b=robot root frame',
+                )
+                print('[Wrench-Refactor-v3-Test OSC] ' + json.dumps(payload), flush=True)
