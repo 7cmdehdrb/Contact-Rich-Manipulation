@@ -88,3 +88,22 @@ class WrenchRefactorRelativePPORunnerCfg(WrenchRefactorV3_1PPORunnerCfg):
     actor = WrenchRefactorRelativeModelCfg(
         distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
     critic = WrenchRefactorRelativeModelCfg()
+
+
+@configclass
+class WrenchRefactorRelativeV2ModelCfg(WrenchRefactorRelativeModelCfg):
+    class_name = "inspire_sweep_baseline.agent.wrench_refactor_models:WrenchRefactorRelativeV2Model"
+
+
+@configclass
+class WrenchRefactorRelativeV2PPORunnerCfg(WrenchRefactorRelativePPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v2"
+    obs_groups = {"actor": ["policy", "obstacles"], "critic": ["critic", "obstacles"]}
+    actor = WrenchRefactorRelativeV2ModelCfg(
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
+    critic = WrenchRefactorRelativeV2ModelCfg()
+
+
+@configclass
+class WrenchRefactorRelativeV3PPORunnerCfg(WrenchRefactorRelativePPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v3"

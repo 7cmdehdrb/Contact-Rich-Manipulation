@@ -179,3 +179,13 @@ def displacement_cosine_goal_distance(env, distance_scale=0.05,
         command_name=command_name,
     ) * cosine
     return torch.where(valid & torch.isfinite(reward), reward, 0.0)
+
+
+
+def contact_gated_displacement_cosine_goal_distance(env, distance_scale=0.05,
+                                                     threshold_n=0.01, command_name="target_goal_pos"):
+    """Preserve Relative distance cosine; require contact in this step only."""
+    from .revision import target_contact_below_height
+    contact = target_contact_below_height(env, threshold_n=threshold_n).bool()
+    reward = displacement_cosine_goal_distance(env, distance_scale, command_name)
+    return torch.where(contact, reward, 0.0)

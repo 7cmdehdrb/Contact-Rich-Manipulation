@@ -96,6 +96,11 @@ class WrenchRefactorRelativeModel(WrenchRefactorModel):
     observation_groups = {'actor': ('policy', 'obstacles'), 'critic': ('policy', 'obstacles')}
 
 
+class WrenchRefactorRelativeV2Model(WrenchRefactorRelativeModel):
+    """Same networks and EEF obstacle input, separate 58D direct groups."""
+    observation_groups = {'actor': ('policy', 'obstacles'), 'critic': ('critic', 'obstacles')}
+
+
 class _ExportWrenchRefactorModel(nn.Module):
     """Export policy + initial obstacles: 138D for Refactor, 122D for Relative."""
 

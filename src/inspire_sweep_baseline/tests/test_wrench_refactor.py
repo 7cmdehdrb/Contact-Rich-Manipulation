@@ -256,6 +256,14 @@ def test_cfg_and_runtime_have_no_task_parents():
             if isinstance(node, ast.ClassDef):
                 v1_parents = {'WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorRelativeEnvCfg':'WrenchRefactorV3_1EnvCfg',
+                              'WrenchRefactorRelativeV3EnvCfg':'WrenchRefactorRelativeEnvCfg',
+                              'WrenchRefactorRelativeV3RewardsCfg':'WrenchRefactorV2RewardsCfg',
+                              'WrenchRefactorRelativeV2EnvCfg':'WrenchRefactorRelativeEnvCfg',
+                              'WrenchRefactorRelativeV2ObservationsCfg':'WrenchRefactorRelativeObservationsCfg',
+                              'WrenchRefactorRelativeV2ModelCfg':'WrenchRefactorRelativeModelCfg',
+                              'WrenchRefactorRelativeCurriculumCfg':'WrenchRefactorCurriculumCfg',
+                              'WrenchRefactorRelativeV2PPORunnerCfg':'WrenchRefactorRelativePPORunnerCfg',
+                              'WrenchRefactorRelativeV3PPORunnerCfg':'WrenchRefactorRelativePPORunnerCfg',
                               'WrenchRefactorRelativePPORunnerCfg':'WrenchRefactorV3_1PPORunnerCfg',
                               'WrenchRefactorRelativeModelCfg':'WrenchRefactorModelCfg',
                               'WrenchRefactorRelativeObservationsCfg':'WrenchRefactorObservationsCfg',
@@ -277,8 +285,9 @@ def test_cfg_and_runtime_have_no_task_parents():
                               'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
-                elif node.name in ('PolicyCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
-                    assert ast.unparse(node.bases[0]) == f'WrenchRefactorObservationsCfg.{node.name}'
+                elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
+                    assert ast.unparse(node.bases[0]) in (f'WrenchRefactorObservationsCfg.{node.name}',
+                                                        'WrenchRefactorRelativeObservationsCfg.PolicyCfg')
                 else:
                     assert all(isinstance(b, ast.Name) and b.id in allowed for b in node.bases), path
 
@@ -322,10 +331,15 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
               WrenchRefactorOSCActionCfg=NS(OffsetCfg=_AssetNode))
     for role, name in [('commands','Commands'),('observations','Observations'),('rewards','Rewards'),('events','Events'),('terminations','Terminations'),('curricula','Curriculum')]:
         ns[f'WrenchRefactor{name}Cfg'] = getattr(configs(role,'wrench_refactor'),f'WrenchRefactor{name}Cfg')
+    ns['WrenchRefactorRelativeV3RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorRelativeV3RewardsCfg
     ns['WrenchRefactorV2RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV2RewardsCfg
     ns['WrenchRefactorV1RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg
     ns['WrenchRefactorRelativeObservationsCfg'] = configs('observations','wrench_refactor').WrenchRefactorRelativeObservationsCfg
-    cfg = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py',ns).WrenchRefactorEnvCfg()
+    ns['WrenchRefactorRelativeV2ObservationsCfg'] = configs('observations','wrench_refactor').WrenchRefactorRelativeV2ObservationsCfg
+    ns['WrenchRefactorRelativeCurriculumCfg'] = configs('curricula','wrench_refactor').WrenchRefactorRelativeCurriculumCfg
+    ns['__package__'] = '_baseline_cpu_pkg.envs'
+    env_module = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py', ns)
+    cfg = env_module.WrenchRefactorEnvCfg()
     assert cfg.goal_reward_height_limit == cfg.contact_height_limit == .14
     assert cfg.commands.target_goal_pos.goal_radius == .03
     assert cfg.decimation*cfg.sim.dt == .02
@@ -333,6 +347,36 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     assert cfg.actions.arm_action.body_offset.pos == (0.,0.,.1427)
     assert cfg.actions.arm_action.body_offset.rot == (.5,-.5,-.5,-.5)
     assert [e.mode for e in vars(cfg.events).values()] == ['prestartup','startup','reset','reset']
+    # No simulator imports: substitute only the action implementation leaf.
+    from types import ModuleType
+    action_module = ModuleType('_baseline_cpu_pkg.mdp.action_functions.wrench_refactor')
+    action_module.WrenchRefactorOSCAction = type('WrenchRefactorOSCAction', (), {})
+    monkeypatch.setitem(sys.modules, action_module.__name__, action_module)
+    parent = env_module.WrenchRefactorRelativeEnvCfg()
+    before = parent.to_dict()
+    assert list(parent.scene.robot.actuators['arm'].velocity_limit_sim.values()) == [3.14] * 6
+    assert list(parent.scene.robot.actuators['arm'].effort_limit_sim.values()) == [150.] * 3 + [28.] * 3
+    assert parent.terminations.arm_joint_velocity.params['threshold'] == 4.0
+    assert parent.curriculum.target_goal_direction_deadzone.to_dict() == cfg.curriculum.target_goal_direction_deadzone.to_dict()
+    assert not hasattr(cfg.curriculum, 'arm_joint_velocity_threshold')
+    assert list(cfg.scene.robot.actuators['arm'].velocity_limit_sim.values()) == [2.] * 3 + [4.] * 3
+    child = env_module.WrenchRefactorRelativeV2EnvCfg()
+    expected = parent.to_dict()
+    expected['observations'] = child.observations.to_dict()
+    assert child.to_dict() == expected
+    assert parent.to_dict() == before
+    assert env_module.WrenchRefactorRelativeV2EnvCfg.__bases__ == (env_module.WrenchRefactorRelativeEnvCfg,)
+    v3 = env_module.WrenchRefactorRelativeV3EnvCfg()
+    expected_v3 = parent.to_dict()
+    expected_v3['rewards']['target_contact'] = None
+    expected_v3['rewards']['target_goal_distance'] = v3.rewards.target_goal_distance.to_dict()
+    assert v3.to_dict() == expected_v3
+    assert parent.to_dict() == before
+    assert parent.scene.robot.spawn.sensor_mass == child.scene.robot.spawn.sensor_mass == v3.scene.robot.spawn.sensor_mass == .280
+    assert not hasattr(env_module, 'WrenchRefactorRelativeV1EnvCfg')
+    assert 'print_velocity' not in child.terminations.arm_joint_velocity.params
+
+
 
 
 def test_same_object_multiple_contacts_both_surfaces_and_no_cancellation(load_mdp):

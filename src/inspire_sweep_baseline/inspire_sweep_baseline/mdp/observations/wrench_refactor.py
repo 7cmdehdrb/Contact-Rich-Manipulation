@@ -153,3 +153,17 @@ class WrenchRefactorRelativeObservationsCfg(WrenchRefactorObservationsCfg):
     obstacles: ObstaclesCfg = ObstaclesCfg()
     critic = None
     critic_obstacles = None
+
+
+@configclass
+class WrenchRefactorRelativeV2ObservationsCfg(WrenchRefactorRelativeObservationsCfg):
+    """Actor retains the initial target; Critic sees the live target in EEF axes."""
+
+    @configclass
+    class CriticCfg(WrenchRefactorRelativeObservationsCfg.PolicyCfg):
+        def __post_init__(self):
+            super().__post_init__()
+            from ..observation_functions.wrench_refactor import CurrentObjectPositionInEEF
+            self.target_obs_state.func = CurrentObjectPositionInEEF
+
+    critic: CriticCfg = CriticCfg()

@@ -4,12 +4,12 @@ from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
 from ..assets.scenes.wrench_refactor import WrenchRefactorSceneCfg
 from ..mdp.actions.wrench_refactor import WrenchRefactorActionsCfg, WrenchRefactorOSCActionCfg
-from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg, WrenchRefactorRelativeObservationsCfg
+from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg, WrenchRefactorRelativeObservationsCfg, WrenchRefactorRelativeV2ObservationsCfg
 from ..mdp.commands.wrench_refactor import WrenchRefactorCommandsCfg
-from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg
+from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg, WrenchRefactorRelativeV3RewardsCfg
 from ..mdp.terminations.wrench_refactor import WrenchRefactorTerminationsCfg
 from ..mdp.events.wrench_refactor import WrenchRefactorEventsCfg
-from ..mdp.curricula.wrench_refactor import WrenchRefactorCurriculumCfg
+from ..mdp.curricula.wrench_refactor import WrenchRefactorCurriculumCfg, WrenchRefactorRelativeCurriculumCfg
 
 
 @configclass
@@ -146,9 +146,27 @@ class WrenchRefactorV3_1EnvCfg(WrenchRefactorV3EnvCfg):
 class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
     """v3_1 physics/reset with shared, predominantly EEF-relative observations."""
     observations: WrenchRefactorRelativeObservationsCfg = WrenchRefactorRelativeObservationsCfg()
+    curriculum: WrenchRefactorRelativeCurriculumCfg = WrenchRefactorRelativeCurriculumCfg()
 
     def __post_init__(self):
         super().__post_init__()
+        self.scene.robot.spawn.sensor_mass = 0.280
         # Vendor right-hand URDF: all twelve revolute joints effort=10, velocity=1.
         self.scene.robot.actuators['hand'].effort_limit_sim = 10.0
         self.rewards.target_goal_first_entry_bonus.weight = 10.0
+        self.scene.robot.actuators['arm'].velocity_limit_sim = dict.fromkeys(ARM_JOINT_NAMES, 3.14)
+        self.scene.robot.actuators['arm'].effort_limit_sim = dict(
+            zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0)))
+        self.terminations.arm_joint_velocity.params['threshold'] = 4.0
+
+
+@configclass
+class WrenchRefactorRelativeV2EnvCfg(WrenchRefactorRelativeEnvCfg):
+    """Direct v0 child; asymmetric initial/current target observations only."""
+    observations: WrenchRefactorRelativeV2ObservationsCfg = WrenchRefactorRelativeV2ObservationsCfg()
+
+
+@configclass
+class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
+    """Direct v0 child: replace contact maintenance by contact-gated distance."""
+    rewards: WrenchRefactorRelativeV3RewardsCfg = WrenchRefactorRelativeV3RewardsCfg()

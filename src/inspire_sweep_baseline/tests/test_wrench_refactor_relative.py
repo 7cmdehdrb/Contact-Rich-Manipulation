@@ -72,6 +72,24 @@ def test_target_noise_is_fixed_in_root_and_partial_reset_only(load_mdp):
     assert not torch.equal(updated[0], rotated[0])
 
 
+def test_base_obstacles_match_refactor_and_ignore_eef_motion(load_mdp):
+    relative = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.wrench_refactor')
+    base = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.revision')
+    env, _, eef = relative_env()
+    snapshot = env._initial_obstacle_observation.clone()
+    first = base.initial_obstacle_positions(env)
+    before_relative = relative.initial_obstacle_positions_in_eef(env)
+    eef.target_pos_w += 3.
+    eef.target_quat_w[:] = torch.tensor([0., 0., 0., 1.])
+    assert torch.equal(first, base.initial_obstacle_positions(env))
+    assert not torch.equal(before_relative, relative.initial_obstacle_positions_in_eef(env))
+    rows = first.reshape(2,16,4)
+    assert torch.equal(rows[:,0], torch.tensor([[1.,2.,1.,0.]]).repeat(2,1))
+    assert not rows[:,1:].any()
+    first.zero_()
+    assert torch.equal(snapshot, env._initial_obstacle_observation)
+
+
 def test_tactile_four_states_and_original_bit_noise(load_mdp):
     m = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.wrench_refactor')
     bits = torch.zeros(4, 34)
@@ -118,3 +136,171 @@ def test_shared_models_storage_gradients_and_export():
     storage = RolloutStorage('rl', 8, 2, obs, [8], 'cpu')
     assert set(storage.observations.keys()) == {'policy', 'obstacles'}
     assert storage.observations['policy'].shape == (2, 8, 58)
+
+
+def test_v2_live_target_preserves_bias_and_eef_transform(load_mdp):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.wrench_refactor')
+    env, command, eef = relative_env()
+    positions = command.target_init_state_w[:, None, :3].repeat(1, 2, 1)
+    positions[:, 1] += 20.  # The distractor must never become the target.
+    env.scene['object_collection'] = NS(data=NS(object_pos_w=positions))
+    env.target_id = torch.zeros(2, 1, dtype=torch.long)
+    critic = m.CurrentObjectPositionInEEF(NS(params={}), env)
+    actor = m.InitialObjectPositionInEEF(NS(params={}), env)
+    torch.manual_seed(41)
+    first = critic(env)
+    torch.manual_seed(41)
+    torch.testing.assert_close(first, actor(env))
+    positions[:, 0, 0] += .3
+    torch.testing.assert_close(critic(env), first + torch.tensor([.3, 0., 0.]))
+    torch.testing.assert_close(actor(env), first)
+    eef.target_pos_w[:, 0, 0] += .2
+    eef.target_quat_w[:] = torch.tensor([0., 0., 0., 1.])
+    rotated = (first + torch.tensor([.1, 0., 0.])) * torch.tensor([-1., -1., 1.])
+    torch.testing.assert_close(critic(env), rotated)
+    critic.reset(torch.tensor([0]))
+    updated = critic(env)
+    torch.testing.assert_close(updated[1], rotated[1])
+    assert not torch.equal(updated[0], rotated[0])
+    env.target_id[0, 0] = 1
+    env.cfg.observations.policy.enable_corruption = False
+    expected = (positions[torch.arange(2), env.target_id[:, 0]] - eef.target_pos_w[:, 0])
+    expected *= torch.tensor([-1., -1., 1.])
+    torch.testing.assert_close(critic(env), expected)
+
+
+def test_v2_observation_config_only_replaces_critic_target(configs, monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, 'isaaclab.utils.noise', importlib.import_module('_omni_official_utils.noise'))
+    module = configs('observations', 'wrench_refactor')
+    parent = module.WrenchRefactorRelativeObservationsCfg()
+    before = parent.to_dict()
+    child = module.WrenchRefactorRelativeV2ObservationsCfg()
+    expected = parent.to_dict()
+    expected['critic'] = parent.policy.to_dict()
+    expected['critic']['target_obs_state']['func'] = child.critic.target_obs_state.to_dict()['func']
+    assert child.to_dict() == expected
+    assert parent.to_dict() == before
+    assert child.policy.target_obs_state.func.__name__ == 'InitialObjectPositionInEEF'
+    assert child.critic.target_obs_state.func.__name__ == 'CurrentObjectPositionInEEF'
+    assert child.policy is not child.critic
+
+
+def test_v2_network_input_isolation_storage_and_export():
+    from rsl_rl.storage import RolloutStorage
+    spec = importlib.util.spec_from_file_location('_relative_v2_models', MODULE_ROOT / 'agent/wrench_refactor_models.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows = torch.randn(8, 16, 4)
+    rows[..., 0] = 1.
+    obs = TensorDict({'policy': torch.randn(8, 58), 'critic': torch.randn(8, 58),
+                     'obstacles': rows.flatten(1)}, batch_size=[8])
+    groups = {'actor': ['policy', 'obstacles'], 'critic': ['critic', 'obstacles']}
+    actor = module.WrenchRefactorRelativeV2Model(obs, groups, 'actor', 8,
+        distribution_cfg={'class_name': 'GaussianDistribution', 'init_std': 1.})
+    critic = module.WrenchRefactorRelativeV2Model(obs, groups, 'critic', 1)
+    for model, own_group, other_group in ((actor, 'policy', 'critic'), (critic, 'critic', 'policy')):
+        before = model(obs)
+        changed = obs.clone()
+        changed[other_group][:, 21:24] += 10.
+        torch.testing.assert_close(model(changed), before)
+        changed[own_group][:, 21:24] += 10.
+        assert not torch.allclose(model(changed), before)
+        model(obs).square().mean().backward()
+        assert model.obstacle_encoder.mlp[0].weight.grad.abs().sum() > 0
+    export = torch.jit.script(actor.as_jit())
+    torch.testing.assert_close(export(torch.cat((obs['policy'], obs['obstacles']), -1)), actor(obs))
+    storage = RolloutStorage('rl', 8, 2, obs, [8], 'cpu')
+    assert set(storage.observations.keys()) == {'policy', 'critic', 'obstacles'}
+    assert storage.observations['policy'].shape == storage.observations['critic'].shape == (2, 8, 58)
+    assert storage.observations['obstacles'].shape == (2, 8, 64)
+
+
+def test_v2_runner_preserves_ppo_settings(omni_config):
+    import ast
+    from dataclasses import MISSING
+    from typing import Literal
+    from conftest import PROJECT_ROOT
+    from test_omni_configuration import _execute_definitions
+    official_path = PROJECT_ROOT / 'IsaacLab/source/isaaclab_rl/isaaclab_rl/rsl_rl/rl_cfg.py'
+    classes = {node.name for node in ast.parse(official_path.read_text()).body if isinstance(node, ast.ClassDef)}
+    official = _execute_definitions(official_path, dict(configclass=omni_config.baseline.configclass,
+        MISSING=MISSING, Literal=Literal), classes)
+    module = _execute_definitions(MODULE_ROOT / 'agent/wrench_refactor_ppo_cfg.py', vars(official).copy())
+    parent = module.WrenchRefactorRelativePPORunnerCfg()
+    before = parent.to_dict()
+    child = module.WrenchRefactorRelativeV2PPORunnerCfg()
+    expected = parent.to_dict()
+    expected['experiment_name'] = 'inspire_wrench_refactor_relative_v2'
+    expected['obs_groups']['critic'] = ['critic', 'obstacles']
+    for group in ('actor', 'critic'):
+        expected[group]['class_name'] = 'inspire_sweep_baseline.agent.wrench_refactor_models:WrenchRefactorRelativeV2Model'
+    assert child.to_dict() == expected
+    assert parent.to_dict() == before
+
+
+def test_relative_velocity_curriculum_boundaries_and_rewind(load_mdp):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.curriculum_functions.wrench_refactor')
+    term = NS(params={'threshold': 4., 'asset_cfg': 'arm-only'})
+    manager = NS(get_term_cfg=lambda name: term,
+                 set_term_cfg=lambda name, value: None)
+    env = NS(learning_iteration=0, termination_manager=manager)
+    # Absolute schedules must also support checkpoint jumps, reset and rewind.
+    for iteration, expected in [(0,4.), (9999,4.), (10000,4.), (10249,4.),
+                                (10250,3.95), (10499,3.95), (10500,3.9),
+                                (14250,3.15), (14500,3.1), (19750,2.05),
+                                (19999,2.05), (20000,2.), (90000,2.), (0,4.)]:
+        env.learning_iteration = iteration
+        assert m.arm_velocity_threshold_schedule(env, None) == expected
+        assert term.params == {'threshold': expected, 'asset_cfg': 'arm-only'}
+        assert m.arm_velocity_threshold_schedule(env, torch.tensor([0])) == expected
+
+
+def test_relative_velocity_curriculum_updates_real_termination(load_mdp):
+    schedule = importlib.import_module('_baseline_cpu_pkg.mdp.curriculum_functions.wrench_refactor')
+    functions = importlib.import_module('_baseline_cpu_pkg.mdp.termination_functions.sweep')
+    cfg = NS(name='robot', joint_ids=[0, 2])
+    velocity = torch.tensor([[4., 99., -4.], [4.001, 0., 0.], [2., 0., -2.], [2.001, 0., 0.]])
+    term = NS(params={'asset_cfg': cfg, 'threshold': 4.})
+    env = NS(learning_iteration=0, scene={'robot': NS(data=NS(joint_vel=velocity))},
+             termination_manager=NS(get_term_cfg=lambda name: term, set_term_cfg=lambda name, value: None))
+    schedule.arm_velocity_threshold_schedule(env, None)
+    assert functions.arm_velocity(env, **term.params).tolist() == [False, True, False, False]
+    env.learning_iteration = 20000
+    schedule.arm_velocity_threshold_schedule(env, None)
+    assert functions.arm_velocity(env, **term.params).tolist() == [True, True, False, True]
+
+
+def test_relative_v3_only_gates_cosine_distance_and_removes_contact(configs):
+    from test_wrench_refactor import reward_env
+    m = configs('rewards', 'wrench_refactor')
+    parent = m.WrenchRefactorV2RewardsCfg()
+    before = parent.to_dict()
+    child = m.WrenchRefactorRelativeV3RewardsCfg()
+    expected = parent.to_dict()
+    expected['target_contact'] = None
+    expected['target_goal_distance'] = child.target_goal_distance.to_dict()
+    assert child.to_dict() == expected
+    assert parent.to_dict() == before
+    assert child.target_goal_distance.weight == 25.
+    assert child.target_goal_distance.params == {'distance_scale': .05, 'threshold_n': .01}
+    env, pos, forces = reward_env()
+    env.cfg.contact_height_limit = env.cfg.goal_reward_height_limit = .14
+    env.scene['ee_frame'].data.target_pos_w[..., 2] = 1.18
+    env._initial_object_positions_w = torch.zeros_like(pos)
+    goal = env.command_manager.get_command('target_goal_pos')
+    goal[:, 0] = .1
+    env.command_manager.get_command = lambda _: goal
+    term = child.target_goal_distance
+    for xy in ((.02, 0.), (-.02, 0.), (.02, .02), (0., 0.), (.1, 0.)):
+        pos[0, 0, :2] = torch.tensor(xy)
+        base = parent.target_goal_distance.func(env, **parent.target_goal_distance.params)
+        forces.zero_()
+        assert term.func(env, **term.params).item() == 0.
+        forces[0, 0, 0, 0] = .01
+        torch.testing.assert_close(term.func(env, **term.params), base)
+        forces.zero_()  # No contact history or goal-occupancy bypass.
+        assert term.func(env, **term.params).item() == 0.
+    forces[0, 0, 0, 0] = .02
+    env.sensor_data_fresh[:] = False
+    assert term.func(env, **term.params).item() == 0.

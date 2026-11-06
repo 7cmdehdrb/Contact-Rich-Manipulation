@@ -183,3 +183,19 @@ def paired_tactile_observation_noise(data, cfg):
     palm = ((data == 1) | (data == 2)).to(data.dtype)
     dorsal = ((data == -1) | (data == 2)).to(data.dtype)
     return encode_paired_tactile(tactile_observation_noise(torch.cat((palm, dorsal), -1), cfg))
+
+
+class CurrentObjectPositionInEEF(InitialObjectPositionInEEF):
+    """Replace the initial point by the live point, preserving reset-fixed bias."""
+
+    def __call__(self, env, command_name='target_goal_pos', coordinate_noise=.01):
+        initial_observation = super().__call__(env, command_name, coordinate_noise)
+        robot = env.scene['robot'].data
+        initial_world = robot.root_pos_w + quat_apply(robot.root_quat_w, self._position_b)
+        rows = torch.arange(env.num_envs, device=env.device)
+        current = env.scene['object_collection'].data.object_pos_w[rows, env.target_id[:, 0].long()]
+        eef = env.scene['ee_frame'].data
+        # The displacement contains no observation noise. Adding it preserves
+        # the exact bias drawn by the inherited initial-position term.
+        return initial_observation + quat_apply_inverse(
+            eef.target_quat_w[:, 0], current - initial_world)

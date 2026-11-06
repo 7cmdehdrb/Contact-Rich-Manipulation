@@ -1,8 +1,13 @@
 # Inspire Sweep Baseline
 
-## Refactor-Relative-v0
+Relative 활성 환경은 **v0·v2·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.
 
-`Inspire-Wrench-Refactor-Relative-v0`는 v3_1을 직접 상속한다. EEF 상대 초기 타겟·장애물, goal XYZ, 촉각17D를 Actor/Critic 공통 관측으로 사용한다. EEF pose는 base 기준이다. URDF Hand effort10Nm·최초 진입+10 외 물리 생성/reset·제어·보상·일정은 부모와 같다. [전체 계약·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V0_ENVIRONMENT.md).
+- [Relative-v0](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V0_ENVIRONMENT.md): Actor/Critic 모두 초기 타겟, 별도 접촉 유지와 cosine 거리 보상.
+- [Relative-v2](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V2_ENVIRONMENT.md): v0 직접 상속. Actor 초기 타겟, Critic 현재 타겟만 변경.
+- [Relative-v3](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V3_ENVIRONMENT.md): v0 직접 상속. 접촉 유지 보상 삭제, 현재 접촉 조건부 cosine 거리 보상(weight25).
+
+Arm 물리 속도3.14rad/s, effort150/150/150/28/28/28Nm, 종료 임계값4.0→2.0rad/s 커리큘럼은 공통 유지한다. [최종 검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_relative_family_280g_v3.md).
+
 
 ```bash
 python src/inspire_sweep_baseline/scripts/train.py --task Inspire-Wrench-Refactor-Relative-v0 --num_envs 2048 --headless
