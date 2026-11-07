@@ -173,6 +173,17 @@ class WrenchRefactorRelativeV2EnvCfg(WrenchRefactorRelativeEnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_1EnvCfg(WrenchRefactorRelativeV2EnvCfg):
+    """Change only distance alignment to reset-to-goal versus reset-to-current."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import displacement_cosine_goal_distance
+        self.rewards.target_goal_distance.func = displacement_cosine_goal_distance
+        self.rewards.target_goal_distance.params = {"distance_scale": 0.05}
+
+
+@configclass
 class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
     """Direct v0 child: replace contact maintenance by contact-gated distance."""
     rewards: WrenchRefactorRelativeV3RewardsCfg = WrenchRefactorRelativeV3RewardsCfg()

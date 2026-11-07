@@ -1,6 +1,8 @@
 # Inspire Sweep Baseline
 
-Relative 활성 환경은 **v0·v2·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.
+Relative 활성 환경은 **v0·v2·v2_1·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.
+
+`Inspire-Wrench-Refactor-Relative-v2_1`은 v2 직접 상속으로 **거리 항만 시작→목표와 시작→현재의 XY 누적 변위 cosine**으로 교체한다. 기존 거리 증가 페널티−12.97, 성공 보상·종료와 나머지 v2 설정은 유지한다. 아래 실시간 이동 cosine 공통 설명에서 v2_1만 이 예외를 적용한다. [계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V2_ENVIRONMENT.md#relative-v2_1-시작점-기준-누적-변위-cosine).
 
 2026-11-07 후속: 공통 cosine은 현재→목표 방향과 실시간 이동 벡터를 비교하며, 이동 기준 위치는XY1mm 이상일 때만 갱신한다. 매step 거리 증가량에는 `target_inverse_distance = −12.97×max(d_t−d_(t−1), 0)`을 적용한다. v3는 최초 진입·목표 유지·성공 보상과 성공 종료를 제거하여 실패가 없으면10초 timeout까지 진행한다. [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-07_relative_motion_rewards.md).
 

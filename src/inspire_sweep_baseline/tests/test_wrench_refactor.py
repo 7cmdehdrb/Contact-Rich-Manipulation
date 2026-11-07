@@ -254,7 +254,8 @@ def test_cfg_and_runtime_have_no_task_parents():
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.ClassDef):
-                v1_parents = {'WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
+                v1_parents = {'WrenchRefactorRelativeV2_1EnvCfg':'WrenchRefactorRelativeV2EnvCfg',
+                              'WrenchRefactorRelativeV2_1PPORunnerCfg':'WrenchRefactorRelativeV2PPORunnerCfg','WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorRelativeEnvCfg':'WrenchRefactorV3_1EnvCfg',
                               'WrenchRefactorRelativeV3EnvCfg':'WrenchRefactorRelativeEnvCfg',
                               'WrenchRefactorRelativeV3RewardsCfg':'WrenchRefactorRelativeRewardsCfg',
@@ -369,6 +370,15 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     expected = parent.to_dict()
     expected['observations'] = child.observations.to_dict()
     assert child.to_dict() == expected
+    child_before = child.to_dict()
+    variant = env_module.WrenchRefactorRelativeV2_1EnvCfg()
+    expected_variant = child.to_dict()
+    assert variant.rewards.target_goal_distance.func is configs('reward_functions','wrench_refactor').displacement_cosine_goal_distance
+    expected_variant['rewards']['target_goal_distance']['func'] = '_baseline_cpu_pkg.mdp.reward_functions.wrench_refactor:displacement_cosine_goal_distance'
+    expected_variant['rewards']['target_goal_distance']['params'] = {'distance_scale': .05}
+    assert variant.to_dict() == expected_variant
+    assert child.to_dict() == child_before
+    assert variant.rewards.target_inverse_distance.weight == -12.97
     assert parent.to_dict() == before
     assert env_module.WrenchRefactorRelativeV2EnvCfg.__bases__ == (env_module.WrenchRefactorRelativeEnvCfg,)
     v3 = env_module.WrenchRefactorRelativeV3EnvCfg()

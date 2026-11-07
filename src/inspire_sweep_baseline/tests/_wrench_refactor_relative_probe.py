@@ -11,7 +11,7 @@ from isaaclab.app import AppLauncher
 from cli_args import apply_renderer_compatibility
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--version', type=int, choices=(0, 2, 3), default=0)
+parser.add_argument('--version', choices=('0', '2', '2_1', '3'), default='0')
 parser.add_argument('--num_envs', type=int, default=64)
 parser.add_argument('--output', type=Path, default=Path('outputs/wrench_refactor_relative_validation'))
 AppLauncher.add_app_launcher_args(parser)
@@ -86,10 +86,26 @@ try:
     v3_runner_expected = runner.to_dict()
     v3_runner_expected['experiment_name'] = 'inspire_wrench_refactor_relative_v3'
     assert v3_runner.to_dict() == v3_runner_expected
-    if args.version == 2:
+    if args.version in ('2', '2_1'):
         cfg, runner = WrenchRefactorRelativeV2EnvCfg(), WrenchRefactorRelativeV2PPORunnerCfg()
-    elif args.version == 3:
+    elif args.version == '3':
         cfg, runner = v3, v3_runner
+    if args.version == '2_1':
+        from inspire_sweep_baseline.envs.wrench_refactor_envs import WrenchRefactorRelativeV2_1EnvCfg
+        from inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg import WrenchRefactorRelativeV2_1PPORunnerCfg
+        from inspire_sweep_baseline.mdp.reward_functions.wrench_refactor import displacement_cosine_goal_distance
+        previous_cfg, previous_runner = copy.deepcopy(cfg.to_dict()), copy.deepcopy(runner.to_dict())
+        variant, variant_runner = WrenchRefactorRelativeV2_1EnvCfg(), WrenchRefactorRelativeV2_1PPORunnerCfg()
+        expected = copy.deepcopy(previous_cfg)
+        assert variant.rewards.target_goal_distance.func is displacement_cosine_goal_distance
+        expected['rewards']['target_goal_distance']['func'] = 'inspire_sweep_baseline.mdp.reward_functions.wrench_refactor:displacement_cosine_goal_distance'
+        expected['rewards']['target_goal_distance']['params'] = {'distance_scale': .05}
+        assert variant.to_dict() == expected
+        expected_runner = copy.deepcopy(previous_runner)
+        expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_v2_1'
+        assert variant_runner.to_dict() == expected_runner
+        assert cfg.to_dict() == previous_cfg == WrenchRefactorRelativeV2EnvCfg().to_dict()
+        cfg, runner = variant, variant_runner
     print('CONFIG_ALLOWLIST_AND_PARENT_ISOLATION_OK', flush=True)
 
     cfg.scene.num_envs, cfg.sim.device, cfg.seed = args.num_envs, args.device, 42
@@ -98,11 +114,11 @@ try:
     raw = env.unwrapped
     obs, _ = env.reset(seed=42)
     expected_dims = {'policy':58, 'obstacles':64}
-    if args.version == 2:
+    if args.version in ('2', '2_1'):
         expected_dims['critic'] = 58
     assert {k:v.shape[-1] for k,v in obs.items()} == expected_dims
     # Exercise the real manager's post-noise clipping, including corruption-off.
-    for group in ('policy', 'critic') if args.version == 2 else ('policy',):
+    for group in ('policy', 'critic') if args.version in ('2', '2_1') else ('policy',):
         term = getattr(raw.observation_manager.cfg, group).wrist_wrench
         reader, noise = term.func, term.noise
         sample = torch.tensor([[200.,-200.,150.,10.,-10.,8.]], device=raw.device).repeat(raw.num_envs,1)
@@ -120,12 +136,12 @@ try:
         assert sample[0,0] == 200.
     print('FINAL_WRENCH_CLIP_WITH_AND_WITHOUT_NOISE_OK', flush=True)
     robot, objects = raw.scene['robot'], raw.scene['object_collection']
-    assert ('target_contact' in raw.reward_manager.active_terms) == (args.version != 3)
-    assert raw.reward_manager.get_term_cfg('target_goal_distance').weight == (25. if args.version == 3 else 5.)
+    assert ('target_contact' in raw.reward_manager.active_terms) == (args.version != '3')
+    assert raw.reward_manager.get_term_cfg('target_goal_distance').weight == (25. if args.version == '3' else 5.)
     assert raw.reward_manager.get_term_cfg('target_inverse_distance').weight == -12.97
     for name in ('target_goal_first_entry_bonus', 'target_goal_hold', 'target_goal_success_bonus'):
-        assert (name in raw.reward_manager.active_terms) == (args.version != 3)
-    assert ('target_goal_success' in raw.termination_manager.active_terms) == (args.version != 3)
+        assert (name in raw.reward_manager.active_terms) == (args.version != '3')
+    assert ('target_goal_success' in raw.termination_manager.active_terms) == (args.version != '3')
     assert 'timeout' in raw.termination_manager.active_terms
     assert objects.num_objects == 17
     hand = robot.actuators['hand']
@@ -169,13 +185,19 @@ try:
     obs_before = raw._initial_obstacle_observation[other].clone()
     motion = raw.reward_manager.get_term_cfg('target_goal_distance').func
     inverse = raw.reward_manager.get_term_cfg('target_inverse_distance').func
-    anchor_before = motion._anchor[other].clone()
+    anchor_before = motion._anchor[other].clone() if args.version != '2_1' else None
+    initial_before = raw._initial_object_positions_w[other].clone()
     previous_before = inverse._previous[other].clone()
     raw.reset(env_ids=ids)
     target_xy = objects.data.object_pos_w[torch.arange(raw.num_envs, device=raw.device), raw.target_id[:, 0], :2]
-    torch.testing.assert_close(motion._anchor[ids], target_xy[ids])
+    if args.version != '2_1':
+        torch.testing.assert_close(motion._anchor[ids], target_xy[ids])
+    else:
+        torch.testing.assert_close(raw._initial_object_positions_w[ids], objects.data.object_pos_w[ids])
+        torch.testing.assert_close(raw._initial_object_positions_w[other], initial_before)
     torch.testing.assert_close(inverse._previous[ids], target_xy[ids])
-    torch.testing.assert_close(motion._anchor[other], anchor_before)
+    if args.version != '2_1':
+        torch.testing.assert_close(motion._anchor[other], anchor_before)
     torch.testing.assert_close(inverse._previous[other], previous_before)
     torch.testing.assert_close(objects.data.object_link_state_w[other], before)
     torch.testing.assert_close(raw._initial_obstacle_observation[other], obs_before)
@@ -210,7 +232,7 @@ try:
             torch.testing.assert_close(obs['obstacles'], initial_obstacle_positions_in_eef(raw), rtol=0, atol=0)
             eef = raw.scene['ee_frame'].data
             root_data = robot.data
-            groups = ('policy', 'critic') if args.version == 2 else ('policy',)
+            groups = ('policy', 'critic') if args.version in ('2', '2_1') else ('policy',)
             for group in groups:
                 limits = obs[group].new_tensor(cfg.wrist_wrench_observation_limits)
                 assert (obs[group][:, 52:58].abs() <= limits).all()
@@ -234,7 +256,7 @@ try:
         assert torch.equal(raw._clutter_physics.mass_buffer, mass)
         assert torch.equal(raw._revision_bounds_t, bounds)
         assert all(torch.equal(m.properties, old) for m,old in zip(raw._clutter_physics.materials,materials))
-    if args.version == 3:
+    if args.version == '3':
         # Manager-level success/timeout distinction; preserve physical failure terms.
         raw.reset()
         command = raw.command_manager.get_term('target_goal_pos')
@@ -248,7 +270,7 @@ try:
         assert raw.termination_manager.get_term('timeout').all()
         assert raw.termination_manager.time_outs.all()
     report = dict(motion_history_partial_reset=True, inverse_weight=-12.97,
-                  success_terms_removed=(args.version == 3), version=args.version, num_envs=args.num_envs, config_allowlist=True, parent_isolation=True,
+                  success_terms_removed=(args.version == '3'), version=args.version, num_envs=args.num_envs, config_allowlist=True, parent_isolation=True,
                   partial_reset=True, rollout_steps=180, observation_dims=expected_dims,
                   max_initial_bottom_error_m=max_initial_bottom_error,
                   max_parking_drift_m=max_parking_drift, fixed_physics=True, eef_osc=True,

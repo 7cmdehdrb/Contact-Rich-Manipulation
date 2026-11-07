@@ -286,6 +286,10 @@ def test_v2_runner_preserves_ppo_settings(omni_config):
         expected[group]['class_name'] = 'inspire_sweep_baseline.agent.wrench_refactor_models:WrenchRefactorRelativeV2Model'
     assert child.to_dict() == expected
     assert parent.to_dict() == before
+    variant = module.WrenchRefactorRelativeV2_1PPORunnerCfg()
+    expected_variant = child.to_dict()
+    expected_variant['experiment_name'] = 'inspire_wrench_refactor_relative_v2_1'
+    assert variant.to_dict() == expected_variant
 
 
 def test_relative_velocity_curriculum_boundaries_and_rewind(load_mdp):
