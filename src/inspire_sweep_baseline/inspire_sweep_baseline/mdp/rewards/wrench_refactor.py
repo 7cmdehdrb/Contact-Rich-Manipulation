@@ -23,6 +23,7 @@ from ..reward_functions.revision import (
 from ..reward_functions.wrench_refactor import (
     contact_gated_goal_distance, displacement_cosine_goal_distance,
     contact_gated_displacement_cosine_goal_distance,
+    RelativeMotionCosineGoalDistance, RelativeInverseDistance,
 )
 from ..reward_functions.wrench import settled_success_bonus
 from ..reward_functions.wrench_refactor import RefactorContactMaintenance, RefactorActionRatePenalty, RefactorFirstEntry
@@ -122,10 +123,23 @@ class WrenchRefactorV2RewardsCfg(WrenchRefactorRewardsCfg):
 
 
 @configclass
-class WrenchRefactorRelativeV3RewardsCfg(WrenchRefactorV2RewardsCfg):
+class WrenchRefactorRelativeRewardsCfg(WrenchRefactorV2RewardsCfg):
+    """Relative v0 and descendants: live motion cosine and outward-only cost."""
+    target_goal_distance = RewTerm(
+        func=RelativeMotionCosineGoalDistance, weight=5.0,
+        params={"distance_scale": 0.05, "anchor_distance": 0.001},
+    )
+    # 20% of integral_0^3 5*exp(-(.1-t/30)/.05) dt, divided by .1 m.
+    # The callable cancels RewardManager's dt: actual reward = -12.97*max(delta_d, 0).
+    target_inverse_distance = RewTerm(func=RelativeInverseDistance, weight=-12.97)
+
+
+@configclass
+class WrenchRefactorRelativeV3RewardsCfg(WrenchRefactorRelativeRewardsCfg):
     """Contact-gated Relative distance with Refactor-v1's weight, no maintenance."""
     target_contact = None
     target_goal_distance = RewTerm(
-        func=contact_gated_displacement_cosine_goal_distance, weight=25.0,
-        params={"distance_scale": 0.05, "threshold_n": 0.01},
+        func=RelativeMotionCosineGoalDistance, weight=25.0,
+        params={"distance_scale": 0.05, "anchor_distance": 0.001,
+                "require_contact": True, "threshold_n": 0.01},
     )

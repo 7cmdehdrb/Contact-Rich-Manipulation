@@ -195,3 +195,77 @@ def contact_gated_displacement_cosine_goal_distance(env, distance_scale=0.05,
     contact = target_contact_below_height(env, threshold_n=threshold_n).bool()
     reward = displacement_cosine_goal_distance(env, distance_scale, command_name)
     return torch.where(contact, reward, 0.0)
+
+
+class RelativeMotionCosineGoalDistance(ManagerTermBase):
+    """Current XY goal direction versus motion from a distance-triggered anchor.
+
+    Evaluate every control step, then advance the anchor only at >= 1 mm.
+    Subthreshold motion is still evaluated, not suppressed or normalized by 1 mm.
+    Contact/height gates affect payment only; histories continue to advance.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._anchor = _object_position(env)[:, :2].clone()
+        self._value = self._anchor.new_zeros(env.num_envs)
+        self._step = torch.full((env.num_envs,), -1, device=env.device, dtype=torch.long)
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        self._anchor[ids] = _object_position(self._env)[ids, :2]
+        self._value[ids] = 0.
+        self._step[ids] = -1
+
+    def __call__(self, env, distance_scale=0.05, anchor_distance=0.001,
+                 require_contact=False, threshold_n=0.01, command_name="target_goal_pos"):
+        from .revision import goal_distance_v2, target_contact_below_height
+
+        fresh = self._step != env.common_step_counter
+        position = _object_position(env)[:, :2]
+        motion = position - self._anchor
+        toward_goal = env.command_manager.get_command(command_name)[:, :2] - position
+        move_norm = motion.norm(dim=-1)
+        goal_norm = toward_goal.norm(dim=-1)
+        cosine = ((motion / move_norm.clamp_min(1e-8)[:, None]) *
+                  (toward_goal / goal_norm.clamp_min(1e-8)[:, None])).sum(-1).clamp(-1., 1.)
+        value = goal_distance_v2(env, distance_scale=distance_scale, command_name=command_name) * cosine
+        valid = (move_norm > 1e-8) & (goal_norm > 1e-8) & torch.isfinite(value)
+        if require_contact:
+            valid &= target_contact_below_height(env, threshold_n=threshold_n).bool()
+        self._value[fresh] = torch.where(valid, value, 0.)[fresh]
+        advance = fresh & (move_norm >= anchor_distance) & torch.isfinite(position).all(-1)
+        self._anchor[advance] = position[advance]
+        self._step[fresh] = env.common_step_counter
+        return self._value.clone()
+
+
+class RelativeInverseDistance(ManagerTermBase):
+    """Outward XY distance increment; dt cancellation gives weight * delta per step.
+
+    Store the previous control-step position independently of the cosine anchor.
+    Reset captures the spawned position, before CommandManager resets its goal;
+    evaluate both distances against the episode's current goal on the next call.
+    """
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._previous = _object_position(env)[:, :2].clone()
+        self._value = self._previous.new_zeros(env.num_envs)
+        self._step = torch.full((env.num_envs,), -1, device=env.device, dtype=torch.long)
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        self._previous[ids] = _object_position(self._env)[ids, :2]
+        self._value[ids] = 0.
+        self._step[ids] = -1
+
+    def __call__(self, env, command_name="target_goal_pos"):
+        fresh = self._step != env.common_step_counter
+        position = _object_position(env)[:, :2]
+        goal = env.command_manager.get_command(command_name)[:, :2]
+        delta = (position - goal).norm(dim=-1) - (self._previous - goal).norm(dim=-1)
+        self._value[fresh] = delta.clamp_min(0.)[fresh] / env.step_dt
+        self._previous[fresh] = position[fresh]
+        self._step[fresh] = env.common_step_counter
+        return self._value.clone()

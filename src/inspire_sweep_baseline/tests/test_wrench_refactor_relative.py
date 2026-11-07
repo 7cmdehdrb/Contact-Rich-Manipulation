@@ -320,10 +320,87 @@ def test_relative_velocity_curriculum_updates_real_termination(load_mdp):
     assert functions.arm_velocity(env, **term.params).tolist() == [True, True, False, True]
 
 
-def test_relative_v3_only_gates_cosine_distance_and_removes_contact(configs):
+def motion_reward_env(count=1):
     from test_wrench_refactor import reward_env
+    env, pos, forces = reward_env(count)
+    env.step_dt = .02
+    env.cfg.contact_height_limit = env.cfg.goal_reward_height_limit = .14
+    env.scene['ee_frame'].data.target_pos_w[..., 2] = 1.18
+    pos[:, 0, :2] = 0.
+    goal = torch.zeros(count, 3, dtype=pos.dtype)
+    goal[:, 0] = .1
+    env.command_manager.get_command = lambda _: goal
+    return env, pos, forces, goal
+
+
+def test_relative_motion_anchor_threshold_and_per_step_evaluation(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, pos, _, goal = motion_reward_env(3)
+    term = m.RelativeMotionCosineGoalDistance(NS(params={}), env)
+    assert not term(env).any()
+    env.common_step_counter += 1
+    pos[:, 0, 0] = pos.new_tensor([.000999, .001, .001001])
+    result = term(env)
+    assert (result > 0).all()  # 1 mm is NOT a minimum reward displacement.
+    assert term._anchor[0, 0] == 0.
+    torch.testing.assert_close(term._anchor[1:, 0], pos[1:, 0, 0])
+    torch.testing.assert_close(term(env), result)  # Updating anchor cannot change duplicate calls.
+    env.common_step_counter += 1
+    pos[:, 0, 0] += .0002
+    assert (term(env) > 0).all()
+    torch.testing.assert_close(term._anchor[0], pos[0, 0, :2])
+    # A sub-mm retreat still evaluates against retained anchor, as requested.
+    env.common_step_counter += 1
+    pos[:, 0, 0] -= .0001
+    assert term(env).tolist()[0] < 0 < term(env).tolist()[1]
+    # Orthogonal motion, overshoot, and returning after overshoot.
+    env.common_step_counter += 1
+    pos[0, 0, :2] = torch.tensor([.12, 0.])
+    assert term(env)[0] < 0
+    env.common_step_counter += 1
+    pos[0, 0, 0] = .11
+    assert term(env)[0] > 0
+    env.common_step_counter += 1
+    pos[0, 0, :2] = goal[0, :2]
+    assert term(env)[0] == 0  # Goal vector has no direction at exact goal.
+    env.common_step_counter += 1
+    pos[0, 0, :2] = torch.tensor([.04, 0.])
+    term.reset(torch.tensor([0]))
+    pos[0, 0, 1] = .002
+    goal[0, :2] = pos.new_tensor([.1, .002])
+    assert term(env)[0] == 0
+
+
+def test_relative_inverse_distance_reset_dt_and_no_contact_gate(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, pos, forces, goal = motion_reward_env(2)
+    term = m.RelativeInverseDistance(NS(params={}), env)
+    forces.zero_()
+    pos[:, 0, 0] = torch.tensor([.01, -.01])
+    torch.testing.assert_close(term(env) * env.step_dt, pos.new_tensor([0., .01]))
+    torch.testing.assert_close(term(env) * env.step_dt, pos.new_tensor([0., .01]))
+    env.common_step_counter += 1
+    pos[:, 0, 0] += .001
+    assert not term(env).any()
+    # Partial reset and a newly sampled goal must not charge a teleport.
+    pos[0, 0, 0] = 10.
+    term.reset(torch.tensor([0]))
+    goal[0, 0] = 10.1
+    assert term(env)[0] == 0.
+    env.common_step_counter += 1
+    pos[:, 0, 0] -= .002
+    torch.testing.assert_close(term(env) * env.step_dt, pos.new_tensor([.002, .002]))
+    env.step_dt = .01
+    env.common_step_counter += 1
+    pos[:, 0, 0] -= .002
+    torch.testing.assert_close(-12.97 * term(env) * env.step_dt, pos.new_tensor([-.02594, -.02594]))
+    term.reset()
+    assert not term(env).any()
+
+
+def test_relative_v3_contact_gate_advances_history_even_without_contact(configs):
     m = configs('rewards', 'wrench_refactor')
-    parent = m.WrenchRefactorV2RewardsCfg()
+    parent = m.WrenchRefactorRelativeRewardsCfg()
     before = parent.to_dict()
     child = m.WrenchRefactorRelativeV3RewardsCfg()
     expected = parent.to_dict()
@@ -332,24 +409,29 @@ def test_relative_v3_only_gates_cosine_distance_and_removes_contact(configs):
     assert child.to_dict() == expected
     assert parent.to_dict() == before
     assert child.target_goal_distance.weight == 25.
-    assert child.target_goal_distance.params == {'distance_scale': .05, 'threshold_n': .01}
-    env, pos, forces = reward_env()
-    env.cfg.contact_height_limit = env.cfg.goal_reward_height_limit = .14
-    env.scene['ee_frame'].data.target_pos_w[..., 2] = 1.18
-    env._initial_object_positions_w = torch.zeros_like(pos)
-    goal = env.command_manager.get_command('target_goal_pos')
-    goal[:, 0] = .1
-    env.command_manager.get_command = lambda _: goal
-    term = child.target_goal_distance
-    for xy in ((.02, 0.), (-.02, 0.), (.02, .02), (0., 0.), (.1, 0.)):
-        pos[0, 0, :2] = torch.tensor(xy)
-        base = parent.target_goal_distance.func(env, **parent.target_goal_distance.params)
-        forces.zero_()
-        assert term.func(env, **term.params).item() == 0.
-        forces[0, 0, 0, 0] = .01
-        torch.testing.assert_close(term.func(env, **term.params), base)
-        forces.zero_()  # No contact history or goal-occupancy bypass.
-        assert term.func(env, **term.params).item() == 0.
+    env, pos, forces, _ = motion_reward_env()
+    cfg = child.target_goal_distance
+    term = cfg.func(cfg, env)
+    forces.zero_()
+    pos[0, 0, 0] = .02
+    assert term(env, **cfg.params) == 0
+    assert term._anchor[0, 0] == .02
+    env.common_step_counter += 1
     forces[0, 0, 0, 0] = .02
+    pos[0, 0, 0] = .019
+    assert term(env, **cfg.params) < 0  # New local motion, not initial-to-current.
+    env.common_step_counter += 1
     env.sensor_data_fresh[:] = False
-    assert term.func(env, **term.params).item() == 0.
+    pos[0, 0, 0] = .03
+    assert term(env, **cfg.params) == 0
+
+
+def test_inverse_distance_calibration_and_old_refactor_preservation(configs):
+    m = configs('rewards', 'wrench_refactor')
+    integral = 5. * 3. * .05 / .1 * (1. - math.exp(-.1 / .05))
+    cfg = m.WrenchRefactorRelativeRewardsCfg().target_inverse_distance
+    assert cfg.weight == -round(.2 * integral / .1, 2) == -12.97
+    assert abs(abs(cfg.weight) * .1 / integral - .2) < 1e-5
+    old = m.WrenchRefactorV2RewardsCfg()
+    assert old.target_goal_distance.func.__name__ == 'displacement_cosine_goal_distance'
+    assert not hasattr(old, 'target_inverse_distance')

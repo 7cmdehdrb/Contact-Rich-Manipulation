@@ -37,6 +37,8 @@ try:
     expected['scene']['robot']['actuators']['hand']['effort_limit_sim'] = 10.
     expected['scene']['robot']['spawn']['sensor_mass'] = .280
     expected['rewards']['target_goal_first_entry_bonus']['weight'] = 10.
+    expected['rewards']['target_goal_distance'] = cfg.rewards.target_goal_distance.to_dict()
+    expected['rewards']['target_inverse_distance'] = cfg.rewards.target_inverse_distance.to_dict()
     expected['wrist_wrench_observation_limits'] = (150.,150.,150.,8.,8.,8.)
     expected['rewards']['robot_action_rate_penalty']['params'] = {'arm_max_cost':100., 'hand_max_cost':100.}
     expected['scene']['robot']['actuators']['arm']['velocity_limit_sim'] = dict.fromkeys(cfg.scene.robot.actuators['arm'].velocity_limit_sim, 3.14)
@@ -74,6 +76,9 @@ try:
     v3_expected = copy.deepcopy(v0_snapshot)
     v3_expected['rewards']['target_contact'] = None
     v3_expected['rewards']['target_goal_distance'] = v3.rewards.target_goal_distance.to_dict()
+    for name in ('target_goal_first_entry_bonus', 'target_goal_hold', 'target_goal_success_bonus'):
+        v3_expected['rewards'][name] = None
+    v3_expected['terminations']['target_goal_success'] = None
     assert v3.to_dict() == v3_expected
     assert cfg.to_dict() == v0_snapshot == WrenchRefactorRelativeEnvCfg().to_dict()
     assert WrenchRefactorRelativeV3EnvCfg.__bases__ == (WrenchRefactorRelativeEnvCfg,)
@@ -117,6 +122,11 @@ try:
     robot, objects = raw.scene['robot'], raw.scene['object_collection']
     assert ('target_contact' in raw.reward_manager.active_terms) == (args.version != 3)
     assert raw.reward_manager.get_term_cfg('target_goal_distance').weight == (25. if args.version == 3 else 5.)
+    assert raw.reward_manager.get_term_cfg('target_inverse_distance').weight == -12.97
+    for name in ('target_goal_first_entry_bonus', 'target_goal_hold', 'target_goal_success_bonus'):
+        assert (name in raw.reward_manager.active_terms) == (args.version != 3)
+    assert ('target_goal_success' in raw.termination_manager.active_terms) == (args.version != 3)
+    assert 'timeout' in raw.termination_manager.active_terms
     assert objects.num_objects == 17
     hand = robot.actuators['hand']
     torch.testing.assert_close(hand.effort_limit, torch.full_like(hand.effort_limit, 10.))
@@ -157,7 +167,16 @@ try:
     other = torch.arange(1, args.num_envs, 2, device=raw.device)
     before = objects.data.object_link_state_w[other].clone()
     obs_before = raw._initial_obstacle_observation[other].clone()
+    motion = raw.reward_manager.get_term_cfg('target_goal_distance').func
+    inverse = raw.reward_manager.get_term_cfg('target_inverse_distance').func
+    anchor_before = motion._anchor[other].clone()
+    previous_before = inverse._previous[other].clone()
     raw.reset(env_ids=ids)
+    target_xy = objects.data.object_pos_w[torch.arange(raw.num_envs, device=raw.device), raw.target_id[:, 0], :2]
+    torch.testing.assert_close(motion._anchor[ids], target_xy[ids])
+    torch.testing.assert_close(inverse._previous[ids], target_xy[ids])
+    torch.testing.assert_close(motion._anchor[other], anchor_before)
+    torch.testing.assert_close(inverse._previous[other], previous_before)
     torch.testing.assert_close(objects.data.object_link_state_w[other], before)
     torch.testing.assert_close(raw._initial_obstacle_observation[other], obs_before)
     actions = torch.zeros(args.num_envs, 8, device=raw.device)
@@ -215,7 +234,21 @@ try:
         assert torch.equal(raw._clutter_physics.mass_buffer, mass)
         assert torch.equal(raw._revision_bounds_t, bounds)
         assert all(torch.equal(m.properties, old) for m,old in zip(raw._clutter_physics.materials,materials))
-    report = dict(version=args.version, num_envs=args.num_envs, config_allowlist=True, parent_isolation=True,
+    if args.version == 3:
+        # Manager-level success/timeout distinction; preserve physical failure terms.
+        raw.reset()
+        command = raw.command_manager.get_term('target_goal_pos')
+        rows = torch.arange(raw.num_envs, device=raw.device)
+        command.command[:, :2] = objects.data.object_pos_w[rows, raw.target_id[:, 0], :2]
+        raw.episode_length_buf[:] = 150  # Former three-second success hold.
+        raw.termination_manager.compute()
+        assert not raw.termination_manager.get_term('timeout').any()
+        raw.episode_length_buf[:] = raw.max_episode_length
+        raw.termination_manager.compute()
+        assert raw.termination_manager.get_term('timeout').all()
+        assert raw.termination_manager.time_outs.all()
+    report = dict(motion_history_partial_reset=True, inverse_weight=-12.97,
+                  success_terms_removed=(args.version == 3), version=args.version, num_envs=args.num_envs, config_allowlist=True, parent_isolation=True,
                   partial_reset=True, rollout_steps=180, observation_dims=expected_dims,
                   max_initial_bottom_error_m=max_initial_bottom_error,
                   max_parking_drift_m=max_parking_drift, fixed_physics=True, eef_osc=True,

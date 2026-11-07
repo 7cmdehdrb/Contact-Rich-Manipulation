@@ -2,6 +2,8 @@
 
 Relative 활성 환경은 **v0·v2·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.
 
+2026-11-07 후속: 공통 cosine은 현재→목표 방향과 실시간 이동 벡터를 비교하며, 이동 기준 위치는XY1mm 이상일 때만 갱신한다. 매step 거리 증가량에는 `target_inverse_distance = −12.97×max(d_t−d_(t−1), 0)`을 적용한다. v3는 최초 진입·목표 유지·성공 보상과 성공 종료를 제거하여 실패가 없으면10초 timeout까지 진행한다. [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-07_relative_motion_rewards.md).
+
 - [Relative-v0](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V0_ENVIRONMENT.md): Actor/Critic 모두 초기 타겟, 별도 접촉 유지와 cosine 거리 보상.
 - [Relative-v2](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V2_ENVIRONMENT.md): v0 직접 상속. Actor 초기 타겟, Critic 현재 타겟만 변경.
 - [Relative-v3](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V3_ENVIRONMENT.md): v0 직접 상속. 접촉 유지 보상 삭제, 현재 접촉 조건부 cosine 거리 보상(weight25).

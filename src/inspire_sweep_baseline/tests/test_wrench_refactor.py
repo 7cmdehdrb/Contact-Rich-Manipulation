@@ -257,7 +257,8 @@ def test_cfg_and_runtime_have_no_task_parents():
                 v1_parents = {'WrenchRefactorV0_1EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorRelativeEnvCfg':'WrenchRefactorV3_1EnvCfg',
                               'WrenchRefactorRelativeV3EnvCfg':'WrenchRefactorRelativeEnvCfg',
-                              'WrenchRefactorRelativeV3RewardsCfg':'WrenchRefactorV2RewardsCfg',
+                              'WrenchRefactorRelativeV3RewardsCfg':'WrenchRefactorRelativeRewardsCfg',
+                              'WrenchRefactorRelativeRewardsCfg':'WrenchRefactorV2RewardsCfg',
                               'WrenchRefactorRelativeV2EnvCfg':'WrenchRefactorRelativeEnvCfg',
                               'WrenchRefactorRelativeV2ObservationsCfg':'WrenchRefactorRelativeObservationsCfg',
                               'WrenchRefactorRelativeV2ModelCfg':'WrenchRefactorRelativeModelCfg',
@@ -331,6 +332,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
               WrenchRefactorOSCActionCfg=NS(OffsetCfg=_AssetNode))
     for role, name in [('commands','Commands'),('observations','Observations'),('rewards','Rewards'),('events','Events'),('terminations','Terminations'),('curricula','Curriculum')]:
         ns[f'WrenchRefactor{name}Cfg'] = getattr(configs(role,'wrench_refactor'),f'WrenchRefactor{name}Cfg')
+    ns['WrenchRefactorRelativeRewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorRelativeRewardsCfg
     ns['WrenchRefactorRelativeV3RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorRelativeV3RewardsCfg
     ns['WrenchRefactorV2RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV2RewardsCfg
     ns['WrenchRefactorV1RewardsCfg'] = configs('rewards','wrench_refactor').WrenchRefactorV1RewardsCfg
@@ -373,6 +375,10 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     expected_v3 = parent.to_dict()
     expected_v3['rewards']['target_contact'] = None
     expected_v3['rewards']['target_goal_distance'] = v3.rewards.target_goal_distance.to_dict()
+    for name in ('target_goal_first_entry_bonus', 'target_goal_hold', 'target_goal_success_bonus'):
+        expected_v3['rewards'][name] = None
+    expected_v3['terminations']['target_goal_success'] = None
+    assert parent.rewards.target_inverse_distance.weight == child.rewards.target_inverse_distance.weight == v3.rewards.target_inverse_distance.weight == -12.97
     assert v3.to_dict() == expected_v3
     assert parent.to_dict() == before
     assert parent.scene.robot.spawn.sensor_mass == child.scene.robot.spawn.sensor_mass == v3.scene.robot.spawn.sensor_mass == .280

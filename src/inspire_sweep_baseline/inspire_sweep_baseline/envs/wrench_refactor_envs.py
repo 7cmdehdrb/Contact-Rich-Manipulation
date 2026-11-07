@@ -6,7 +6,7 @@ from ..assets.scenes.wrench_refactor import WrenchRefactorSceneCfg
 from ..mdp.actions.wrench_refactor import WrenchRefactorActionsCfg, WrenchRefactorOSCActionCfg
 from ..mdp.observations.wrench_refactor import WrenchRefactorObservationsCfg, WrenchRefactorRelativeObservationsCfg, WrenchRefactorRelativeV2ObservationsCfg
 from ..mdp.commands.wrench_refactor import WrenchRefactorCommandsCfg
-from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg, WrenchRefactorRelativeV3RewardsCfg
+from ..mdp.rewards.wrench_refactor import WrenchRefactorRewardsCfg, WrenchRefactorV1RewardsCfg, WrenchRefactorV2RewardsCfg, WrenchRefactorRelativeRewardsCfg, WrenchRefactorRelativeV3RewardsCfg
 from ..mdp.terminations.wrench_refactor import WrenchRefactorTerminationsCfg
 from ..mdp.events.wrench_refactor import WrenchRefactorEventsCfg
 from ..mdp.curricula.wrench_refactor import WrenchRefactorCurriculumCfg, WrenchRefactorRelativeCurriculumCfg
@@ -146,6 +146,7 @@ class WrenchRefactorV3_1EnvCfg(WrenchRefactorV3EnvCfg):
 class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
     """v3_1 physics/reset with shared, predominantly EEF-relative observations."""
     observations: WrenchRefactorRelativeObservationsCfg = WrenchRefactorRelativeObservationsCfg()
+    rewards: WrenchRefactorRelativeRewardsCfg = WrenchRefactorRelativeRewardsCfg()
     curriculum: WrenchRefactorRelativeCurriculumCfg = WrenchRefactorRelativeCurriculumCfg()
     # Final observation limits, AFTER gravity/inertia cancellation and noise.
     wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
@@ -175,3 +176,10 @@ class WrenchRefactorRelativeV2EnvCfg(WrenchRefactorRelativeEnvCfg):
 class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
     """Direct v0 child: replace contact maintenance by contact-gated distance."""
     rewards: WrenchRefactorRelativeV3RewardsCfg = WrenchRefactorRelativeV3RewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.target_goal_first_entry_bonus = None
+        self.rewards.target_goal_hold = None
+        self.rewards.target_goal_success_bonus = None
+        self.terminations.target_goal_success = None
