@@ -321,7 +321,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     assert scene.robot.init_state.joint_pos["wrist_3_joint"] == -math.pi/2
     assert len(roster) == 17
     assert [obj.spawn.kind_override for obj in roster.values()] == ['cylinder', *[k for k in kinds for _ in range(2)]]
-    assert scene.robot.spawn.usd_path.endswith('wrench_right_hand/ur5e_inspire_right.usda')
+    assert Path(scene.robot.spawn.usd_path).as_posix().endswith('wrench_right_hand/ur5e_inspire_right.usda')
     for parent in tactile.TACTILE_PARENT_BODY_NAMES:
         sensor = getattr(scene,tactile.parent_sensor_name(parent))
         assert len(sensor.filter_prim_paths_expr) == 17
@@ -354,6 +354,9 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     monkeypatch.setitem(sys.modules, action_module.__name__, action_module)
     parent = env_module.WrenchRefactorRelativeEnvCfg()
     before = parent.to_dict()
+    assert parent.wrist_wrench_observation_limits == (150.,150.,150.,8.,8.,8.)
+    assert parent.rewards.robot_action_rate_penalty.params == {'arm_max_cost':100., 'hand_max_cost':100.}
+    assert env_module.WrenchRefactorV3_1EnvCfg().rewards.robot_action_rate_penalty.params == {}
     assert list(parent.scene.robot.actuators['arm'].velocity_limit_sim.values()) == [3.14] * 6
     assert list(parent.scene.robot.actuators['arm'].effort_limit_sim.values()) == [150.] * 3 + [28.] * 3
     assert parent.terminations.arm_joint_velocity.params['threshold'] == 4.0

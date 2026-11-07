@@ -4,13 +4,19 @@ from isaaclab.managers import ManagerTermBase
 from ..termination_functions.goal_terminations import _object_position
 
 
-def policy_action_rate_penalty(env):
-    """Uncapped raw Arm policy-action change and clamped Hand openness change."""
+def policy_action_rate_penalty(env, arm_max_cost=None, hand_max_cost=None):
+    """Raw Arm and clamped Hand changes; optional caps apply to each squared sum."""
     action = env.action_manager.action
     previous = env.action_manager.prev_action
     arm_delta = action[:, :6] - previous[:, :6]
     hand_delta = action[:, -2:].clamp(0., 1.) - previous[:, -2:].clamp(0., 1.)
-    return 0.03 * arm_delta.square().sum(-1) + 0.03 * hand_delta.square().sum(-1)
+    arm_cost = arm_delta.square().sum(-1)
+    hand_cost = hand_delta.square().sum(-1)
+    if arm_max_cost is not None:
+        arm_cost = arm_cost.clamp_max(arm_max_cost)
+    if hand_max_cost is not None:
+        hand_cost = hand_cost.clamp_max(hand_max_cost)
+    return 0.03 * arm_cost + 0.03 * hand_cost
 
 
 class RefactorActionRatePenalty(ManagerTermBase):

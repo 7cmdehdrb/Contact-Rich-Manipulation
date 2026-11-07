@@ -147,6 +147,8 @@ class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
     """v3_1 physics/reset with shared, predominantly EEF-relative observations."""
     observations: WrenchRefactorRelativeObservationsCfg = WrenchRefactorRelativeObservationsCfg()
     curriculum: WrenchRefactorRelativeCurriculumCfg = WrenchRefactorRelativeCurriculumCfg()
+    # Final observation limits, AFTER gravity/inertia cancellation and noise.
+    wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
 
     def __post_init__(self):
         super().__post_init__()
@@ -154,6 +156,9 @@ class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
         # Vendor right-hand URDF: all twelve revolute joints effort=10, velocity=1.
         self.scene.robot.actuators['hand'].effort_limit_sim = 10.0
         self.rewards.target_goal_first_entry_bonus.weight = 10.0
+        self.rewards.robot_action_rate_penalty.params = {
+            'arm_max_cost': 100.0, 'hand_max_cost': 100.0,
+        }
         self.scene.robot.actuators['arm'].velocity_limit_sim = dict.fromkeys(ARM_JOINT_NAMES, 3.14)
         self.scene.robot.actuators['arm'].effort_limit_sim = dict(
             zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0)))

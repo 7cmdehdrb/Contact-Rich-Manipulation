@@ -37,6 +37,8 @@ try:
     expected['scene']['robot']['actuators']['hand']['effort_limit_sim'] = 10.
     expected['scene']['robot']['spawn']['sensor_mass'] = .280
     expected['rewards']['target_goal_first_entry_bonus']['weight'] = 10.
+    expected['wrist_wrench_observation_limits'] = (150.,150.,150.,8.,8.,8.)
+    expected['rewards']['robot_action_rate_penalty']['params'] = {'arm_max_cost':100., 'hand_max_cost':100.}
     expected['scene']['robot']['actuators']['arm']['velocity_limit_sim'] = dict.fromkeys(cfg.scene.robot.actuators['arm'].velocity_limit_sim, 3.14)
     expected['scene']['robot']['actuators']['arm']['effort_limit_sim'] = dict(zip(cfg.scene.robot.actuators['arm'].effort_limit_sim, (150.,150.,150.,28.,28.,28.)))
     expected['terminations']['arm_joint_velocity']['params']['threshold'] = 4.0
@@ -94,6 +96,24 @@ try:
     if args.version == 2:
         expected_dims['critic'] = 58
     assert {k:v.shape[-1] for k,v in obs.items()} == expected_dims
+    # Exercise the real manager's post-noise clipping, including corruption-off.
+    for group in ('policy', 'critic') if args.version == 2 else ('policy',):
+        term = getattr(raw.observation_manager.cfg, group).wrist_wrench
+        reader, noise = term.func, term.noise
+        sample = torch.tensor([[200.,-200.,150.,10.,-10.,8.]], device=raw.device).repeat(raw.num_envs,1)
+        try:
+            term.func = lambda env: sample.clone()
+            term.noise = None
+            expected = sample.clamp(min=term.clip[0], max=term.clip[1])
+            torch.testing.assert_close(raw.observation_manager.compute_group(group)[:,-6:], expected)
+            term.noise = copy.deepcopy(noise)
+            term.noise.func = lambda data, cfg: data + data.new_tensor([100.,-100.,100.,100.,-100.,100.])
+            noisy_expected = (sample + sample.new_tensor([100.,-100.,100.,100.,-100.,100.])).clamp(min=term.clip[0],max=term.clip[1])
+            torch.testing.assert_close(raw.observation_manager.compute_group(group)[:,-6:], noisy_expected)
+        finally:
+            term.func, term.noise = reader, noise
+        assert sample[0,0] == 200.
+    print('FINAL_WRENCH_CLIP_WITH_AND_WITHOUT_NOISE_OK', flush=True)
     robot, objects = raw.scene['robot'], raw.scene['object_collection']
     assert ('target_contact' in raw.reward_manager.active_terms) == (args.version != 3)
     assert raw.reward_manager.get_term_cfg('target_goal_distance').weight == (25. if args.version == 3 else 5.)
@@ -173,6 +193,8 @@ try:
             root_data = robot.data
             groups = ('policy', 'critic') if args.version == 2 else ('policy',)
             for group in groups:
+                limits = obs[group].new_tensor(cfg.wrist_wrench_observation_limits)
+                assert (obs[group][:, 52:58].abs() <= limits).all()
                 target_term = getattr(raw.observation_manager.cfg, group).target_obs_state.func
                 if group == 'critic':
                     world = objects.data.object_pos_w[torch.arange(raw.num_envs, device=raw.device), raw.target_id[:, 0].long()]

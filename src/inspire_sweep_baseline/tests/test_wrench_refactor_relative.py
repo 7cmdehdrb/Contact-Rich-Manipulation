@@ -12,6 +12,55 @@ from test_final_configuration import configs
 from test_omni_configuration import omni_config
 
 
+def test_capped_raw_action_rate_preserves_parent_and_group_semantics(configs):
+    func = configs('reward_functions', 'wrench_refactor').policy_action_rate_penalty
+    action = torch.tensor([[3., 4., 0., 0., 0., 0., 1., -2.],
+                           [6., 8., 0., 0., 0., 0., 1., 1.],
+                           [8., 8., 0., 0., 0., 0., 40., 73.],
+                           [12000., -9000., 0., 0., 0., 0., -40000., 40000.]])
+    env = NS(action_manager=NS(action=action, prev_action=torch.zeros_like(action)))
+    original = action.clone()
+    capped = func(env, arm_max_cost=100., hand_max_cost=100.)
+    torch.testing.assert_close(capped, torch.tensor([.78, 3.06, 3.06, 3.03]))
+    assert func(env)[-1] > 1e6  # Unrelated Refactor callers retain the uncapped default.
+    # Independent caps: a smaller Hand cap cannot consume the Arm budget.
+    torch.testing.assert_close(func(env, arm_max_cost=100., hand_max_cost=1.)[1], torch.tensor(3.03))
+    assert torch.equal(action, original)
+    assert (capped * .02 <= .061201).all()
+
+
+def test_runtime_installs_final_clip_without_changing_reader_or_saved_cfg():
+    import ast
+    import copy
+    tree = ast.parse((MODULE_ROOT / 'runtime/wrench_refactor.py').read_text(encoding='utf-8'))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef))
+    reader = lambda env: torch.tensor([[900., -500., 100., 20., -30., 1.]])
+    source = NS(policy=NS(wrist_wrench=NS(func=reader, clip=None)),
+                critic=NS(wrist_wrench=NS(func=reader, clip=None)))
+    class Base:
+        def load_managers(self):
+            self.observation_manager = NS(cfg=copy.deepcopy(source),
+                active_terms={'policy':['wrist_wrench'], 'critic':['wrist_wrench']})
+    namespace = {'torch':torch, 'ManagerBasedRLEnv':Base}
+    exec(compile(ast.Module(body=[cls], type_ignores=[]), '<runtime>', 'exec'), namespace)
+    env = namespace['WrenchRefactorEnv'].__new__(namespace['WrenchRefactorEnv'])
+    env.scene = {'shelf':NS(data=NS(root_pos_w=torch.zeros(1,3), root_quat_w=torch.zeros(1,4)))}
+    env.cfg = NS(wrist_wrench_observation_limits=(150.,150.,150.,8.,8.,8.))
+    env.device = 'cpu'
+    env.load_managers()
+    for name in ('policy','critic'):
+        term = getattr(env.observation_manager.cfg,name).wrist_wrench
+        assert term.func is reader
+        raw = term.func(env)
+        assert raw[0,0] == 900  # Compensation/telemetry source is NOT saturated.
+        torch.testing.assert_close(raw.clip(min=term.clip[0],max=term.clip[1]),
+                                   torch.tensor([[150.,-150.,100.,8.,-8.,1.]]))
+        assert getattr(source,name).wrist_wrench.clip is None
+    env.cfg = NS()  # Non-Relative runtime leaves the parent observation unchanged.
+    env.load_managers()
+    assert env.observation_manager.cfg.policy.wrist_wrench.clip is None
+
+
 def relative_env():
     q = torch.tensor([[1., 0., 0., 0.]]).repeat(2, 1)
     root = NS(root_pos_w=torch.tensor([[3., 2., 1.], [-3., 1., 2.]]), root_quat_w=q.clone())

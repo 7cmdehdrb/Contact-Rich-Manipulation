@@ -8,6 +8,8 @@ Relative 활성 환경은 **v0·v2·v3**다. v0부터 Axia 질량280g을 공통 
 
 Arm 물리 속도3.14rad/s, effort150/150/150/28/28/28Nm, 종료 임계값4.0→2.0rad/s 커리큘럼은 공통 유지한다. [최종 검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-06_relative_family_280g_v3.md).
 
+2026-11-07부터 Relative-v0 및 하위 v2/v3의 최종 F/T 관측에 힘 각 축±150N·모멘트 각 축±8N·m 한도를 적용한다. 질량·관성 보정과 noise 이후 관측만 제한하며 보상/진단용 wrench는 유지한다. raw Arm/기존 clamp Hand Action Rate에는 그룹별 제곱합 cap100을 적용한다. [구현·CPU/GPU 검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-07_relative_observation_action_limits.md).
+
 
 ```bash
 python src/inspire_sweep_baseline/scripts/train.py --task Inspire-Wrench-Refactor-Relative-v0 --num_envs 2048 --headless

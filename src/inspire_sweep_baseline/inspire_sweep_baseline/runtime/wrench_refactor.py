@@ -42,6 +42,19 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
         self._revision_initial_shelf_pos = shelf.root_pos_w.clone()
         self._revision_initial_shelf_quat = shelf.root_quat_w.clone()
         super().load_managers()
+        limits = getattr(self.cfg, 'wrist_wrench_observation_limits', None)
+        if limits is not None:
+            bounds = torch.as_tensor(limits, dtype=torch.float32, device=self.device)
+            if bounds.shape != (6,) or not bool((torch.isfinite(bounds) & (bounds > 0)).all()):
+                raise ValueError('Wrist wrench observation limits must be six positive finite values')
+            # ObservationManager owns a deep copy of the serialized config.
+            # Bind device tensors only on its live terms, leaving PureWrenchReader
+            # and direct reward/telemetry reads untouched. Built-in clip runs
+            # after noise and also runs when observation corruption is disabled.
+            for group, terms in self.observation_manager.active_terms.items():
+                if 'wrist_wrench' in terms:
+                    term = getattr(getattr(self.observation_manager.cfg, group), 'wrist_wrench')
+                    term.clip = (-bounds, bounds)
 
     def reset(self, seed=None, env_ids=None, options=None):
         if seed is not None:
