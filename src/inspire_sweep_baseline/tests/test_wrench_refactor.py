@@ -299,6 +299,8 @@ def test_cfg_and_runtime_have_no_task_parents():
                                    for suffix in ('EnvCfg', 'PPORunnerCfg')})
                 v1_parents.update({
                     'WrenchRefactorRelativeIKV0EnvCfg': 'WrenchRefactorRelativeV2_7EnvCfg',
+                    'WrenchRefactorRelativeIKV0_1EnvCfg': 'WrenchRefactorRelativeIKV0EnvCfg',
+                    'WrenchRefactorRelativeIKV0_1PPORunnerCfg': 'WrenchRefactorRelativeIKV0PPORunnerCfg',
                     'WrenchRefactorRelativeIKV1EnvCfg': 'WrenchRefactorRelativeIKV0EnvCfg',
                     'WrenchRefactorRelativeIKV0PPORunnerCfg': 'WrenchRefactorRelativePPORunnerCfg',
                     'WrenchRefactorRelativeIKV1PPORunnerCfg': 'WrenchRefactorRelativeIKV0PPORunnerCfg',
@@ -422,6 +424,10 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
         height_offset=.01)
     assert ik0.to_dict() == expected_ik0
     assert not getattr(ik0, 'debug_reaching_point', False)
+    ik0_1 = env_module.WrenchRefactorRelativeIKV0_1EnvCfg()
+    expected_ik0_1 = copy.deepcopy(expected_ik0)
+    expected_ik0_1['rewards']['target_goal_first_entry_bonus'] = None
+    assert ik0_1.to_dict() == expected_ik0_1
     ik1 = env_module.WrenchRefactorRelativeIKV1EnvCfg()
     expected_ik1 = copy.deepcopy(expected_ik0)
     expected_ik1['rewards']['target_goal_distance'].update(

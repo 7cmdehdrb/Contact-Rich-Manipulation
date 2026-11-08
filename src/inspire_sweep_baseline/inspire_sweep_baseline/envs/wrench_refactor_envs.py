@@ -213,6 +213,15 @@ class WrenchRefactorRelativeIKV0EnvCfg(WrenchRefactorRelativeV2_7EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeIKV0_1EnvCfg(WrenchRefactorRelativeIKV0EnvCfg):
+    """Disable only the first goal-entry bonus."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.target_goal_first_entry_bonus = None
+
+
+@configclass
 class WrenchRefactorRelativeIKV1EnvCfg(WrenchRefactorRelativeIKV0EnvCfg):
     """Contact-gated cumulative progress, without contact/settling event rewards."""
 

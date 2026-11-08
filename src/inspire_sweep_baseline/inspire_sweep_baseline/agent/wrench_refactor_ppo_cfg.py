@@ -150,5 +150,10 @@ class WrenchRefactorRelativeIKV0PPORunnerCfg(WrenchRefactorRelativePPORunnerCfg)
 
 
 @configclass
+class WrenchRefactorRelativeIKV0_1PPORunnerCfg(WrenchRefactorRelativeIKV0PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_ik_v0_1"
+
+
+@configclass
 class WrenchRefactorRelativeIKV1PPORunnerCfg(WrenchRefactorRelativeIKV0PPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_relative_ik_v1"
