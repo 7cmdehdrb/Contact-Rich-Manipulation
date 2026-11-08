@@ -186,6 +186,49 @@ class WrenchRefactorRelativeV2_1EnvCfg(WrenchRefactorRelativeV2EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_7EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Keep v2_1 and initialize the arm opposite the requested push via IK."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from isaaclab.managers import EventTermCfg
+        from ..mdp.event_functions.wrench_refactor import reset_robot_from_goal_ik
+        self.events.robot_initial_pose = EventTermCfg(
+            func=reset_robot_from_goal_ik, mode='reset', params={
+                'front_clearance': (0.10, 0.13), 'lateral_offset': (0.10, 0.14), 'height_jitter': 0.01,
+            })
+
+
+@configclass
+class WrenchRefactorRelativeIKV0EnvCfg(WrenchRefactorRelativeV2_7EnvCfg):
+    """Goal-conditioned IK with shared initial-only Actor/Critic observations."""
+    debug_initial_ik_bounds: bool = True
+    observations: WrenchRefactorRelativeObservationsCfg = WrenchRefactorRelativeObservationsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.robot_initial_pose.params.update(
+            front_clearance=(0.08, 0.10), lateral_offset=(0.10, 0.18),
+            height_jitter=0.02, height_offset=0.01)
+
+
+@configclass
+class WrenchRefactorRelativeIKV1EnvCfg(WrenchRefactorRelativeIKV0EnvCfg):
+    """Contact-gated cumulative progress, without contact/settling event rewards."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import contact_gated_displacement_cosine_goal_distance
+        self.rewards.target_goal_distance.func = contact_gated_displacement_cosine_goal_distance
+        self.rewards.target_goal_distance.params = {'distance_scale': 0.05, 'threshold_n': 0.01}
+        self.rewards.target_contact = None
+        self.rewards.target_goal_hold = None
+        self.rewards.target_goal_first_entry_bonus = None
+        self.rewards.target_goal_success_bonus = None
+        self.terminations.target_goal_success = None
+
+
+@configclass
 class WrenchRefactorRelativeV2_6EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
     """Only fix the goal to 9 cm straight left of the initial target."""
 

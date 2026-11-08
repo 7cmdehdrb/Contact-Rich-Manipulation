@@ -60,6 +60,10 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
     def reset(self, seed=None, env_ids=None, options=None):
         if seed is not None:
             self._revision_layout_rng.manual_seed(seed)
+            if getattr(self.cfg.events, 'robot_initial_pose', None) is not None:
+                self._goal_reset_seed = seed + 1707
+                if hasattr(self, '_goal_reset_rng'):
+                    self._goal_reset_rng.manual_seed(self._goal_reset_seed)
         result = super().reset(seed=seed, env_ids=env_ids, options=options)
         self._update_reaching_point_marker()
         return result
@@ -97,6 +101,55 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
         )
         self._reaching_point_marker.set_visibility(True)
         self._reaching_point_marker.visualize(translations=point)
+
+    def _update_initial_ik_bounds(self, ids, target_local, default_local, shelf_pos, shelf_quat,
+                                  front_clearance, lateral_offset, height_jitter):
+        """Draw both reset sampling boxes as non-physical 1 mm wire edges."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+        from isaaclab.utils.math import quat_apply
+
+        if not hasattr(self, '_initial_ik_bounds_marker'):
+            self._initial_ik_bounds_marker = VisualizationMarkers(VisualizationMarkersCfg(
+                prim_path='/Visuals/InspireWrenchRefactor/initial_ik_bounds',
+                markers={name: sim_utils.CuboidCfg(
+                    size=(1., 1., 1.), rigid_props=None, collision_props=None,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=color),
+                ) for name, color in [('right', (0.1, 0.8, 1.0)), ('left', (1.0, 0.5, 0.1))]},
+            ))
+            self._ik_bounds_positions = torch.zeros((self.num_envs, 24, 3), device=self.device)
+            self._ik_bounds_rotations = torch.zeros((self.num_envs, 24, 4), device=self.device)
+            self._ik_bounds_scales = torch.zeros((self.num_envs, 24, 3), device=self.device)
+            self._ik_bounds_active = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        size = target_local.new_tensor((front_clearance[1] - front_clearance[0],
+                                       lateral_offset[1] - lateral_offset[0], 2 * height_jitter))
+        positions, scales = [], []
+        for side in (1., -1.):
+            center = default_local.clone()
+            center[:, 0] = .20 + sum(front_clearance) / 2
+            center[:, 1] = target_local[:, 1] + side * sum(lateral_offset) / 2
+            for axis in range(3):
+                other = [i for i in range(3) if i != axis]
+                for a, b in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
+                    edge = center.clone()
+                    edge[:, other[0]] += a * size[other[0]] / 2
+                    edge[:, other[1]] += b * size[other[1]] / 2
+                    positions.append(shelf_pos + quat_apply(shelf_quat, edge))
+                    scale = size.new_full((3,), .001)
+                    scale[axis] = size[axis].clamp_min(.001)
+                    scales.append(scale)
+        self._ik_bounds_positions[ids] = torch.stack(positions, dim=1)
+        self._ik_bounds_rotations[ids] = shelf_quat[:, None, :]
+        self._ik_bounds_scales[ids] = torch.stack(scales)
+        self._ik_bounds_active[ids] = True
+        active = self._ik_bounds_active
+        indices = torch.arange(24, device=self.device).div(12, rounding_mode='floor')
+        self._initial_ik_bounds_marker.visualize(
+            translations=self._ik_bounds_positions[active].reshape(-1, 3),
+            orientations=self._ik_bounds_rotations[active].reshape(-1, 4),
+            scales=self._ik_bounds_scales[active].reshape(-1, 3),
+            marker_indices=indices.repeat(int(active.sum())),
+        )
 
     def set_learning_iteration(self, iteration):
         if not isinstance(iteration, int) or isinstance(iteration, bool) or iteration < 0:

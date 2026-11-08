@@ -119,3 +119,97 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     env._revision_layout_complete[ids] = True
     env._revision_spawn_positions[ids] = world
     env.sensor_data_fresh[ids] = False
+
+
+def reset_robot_from_goal_ik(env, env_ids, front_clearance=(0.10, 0.13),
+                            lateral_offset=(0.10, 0.14), height_jitter=0.01,
+                            height_offset=0.0, max_condition=None, joint_margin=0.0,
+                            max_attempts=1):
+    """Run after object_spawn and before observation/action/reward manager resets."""
+    from isaaclab.sim.utils import get_current_stage
+    from isaaclab.utils.math import quat_apply_inverse, quat_mul
+    from ...assets.robot import ARM_JOINT_NAMES
+    from ..common.wrench_refactor_ik import ResetArmIK, sample_initial_eef
+
+    if (not math.isfinite(height_offset) or max_attempts < 1
+            or (max_condition is not None and (not math.isfinite(max_condition) or max_condition < 1))
+            or not math.isfinite(joint_margin) or joint_margin < 0):
+        raise ValueError('Invalid initial IK height/quality/retry settings')
+
+    ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
+           else torch.as_tensor(env_ids, device=env.device, dtype=torch.long))
+    if not len(ids):
+        return
+    robot, shelf = env.scene['robot'], env.scene['shelf'].data
+    if not hasattr(env, '_goal_reset_ik'):
+        offset = env.cfg.scene.ee_frame.target_frames[0].offset
+        path = env.scene.env_prim_paths[0] + '/Robot'
+        env._goal_reset_ik = ResetArmIK.from_stage(get_current_stage(), path, ARM_JOINT_NAMES,
+                                                 offset.pos, offset.rot, env.device)
+        env._goal_reset_arm_ids = robot.find_joints(list(ARM_JOINT_NAMES), preserve_order=True)[0]
+        env._goal_reset_base_id = robot.find_bodies('base_link')[0][0]
+        env._goal_reset_rng = torch.Generator(device=env.device).manual_seed(
+            getattr(env, '_goal_reset_seed', int(env.cfg.seed or 0) + 1707))
+        env._goal_reset_desired_pos_w = torch.zeros((env.num_envs, 3), device=env.device)
+        env._goal_reset_desired_quat_w = torch.zeros((env.num_envs, 4), device=env.device)
+        env._goal_reset_errors = torch.zeros((env.num_envs, 2), device=env.device)
+    chain, arm_ids = env._goal_reset_ik, env._goal_reset_arm_ids
+    base_pos = robot.data.body_link_pos_w[ids, env._goal_reset_base_id].clone()
+    base_quat = robot.data.body_link_quat_w[ids, env._goal_reset_base_id].clone()
+    initial = robot.data.default_joint_pos[ids][:, arm_ids]
+    default_pos, default_quat = chain.forward(initial)
+    default_world = base_pos + quat_apply(base_quat, default_pos)
+    default_local = quat_apply_inverse(shelf.root_quat_w[ids], default_world - shelf.root_pos_w[ids])
+    default_local[:, 2] += height_offset
+    target_local = quat_apply_inverse(shelf.root_quat_w[ids],
+        env._revision_spawn_positions[ids, 0] - shelf.root_pos_w[ids])
+    sweep_local = quat_apply_inverse(shelf.root_quat_w[ids], env.sweep_dir[ids])
+    desired_local = sample_initial_eef(target_local, sweep_local, default_local, env._goal_reset_rng,
+                                       front_clearance, lateral_offset, height_jitter)
+    desired_world = shelf.root_pos_w[ids] + quat_apply(shelf.root_quat_w[ids], desired_local)
+    desired_base, _ = subtract_frame_transforms(base_pos, base_quat, desired_world)
+    limits = robot.data.joint_pos_limits[ids][:, arm_ids]
+    angles, valid, position_error, rotation_error = chain.solve(desired_base, default_quat, initial, limits)
+    if max_condition is not None:
+        # Normalize translation by a 0.3 m characteristic arm length before SVD.
+        # Otherwise a mixed metre/radian condition number depends on units.
+        from ..common.wrench_refactor_ik import initial_pose_quality
+        for attempt in range(max_attempts):
+            quality, condition, margin = initial_pose_quality(chain, angles, limits, max_condition, joint_margin)
+            valid &= quality
+            if bool(valid.all()) or attempt == max_attempts - 1:
+                break
+            retry = ~valid
+            desired_local[retry] = sample_initial_eef(
+                target_local[retry], sweep_local[retry], default_local[retry], env._goal_reset_rng,
+                front_clearance, lateral_offset, height_jitter)
+            desired_world[retry] = shelf.root_pos_w[ids][retry] + quat_apply(
+                shelf.root_quat_w[ids][retry], desired_local[retry])
+            retry_base, _ = subtract_frame_transforms(base_pos[retry], base_quat[retry], desired_world[retry])
+            angles[retry], valid[retry], position_error[retry], rotation_error[retry] = chain.solve(
+                retry_base, default_quat[retry], initial[retry], limits[retry])
+        if not hasattr(env, '_goal_reset_condition'):
+            env._goal_reset_condition = torch.zeros(env.num_envs, device=env.device)
+            env._goal_reset_joint_margin = torch.zeros(env.num_envs, device=env.device)
+        env._goal_reset_condition[ids] = condition
+        env._goal_reset_joint_margin[ids] = margin
+    if not bool(valid.all()):
+        raise RuntimeError(f'Goal-conditioned reset IK pose/quality check failed for envs {ids[~valid].tolist()}; '
+                           f'max position error={position_error.max().item():.6f}m, '
+                           f'rotation error={rotation_error.max().item():.6f}rad')
+    # No fallback to a default pose on the wrong side. No intermediate IK
+    # iterates are written to PhysX, and unrelated environments never advance.
+    robot.write_joint_state_to_sim(angles, torch.zeros_like(angles), joint_ids=arm_ids, env_ids=ids)
+    robot.set_joint_position_target(angles, joint_ids=arm_ids, env_ids=ids)
+    robot.set_joint_velocity_target(torch.zeros_like(angles), joint_ids=arm_ids, env_ids=ids)
+    # Refresh PhysX link transforms before snapshot observations/rewards read
+    # the frame sensor in their reset callbacks (without advancing physics).
+    _ = robot.data.body_link_pos_w
+    env.scene['ee_frame'].reset(ids)
+    env._goal_reset_desired_pos_w[ids] = desired_world
+    env._goal_reset_desired_quat_w[ids] = quat_mul(base_quat, default_quat)
+    env._goal_reset_errors[ids] = torch.stack((position_error, rotation_error), -1)
+    if getattr(env.cfg, 'debug_initial_ik_bounds', False):
+        env._update_initial_ik_bounds(ids, target_local, default_local,
+                                     shelf.root_pos_w[ids], shelf.root_quat_w[ids],
+                                     front_clearance, lateral_offset, height_jitter)

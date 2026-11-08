@@ -294,9 +294,15 @@ def test_cfg_and_runtime_have_no_task_parents():
                 v1_parents.update({f'WrenchRefactorRelative{v}Test{d}EnvCfg': f'WrenchRefactorRelative{v}EnvCfg'
                                    for v in ('V2_1', 'V3') for d in ('Right', 'Pull', 'Left', 'Push')})
                 v1_parents.update({f'WrenchRefactorRelative{v}{suffix}': f'WrenchRefactorRelativeV2_1{suffix}'
-                                   for v in ('V2_2', 'V2_3', 'V2_4', 'V2_6') for suffix in ('EnvCfg', 'PPORunnerCfg')})
+                                   for v in ('V2_2', 'V2_3', 'V2_4', 'V2_6', 'V2_7') for suffix in ('EnvCfg', 'PPORunnerCfg')})
                 v1_parents.update({f'WrenchRefactorRelativeV2_5{suffix}': f'WrenchRefactorRelativeV2_4{suffix}'
                                    for suffix in ('EnvCfg', 'PPORunnerCfg')})
+                v1_parents.update({
+                    'WrenchRefactorRelativeIKV0EnvCfg': 'WrenchRefactorRelativeV2_7EnvCfg',
+                    'WrenchRefactorRelativeIKV1EnvCfg': 'WrenchRefactorRelativeIKV0EnvCfg',
+                    'WrenchRefactorRelativeIKV0PPORunnerCfg': 'WrenchRefactorRelativePPORunnerCfg',
+                    'WrenchRefactorRelativeIKV1PPORunnerCfg': 'WrenchRefactorRelativeIKV0PPORunnerCfg',
+                })
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
                 elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
@@ -403,6 +409,34 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     assert child.to_dict() == child_before
     assert variant.rewards.target_inverse_distance.weight == -12.97
     variant_before = variant.to_dict()
+    ik_child = env_module.WrenchRefactorRelativeV2_7EnvCfg()
+    expected_ik = copy.deepcopy(variant_before)
+    expected_ik['events']['robot_initial_pose'] = ik_child.events.robot_initial_pose.to_dict()
+    assert ik_child.to_dict() == expected_ik
+    ik0 = env_module.WrenchRefactorRelativeIKV0EnvCfg()
+    expected_ik0 = copy.deepcopy(expected_ik)
+    expected_ik0['observations'] = env_module.WrenchRefactorRelativeEnvCfg().observations.to_dict()
+    expected_ik0['debug_initial_ik_bounds'] = True
+    expected_ik0['events']['robot_initial_pose']['params'].update(
+        front_clearance=(.08,.10), lateral_offset=(.10,.18), height_jitter=.02,
+        height_offset=.01)
+    assert ik0.to_dict() == expected_ik0
+    assert not getattr(ik0, 'debug_reaching_point', False)
+    ik1 = env_module.WrenchRefactorRelativeIKV1EnvCfg()
+    expected_ik1 = copy.deepcopy(expected_ik0)
+    expected_ik1['rewards']['target_goal_distance'].update(
+        func='_baseline_cpu_pkg.mdp.reward_functions.wrench_refactor:contact_gated_displacement_cosine_goal_distance',
+        params={'distance_scale': .05, 'threshold_n': .01})
+    for name in ('target_contact', 'target_goal_hold', 'target_goal_first_entry_bonus', 'target_goal_success_bonus'):
+        expected_ik1['rewards'][name] = None
+    expected_ik1['terminations']['target_goal_success'] = None
+    assert ik1.to_dict() == expected_ik1
+    assert ik0.to_dict() == expected_ik0 == env_module.WrenchRefactorRelativeIKV0EnvCfg().to_dict()
+    assert ik_child.to_dict() == expected_ik
+    assert ik1.terminations.timeout.time_out
+    assert list(ik_child.events.to_dict())[-1] == 'robot_initial_pose'
+    assert ik_child.events.robot_initial_pose.func is configs('event_functions', 'wrench_refactor').reset_robot_from_goal_ik
+    assert variant.to_dict() == variant_before
     fixed_left = env_module.WrenchRefactorRelativeV2_6EnvCfg()
     expected_left = copy.deepcopy(variant_before)
     expected_left['events']['object_spawn']['params']['fixed_goal_offset'] = (0.0, -0.09)
@@ -829,3 +863,27 @@ def test_fixed_goal_rejects_invalid_offset(load_mdp, offset):
     m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
     with pytest.raises(ValueError, match='Fixed goal offset'):
         m.sample_commands(pool_bounds(1)[:, 0], torch.Generator(), fixed_goal_offset=offset)
+
+
+def test_ik_v1_current_target_contact_gates_cumulative_cosine(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, pos, force = reward_env()
+    env.cfg.goal_reward_height_limit = env.cfg.contact_height_limit = .14
+    env._initial_object_positions_w.zero_()
+    goal = torch.tensor([[.1, 0., 0.]], dtype=pos.dtype)
+    env.command_manager.get_command = lambda _: goal
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.18
+    force.zero_();force[0,0,0,0] = .02
+    for x in (.05, .04, -.01):
+        pos[0,0,0] = x
+        expected = math.exp(-abs(.1-x)/.05) * (1 if x>0 else -1)
+        assert m.contact_gated_displacement_cosine_goal_distance(env).item() == pytest.approx(expected)
+    force.zero_()
+    pos[0,0,0] = .1  # Goal occupancy alone does not replace current contact.
+    assert m.contact_gated_displacement_cosine_goal_distance(env).item() == 0.
+    force[0,0,0,0] = .02
+    env.sensor_data_fresh[:] = False
+    assert m.contact_gated_displacement_cosine_goal_distance(env).item() == 0.
+    env.sensor_data_fresh[:] = True
+    env.scene['ee_frame'].data.target_pos_w[...,2] = 1.19
+    assert m.contact_gated_displacement_cosine_goal_distance(env).item() == 0.

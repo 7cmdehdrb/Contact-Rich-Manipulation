@@ -137,7 +137,7 @@ def zone_masks(centers, half, yaw, target, goal, target_half, target_yaw, cfg):
 
 @torch.no_grad()
 def generate_layout(target, goal, target_half, target_yaw, obstacle_half, *, cfg=LayoutConfig(),
-                    requested=None, generator=None, check_inputs=True):
+                    requested=None, generator=None, check_inputs=True, cpu_small_batch=False, _samples=None):
     """Best-count result of a fixed search budget, vectorized over scenes/restarts/candidates.
 
     All tensors share floating dtype/device. Shapes: target/goal/target_half [B,2],
@@ -179,6 +179,24 @@ def generate_layout(target, goal, target_half, target_yaw, obstacle_half, *, cfg
         return LayoutResult(target.new_zeros(batch, slots, 2), target.new_zeros(batch, slots),
                             torch.zeros(batch, slots, device=device, dtype=torch.bool), zones,
                             requested, torch.zeros_like(requested), (requested == 0).all(-1))
+    # Preserve the CUDA generator's exact draw shapes/order/state. Only the
+    # deterministic search moves to CPU for tiny, launch-bound reset batches.
+    if cpu_small_batch and device.type == 'cuda' and batch <= 8 and _samples is None:
+        n, k = batch * cfg.restarts, cfg.candidates
+        draws = [torch.rand(n, slots, device=device, generator=generator)]
+        for _ in range(cfg.passes * slots):
+            draws.append(torch.rand(n, k, device=device, dtype=dtype, generator=generator))
+            draws.append(torch.rand(n, k, 2, device=device, dtype=dtype, generator=generator))
+        packed = torch.cat([draw.flatten() for draw in draws]).cpu()
+        samples, cursor = [], 0
+        for draw in draws:
+            samples.append(packed[cursor:cursor + draw.numel()].reshape(draw.shape))
+            cursor += draw.numel()
+        result = generate_layout(target.cpu(), goal.cpu(), target_half.cpu(), target_yaw.cpu(),
+                                 obstacle_half.cpu(), cfg=cfg, requested=requested.cpu(),
+                                 check_inputs=False, _samples=samples)
+        return LayoutResult(*(getattr(result, name).to(device) for name in
+                              ('centers', 'yaw', 'active', 'zones', 'requested', 'actual', 'complete')))
     repeat = lambda x: x.repeat_interleave(cfg.restarts, dim=0)
     t, g, th, ty, half = map(repeat, (target, goal, target_half, target_yaw, obstacle_half))
     req = repeat(requested)
@@ -191,17 +209,22 @@ def generate_layout(target, goal, target_half, target_yaw, obstacle_half, *, cfg
     rotations = target.new_zeros(n, slots)
     active = torch.zeros(n, slots, dtype=torch.bool, device=device)
     # Different orders per restart prevent a large failed object blocking the rest.
-    order = torch.rand(n, slots, device=device, generator=generator).argsort(-1)
+    order = (torch.rand(n, slots, device=device, generator=generator)
+             if _samples is None else _samples[0]).argsort(-1)
+    sample_index = 1
     lower = target.new_tensor([cfg.board[0], cfg.board[2]]) + cfg.wall_margin
     upper = target.new_tensor([cfg.board[1], cfg.board[3]]) - cfg.wall_margin
     for _ in range(cfg.passes):
         for step in range(slots):
             slot = order[:, step]
             h = half[rows, slot][:, None]
-            yaw = torch.rand(n, k, device=device, dtype=dtype, generator=generator) * (2 * math.pi) - math.pi
+            yaw = (torch.rand(n, k, device=device, dtype=dtype, generator=generator)
+                   if _samples is None else _samples[sample_index]) * (2 * math.pi) - math.pi
             extent = (axes(yaw).abs() * h[..., :, None]).sum(-2)
             lo, hi = lower + extent, upper - extent
-            unit = torch.rand(n, k, 2, device=device, dtype=dtype, generator=generator)
+            unit = (torch.rand(n, k, 2, device=device, dtype=dtype, generator=generator)
+                    if _samples is None else _samples[sample_index + 1])
+            sample_index += 2
             centers = lo + unit * (hi - lo).clamp_min(0)
             red, gray, white = zone_masks(centers, h, yaw, t, g, th, ty, cfg)
             valid = torch.where((slot < cfg.max_gray)[:, None], gray, white) & ~red

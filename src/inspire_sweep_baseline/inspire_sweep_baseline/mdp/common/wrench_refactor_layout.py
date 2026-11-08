@@ -92,14 +92,15 @@ def fixed_pool_layout(bounds, spawn_z, generator, requested, *, red_margin=.023,
     cfg = LayoutConfig(gray_padding=.065, red_margin=red_margin, rear_offset=rear_offset,
                        max_gray=3, max_white=3, candidates=64, restarts=4, passes=2)
     result = generate_layout(to_board(target + offset), to_board(goal + offset), target_half,
-                             target_yaw, obstacle_half, cfg=cfg, requested=requested, generator=generator)
+                             target_yaw, obstacle_half, cfg=cfg, requested=requested, generator=generator,
+                             cpu_small_batch=True)
     for _ in range(3):
         missing = (~result.complete).nonzero().flatten()
         if not len(missing):
             break
         retry = generate_layout(to_board(target[missing] + offset[missing]), to_board(goal[missing] + offset[missing]),
                                 target_half[missing], target_yaw[missing], obstacle_half[missing],
-                                cfg=cfg, requested=requested[missing], generator=generator)
+                                cfg=cfg, requested=requested[missing], generator=generator, cpu_small_batch=True)
         for name in ('centers', 'yaw', 'active', 'actual', 'complete'):
             getattr(result, name)[missing] = getattr(retry, name)
     if not bool(result.complete.all()):

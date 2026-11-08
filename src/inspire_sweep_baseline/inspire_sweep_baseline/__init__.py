@@ -1200,6 +1200,45 @@ if WRENCH_REFACTOR_RELATIVE_V2_6_TASK_ID not in gym.registry:
     )
 
 
+WRENCH_REFACTOR_RELATIVE_V2_7_TASK_ID = "Inspire-Wrench-Refactor-Relative-v2_7"
+if WRENCH_REFACTOR_RELATIVE_V2_7_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_V2_7_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeV2_7EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeV2_7PPORunnerCfg",
+        },
+    )
+
+
+WRENCH_REFACTOR_RELATIVE_IK_V0_TASK_ID = "Inspire-Wrench-Refactor-Relative-IK-v0"
+if WRENCH_REFACTOR_RELATIVE_IK_V0_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_IK_V0_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeIKV0EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeIKV0PPORunnerCfg",
+        },
+    )
+
+
+WRENCH_REFACTOR_RELATIVE_IK_V1_TASK_ID = "Inspire-Wrench-Refactor-Relative-IK-v1"
+if WRENCH_REFACTOR_RELATIVE_IK_V1_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_IK_V1_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeIKV1EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeIKV1PPORunnerCfg",
+        },
+    )
+
+
 WRENCH_REFACTOR_RELATIVE_V3_TASK_ID = "Inspire-Wrench-Refactor-Relative-v3"
 if WRENCH_REFACTOR_RELATIVE_V3_TASK_ID not in gym.registry:
     gym.register(

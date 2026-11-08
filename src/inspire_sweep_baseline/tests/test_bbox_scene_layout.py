@@ -15,6 +15,29 @@ sys.modules[spec.name] = layout
 spec.loader.exec_module(layout)
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason='CUDA random stream preservation')
+@pytest.mark.parametrize('batch', [1, 8, 9])
+def test_small_cpu_search_preserves_cuda_rng_and_layout(batch):
+    target = torch.tensor([0., .2], device='cuda').expand(batch, -1)
+    goal = target + target.new_tensor([.08, 0.])
+    half = target.new_full((batch, 2), .025)
+    yaw = target.new_full((batch,), -torch.pi / 2)
+    obstacles = target.new_full((batch, 6, 2), .025)
+    cfg = layout.LayoutConfig(max_gray=3, max_white=3, candidates=64,
+                              red_margin=.023, gray_padding=.065, rear_offset=.02)
+    for seed in range(8):
+        original_rng = torch.Generator(device='cuda').manual_seed(seed)
+        fast_rng = torch.Generator(device='cuda').manual_seed(seed)
+        original = layout.generate_layout(target, goal, half, yaw, obstacles, cfg=cfg, generator=original_rng)
+        fast = layout.generate_layout(target, goal, half, yaw, obstacles, cfg=cfg, generator=fast_rng,
+                                      cpu_small_batch=True)
+        assert torch.equal(original_rng.get_state(), fast_rng.get_state())
+        for key in ('active', 'zones', 'requested', 'actual', 'complete'):
+            assert torch.equal(getattr(original, key), getattr(fast, key))
+        for key in ('centers', 'yaw'):
+            torch.testing.assert_close(getattr(original, key), getattr(fast, key), atol=1e-6, rtol=1e-6)
+
+
 def rectangle(center, half, angle):
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]]) * half @ np.array([[c, s], [-s, c]]) + center
