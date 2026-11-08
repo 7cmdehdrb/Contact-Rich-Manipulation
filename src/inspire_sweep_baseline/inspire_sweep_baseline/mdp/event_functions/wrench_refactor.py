@@ -81,7 +81,7 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
                 excluded_x_half_angle=math.pi / 6, min_goal_distance=.06, max_goal_distance=.12,
                 observation_noise=.01,
                 visibility_threshold=.35, visibility_flip_probability=.01,
-                observation_swap_probability=.1, sweep_direction='both'):
+                observation_swap_probability=.1, sweep_direction='both', goal_angle_range=None):
     ids = (torch.arange(env.num_envs, device=env.device) if env_ids is None
            else torch.as_tensor(env_ids, device=env.device, dtype=torch.long))
     if not len(ids):
@@ -92,7 +92,8 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
         red_margin=env.cfg.red_margin, rear_offset=env.cfg.rear_offset,
         spawn_radius=spawn_radius, edge_clearance=edge_clearance,
         excluded_x_half_angle=excluded_x_half_angle, min_goal_distance=min_goal_distance,
-        max_goal_distance=max_goal_distance, sweep_direction=sweep_direction)
+        max_goal_distance=max_goal_distance, sweep_direction=sweep_direction,
+        goal_angle_range=goal_angle_range)
     shelf = env.scene['shelf'].data
     rotation = shelf.root_quat_w[ids, None].expand(-1, 17, -1)
     world = shelf.root_pos_w[ids, None] + quat_apply(rotation, local)

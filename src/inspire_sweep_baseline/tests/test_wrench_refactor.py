@@ -285,6 +285,8 @@ def test_cfg_and_runtime_have_no_task_parents():
                               'WrenchRefactorV2PPORunnerCfg':'WrenchRefactorPPORunnerCfg','WrenchRefactorV1EnvCfg':'WrenchRefactorEnvCfg',
                               'WrenchRefactorV1RewardsCfg':'WrenchRefactorRewardsCfg',
                               'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
+                v1_parents.update({f'WrenchRefactorRelative{v}Test{d}EnvCfg': f'WrenchRefactorRelative{v}EnvCfg'
+                                   for v in ('V2_1', 'V3') for d in ('Right', 'Pull', 'Left', 'Push')})
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
                 elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
@@ -340,6 +342,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     ns['WrenchRefactorRelativeObservationsCfg'] = configs('observations','wrench_refactor').WrenchRefactorRelativeObservationsCfg
     ns['WrenchRefactorRelativeV2ObservationsCfg'] = configs('observations','wrench_refactor').WrenchRefactorRelativeV2ObservationsCfg
     ns['WrenchRefactorRelativeCurriculumCfg'] = configs('curricula','wrench_refactor').WrenchRefactorRelativeCurriculumCfg
+    ns['math'] = math
     ns['__package__'] = '_baseline_cpu_pkg.envs'
     env_module = _execute_definitions(MODULE_ROOT/'envs/wrench_refactor_envs.py', ns)
     cfg = env_module.WrenchRefactorEnvCfg()
@@ -355,6 +358,16 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     action_module = ModuleType('_baseline_cpu_pkg.mdp.action_functions.wrench_refactor')
     action_module.WrenchRefactorOSCAction = type('WrenchRefactorOSCAction', (), {})
     monkeypatch.setitem(sys.modules, action_module.__name__, action_module)
+    for version in ('V2_1', 'V3'):
+        parent_type = getattr(env_module, f'WrenchRefactorRelative{version}EnvCfg')
+        baseline = parent_type().to_dict()
+        for direction, low, high in [('Right',60,120),('Pull',-60,60),('Left',240,300),('Push',120,240)]:
+            child_type = getattr(env_module, f'WrenchRefactorRelative{version}Test{direction}EnvCfg')
+            assert child_type.__bases__ == (parent_type,)
+            expected = copy.deepcopy(baseline)
+            expected['events']['object_spawn']['params']['goal_angle_range'] = (math.radians(low),math.radians(high))
+            assert child_type().to_dict() == expected
+            assert parent_type().to_dict() == baseline
     parent = env_module.WrenchRefactorRelativeEnvCfg()
     before = parent.to_dict()
     assert parent.wrist_wrench_observation_limits == (150.,150.,150.,8.,8.,8.)
@@ -723,3 +736,40 @@ def test_policy_action_rate_is_uncapped_and_preserves_hand_clamping(configs):
     torch.testing.assert_close(action, saved)
     previous.zero_()  # Reset action history, not stale torque history.
     torch.testing.assert_close(func(env), torch.tensor([12.03, 3.009375]))
+
+
+@pytest.mark.parametrize('low,high', [(60,120),(-60,60),(240,300),(120,240)])
+@pytest.mark.parametrize('deadzone', [0, 30])
+def test_relative_test_sector_distribution(load_mdp, low, high, deadzone):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    bounds = pool_bounds(20000)[:, 0]
+    lo, hi = math.radians(low), math.radians(high)
+    target, goal = m.sample_commands(bounds, torch.Generator().manual_seed(42),
+        excluded_x_half_angle=math.radians(deadzone), goal_angle_range=(lo,hi))
+    delta = goal-target
+    angle = (torch.atan2(delta[:,1],delta[:,0])-lo).remainder(2*math.pi)
+    unit = angle/(hi-lo)
+    assert (unit <= 1+1e-5).all()
+    assert ((torch.histc(unit,bins=10,min=0,max=1)/len(bounds)-.1).abs()<.01).all()
+    distance = delta.norm(dim=-1)
+    assert ((distance >= .06-1e-6) & (distance <= .12+1e-6)).all()
+    safe = torch.tensor([.2,.5])-bounds[:,:,:2].abs().amax(1)-.02
+    assert (goal.abs() <= safe+1e-6).all()
+
+
+def test_relative_test_registrations():
+    import types
+    registry = {}
+    def register(**kwargs):
+        registry[kwargs['id']] = kwargs
+    tree = ast.parse((MODULE_ROOT/'__init__.py').read_text())
+    block = next(n for n in tree.body if isinstance(n, ast.For) and '_cfg_version' in ast.unparse(n.target))
+    exec(compile(ast.Module(body=[block],type_ignores=[]),'<registrations>','exec'),
+         {'gym':types.SimpleNamespace(registry=registry,register=register)})
+    assert len(registry) == 8
+    for version in ('v2_1','v3'):
+        for direction in ('Right','Pull','Left','Push'):
+            item = registry[f'Inspire-Wrench-Refactor-Relative-{version}-Test-{direction}']
+            assert item['entry_point'].endswith(':WrenchRefactorEnv')
+            assert item['kwargs']['rsl_rl_cfg_entry_point'].endswith(f':WrenchRefactorRelative{version.upper()}PPORunnerCfg')
+            assert item['kwargs']['env_cfg_entry_point'].endswith(f':WrenchRefactorRelative{version.upper()}Test{direction}EnvCfg')

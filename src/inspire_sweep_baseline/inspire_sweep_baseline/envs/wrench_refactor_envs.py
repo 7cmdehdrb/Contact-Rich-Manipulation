@@ -1,4 +1,6 @@
 """Independent Wrench Refactor v0; no previous environment CFG inheritance."""
+import math
+
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
@@ -184,6 +186,15 @@ class WrenchRefactorRelativeV2_1EnvCfg(WrenchRefactorRelativeV2EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_2EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Direct v2_1 child with only contact-maintenance reward disabled."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.target_contact = None
+
+
+@configclass
 class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
     """Direct v0 child: replace contact maintenance by contact-gated distance."""
     rewards: WrenchRefactorRelativeV3RewardsCfg = WrenchRefactorRelativeV3RewardsCfg()
@@ -194,3 +205,75 @@ class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
         self.rewards.target_goal_hold = None
         self.rewards.target_goal_success_bonus = None
         self.terminations.target_goal_success = None
+
+
+@configclass
+class WrenchRefactorRelativeV2_1TestRightEnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Parent policy evaluation with right goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(60), math.radians(120))
+
+
+@configclass
+class WrenchRefactorRelativeV2_1TestPullEnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Parent policy evaluation with pull goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(-60), math.radians(60))
+
+
+@configclass
+class WrenchRefactorRelativeV2_1TestLeftEnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Parent policy evaluation with left goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(240), math.radians(300))
+
+
+@configclass
+class WrenchRefactorRelativeV2_1TestPushEnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Parent policy evaluation with push goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(120), math.radians(240))
+
+
+@configclass
+class WrenchRefactorRelativeV3TestRightEnvCfg(WrenchRefactorRelativeV3EnvCfg):
+    """Parent policy evaluation with right goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(60), math.radians(120))
+
+
+@configclass
+class WrenchRefactorRelativeV3TestPullEnvCfg(WrenchRefactorRelativeV3EnvCfg):
+    """Parent policy evaluation with pull goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(-60), math.radians(60))
+
+
+@configclass
+class WrenchRefactorRelativeV3TestLeftEnvCfg(WrenchRefactorRelativeV3EnvCfg):
+    """Parent policy evaluation with left goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(240), math.radians(300))
+
+
+@configclass
+class WrenchRefactorRelativeV3TestPushEnvCfg(WrenchRefactorRelativeV3EnvCfg):
+    """Parent policy evaluation with push goals only."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['goal_angle_range'] = (math.radians(120), math.radians(240))

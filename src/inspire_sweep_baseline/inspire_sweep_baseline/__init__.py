@@ -1135,6 +1135,19 @@ if WRENCH_REFACTOR_RELATIVE_V2_1_TASK_ID not in gym.registry:
     )
 
 
+WRENCH_REFACTOR_RELATIVE_V2_2_TASK_ID = "Inspire-Wrench-Refactor-Relative-v2_2"
+if WRENCH_REFACTOR_RELATIVE_V2_2_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_V2_2_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeV2_2EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeV2_2PPORunnerCfg",
+        },
+    )
+
+
 WRENCH_REFACTOR_RELATIVE_V3_TASK_ID = "Inspire-Wrench-Refactor-Relative-v3"
 if WRENCH_REFACTOR_RELATIVE_V3_TASK_ID not in gym.registry:
     gym.register(
@@ -1146,3 +1159,18 @@ if WRENCH_REFACTOR_RELATIVE_V3_TASK_ID not in gym.registry:
             "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeV3PPORunnerCfg",
         },
     )
+
+# Direction-only evaluation variants reuse the exact parent runtime and PPO.
+for _version, _cfg_version in (("v2_1", "V2_1"), ("v3", "V3")):
+    for _direction in ("Right", "Pull", "Left", "Push"):
+        _task_id = f"Inspire-Wrench-Refactor-Relative-{_version}-Test-{_direction}"
+        if _task_id not in gym.registry:
+            gym.register(
+                id=_task_id,
+                entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+                disable_env_checker=True,
+                kwargs={
+                    "env_cfg_entry_point": f"inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelative{_cfg_version}Test{_direction}EnvCfg",
+                    "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelative{_cfg_version}PPORunnerCfg",
+                },
+            )

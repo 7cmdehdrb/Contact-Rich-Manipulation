@@ -6,12 +6,14 @@ from .bbox_scene_layout import LayoutConfig, footprint_from_bounds, generate_lay
 
 def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
                     excluded_x_half_angle=math.pi / 6, min_goal_distance=.06, max_goal_distance=.12,
-                    sweep_direction='both'):
+                    sweep_direction='both', goal_angle_range=None):
     """Uniform allowed angle, then uniform distance within the annulus and safe shelf edge.
 
-    Shelf-local +/-X are 12/6 o'clock; +/-Y are the two lateral directions.
+    Shelf-local +X is robot-side (6 o'clock), -X is 12 o'clock.
     Distances are capped at max_goal_distance; the inner disk is excluded.
     Left is shelf-local -Y (world -Y for the unrotated shelf); right is +Y.
+    Optional goal_angle_range is (low, high) radians of atan2(Y, X); it
+    overrides direction/deadzone sampling, retaining distance and edge rules.
     """
     if sweep_direction not in ('both', 'left', 'right'):
         raise ValueError("sweep_direction must be 'both', 'left', or 'right'")
@@ -23,6 +25,10 @@ def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
         raise ValueError('Invalid minimum goal distance')
     if not math.isfinite(max_goal_distance) or max_goal_distance < min_goal_distance:
         raise ValueError('Maximum goal distance must be finite and >= minimum')
+    if goal_angle_range is not None:
+        low, high = goal_angle_range
+        if not all(math.isfinite(v) for v in (low, high)) or not 0 < high - low <= 2 * math.pi:
+            raise ValueError('Goal angle range must be finite with width in (0, 2*pi]')
     half = bounds[:, :, :2].abs().amax(1)
     safe = bounds.new_tensor([.20, .50]) - half - edge_clearance
     if bool((safe <= spawn_radius).any()):
@@ -38,6 +44,10 @@ def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
         theta = excluded_x_half_angle + draws[:, 2] * (math.pi - 2 * excluded_x_half_angle)
         if sweep_direction == 'left':
             theta = theta + math.pi
+    # Explicit evaluation sectors supersede the training direction deadzone.
+    # atan2(Y, X): robot-side +X is 6 o'clock, +Y is 3 o'clock.
+    if goal_angle_range is not None:
+        theta = low + draws[:, 2] * (high - low)
     direction = torch.stack((theta.cos(), theta.sin()), -1)
     maximum = ((safe - direction.sign() * target) / direction.abs().clamp_min(1e-12)).amin(-1)
     maximum = maximum.clamp_max(max_goal_distance)
