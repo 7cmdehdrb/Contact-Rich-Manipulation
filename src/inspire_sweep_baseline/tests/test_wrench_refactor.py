@@ -287,6 +287,8 @@ def test_cfg_and_runtime_have_no_task_parents():
                               'WrenchRefactorV1PPORunnerCfg':'WrenchRefactorPPORunnerCfg'}
                 v1_parents.update({f'WrenchRefactorRelative{v}Test{d}EnvCfg': f'WrenchRefactorRelative{v}EnvCfg'
                                    for v in ('V2_1', 'V3') for d in ('Right', 'Pull', 'Left', 'Push')})
+                v1_parents.update({f'WrenchRefactorRelative{v}{suffix}': f'WrenchRefactorRelativeV2_1{suffix}'
+                                   for v in ('V2_2', 'V2_3') for suffix in ('EnvCfg', 'PPORunnerCfg')})
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
                 elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):

@@ -337,6 +337,82 @@ def motion_reward_env(count=1):
     return env, pos, forces, goal
 
 
+def opposite_reach_env(count=1):
+    env, pos, _, goal = motion_reward_env(count)
+    # Match the simulator's float32 state and the parent reward history buffers.
+    pos, goal = pos.float(), goal.float()
+    env.scene['object_collection'].data.object_pos_w = pos
+    env.scene['ee_frame'].data.target_pos_w = env.scene['ee_frame'].data.target_pos_w.float()
+    env.command_manager.get_command = lambda _: goal
+    env.scene['robot'] = NS(data=NS())
+    env._revision_bounds_t = torch.zeros(count, 1, 2, 3)
+    env._revision_bounds_t[:, 0, 0, 2] = -.02
+    env._revision_bounds_t[:, 0, 1, 2] = .10
+    env.sweep_dir = goal - pos[:, 0]
+    return env, pos, goal
+
+
+def test_opposite_reaching_point_xy_height_live_and_coincident(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, pos, goal = opposite_reach_env(5)
+    goal[:, :2] = torch.tensor([[.1, 0.], [-.1, 0.], [0., .1], [0., -.1], [.1, .1]])
+    env.sweep_dir = goal - pos[:, 0]
+    point = m.opposite_reaching_point(env)
+    delta = point[:, :2] - pos[:, 0, :2]
+    torch.testing.assert_close(delta.norm(dim=-1), torch.full((5,), .05))
+    torch.testing.assert_close(delta, -.05 * goal[:, :2] / goal[:, :2].norm(dim=-1, keepdim=True))
+    torch.testing.assert_close(point[:, 2], torch.full((5,), 1.11))
+    # The physical object's height is scale-correct; shelf floor, not link origin, sets Z.
+    env._revision_bounds_t[0, 0, 1, 2] = .22
+    pos[0, 0] = torch.tensor([.02, .03, 1.4])
+    moved = m.opposite_reaching_point(env)
+    assert abs(moved[0, 2].item() - 1.17) < 1e-6
+    torch.testing.assert_close((moved[0, :2] - pos[0, 0, :2]).norm(), torch.tensor(.05))
+    pos[1, 0, :2] = goal[1, :2]
+    coincident = m.opposite_reaching_point(env)
+    torch.testing.assert_close(coincident[1, :2], torch.tensor([-.05, 0.]))
+    assert torch.isfinite(coincident).all()
+
+
+def test_opposite_reach_reset_first_step_budget_partial_and_dt(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, pos, goal = opposite_reach_env(2)
+    eef = env.scene['ee_frame'].data.target_pos_w
+    eef[:, 0] = torch.tensor([-.35, 0., 1.11])
+    cfg = NS(params={'near_radius': .10, 'offset': .05})
+    # Command still belongs to the previous episode when reward reset runs.
+    goal[:, 0] = -10.
+    term = m.OppositeReachProgress(cfg, env)
+    goal[:, 0] = .1
+    torch.testing.assert_close(term(env), torch.zeros(2), atol=1e-6, rtol=0.)
+    eef[:, 0, 0] += .04
+    torch.testing.assert_close(term(env) * env.step_dt, torch.full((2,), .04))
+    assert not term(env).any()  # Waiting does not pay twice.
+    eef[:, 0, 0] -= .02
+    assert not term(env).any()
+    eef[:, 0, 0] += .02
+    assert not term(env).any()
+    preserved = term._best_distance[1].clone()
+    eef[0, 0, 0] = -.5
+    term.reset(torch.tensor([0]))
+    torch.testing.assert_close(term._best_distance[1], preserved)
+    env.step_dt = .01
+    eef[0, 0, 0] += .03
+    torch.testing.assert_close(term(env) * env.step_dt, torch.tensor([.03, 0.]))
+
+
+def test_opposite_reach_near_radius_boundary(configs):
+    m = configs('reward_functions', 'wrench_refactor')
+    env, _, _ = opposite_reach_env(3)
+    eef = env.scene['ee_frame'].data.target_pos_w
+    eef[:, 0] = torch.tensor([-.25, 0., 1.11])
+    term = m.OppositeReachProgress(NS(params={'near_radius': .05}), env)
+    eef[:, 0, 0] = torch.tensor([-.100001, -.10, -.099999])
+    paid = term(env, near_radius=.05) * env.step_dt
+    torch.testing.assert_close(paid, torch.tensor([.149999, .15, .15]), atol=1e-7, rtol=1e-5)
+    assert not term(env, near_radius=.05).any()
+
+
 def test_relative_motion_anchor_threshold_and_per_step_evaluation(configs):
     m = configs('reward_functions', 'wrench_refactor')
     env, pos, _, goal = motion_reward_env(3)

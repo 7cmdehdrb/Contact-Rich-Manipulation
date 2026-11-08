@@ -195,6 +195,18 @@ class WrenchRefactorRelativeV2_2EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_3EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Direct v2_1 child; reach behind the live target, retaining contact reward."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench_refactor import OppositeReachProgress
+        self.rewards.target_reaching.func = OppositeReachProgress
+        self.rewards.target_reaching.params["offset"] = 0.05
+        self.rewards.target_reaching.params["near_radius"] = 0.05
+
+
+@configclass
 class WrenchRefactorRelativeV3EnvCfg(WrenchRefactorRelativeEnvCfg):
     """Direct v0 child: replace contact maintenance by contact-gated distance."""
     rewards: WrenchRefactorRelativeV3RewardsCfg = WrenchRefactorRelativeV3RewardsCfg()

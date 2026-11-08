@@ -117,3 +117,8 @@ class WrenchRefactorRelativeV2_1PPORunnerCfg(WrenchRefactorRelativeV2PPORunnerCf
 @configclass
 class WrenchRefactorRelativeV2_2PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_relative_v2_2"
+
+
+@configclass
+class WrenchRefactorRelativeV2_3PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v2_3"

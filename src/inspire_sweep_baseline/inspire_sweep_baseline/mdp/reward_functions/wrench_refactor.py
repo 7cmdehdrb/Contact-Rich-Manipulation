@@ -2,6 +2,61 @@
 import torch
 from isaaclab.managers import ManagerTermBase
 from ..termination_functions.goal_terminations import _object_position
+from .dex_rewards import DexReachProgress
+
+
+def opposite_reaching_point(env, offset=0.05, command_name="target_goal_pos", *, reset=False):
+    """Live target XY plus an offset away from the goal; supported mid-height Z.
+
+    Reset events precede command reset, so use the freshly sampled sweep_dir
+    then. At exact goal coincidence, retain the episode's initial direction.
+    """
+    from ..common.contact_sweep_clutter_fusion import SHELF_SURFACE_HEIGHT
+
+    position = _object_position(env)
+    goal = position + env.sweep_dir if reset else env.command_manager.get_command(command_name)[:, :3]
+    away = position[:, :2] - goal[:, :2]
+    norm = away.norm(dim=-1, keepdim=True)
+    fallback = -env.sweep_dir[:, :2]
+    fallback_norm = fallback.norm(dim=-1, keepdim=True)
+    fallback = torch.where(fallback_norm > 1e-8, fallback / fallback_norm.clamp_min(1e-8),
+                           fallback.new_tensor([1.0, 0.0]))
+    direction = torch.where(norm > 1e-8, away / norm.clamp_min(1e-8), fallback)
+    point = position.clone()
+    point[:, :2] += offset * direction
+    rows = torch.arange(env.num_envs, device=env.device)
+    bounds = env._revision_bounds_t[rows, env.target_id[:, 0].long()]
+    height = bounds[:, 1, 2] - bounds[:, 0, 2]
+    point[:, 2] = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT + 0.5 * height
+    return point
+
+
+class OppositeReachProgress(DexReachProgress):
+    """Parent best-distance reward measured to a point behind the live target."""
+
+    def reset(self, env_ids=None):
+        ids = slice(None) if env_ids is None else env_ids
+        params = self.cfg.params
+        getattr(self._env.scene["robot"].data, "body_link_pos_w", None)
+        point = opposite_reaching_point(
+            self._env, params.get("offset", 0.05), params.get("command_name", "target_goal_pos"), reset=True
+        )[ids]
+        reference = self._env.scene[params.get("frame_name", "ee_frame")].data.target_pos_w[ids, 0]
+        distance = (torch.linalg.vector_norm(reference - point, dim=-1)
+                    - params.get("near_radius", 0.10)).clamp_min(0.0)
+        self._initial_object_position[ids] = point
+        self._initial_distance[ids] = distance
+        self._best_distance[ids] = distance
+
+    def __call__(self, env, near_radius=0.10, frame_name="ee_frame", offset=0.05,
+                 command_name="target_goal_pos"):
+        point = opposite_reaching_point(env, offset, command_name)
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        distance = (torch.linalg.vector_norm(reference - point, dim=-1) - near_radius).clamp_min(0.0)
+        best = torch.minimum(self._best_distance, distance)
+        increment = self._best_distance - best
+        self._best_distance[:] = best
+        return increment / env.step_dt
 
 
 def policy_action_rate_penalty(env, arm_max_cost=None, hand_max_cost=None):
