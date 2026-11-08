@@ -186,6 +186,20 @@ class WrenchRefactorRelativeV2_1EnvCfg(WrenchRefactorRelativeV2EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_4EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Holding-style new-best XY progress, without the outward-distance cost."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.wrench import WrenchV0_4GoalProgress
+        self.rewards.target_goal_distance.func = WrenchV0_4GoalProgress
+        self.rewards.target_goal_distance.params = {"position_tolerance": 0.0}
+        # Holding OSC uses reaching=30 and goal progress=100 (reward/metre).
+        self.rewards.target_goal_distance.weight = 100.0 * self.rewards.target_reaching.weight / 30.0
+        self.rewards.target_inverse_distance = None
+
+
+@configclass
 class WrenchRefactorRelativeV2_2EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
     """Direct v2_1 child with only contact-maintenance reward disabled."""
 
@@ -197,6 +211,8 @@ class WrenchRefactorRelativeV2_2EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
 @configclass
 class WrenchRefactorRelativeV2_3EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
     """Direct v2_1 child; reach behind the live target, retaining contact reward."""
+
+    debug_reaching_point: bool = True
 
     def __post_init__(self):
         super().__post_init__()

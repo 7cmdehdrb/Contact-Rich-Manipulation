@@ -288,7 +288,7 @@ def test_cfg_and_runtime_have_no_task_parents():
                 v1_parents.update({f'WrenchRefactorRelative{v}Test{d}EnvCfg': f'WrenchRefactorRelative{v}EnvCfg'
                                    for v in ('V2_1', 'V3') for d in ('Right', 'Pull', 'Left', 'Push')})
                 v1_parents.update({f'WrenchRefactorRelative{v}{suffix}': f'WrenchRefactorRelativeV2_1{suffix}'
-                                   for v in ('V2_2', 'V2_3') for suffix in ('EnvCfg', 'PPORunnerCfg')})
+                                   for v in ('V2_2', 'V2_3', 'V2_4') for suffix in ('EnvCfg', 'PPORunnerCfg')})
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
                 elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
@@ -394,6 +394,17 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     assert variant.to_dict() == expected_variant
     assert child.to_dict() == child_before
     assert variant.rewards.target_inverse_distance.weight == -12.97
+    variant_before = variant.to_dict()
+    progress = env_module.WrenchRefactorRelativeV2_4EnvCfg()
+    expected_progress = copy.deepcopy(variant_before)
+    expected_progress['rewards']['target_goal_distance'].update(
+        func='_baseline_cpu_pkg.mdp.reward_functions.wrench:WrenchV0_4GoalProgress',
+        params={'position_tolerance': 0.0}, weight=100.0)
+    expected_progress['rewards']['target_inverse_distance'] = None
+    assert progress.to_dict() == expected_progress
+    assert progress.goal_reward_height_limit == variant.goal_reward_height_limit == .14
+    assert variant.to_dict() == variant_before
+    assert env_module.WrenchRefactorRelativeV2_1EnvCfg().to_dict() == variant_before
     assert parent.to_dict() == before
     assert env_module.WrenchRefactorRelativeV2EnvCfg.__bases__ == (env_module.WrenchRefactorRelativeEnvCfg,)
     v3 = env_module.WrenchRefactorRelativeV3EnvCfg()

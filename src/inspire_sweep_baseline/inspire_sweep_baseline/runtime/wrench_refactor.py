@@ -36,6 +36,7 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
         self._force_samples = torch.zeros(count, device=device, dtype=torch.bool)
         self._moment_samples = torch.zeros(count, device=device, dtype=torch.bool)
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
+        self._update_reaching_point_marker()
 
     def load_managers(self):
         shelf = self.scene['shelf'].data
@@ -59,11 +60,43 @@ class WrenchRefactorEnv(ManagerBasedRLEnv):
     def reset(self, seed=None, env_ids=None, options=None):
         if seed is not None:
             self._revision_layout_rng.manual_seed(seed)
-        return super().reset(seed=seed, env_ids=env_ids, options=options)
+        result = super().reset(seed=seed, env_ids=env_ids, options=options)
+        self._update_reaching_point_marker()
+        return result
 
     def step(self, action):
         self.sensor_data_fresh[:] = True
-        return super().step(action)
+        result = super().step(action)
+        self._update_reaching_point_marker()
+        return result
+
+    def _update_reaching_point_marker(self):
+        """Render the reward's live point without adding any physical body."""
+        if not getattr(self.cfg, "debug_reaching_point", False):
+            if hasattr(self, "_reaching_point_marker"):
+                self._reaching_point_marker.set_visibility(False)
+            return
+        if not hasattr(self, "_reaching_point_marker"):
+            import isaaclab.sim as sim_utils
+            from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+
+            self._reaching_point_marker = VisualizationMarkers(VisualizationMarkersCfg(
+                prim_path="/Visuals/InspireWrenchRefactor/reaching_point",
+                markers={"point": sim_utils.SphereCfg(
+                    radius=0.008,
+                    rigid_props=None,
+                    collision_props=None,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.05, 0.8)),
+                )},
+            ))
+        from ..mdp.reward_functions.wrench_refactor import opposite_reaching_point
+
+        params = self.reward_manager.get_term_cfg("target_reaching").params
+        point = opposite_reaching_point(
+            self, params.get("offset", 0.05), params.get("command_name", "target_goal_pos")
+        )
+        self._reaching_point_marker.set_visibility(True)
+        self._reaching_point_marker.visualize(translations=point)
 
     def set_learning_iteration(self, iteration):
         if not isinstance(iteration, int) or isinstance(iteration, bool) or iteration < 0:

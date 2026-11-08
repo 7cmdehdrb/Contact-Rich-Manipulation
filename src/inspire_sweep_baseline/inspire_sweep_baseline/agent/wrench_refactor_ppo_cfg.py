@@ -122,3 +122,8 @@ class WrenchRefactorRelativeV2_2PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunner
 @configclass
 class WrenchRefactorRelativeV2_3PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_relative_v2_3"
+
+
+@configclass
+class WrenchRefactorRelativeV2_4PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v2_4"
