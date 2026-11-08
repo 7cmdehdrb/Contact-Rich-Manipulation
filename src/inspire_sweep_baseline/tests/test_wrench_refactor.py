@@ -76,14 +76,17 @@ def test_left_only_uniform_angle_and_distance(load_mdp, degrees):
 
 @pytest.mark.parametrize('degrees', [0, 30])
 @pytest.mark.parametrize('sweep_direction', ['both', 'left'])
-def test_pool_exact_counts_bottom_gaps_and_parking(load_mdp, degrees, sweep_direction):
+@pytest.mark.parametrize('fixed_goal_offset', [None, (0., -.09)])
+def test_pool_exact_counts_bottom_gaps_and_parking(load_mdp, degrees, sweep_direction, fixed_goal_offset):
     m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
     obb = importlib.import_module('_baseline_cpu_pkg.mdp.common.bbox_scene_layout')
     b = pool_bounds(128)
     req = torch.tensor([(g, w) for g in range(4) for w in range(4)] * 8)
     local, yaw, active, delta, actual = m.fixed_pool_layout(
         b, 1.05 - b[..., 0, 2], torch.Generator().manual_seed(10), req,
-        excluded_x_half_angle=math.radians(degrees), sweep_direction=sweep_direction)
+        excluded_x_half_angle=math.radians(degrees), sweep_direction=sweep_direction, fixed_goal_offset=fixed_goal_offset)
+    if fixed_goal_offset is not None:
+        torch.testing.assert_close(delta[:, :2], torch.tensor(fixed_goal_offset).expand(128, 2), atol=1e-8, rtol=0.)
     if sweep_direction == 'left':
         assert (delta[:, 1] < 0).all()
     assert torch.equal(req, actual)
@@ -103,7 +106,8 @@ def test_pool_exact_counts_bottom_gaps_and_parking(load_mdp, degrees, sweep_dire
             assert obb.separated(centers[:, i], half[:, i], yaw[:, i], centers[:, j], half[:, j], yaw[:, j], .02 - 1e-6)[both].all()
 
 
-def test_reset_is_partial_has_uniform_counts_and_never_changes_physics(configs, monkeypatch):
+@pytest.mark.parametrize("fixed_goal_offset", [None, (0., -.09)])
+def test_reset_is_partial_has_uniform_counts_and_never_changes_physics(configs, monkeypatch, fixed_goal_offset):
     m = configs('event_functions', 'wrench_refactor')
     n = 32
     b, ids = pool_bounds(n), torch.tensor([1, 4, 8, 30])
@@ -122,7 +126,9 @@ def test_reset_is_partial_has_uniform_counts_and_never_changes_physics(configs, 
              _revision_spawn_positions=torch.zeros(n, 17, 3), sensor_data_fresh=torch.ones(n, dtype=torch.bool))
     monkeypatch.setattr(m, 'apply_final_visibility', lambda *args: None)
     expected = torch.randint(0, 4, (len(ids), 2), generator=torch.Generator().manual_seed(42))
-    m.reset_scene(env, ids)
+    m.reset_scene(env, ids, fixed_goal_offset=fixed_goal_offset)
+    if fixed_goal_offset is not None:
+        torch.testing.assert_close(env.sweep_dir[ids, :2], torch.tensor(fixed_goal_offset).expand(len(ids), 2), atol=1e-8, rtol=0.)
     assert torch.equal(env._final_actual_population[ids], expected)
     other = torch.ones(n, dtype=torch.bool); other[ids] = False
     assert not state[other].any()
@@ -288,7 +294,9 @@ def test_cfg_and_runtime_have_no_task_parents():
                 v1_parents.update({f'WrenchRefactorRelative{v}Test{d}EnvCfg': f'WrenchRefactorRelative{v}EnvCfg'
                                    for v in ('V2_1', 'V3') for d in ('Right', 'Pull', 'Left', 'Push')})
                 v1_parents.update({f'WrenchRefactorRelative{v}{suffix}': f'WrenchRefactorRelativeV2_1{suffix}'
-                                   for v in ('V2_2', 'V2_3', 'V2_4') for suffix in ('EnvCfg', 'PPORunnerCfg')})
+                                   for v in ('V2_2', 'V2_3', 'V2_4', 'V2_6') for suffix in ('EnvCfg', 'PPORunnerCfg')})
+                v1_parents.update({f'WrenchRefactorRelativeV2_5{suffix}': f'WrenchRefactorRelativeV2_4{suffix}'
+                                   for suffix in ('EnvCfg', 'PPORunnerCfg')})
                 if node.name in v1_parents:
                     assert [ast.unparse(b) for b in node.bases] == [v1_parents[node.name]]
                 elif node.name in ('PolicyCfg', 'CriticCfg', 'ObstaclesCfg') and isinstance(node.bases[0], ast.Attribute):
@@ -395,6 +403,12 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     assert child.to_dict() == child_before
     assert variant.rewards.target_inverse_distance.weight == -12.97
     variant_before = variant.to_dict()
+    fixed_left = env_module.WrenchRefactorRelativeV2_6EnvCfg()
+    expected_left = copy.deepcopy(variant_before)
+    expected_left['events']['object_spawn']['params']['fixed_goal_offset'] = (0.0, -0.09)
+    assert fixed_left.to_dict() == expected_left
+    assert variant.to_dict() == variant_before
+    assert env_module.WrenchRefactorRelativeV2_1EnvCfg().to_dict() == variant_before
     progress = env_module.WrenchRefactorRelativeV2_4EnvCfg()
     expected_progress = copy.deepcopy(variant_before)
     expected_progress['rewards']['target_goal_distance'].update(
@@ -402,6 +416,12 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
         params={'position_tolerance': 0.0}, weight=100.0)
     expected_progress['rewards']['target_inverse_distance'] = None
     assert progress.to_dict() == expected_progress
+    no_contact = env_module.WrenchRefactorRelativeV2_5EnvCfg()
+    expected_no_contact = copy.deepcopy(expected_progress)
+    expected_no_contact['rewards']['target_contact'] = None
+    assert no_contact.to_dict() == expected_no_contact
+    assert progress.to_dict() == expected_progress
+    assert env_module.WrenchRefactorRelativeV2_4EnvCfg().to_dict() == expected_progress
     assert progress.goal_reward_height_limit == variant.goal_reward_height_limit == .14
     assert variant.to_dict() == variant_before
     assert env_module.WrenchRefactorRelativeV2_1EnvCfg().to_dict() == variant_before
@@ -786,3 +806,26 @@ def test_relative_test_registrations():
             assert item['entry_point'].endswith(':WrenchRefactorEnv')
             assert item['kwargs']['rsl_rl_cfg_entry_point'].endswith(f':WrenchRefactorRelative{version.upper()}PPORunnerCfg')
             assert item['kwargs']['env_cfg_entry_point'].endswith(f':WrenchRefactorRelative{version.upper()}Test{direction}EnvCfg')
+
+
+@pytest.mark.parametrize('deadzone', [0, 5, 10, 15, 20, 25, 30])
+def test_fixed_left_goal_preserves_spawn_and_rng(load_mdp, deadzone):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    bounds = pool_bounds(4096)[:, 0]
+    parent_rng = torch.Generator().manual_seed(42)
+    child_rng = torch.Generator().manual_seed(42)
+    parent, _ = m.sample_commands(bounds, parent_rng, excluded_x_half_angle=math.radians(deadzone))
+    target, goal = m.sample_commands(bounds, child_rng,
+        excluded_x_half_angle=math.radians(deadzone), fixed_goal_offset=(0., -.09))
+    assert torch.equal(target, parent)
+    assert torch.equal(parent_rng.get_state(), child_rng.get_state())
+    assert torch.equal(goal[:, 0], target[:, 0])
+    torch.testing.assert_close(goal[:, 1] - target[:, 1], torch.full((4096,), -.09), atol=1e-8, rtol=0.)
+    assert target.std(dim=0).min() > .005
+
+
+@pytest.mark.parametrize('offset', [(0., -.13), (0., -.01), (float('nan'), 0.), (0.,)])
+def test_fixed_goal_rejects_invalid_offset(load_mdp, offset):
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    with pytest.raises(ValueError, match='Fixed goal offset'):
+        m.sample_commands(pool_bounds(1)[:, 0], torch.Generator(), fixed_goal_offset=offset)

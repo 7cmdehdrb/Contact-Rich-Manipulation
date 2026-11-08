@@ -186,6 +186,15 @@ class WrenchRefactorRelativeV2_1EnvCfg(WrenchRefactorRelativeV2EnvCfg):
 
 
 @configclass
+class WrenchRefactorRelativeV2_6EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
+    """Only fix the goal to 9 cm straight left of the initial target."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['fixed_goal_offset'] = (0.0, -0.09)
+
+
+@configclass
 class WrenchRefactorRelativeV2_4EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
     """Holding-style new-best XY progress, without the outward-distance cost."""
 
@@ -197,6 +206,15 @@ class WrenchRefactorRelativeV2_4EnvCfg(WrenchRefactorRelativeV2_1EnvCfg):
         # Holding OSC uses reaching=30 and goal progress=100 (reward/metre).
         self.rewards.target_goal_distance.weight = 100.0 * self.rewards.target_reaching.weight / 30.0
         self.rewards.target_inverse_distance = None
+
+
+@configclass
+class WrenchRefactorRelativeV2_5EnvCfg(WrenchRefactorRelativeV2_4EnvCfg):
+    """Preserve v2_4 and disable only contact-maintenance reward."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.target_contact = None
 
 
 @configclass

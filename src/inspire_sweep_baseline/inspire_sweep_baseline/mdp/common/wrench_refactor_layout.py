@@ -6,7 +6,7 @@ from .bbox_scene_layout import LayoutConfig, footprint_from_bounds, generate_lay
 
 def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
                     excluded_x_half_angle=math.pi / 6, min_goal_distance=.06, max_goal_distance=.12,
-                    sweep_direction='both', goal_angle_range=None):
+                    sweep_direction='both', goal_angle_range=None, fixed_goal_offset=None):
     """Uniform allowed angle, then uniform distance within the annulus and safe shelf edge.
 
     Shelf-local +X is robot-side (6 o'clock), -X is 12 o'clock.
@@ -38,6 +38,18 @@ def sample_commands(bounds, generator, spawn_radius=.02, edge_clearance=.02,
     draws = torch.rand((len(bounds), 4), device=bounds.device, dtype=bounds.dtype, generator=generator)
     angle = 2 * math.pi * draws[:, 0]
     target = spawn_radius * draws[:, 1:2].sqrt() * torch.stack((angle.cos(), angle.sin()), -1)
+    if fixed_goal_offset is not None:
+        # Keep the parent's spawn distribution and RNG consumption. A fixed
+        # shelf-local XY offset supersedes angle/deadzone sampling only.
+        if len(fixed_goal_offset) != 2 or not all(math.isfinite(v) for v in fixed_goal_offset):
+            raise ValueError('Fixed goal offset must contain two finite XY values')
+        distance = math.hypot(*fixed_goal_offset)
+        if not min_goal_distance <= distance <= max_goal_distance:
+            raise ValueError('Fixed goal offset must lie within the goal distance limits')
+        goal = target + bounds.new_tensor(fixed_goal_offset)
+        if bool((goal.abs() > safe).any()):
+            raise ValueError('Fixed goal offset exceeds the safe shelf bounds')
+        return target, goal
     side = (draws[:, 2] >= .5).to(bounds.dtype)
     theta = excluded_x_half_angle + (2 * draws[:, 2] % 1) * (math.pi - 2 * excluded_x_half_angle) + side * math.pi
     if sweep_direction != 'both':

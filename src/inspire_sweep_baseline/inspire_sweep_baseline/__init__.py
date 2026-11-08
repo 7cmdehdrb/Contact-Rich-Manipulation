@@ -1174,6 +1174,32 @@ if WRENCH_REFACTOR_RELATIVE_V2_4_TASK_ID not in gym.registry:
     )
 
 
+WRENCH_REFACTOR_RELATIVE_V2_5_TASK_ID = "Inspire-Wrench-Refactor-Relative-v2_5"
+if WRENCH_REFACTOR_RELATIVE_V2_5_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_V2_5_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeV2_5EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeV2_5PPORunnerCfg",
+        },
+    )
+
+
+WRENCH_REFACTOR_RELATIVE_V2_6_TASK_ID = "Inspire-Wrench-Refactor-Relative-v2_6"
+if WRENCH_REFACTOR_RELATIVE_V2_6_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_V2_6_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor:WrenchRefactorEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_envs:WrenchRefactorRelativeV2_6EnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelativeV2_6PPORunnerCfg",
+        },
+    )
+
+
 WRENCH_REFACTOR_RELATIVE_V3_TASK_ID = "Inspire-Wrench-Refactor-Relative-v3"
 if WRENCH_REFACTOR_RELATIVE_V3_TASK_ID not in gym.registry:
     gym.register(

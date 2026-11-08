@@ -127,3 +127,13 @@ class WrenchRefactorRelativeV2_3PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunner
 @configclass
 class WrenchRefactorRelativeV2_4PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
     experiment_name = "inspire_wrench_refactor_relative_v2_4"
+
+
+@configclass
+class WrenchRefactorRelativeV2_5PPORunnerCfg(WrenchRefactorRelativeV2_4PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v2_5"
+
+
+@configclass
+class WrenchRefactorRelativeV2_6PPORunnerCfg(WrenchRefactorRelativeV2_1PPORunnerCfg):
+    experiment_name = "inspire_wrench_refactor_relative_v2_6"
