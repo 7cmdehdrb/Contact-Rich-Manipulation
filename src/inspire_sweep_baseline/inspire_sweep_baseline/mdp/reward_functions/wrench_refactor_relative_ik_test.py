@@ -53,7 +53,8 @@ class TargetContactMaintenance(RefactorContactMaintenance):
 class TargetContactDecayMaintenance(RefactorContactMaintenance):
     """Target-only 2-of-3 windows: increment to 20, decay by two on rejection.
 
-    Rejected windows pay zero. Episode reset clears count and contact history.
+    Rejected windows pay zero but retain the decayed count for reacquisition.
+    Episode reset clears count and history.
     """
 
     def __call__(self, env, threshold_n=0.01, eef_height_limit=0.15):

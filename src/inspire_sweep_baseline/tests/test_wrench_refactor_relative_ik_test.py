@@ -414,7 +414,7 @@ def test_v0223_contact_decay_and_no_holding(configs):
     assert term(env).tolist() == [20., 20.]  # raw miss still accepted by 2-of-3
     for i in range(12):
         env.common_step_counter += 1
-        assert not term(env).any()  # rejected steps pay zero despite retained count
+        assert not term(env).any()  # rejected windows pay zero but retain decayed count
         assert term._count.tolist() == [max(20 - 2*(i+1), 0)]*2
         term(env)  # same-step cache must not decay twice
         assert term._count.tolist() == [max(20 - 2*(i+1), 0)]*2
@@ -432,3 +432,23 @@ def test_v0223_contact_decay_and_no_holding(configs):
     env.common_step_counter += 1
     assert not term(env).any()  # height gate overrides past contacts immediately
     assert term._count.tolist() == [0, 5]
+
+
+def test_contact_decay_reacquisition_keeps_remaining_count(configs):
+    env, force, _ = contact_count_fixture(configs)
+    cls = configs('reward_functions', STEM).TargetContactDecayMaintenance
+    term = cls(NS(params={}), env)
+    for _ in range(25):
+        term(env)
+        env.common_step_counter += 1
+    force.zero_()
+    assert term(env).tolist() == [20., 20.]  # first raw miss still passes 2-of-3
+    env.common_step_counter += 1
+    assert not term(env).any()
+    assert term._count.tolist() == [18, 18]
+    force[:, 0, 0, 0] = .01
+    env.common_step_counter += 1
+    assert not term(env).any()  # first returning contact: only 1-of-3
+    assert term._count.tolist() == [16, 16]
+    env.common_step_counter += 1
+    assert term(env).tolist() == [17., 17.]  # reacquisition resumes from remaining count
