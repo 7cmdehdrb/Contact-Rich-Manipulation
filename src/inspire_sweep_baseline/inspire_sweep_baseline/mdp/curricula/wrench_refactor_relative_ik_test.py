@@ -19,3 +19,9 @@ class WrenchRefactorRelativeIKV0_2TestCurriculumCfg:
     goal_speed_scale = CurriculumTermCfg(func=reward_schedule, params={'term_name': 'goal_hold', 'parameter': 'speed_scale', 'points': ((0, 0.05), (6000, 0.05), (10000, 0.02)), 'interval': 250})
     target_goal_direction_deadzone = CurriculumTermCfg(func=goal_deadzone_schedule, params={'start_degrees': 30.0, 'start_iteration': 10000, 'interval': 3000, 'decrement_degrees': 5.0})
     arm_joint_velocity_threshold = CurriculumTermCfg(func=arm_velocity_threshold_schedule, params={'initial': 4.0, 'minimum': 2.0, 'start_iteration': 10000, 'interval': 250, 'decrement': 0.05})
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg(WrenchRefactorRelativeIKV0_2TestCurriculumCfg):
+    eef_free_speed = None
+    pushing_free_speed = None

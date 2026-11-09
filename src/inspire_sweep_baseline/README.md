@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Reset-Test`**는 v0_2_1-Test의 초기화 비교 환경이다. 크기 그룹별 배치·목표·IK를 공유/교체하며 질량·관성·마찰은 매 reset 갱신한다. [설정·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_reset_test.md).
+
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Test`**는 v0_2-Test 직접 상속. object를 기울기/변위로 분리하고 EEF·타겟 속도 비용과 일정을 제거한다. 두 환경 모두 목표 거리·속도 Metrics를 기록한다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_ENVIRONMENT.md).
+
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2-Test`** 독립 환경. IK-v0_1 Scene·제어·대칭 관측과 Holding OSC v2 보상, 고정3cm·성공 종료 제거. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_ENVIRONMENT.md).
 
 Relative 활성 환경은 **v0·v2·v2_1·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.

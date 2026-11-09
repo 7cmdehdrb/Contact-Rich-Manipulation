@@ -56,6 +56,7 @@ def test_terminations_exact_ik_failures_without_success(configs):
     del old['target_goal_success']
     old['arm_joint_velocity']['params']['threshold'] = 4.
     new = getattr(configs('terminations', STEM), PREFIX + 'TerminationsCfg')().to_dict()
+    old['timeout']['func'] = new['timeout']['func']  # telemetry wrapper preserves time_out
     assert_ordered_equal(new, old)
 
 
@@ -134,9 +135,94 @@ def test_no_task_configuration_or_runtime_ancestry():
         'RslRlMLPModelCfg','RslRlOnPolicyRunnerCfg'}
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node,ast.ClassDef):
+            if isinstance(node,ast.ClassDef) and 'V0_2_1' not in node.name and node.name != 'GroupedResetObjectSpawnerCfg':
                 assert all(isinstance(b,ast.Name) and b.id in allowed for b in node.bases), path
             if isinstance(node,ast.ImportFrom):
                 for alias in node.names:
                     if alias.name.endswith('Cfg') and node.level:
-                        assert alias.name.startswith(PREFIX) or 'SpawnerCfg' in alias.name, (path,alias.name)
+                        assert alias.name.startswith(('WrenchRefactorRelativeIKV0_2Test', 'WrenchRefactorRelativeIKV0_2_1')) or 'SpawnerCfg' in alias.name, (path,alias.name)
+
+
+def test_child_only_changes_requested_rewards_and_schedules(configs):
+    module = configs('rewards', STEM)
+    parent = module.WrenchRefactorRelativeIKV0_2TestRewardsCfg().to_dict()
+    child = module.WrenchRefactorRelativeIKV0_2_1TestRewardsCfg().to_dict()
+    expected = copy.deepcopy(parent)
+    expected.update(object=None, eef_linear_speed=None, pushing_speed=None)
+    expected['object_tilt'] = child['object_tilt']
+    expected['obstacle_displacement'] = child['obstacle_displacement']
+    assert child == expected
+    assert child['object_tilt']['weight'] == -30.
+    assert child['obstacle_displacement']['weight'] == -150.
+    assert child['obstacle_displacement']['params'] == {'displacement_max_cost': .04}
+    assert module.WrenchRefactorRelativeIKV0_2TestRewardsCfg().to_dict() == parent
+    schedules = configs('curricula', STEM)
+    expected = schedules.WrenchRefactorRelativeIKV0_2TestCurriculumCfg().to_dict()
+    expected.update(eef_free_speed=None, pushing_free_speed=None)
+    assert schedules.WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg().to_dict() == expected
+
+
+def test_split_object_cost_preserves_sum(configs):
+    module = configs('rewards', STEM)
+    parent = module.WrenchRefactorRelativeIKV0_2TestRewardsCfg()
+    child = module.WrenchRefactorRelativeIKV0_2_1TestRewardsCfg()
+    env, _ = goal_env()
+    pos = env.scene['object_collection'].data.object_pos_w
+    env._initial_object_positions_w = torch.zeros_like(pos)
+    pos[:, 1:, 0] = torch.tensor([0., .01, .2, 1.])[:, None]
+    quat = env.scene['object_collection'].data.object_quat_w
+    angle = torch.tensor([0., .0872664626, .4, .9])[:, None]
+    quat[..., 0] = (angle / 2).cos()
+    quat[..., 1] = (angle / 2).sin()
+    old = parent.object.weight * parent.object.func(env, **parent.object.params)
+    new = sum(term.weight * term.func(env, **term.params)
+              for term in (child.object_tilt, child.obstacle_displacement))
+    torch.testing.assert_close(old, new)
+
+
+def test_metrics_temporal_mean_peak_and_partial_reset():
+    # Execute the real runtime class with only its Isaac Lab base substituted.
+    tree = ast.parse((MODULE_ROOT / f'runtime/{STEM}.py').read_text())
+    node = next(n for n in tree.body if isinstance(n, ast.ClassDef))
+    class Base:
+        def _reset_idx(self, ids):
+            pass
+    ns = {'torch': torch, 'ManagerBasedRLEnv': Base}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), '<runtime-metrics>', 'exec'), ns)
+    cls = ns['WrenchRefactorRelativeIKV0_2TestEnv']
+    env = cls.__new__(cls)
+    env._metric_eef_body = 0
+    env.cfg = NS(goal_success_radius=.03)
+    env._metric_sums = torch.zeros(2,4)
+    env._metric_counts = torch.zeros(2,4)
+    env._metric_peaks = torch.zeros(2,2)
+    env._metric_final_distance = torch.zeros(2)
+    env._metric_min_distance = torch.full((2,), float('inf'))
+    env.sensor_data_fresh = torch.ones(2,dtype=torch.bool)
+    env.extras = {'log': {}}
+    env.action_manager = NS(_action=torch.zeros(2,8), _prev_action=torch.zeros(2,8))
+    objects = NS(object_pos_w=torch.zeros(2,17,3), object_lin_vel_w=torch.zeros(2,17,3))
+    robot = NS(body_link_pos_w=torch.zeros(2,1,3), body_link_lin_vel_w=torch.zeros(2,1,3),
+               body_link_ang_vel_w=torch.zeros(2,1,3))
+    env.scene = {'robot':NS(data=robot), 'object_collection':NS(data=objects),
+                 'ee_frame':NS(data=NS(target_pos_w=torch.zeros(2,1,3)))}
+    env._initial_object_positions_w = torch.zeros(2,17,3)
+    env.command_manager = NS(get_command=lambda _: torch.zeros(2,3))
+    for distances, eef, target in (([.02,.04],[1.,2.],[.5,1.]), ([.03,.01],[3.,4.],[1.5,2.])):
+        objects.object_pos_w[:,0,0] = torch.tensor(distances)
+        robot.body_link_lin_vel_w[:,0,0] = torch.tensor(eef)
+        objects.object_lin_vel_w[:,0,0] = torch.tensor(target)
+        env.record_goal_accuracy_metrics()
+    env._reset_idx(torch.tensor([0]))
+    log = env.extras['log']
+    expected = {'target_goal_distance_xy_m_mean':.025, 'target_goal_distance_xy_m_min':.02,
+                'target_goal_distance_xy_m_final':.03, 'eef_linear_speed_m_s_mean':2.,
+                'eef_linear_speed_m_s_episode_max':3., 'target_linear_speed_m_s_mean':1.,
+                'target_linear_speed_m_s_episode_max':1.5, 'target_within_goal_radius_fraction_mean':1.}
+    assert {k:float(v) for k,v in log.items()} == pytest.approx({'Metrics/'+k:v for k,v in expected.items()})
+    assert not env._metric_counts[0].any()
+    assert (env._metric_counts[1] == 2).all()
+    objects.object_pos_w[0,0,0] = float('nan')
+    env.record_goal_accuracy_metrics()
+    env._reset_idx(torch.tensor([0]))
+    assert all(torch.isfinite(v) for v in env.extras['log'].values())

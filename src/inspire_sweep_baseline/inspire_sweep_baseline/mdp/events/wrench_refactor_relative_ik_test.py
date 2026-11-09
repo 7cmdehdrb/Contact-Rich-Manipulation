@@ -20,3 +20,17 @@ class WrenchRefactorRelativeIKV0_2TestEventsCfg:
         'front_clearance': (0.08, 0.10), 'lateral_offset': (0.10, 0.18),
         'height_jitter': 0.02, 'height_offset': 0.01,
     })
+
+
+from ..event_functions.wrench_refactor_relative_ik_test import grouped_reset_scene, randomize_reset_physics
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1ResetTestEventsCfg(WrenchRefactorRelativeIKV0_2TestEventsCfg):
+    # Startup prepares immutable geometry/material buffers. Reset updates values.
+    reset_physics = EventTerm(func=randomize_reset_physics, mode='reset', params={'mass_scale': 1.5})
+
+    def __post_init__(self):
+        self.object_spawn.func = grouped_reset_scene
+        self.object_spawn.params['ik_params'] = dict(self.robot_initial_pose.params)
+        self.robot_initial_pose = None

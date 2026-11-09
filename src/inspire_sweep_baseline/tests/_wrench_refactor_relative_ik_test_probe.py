@@ -13,6 +13,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--num-envs', type=int, default=32)
 parser.add_argument('--output', type=Path, default=Path('outputs/relative_ik_v0_2_test_validation'))
 parser.add_argument('--config-only', action='store_true')
+parser.add_argument('--child', action='store_true')
+parser.add_argument('--benchmark', action='store_true')
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -39,6 +41,7 @@ try:
     expected['rewards']['goal_hold']['params']['position_tolerance'] = .03
     expected['rewards']['shelf_failure']['func'] = current['rewards']['shelf_failure']['func']
     expected['terminations'].pop('target_goal_success')
+    expected['terminations']['timeout']['func'] = current['terminations']['timeout']['func']
     schedules = FusionHoldingV2CurriculumCfg().to_dict()
     expected['curriculum'] = {k:v for k,v in schedules.items() if k not in (
         'obstacle_population','goal_deadzone','goal_position_scale','goal_position_tolerance','arm_free_speed')}
@@ -51,6 +54,22 @@ try:
     expected_runner = WrenchRefactorRelativeIKV0_1PPORunnerCfg().to_dict()
     expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2-Test'
     assert runner.to_dict() == expected_runner
+    if args.child:
+        task = 'Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Test'
+        child = load_cfg_from_registry(task, 'env_cfg_entry_point')
+        child_dict = child.to_dict()
+        expected_child = copy.deepcopy(current)
+        expected_child['rewards'].update(object=None, eef_linear_speed=None, pushing_speed=None)
+        for name in ('object_tilt', 'obstacle_displacement'):
+            expected_child['rewards'][name] = child_dict['rewards'][name]
+        expected_child['curriculum'].update(eef_free_speed=None, pushing_free_speed=None)
+        assert child_dict == expected_child
+        assert type(child).__bases__ == (WrenchRefactorRelativeIKV0_2TestEnvCfg,)
+        assert WrenchRefactorRelativeIKV0_2TestEnvCfg().to_dict() == current
+        child_runner = load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point').to_dict()
+        expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_1-Test'
+        assert child_runner == expected_runner
+        cfg = child
     args.output.mkdir(parents=True, exist_ok=True)
     result = {'task':task, 'full_config_comparison':True, 'ppo_comparison':True, 'parent_preserved':True}
     print('FULL CONFIG COMPARISON PASSED', flush=True)
@@ -99,12 +118,50 @@ try:
                     assert all(torch.isfinite(v).all() for v in obs.values())
                     assert (obs['policy'][:,-6:].abs() <= obs['policy'].new_tensor([150.,150.,150.,8.,8.,8.])+1e-5).all()
                     done += int((terminated | truncated).sum())
+            assert (raw._metric_counts > 0).all(), 'metrics not collected without success termination'
+            if args.child:
+                assert all(n not in raw.reward_manager.active_terms for n in ('object','eef_linear_speed','pushing_speed','arm_speed_excess'))
+                from inspire_sweep_baseline.mdp.reward_functions.contact_sweep_clutter_fusion import combined_active_object_cost
+                terms = [raw.reward_manager.get_term_cfg(n) for n in ('object_tilt','obstacle_displacement')]
+                split = sum(t.weight * t.func(raw, **t.params) for t in terms)
+                torch.testing.assert_close(split, -30 * combined_active_object_cost(raw, displacement_ratio=5.))
+            if args.benchmark:
+                import time, statistics
+                collect = raw.record_goal_accuracy_metrics
+                timings = {'enabled': [], 'disabled': []}
+                # Alternating equal-length blocks on the same scene; include reset costs.
+                for enabled in (False, True, True, False, False, True, True, False):
+                    raw.record_goal_accuracy_metrics = collect if enabled else lambda: None
+                    torch.cuda.synchronize()
+                    start = time.perf_counter()
+                    for _ in range(40):
+                        env.step(action)
+                    torch.cuda.synchronize()
+                    timings['enabled' if enabled else 'disabled'].append((time.perf_counter()-start)/40)
+                raw.record_goal_accuracy_metrics = collect
+                result['step_benchmark_seconds'] = timings
+                result['step_benchmark_overhead_percent'] = 100 * (
+                    statistics.median(timings['enabled'])/statistics.median(timings['disabled'])-1)
+            before_counts = raw._metric_counts.clone()
             ids = torch.arange(0,args.num_envs,2,device=raw.device)
             before = raw.scene['object_collection'].data.object_pos_w.clone()
             raw._reset_idx(ids)
             mask = torch.ones(args.num_envs,dtype=torch.bool,device=raw.device); mask[ids] = False
             torch.testing.assert_close(raw.scene['object_collection'].data.object_pos_w[mask],before[mask])
             assert not raw.sensor_data_fresh[ids].any()
+            assert not raw._metric_counts[ids].any()
+            torch.testing.assert_close(raw._metric_counts[mask], before_counts[mask])
+            logs = {k:v for k,v in raw.extras['log'].items() if k.startswith('Metrics/')}
+            assert len(logs) == 8, logs
+            assert all(torch.isfinite(v) for v in logs.values())
+            assert not any('obstacle_actual' in k or 'layout_complete' in k for k in logs)
+            result['metrics'] = {k:float(v) for k,v in logs.items()}
+            # Force an actual timeout; metrics must contain pre-reset terminal distance.
+            terminal_distance = (raw.scene['object_collection'].data.object_pos_w[:,0,:2] - raw.command_manager.get_command('target_goal_pos')[:,:2]).norm(dim=-1)
+            raw.episode_length_buf[:] = raw.max_episode_length
+            assert raw.termination_manager.compute().all()
+            torch.testing.assert_close(raw._metric_final_distance, terminal_distance)
+
             # Place stationary targets at goal, evaluate after physics sensor refresh.
             states = raw.scene['object_collection'].data.object_link_state_w.clone()
             goals = raw.command_manager.get_command('target_goal_pos')

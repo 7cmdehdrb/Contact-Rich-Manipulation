@@ -1,4 +1,6 @@
 """Independent IK-v0_1 scene/control and Holding OSC v2 reward environment."""
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_1TestRewardsCfg
+from ..mdp.curricula.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
@@ -68,3 +70,33 @@ class WrenchRefactorRelativeIKV0_2TestEnvCfg(ManagerBasedRLEnvCfg):
         self.scene.robot.actuators['arm'].effort_limit_sim = dict(
             zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0)))
 
+
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1TestEnvCfg(WrenchRefactorRelativeIKV0_2TestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_1TestRewardsCfg = WrenchRefactorRelativeIKV0_2_1TestRewardsCfg()
+    curriculum: WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg = WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg()
+
+
+from ..assets.scenes.wrench_refactor_relative_ik_test import GroupedResetObjectSpawnerCfg
+from ..mdp.events.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_1ResetTestEventsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1ResetTestEnvCfg(WrenchRefactorRelativeIKV0_2_1TestEnvCfg):
+    events: WrenchRefactorRelativeIKV0_2_1ResetTestEventsCfg = WrenchRefactorRelativeIKV0_2_1ResetTestEventsCfg()
+    reset_size_groups: int = 16
+    reset_pool_capacity: int = 8
+    reset_pool_refresh_interval: int = 32
+
+    def __post_init__(self):
+        super().__post_init__()
+        for value in (self.reset_size_groups, self.reset_pool_capacity, self.reset_pool_refresh_interval):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError('Reset group/pool settings must be positive integers')
+        for obj in self.scene.object_collection.rigid_objects.values():
+            import copy
+            values = copy.deepcopy(vars(obj.spawn))
+            values.pop('func')
+            obj.spawn = GroupedResetObjectSpawnerCfg(**values, reset_scale_groups=self.reset_size_groups)

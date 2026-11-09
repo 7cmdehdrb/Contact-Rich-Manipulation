@@ -205,6 +205,13 @@ def spawn_revision_objects(prim_path, cfg, translation=None, orientation=None, *
     if cfg.kind_override is not None:
         choices = [REVISION_OBJECT_KINDS.index(cfg.kind_override)] * len(paths)
     scales = [random.uniform(*cfg.scale_range) for _ in paths]
+    group_count = getattr(cfg, 'reset_scale_groups', None)
+    if group_count is not None:
+        # Only Reset-Test opts in. Group by numeric env id, not USD traversal order.
+        by_env = {int(re.search(r'/env_(\d+)/', path).group(1)): scale
+                  for path, scale in zip(paths, scales)}
+        scales = [by_env[int(re.search(r'/env_(\d+)/', path).group(1)) % group_count]
+                  for path in paths]
     with Sdf.ChangeBlock():
         for path, kind in zip(paths, choices):
             Sdf.CreatePrimInLayer(stage.GetRootLayer(), path)

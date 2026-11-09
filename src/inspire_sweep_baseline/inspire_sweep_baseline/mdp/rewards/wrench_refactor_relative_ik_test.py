@@ -1,4 +1,5 @@
 """Holding OSC v2 rewards, fixed 3 cm hold radius; no IK reward terms."""
+from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
 from ..reward_functions.contact_sweep_clutter import shelf_failure
@@ -39,3 +40,15 @@ class WrenchRefactorRelativeIKV0_2TestRewardsCfg:
     obstacle_contact = RewTerm(func=obstacle_contact_force_cost, weight=0.0, params={'free_force': 80.0, 'max_cost': 100.0})
     object_acceleration = RewTerm(func=ObjectAccelerationPenalty, weight=0.0, params={'free_acceleration': 50.0, 'max_cost': 100.0})
     wrench_change = RewTerm(func=WrenchMagnitudeChangePenalty, weight=0.0, params={'free_force_change': 50.0, 'free_moment_change': 5.0, 'saturation_ratio': 2.5, 'sharpness': 3.0, 'max_positive_fraction': 0.05})
+
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1TestRewardsCfg(WrenchRefactorRelativeIKV0_2TestRewardsCfg):
+    object = None
+    object_tilt = RewTerm(func=active_object_tilt_cost, weight=-30.0,
+                          params={'free_angle': math.radians(5.0), 'fail_angle': 0.9})
+    obstacle_displacement = RewTerm(func=active_obstacle_displacement_cost, weight=-150.0,
+                                    params={'displacement_max_cost': 0.04})
+    eef_linear_speed = None
+    pushing_speed = None

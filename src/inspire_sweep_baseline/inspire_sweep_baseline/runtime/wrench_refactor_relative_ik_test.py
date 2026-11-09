@@ -7,8 +7,8 @@ from isaaclab.envs import ManagerBasedRLEnv
 class WrenchRefactorRelativeIKV0_2TestEnv(ManagerBasedRLEnv):
     """Own reset snapshots, iteration and telemetry without previous task inheritance."""
 
-    _mean_metrics = ('target_goal_distance_xy', 'eef_linear_speed',
-                     'target_linear_speed', 'target_linear_acceleration')
+    _mean_metrics = ('target_goal_distance_xy_m', 'eef_linear_speed_m_s',
+                     'target_linear_speed_m_s', 'target_within_goal_radius_fraction')
 
     def __init__(self, cfg, render_mode=None, **kwargs):
         # Preserve IK runtime configuration; Holding rewards have no EEF height gate.
@@ -29,18 +29,18 @@ class WrenchRefactorRelativeIKV0_2TestEnv(ManagerBasedRLEnv):
         self._final_actual_population = torch.zeros((count, 2), device=device, dtype=torch.long)
         self._revision_layout_complete = torch.zeros(count, device=device, dtype=torch.bool)
         self._revision_layout_rng = torch.Generator(device=device).manual_seed(int(cfg.seed or 0))
-        self._metric_sums = {key: torch.zeros(count, device=device) for key in self._mean_metrics}
-        self._metric_counts = {key: torch.zeros(count, device=device) for key in self._mean_metrics}
-        self._max_force = torch.zeros(count, device=device)
-        self._max_moment = torch.zeros(count, device=device)
-        self._force_samples = torch.zeros(count, device=device, dtype=torch.bool)
-        self._moment_samples = torch.zeros(count, device=device, dtype=torch.bool)
+        self._metric_sums = torch.zeros((count, 4), device=device)
+        self._metric_counts = torch.zeros_like(self._metric_sums)
+        self._metric_peaks = torch.zeros((count, 2), device=device)
+        self._metric_final_distance = torch.zeros(count, device=device)
+        self._metric_min_distance = torch.full((count,), float('inf'), device=device)
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
 
     def load_managers(self):
         shelf = self.scene['shelf'].data
         self._revision_initial_shelf_pos = shelf.root_pos_w.clone()
         self._revision_initial_shelf_quat = shelf.root_quat_w.clone()
+        self._metric_eef_body = self.scene['robot'].body_names.index('axia80_link')
         super().load_managers()
         limits = getattr(self.cfg, 'wrist_wrench_observation_limits', None)
         if limits is not None:
@@ -128,55 +128,73 @@ class WrenchRefactorRelativeIKV0_2TestEnv(ManagerBasedRLEnv):
         self.curriculum_manager.compute(env_ids=None)
 
     def record_goal_accuracy_metrics(self):
+        """One device-only sample per policy step, including the terminal state.
+
+        Read existing pose/velocity buffers; no acceleration, sensor readback,
+        CPU transfer, or GPU-to-host scalar synchronization in the step path.
+        """
         data = self.scene['object_collection'].data
-        rows = torch.arange(self.num_envs, device=self.device)
-        target = self.target_id[:, 0]
+        # This environment always uses slot zero as its target.
         robot = self.scene['robot']
-        body = robot.body_names.index('axia80_link')
+        body = self._metric_eef_body
         offset = self.scene['ee_frame'].data.target_pos_w[:, 0] - robot.data.body_link_pos_w[:, body]
-        eef_velocity = robot.data.body_link_lin_vel_w[:, body] + torch.cross(
+        velocity = robot.data.body_link_lin_vel_w[:, body] + torch.cross(
             robot.data.body_link_ang_vel_w[:, body], offset, dim=-1)
         goal = self.command_manager.get_command('target_goal_pos')
-        values = {
-            'target_goal_distance_xy': (data.object_pos_w[rows, target, :2] - goal[:, :2]).norm(dim=-1),
-            'eef_linear_speed': eef_velocity.norm(dim=-1),
-            'target_linear_speed': data.object_lin_vel_w[rows, target].norm(dim=-1),
-            'target_linear_acceleration': data.object_com_lin_acc_w[rows, target].norm(dim=-1),
-        }
-        for key, value in values.items():
-            valid = torch.isfinite(value)
-            self._metric_sums[key] += torch.where(valid, value, 0.)
-            self._metric_counts[key] += valid.float()
-        wrench = self.observation_manager.cfg.policy.wrist_wrench.func(self)
-        force, moment = wrench[:, :3].norm(dim=-1), wrench[:, 3:].norm(dim=-1)
-        force_valid, moment_valid = torch.isfinite(force), torch.isfinite(moment)
-        self._max_force = torch.maximum(self._max_force, torch.where(force_valid, force, 0.))
-        self._max_moment = torch.maximum(self._max_moment, torch.where(moment_valid, moment, 0.))
-        self._force_samples |= force_valid
-        self._moment_samples |= moment_valid
+        distance = (data.object_pos_w[:, 0, :2] - goal[:, :2]).norm(dim=-1)
+        values = torch.stack((distance, velocity.norm(dim=-1),
+                              data.object_lin_vel_w[:, 0].norm(dim=-1),
+                              (distance <= self.cfg.goal_success_radius).float()), dim=-1)
+        valid = torch.isfinite(values)
+        valid[:, 3] = valid[:, 0]
+        clean = torch.where(valid, values, 0.)
+        self._metric_sums += clean
+        self._metric_counts += valid
+        self._metric_peaks = torch.maximum(self._metric_peaks, clean[:, 1:3])
+        self._metric_final_distance = clean[:, 0]
+        self._metric_min_distance = torch.minimum(
+            self._metric_min_distance, torch.where(valid[:, 0], distance, float('inf')))
 
     def _reset_idx(self, env_ids):
-        metrics = {}
-        for key in self._mean_metrics:
-            sampled = self._metric_counts[key][env_ids] > 0
-            if bool(sampled.any()):
-                metrics[f'Metrics/{key}_mean'] = (
-                    self._metric_sums[key][env_ids][sampled] /
-                    self._metric_counts[key][env_ids][sampled]).mean()
-            self._metric_sums[key][env_ids] = 0.
-            self._metric_counts[key][env_ids] = 0.
-        for key, values, valid in (('max_force', self._max_force, self._force_samples),
-                                   ('max_moment', self._max_moment, self._moment_samples)):
-            if bool(valid[env_ids].any()):
-                metrics[f'Metrics/{key}'] = values[env_ids][valid[env_ids]].mean()
-            values[env_ids] = 0.
-            valid[env_ids] = False
+        # Log per-episode temporal means and peaks, averaged over reset episodes.
+        counts = self._metric_counts[env_ids]
+        means = self._metric_sums[env_ids] / counts.clamp_min(1)
+        valid = counts > 0
+        batch_means = (means * valid).sum(0) / valid.sum(0).clamp_min(1)
+        metrics = {f'Metrics/{key}_mean': batch_means[i] for i, key in enumerate(self._mean_metrics)}
+        speed_valid = valid[:, 1:3]
+        peaks = (self._metric_peaks[env_ids] * speed_valid).sum(0) / speed_valid.sum(0).clamp_min(1)
+        metrics['Metrics/eef_linear_speed_m_s_episode_max'] = peaks[0]
+        metrics['Metrics/target_linear_speed_m_s_episode_max'] = peaks[1]
+        distance_valid = valid[:, 0]
+        denom = distance_valid.sum().clamp_min(1)
+        metrics['Metrics/target_goal_distance_xy_m_final'] = (
+            self._metric_final_distance[env_ids] * distance_valid).sum() / denom
+        metrics['Metrics/target_goal_distance_xy_m_min'] = torch.where(
+            distance_valid, self._metric_min_distance[env_ids], 0.).sum() / denom
+        self._metric_sums[env_ids] = 0.
+        self._metric_counts[env_ids] = 0.
+        self._metric_peaks[env_ids] = 0.
+        self._metric_final_distance[env_ids] = 0.
+        self._metric_min_distance[env_ids] = float('inf')
         self.sensor_data_fresh[env_ids] = False
         super()._reset_idx(env_ids)
         self.action_manager._action[env_ids, -2:] = 1.
         self.action_manager._prev_action[env_ids, -2:] = 1.
         self._initial_object_positions_w[env_ids] = self.scene['object_collection'].data.object_pos_w[env_ids]
-        for index, color in enumerate(('gray', 'white')):
-            metrics[f'Metrics/obstacle_actual_{color}'] = self._final_actual_population[env_ids, index].float().mean()
-        metrics['Metrics/layout_complete'] = self._revision_layout_complete[env_ids].float().mean()
         self.extras['log'].update(metrics)
+
+
+class WrenchRefactorRelativeIKV0_2_1ResetTestEnv(WrenchRefactorRelativeIKV0_2TestEnv):
+    """Parent runtime with explicit reseeding of reset-only random streams."""
+
+    def reset(self, seed=None, env_ids=None, options=None):
+        if seed is not None:
+            self._reset_pool_seed = seed
+            self._goal_reset_seed = seed + 1707
+            if hasattr(self, '_goal_reset_rng'):
+                self._goal_reset_rng.manual_seed(self._goal_reset_seed)
+            if hasattr(self, '_grouped_reset_pool'):
+                del self._grouped_reset_pool
+            self._reset_physics_rng = torch.Generator().manual_seed(seed + 173)
+        return super().reset(seed=seed, env_ids=env_ids, options=options)

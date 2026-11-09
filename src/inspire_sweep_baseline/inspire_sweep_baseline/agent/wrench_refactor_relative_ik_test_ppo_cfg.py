@@ -28,3 +28,13 @@ class WrenchRefactorRelativeIKV0_2TestPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     actor = WrenchRefactorRelativeIKV0_2TestModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
     critic = WrenchRefactorRelativeIKV0_2TestModelCfg()
     algorithm = RslRlPpoAlgorithmCfg(value_loss_coef=1.0, use_clipped_value_loss=True, clip_param=0.2, entropy_coef=0.005, num_learning_epochs=8, num_mini_batches=4, learning_rate=0.001, schedule='adaptive', gamma=0.98, lam=0.95, desired_kl=0.02, max_grad_norm=1.0)
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1TestPPORunnerCfg(WrenchRefactorRelativeIKV0_2TestPPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_1-Test'
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_1ResetTestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_1TestPPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_1-Reset-Test'

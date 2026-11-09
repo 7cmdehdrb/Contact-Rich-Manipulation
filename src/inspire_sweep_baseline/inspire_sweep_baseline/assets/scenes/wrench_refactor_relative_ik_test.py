@@ -87,3 +87,8 @@ class WrenchRefactorRelativeIKV0_2TestSceneCfg(InteractiveSceneCfg):
                 update_period=0., history_length=0, debug_vis=False,
                 max_contact_data_count_per_prim=16 * len(HAND_CONTACT_BODY_NAMES),
             ))
+
+
+@configclass
+class GroupedResetObjectSpawnerCfg(RevisionObjectSpawnerCfg):
+    reset_scale_groups: int = 16
