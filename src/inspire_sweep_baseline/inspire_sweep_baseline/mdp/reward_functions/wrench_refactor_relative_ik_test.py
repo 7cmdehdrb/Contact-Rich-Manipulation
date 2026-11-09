@@ -133,3 +133,33 @@ class ContactConditionedSweep(RelativeInverseDistance):
         self._previous[fresh] = position[fresh]
         self._step[fresh] = env.common_step_counter
         return self._value.clone()
+
+
+from .goal_rewards import ReachProgress
+from isaaclab.utils.math import quat_apply
+
+
+class InverseDistanceReach(ReachProgress):
+    """Continuous proximity to the live BBOX center, bounded by the old reach budget.
+
+    Keep the parent's reset-time root distance only for reward scale. No running
+    minimum or contact gate is used. RewardManager integrates this rate with dt.
+    """
+
+    def __call__(self, env, near_radius=.10, distance_scale=.10, frame_name='ee_frame'):
+        if not math.isfinite(distance_scale) or distance_scale <= 0:
+            raise ValueError('Reach distance_scale must be finite and positive')
+        if not math.isfinite(near_radius) or near_radius < 0:
+            raise ValueError('Reach near_radius must be finite and nonnegative')
+        duration = env.cfg.episode_length_s
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError('Episode duration must be finite and positive')
+        rows = torch.arange(env.num_envs, device=env.device)
+        target = env.target_id[:, 0].long()
+        objects = env.scene['object_collection'].data
+        offset = env._revision_bounds_t[rows, target].mean(dim=-2)
+        center = objects.object_pos_w[rows, target] + quat_apply(objects.object_quat_w[rows, target], offset)
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        gap = ((reference - center).norm(dim=-1) - near_radius).clamp_min(0.)
+        proximity = distance_scale / (distance_scale + gap)
+        return self._initial_distance / duration * proximity

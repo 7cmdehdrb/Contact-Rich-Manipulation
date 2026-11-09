@@ -103,3 +103,12 @@ class WrenchRefactorRelativeIKV0_2_2_5RewardsCfg(WrenchRefactorRelativeIKV0_2_2_
     direction_deviation = RewTerm(func=ContactConditionedSweep, weight=-6.0,
                                  params={'component': 'direction', 'threshold_n': .01, 'eef_height_limit': .15})
     hand_contact = None
+
+
+from ..reward_functions.wrench_refactor_relative_ik_test import InverseDistanceReach
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_6RewardsCfg(WrenchRefactorRelativeIKV0_2_2_4RewardsCfg):
+    reaching = RewTerm(func=InverseDistanceReach, weight=30.0,
+                       params={'near_radius': .10, 'distance_scale': .10, 'frame_name': 'ee_frame'})

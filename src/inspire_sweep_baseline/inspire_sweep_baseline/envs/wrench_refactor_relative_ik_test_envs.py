@@ -170,6 +170,7 @@ class WrenchRefactorRelativeIKV0_2_2_4EnvCfg(WrenchRefactorRelativeIKV0_2_2_3Fas
     terminations: WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg = WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg()
     debug_spawn_regions: bool = False  # play.py enables; train.py forces off, including video runs.
     debug_spawn_max_envs: int = 4
+    timeout_metric_window: int = 10000
 
 
 from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_5RewardsCfg
@@ -178,3 +179,11 @@ from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativ
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_5EnvCfg(WrenchRefactorRelativeIKV0_2_2_4EnvCfg):
     rewards: WrenchRefactorRelativeIKV0_2_2_5RewardsCfg = WrenchRefactorRelativeIKV0_2_2_5RewardsCfg()
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_6RewardsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_6EnvCfg(WrenchRefactorRelativeIKV0_2_2_4EnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2_6RewardsCfg = WrenchRefactorRelativeIKV0_2_2_6RewardsCfg()

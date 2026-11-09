@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_6`**는 v0_2_2_4 직접 상속으로 Reach만 현재3D 중심의 지속 근접 보상으로 변경한다. v0_2_2_4부터 timeout/success 집계를 최근10,000개 완료 에피소드로 변경했다. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_6.md).
+
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_5`**는 v0_2_2_4 직접 상속. 접촉 조건부 policy step 접근120·방향 이탈−6, 후퇴−25.94 유지, 접촉 유지 보상 삭제. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_5.md).
 
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_4`**는 v0_2_2_3-Fast-Test 직접 상속. play 전용 스폰 영역 표시, 물체 가속도 비용/일정 제거,10초 timeout 중 XY 거리<3cm 성공률 기록. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_4.md).

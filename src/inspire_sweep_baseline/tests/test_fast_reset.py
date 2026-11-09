@@ -183,6 +183,7 @@ def test_full_fast_config_matches_parent_except_reset(configs, omni_config, monk
     expected_latest['terminations']['success'] = latest['terminations']['success']
     expected_latest['debug_spawn_regions'] = False
     expected_latest['debug_spawn_max_envs'] = 4
+    expected_latest['timeout_metric_window'] = 10000
     assert latest == expected_latest
     assert Latest.__bases__ == (newest,)
     assert newest().to_dict() == new
@@ -197,6 +198,16 @@ def test_full_fast_config_matches_parent_except_reset(configs, omni_config, monk
     assert final == expected_final
     assert Final.__bases__ == (Latest,)
     assert Latest().to_dict() == latest
+    Follow = envs.WrenchRefactorRelativeIKV0_2_2_6EnvCfg
+    follow = Follow().to_dict()
+    expected_follow = copy.deepcopy(latest)
+    expected_follow['rewards']['reaching'] = follow['rewards']['reaching']
+    assert follow == expected_follow
+    assert Follow.__bases__ == (Latest,)
+    assert Latest().to_dict() == latest
+    assert follow['rewards']['goal_distance']['weight'] == 100.
+    assert follow['rewards']['hand_contact'] is not None
+    assert 'direction_deviation' not in follow['rewards']
 
 
 def test_integrated_reset_writes_final_selected_states_once(configs):

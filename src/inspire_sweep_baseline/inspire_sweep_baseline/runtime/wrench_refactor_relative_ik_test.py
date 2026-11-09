@@ -213,20 +213,53 @@ class WrenchRefactorRelativeIKV0_2_2_2FastTestEnv(WrenchRefactorRelativeIKV0_2Te
         return super().reset(seed=seed, env_ids=env_ids, options=options)
 
 
+class _RecentEpisodeOutcomes:
+    """Bounded episode ring; columns are success and timeout, including early failures."""
+
+    def __init__(self, capacity, device):
+        if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 1:
+            raise ValueError('timeout_metric_window must be a positive integer')
+        self.capacity = capacity
+        self.buffer = torch.zeros((capacity, 2), dtype=torch.long, device=device)
+        self.totals = torch.zeros(2, dtype=torch.long, device=device)
+        self.cursor = 0
+        self.filled = 0
+
+    def append(self, outcomes):
+        count = len(outcomes)
+        if count == 0:
+            return
+        if count >= self.capacity:
+            self.buffer[:] = outcomes[-self.capacity:]
+            self.totals[:] = self.buffer.sum(0)
+            self.cursor = 0
+            self.filled = self.capacity
+            return
+        slots = (torch.arange(count, device=self.buffer.device) + self.cursor) % self.capacity
+        self.totals += outcomes.sum(0) - self.buffer[slots].sum(0)
+        self.buffer[slots] = outcomes
+        self.cursor = (self.cursor + count) % self.capacity
+        self.filled = min(self.capacity, self.filled + count)
+
+
 class WrenchRefactorRelativeIKV0_2_2_4Env(WrenchRefactorRelativeIKV0_2_2_2FastTestEnv):
     """Fast reset with play-only footprint overlay and timeout success telemetry."""
 
     def __init__(self, cfg, render_mode=None, **kwargs):
-        self._timeout_outcome_totals = torch.zeros(2, dtype=torch.long, device=cfg.sim.device)
+        self._timeout_outcomes = _RecentEpisodeOutcomes(cfg.timeout_metric_window, cfg.sim.device)
         super().__init__(cfg, render_mode=render_mode, **kwargs)
 
     def _reset_idx(self, env_ids):
         # Read the terminal outcome before parent reset overwrites the goal/poses.
-        due = self.episode_length_buf[env_ids] >= self.max_episode_length
-        success = due & self.termination_manager.get_term('success')[env_ids]
-        self._timeout_outcome_totals += torch.stack((success.sum(), due.sum()))
+        completed = ((self.episode_length_buf[env_ids] > 0)
+                     & self.termination_manager.dones[env_ids])
+        # Same-step ties use ascending env ID, including if a batch exceeds N.
+        ids = env_ids[completed].sort().values
+        due = self.episode_length_buf[ids] >= self.max_episode_length
+        success = due & self.termination_manager.get_term('success')[ids]
+        self._timeout_outcomes.append(torch.stack((success, due), dim=-1).long())
         super()._reset_idx(env_ids)
-        totals = self._timeout_outcome_totals
+        totals = self._timeout_outcomes.totals
         self.extras['log'].update({
             'Metrics/timeout_success_rate': totals[0].float() / totals[1].clamp_min(1),
             'Metrics/timeout_success_count': totals[0].clone(),

@@ -482,33 +482,43 @@ def test_v0224_success_only_at_deadline_strict_xy_and_failure_priority(configs, 
 
 def test_v0224_timeout_ratio_counts_episodes_before_reset_and_training_no_overlay():
     tree = ast.parse((MODULE_ROOT / f'runtime/{STEM}.py').read_text())
-    node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'WrenchRefactorRelativeIKV0_2_2_4Env')
+    nodes = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name in
+             ('_RecentEpisodeOutcomes', 'WrenchRefactorRelativeIKV0_2_2_4Env')]
     class Base:
         def _reset_idx(self, ids):
             self.episode_length_buf[ids] = 0
             self.outcomes[ids] = False
             self.extras = {'log': {}}
     ns = {'torch': torch, 'WrenchRefactorRelativeIKV0_2_2_2FastTestEnv': Base}
-    exec(compile(ast.Module(body=[node], type_ignores=[]), '<timeout-metrics>', 'exec'), ns)
-    cls = ns[node.name]
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), '<timeout-metrics>', 'exec'), ns)
+    cls = ns['WrenchRefactorRelativeIKV0_2_2_4Env']
     env = cls.__new__(cls)
     env.cfg = NS(debug_spawn_regions=False)
     env._update_spawn_regions = lambda ids: pytest.fail('training must not build visual regions')
-    env._timeout_outcome_totals = torch.zeros(2, dtype=torch.long)
+    env._timeout_outcomes = ns['_RecentEpisodeOutcomes'](3, 'cpu')
     env.max_episode_length = 500
     env.episode_length_buf = torch.tensor([500, 500, 125, 0])
     env.outcomes = torch.tensor([True, False, False, False])
-    env.termination_manager = NS(get_term=lambda _: env.outcomes)
-    env._reset_idx(torch.arange(4))
-    assert env._timeout_outcome_totals.tolist() == [1, 2]
+    env.termination_manager = NS(get_term=lambda _: env.outcomes, dones=torch.tensor([True, True, True, False]))
+    env._reset_idx(torch.tensor([2, 0, 3, 1]))  # sort same-step completions by env ID
+    assert env._timeout_outcomes.totals.tolist() == [1, 2]
+    assert env._timeout_outcomes.filled == 3  # early failure consumes a window slot
     assert env.extras['log']['Metrics/timeout_success_rate'] == .5
-    env._reset_idx(torch.arange(4))  # explicit reset/zero length must not count stale outcomes
-    assert env._timeout_outcome_totals.tolist() == [1, 2]
+    env._reset_idx(torch.arange(4))  # no duplicate count on zero-length reset
+    assert env._timeout_outcomes.totals.tolist() == [1, 2]
     env.episode_length_buf[1] = 500
     env.outcomes[1] = True
-    env._reset_idx(torch.tensor([1]))
-    assert env._timeout_outcome_totals.tolist() == [2, 3]
-    assert env.extras['log']['Metrics/timeout_success_rate'] == pytest.approx(2/3)
+    env._reset_idx(torch.tensor([1]))  # evict the oldest successful timeout
+    assert env._timeout_outcomes.totals.tolist() == [1, 2]
+    env.episode_length_buf[2] = 3
+    env._reset_idx(torch.tensor([2]))  # evict the old unsuccessful timeout
+    assert env._timeout_outcomes.totals.tolist() == [1, 1]
+    assert env.extras['log']['Metrics/timeout_success_rate'] == 1.
+    # A manual reset of an ongoing episode must not enter the completed window.
+    env.episode_length_buf[0] = 100
+    env.termination_manager.dones[0] = False
+    env._reset_idx(torch.tensor([0]))
+    assert env._timeout_outcomes.totals.tolist() == [1, 1]
 
 
 @pytest.mark.parametrize('contact', [True, False])
@@ -595,3 +605,90 @@ def test_v0225_partial_reset_new_goal_no_spawn_credit(configs, component):
     result = term(env, component=component)
     assert result[0] == pytest.approx(.5 if component == 'approach' else 0.)
     assert result[1] == 0
+
+
+def test_recent_episode_ring_matches_python_window_over_wraps():
+    tree = ast.parse((MODULE_ROOT / f'runtime/{STEM}.py').read_text())
+    node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == '_RecentEpisodeOutcomes')
+    ns = {'torch': torch}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), '<recent-ring>', 'exec'), ns)
+    cls = ns[node.name]
+    for invalid in (0, -1, True, 1.5):
+        with pytest.raises(ValueError): cls(invalid, 'cpu')
+    for capacity in (1, 3, 7):
+        ring = cls(capacity, 'cpu')
+        history = torch.empty((0, 2), dtype=torch.long)
+        for batch in (0, 1, 2, 3, 0, 8, 2, 1, 7, 20):
+            timeout = torch.arange(batch) % 2 == 0
+            success = timeout & (torch.arange(batch) % 3 == 0)
+            outcomes = torch.stack((success, timeout), -1).long()
+            ring.append(outcomes)
+            history = torch.cat((history, outcomes))[-capacity:]
+            torch.testing.assert_close(ring.totals, history.sum(0))
+            assert ring.filled == len(history)
+        ring.append(torch.zeros(capacity, 2, dtype=torch.long))
+        assert not ring.totals.any()  # no-timeout windows have zero denominator/counts
+
+
+def inverse_reach_fixture(configs, n=1):
+    from test_wrench_v0_1 import reward_env
+    env, pos, _ = reward_env(n)
+    # Production pose buffers and inherited ReachProgress reset buffers are float32.
+    objects = env.scene['object_collection'].data
+    objects.object_link_state_w = objects.object_link_state_w.float()
+    pos = objects.object_link_state_w[..., :3]
+    objects.object_pos_w = pos
+    env.scene['ee_frame'].data.target_pos_w = env.scene['ee_frame'].data.target_pos_w.float()
+    env.step_dt = .02
+    env.cfg.episode_length_s = 10.
+    env.scene['robot'] = NS(data=NS())
+    env.scene['object_collection'].data.object_quat_w = pos.new_tensor([[[1., 0., 0., 0.]]]).repeat(n, 1, 1)
+    env._revision_bounds_t = pos.new_tensor([[[[-.02, -.02, -.02], [.02, .02, .02]]]]).repeat(n, 1, 1, 1)
+    pos[:] = 0.
+    eef = env.scene['ee_frame'].data.target_pos_w
+    eef[:] = 0.; eef[:, 0, 0] = .35
+    cfg = configs('rewards', STEM).WrenchRefactorRelativeIKV0_2_2_6RewardsCfg().reaching
+    term = cfg.func(cfg, env)
+    return env, pos, eef, cfg, term
+
+
+def test_inverse_reach_live_center_inverse_curve_and_following(configs):
+    env, pos, eef, cfg, term = inverse_reach_fixture(configs, 6)
+    eef[:, 0, 0] = eef.new_tensor([.0, .099999, .1, .100001, .2, .3])
+    actual = term(env, **cfg.params) * cfg.weight
+    expected = .75 * .1 / (.1 + (eef[:, 0, 0] - .1).clamp_min(0.))
+    torch.testing.assert_close(actual, expected)
+    assert torch.isfinite(actual).all()
+    assert actual[0] == actual[2] and actual[3] < actual[2]
+    before = actual.clone()
+    pos[:, 0, 1] = .3  # moved target; EEF must follow to recover reward
+    moved = term(env, **cfg.params)*cfg.weight
+    assert (moved < before).all()
+    eef[:, 0, 1] = .3
+    torch.testing.assert_close(term(env, **cfg.params)*cfg.weight, before)
+    # Physical center offset rotates with the object (not its root or inertial COM).
+    env._revision_bounds_t[..., 0, :] = pos.new_tensor([.08, -.02, -.02])
+    env._revision_bounds_t[..., 1, :] = pos.new_tensor([.12, .02, .02])
+    env.scene['object_collection'].data.object_quat_w[:] = pos.new_tensor([2**-.5, 0., 0., 2**-.5])
+    pos[:] = 0.; eef[:] = 0.; eef[:, 0, 1] = .2
+    torch.testing.assert_close(term(env, **cfg.params)*cfg.weight, torch.full((6,), .75, dtype=actual.dtype))
+
+
+def test_inverse_reach_episode_budget_matches_old_cap_and_dt(configs):
+    env, pos, eef, cfg, term = inverse_reach_fixture(configs, 2)
+    old_cfg = configs('rewards', STEM).WrenchRefactorRelativeIKV0_2_2_4RewardsCfg().reaching
+    old = old_cfg.func(old_cfg, env)
+    eef[:, 0, 0] = .1
+    old_total = old(env, **old_cfg.params)*old_cfg.weight*env.step_dt
+    for dt in (.01, .02, .04):
+        total = term(env, **cfg.params)*cfg.weight*dt*round(env.cfg.episode_length_s/dt)
+        torch.testing.assert_close(total, old_total)
+    eef[:, 0, 0] = .2
+    half = term(env, **cfg.params)*cfg.weight*env.cfg.episode_length_s
+    torch.testing.assert_close(half, old_total/2)
+    # Partial reset updates the old-budget scale only for the reset episode.
+    eef[0, 0, 0] = .5
+    term.reset(torch.tensor([0]))
+    torch.testing.assert_close(term._initial_distance, torch.tensor([.4, .25]))
+    eef[:, 0, 0] = .1
+    torch.testing.assert_close(term(env, **cfg.params)*cfg.weight, eef.new_tensor([1.2, .75]))
