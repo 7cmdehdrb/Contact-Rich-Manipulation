@@ -156,3 +156,17 @@ from ..mdp.curricula.wrench_refactor_relative_ik_test import WrenchRefactorRelat
 class WrenchRefactorRelativeIKV0_2_2_3FastTestEnvCfg(WrenchRefactorRelativeIKV0_2_2_2FastTestEnvCfg):
     rewards: WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg = WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg()
     curriculum: WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg = WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg()
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_4RewardsCfg
+from ..mdp.curricula.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg
+from ..mdp.terminations.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_4EnvCfg(WrenchRefactorRelativeIKV0_2_2_3FastTestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2_4RewardsCfg = WrenchRefactorRelativeIKV0_2_2_4RewardsCfg()
+    curriculum: WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg = WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg()
+    terminations: WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg = WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg()
+    debug_spawn_regions: bool = False  # play.py enables; train.py forces off, including video runs.
+    debug_spawn_max_envs: int = 4

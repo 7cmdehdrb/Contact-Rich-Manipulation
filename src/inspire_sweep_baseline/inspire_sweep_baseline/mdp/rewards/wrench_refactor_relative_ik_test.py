@@ -86,3 +86,8 @@ class WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg(WrenchRefactorRelativeI
     hand_contact = RewTerm(func=TargetContactDecayMaintenance, weight=0.1,
                           params={'threshold_n': 0.01, 'eef_height_limit': 0.15})
     goal_hold = None
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_4RewardsCfg(WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg):
+    object_acceleration = None

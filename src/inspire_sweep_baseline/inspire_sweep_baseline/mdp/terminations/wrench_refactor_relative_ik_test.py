@@ -13,3 +13,12 @@ class WrenchRefactorRelativeIKV0_2TestTerminationsCfg:
     shelf_failure = DoneTerm(func=shelf_termination)
     arm_joint_velocity = DoneTerm(func=arm_velocity, params={'asset_cfg': arm_entity(), 'threshold': 4.0})
     timeout = DoneTerm(func=timeout_with_metrics, time_out=True)
+
+
+from ..termination_functions.wrench_refactor_relative_ik_test import success_at_timeout
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg(WrenchRefactorRelativeIKV0_2TestTerminationsCfg):
+    # Diagnostic subset of timeout: retain the parent's truncation/bootstrap contract.
+    success = DoneTerm(func=success_at_timeout, time_out=True)

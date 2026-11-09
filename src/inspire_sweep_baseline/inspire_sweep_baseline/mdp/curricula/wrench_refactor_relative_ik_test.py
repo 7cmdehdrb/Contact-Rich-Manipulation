@@ -30,3 +30,9 @@ class WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg(WrenchRefactorRelativeIKV0
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg(WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg):
     goal_speed_scale = None
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg(WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg):
+    object_free_acceleration = None
+    acceleration_weight = None

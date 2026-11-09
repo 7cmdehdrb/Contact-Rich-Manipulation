@@ -186,6 +186,8 @@ def main(
     env_cfg.log_dir = log_dir
 
     # create isaac environment
+    if hasattr(env_cfg, 'debug_spawn_regions'):
+        env_cfg.debug_spawn_regions = True
     if hasattr(env_cfg, 'target_bounding_box'):
         env_cfg.target_bounding_box = True
     env = gym.make(

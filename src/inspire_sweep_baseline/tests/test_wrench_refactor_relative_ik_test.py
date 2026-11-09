@@ -452,3 +452,60 @@ def test_contact_decay_reacquisition_keeps_remaining_count(configs):
     assert term._count.tolist() == [16, 16]
     env.common_step_counter += 1
     assert term(env).tolist() == [17., 17.]  # reacquisition resumes from remaining count
+
+
+def test_v0224_success_only_at_deadline_strict_xy_and_failure_priority(configs, monkeypatch):
+    n = 8
+    positions = torch.zeros(n, 17, 3)
+    positions[:, 2, 0] = torch.tensor([.029999, .03, .030001, .01, .01, float('nan'), .0, .01])
+    positions[:, 2, 2] = 50.  # XY only; failure term independently gates invalid episodes
+    failures = torch.tensor([False, False, False, False, True, False, False, False])
+    env = NS(num_envs=n, device='cpu', max_episode_length=500,
+             episode_length_buf=torch.tensor([500, 500, 500, 499, 500, 500, 0, 501]),
+             target_id=torch.full((n, 1), 2),
+             scene={'object_collection': NS(data=NS(object_pos_w=positions))},
+             command_manager=NS(get_command=lambda _: torch.zeros(n, 3)),
+             termination_manager=NS(get_term=lambda name: failures if name == 'shelf_failure' else torch.zeros(n, dtype=torch.bool)))
+    module = configs('termination_functions', STEM)
+    # Use the installed Isaac Lab timeout function; the generic CPU fixture is a no-op.
+    path = MODULE_ROOT.parents[2] / 'IsaacLab/source/isaaclab/isaaclab/envs/mdp/terminations.py'
+    tree = ast.parse(path.read_text())
+    timeout_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'time_out')
+    ns = {'ManagerBasedRLEnv': object, 'torch': torch}
+    exec(compile(ast.Module(body=[timeout_node], type_ignores=[]), str(path), 'exec'), ns)
+    monkeypatch.setattr(module, 'time_out', ns['time_out'])
+    assert module.success_at_timeout(env).tolist() == [True, False, False, False, False, False, False, True]
+    cfg = configs('terminations', STEM).WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg()
+    assert cfg.success.time_out  # preserve timeout bootstrapping, diagnostic classification only
+    assert list(cfg.to_dict())[-1] == 'success'  # failure terms computed first
+
+
+def test_v0224_timeout_ratio_counts_episodes_before_reset_and_training_no_overlay():
+    tree = ast.parse((MODULE_ROOT / f'runtime/{STEM}.py').read_text())
+    node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'WrenchRefactorRelativeIKV0_2_2_4Env')
+    class Base:
+        def _reset_idx(self, ids):
+            self.episode_length_buf[ids] = 0
+            self.outcomes[ids] = False
+            self.extras = {'log': {}}
+    ns = {'torch': torch, 'WrenchRefactorRelativeIKV0_2_2_2FastTestEnv': Base}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), '<timeout-metrics>', 'exec'), ns)
+    cls = ns[node.name]
+    env = cls.__new__(cls)
+    env.cfg = NS(debug_spawn_regions=False)
+    env._update_spawn_regions = lambda ids: pytest.fail('training must not build visual regions')
+    env._timeout_outcome_totals = torch.zeros(2, dtype=torch.long)
+    env.max_episode_length = 500
+    env.episode_length_buf = torch.tensor([500, 500, 125, 0])
+    env.outcomes = torch.tensor([True, False, False, False])
+    env.termination_manager = NS(get_term=lambda _: env.outcomes)
+    env._reset_idx(torch.arange(4))
+    assert env._timeout_outcome_totals.tolist() == [1, 2]
+    assert env.extras['log']['Metrics/timeout_success_rate'] == .5
+    env._reset_idx(torch.arange(4))  # explicit reset/zero length must not count stale outcomes
+    assert env._timeout_outcome_totals.tolist() == [1, 2]
+    env.episode_length_buf[1] = 500
+    env.outcomes[1] = True
+    env._reset_idx(torch.tensor([1]))
+    assert env._timeout_outcome_totals.tolist() == [2, 3]
+    assert env.extras['log']['Metrics/timeout_success_rate'] == pytest.approx(2/3)
