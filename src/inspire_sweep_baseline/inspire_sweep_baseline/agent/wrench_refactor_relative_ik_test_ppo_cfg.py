@@ -68,3 +68,8 @@ class WrenchRefactorRelativeIKV0_2_2_3FastTestPPORunnerCfg(WrenchRefactorRelativ
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_4PPORunnerCfg(WrenchRefactorRelativeIKV0_2_2_3FastTestPPORunnerCfg):
     experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2_4'
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_5PPORunnerCfg(WrenchRefactorRelativeIKV0_2_2_4PPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2_5'

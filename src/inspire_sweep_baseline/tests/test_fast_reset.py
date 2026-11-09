@@ -188,6 +188,15 @@ def test_full_fast_config_matches_parent_except_reset(configs, omni_config, monk
     assert newest().to_dict() == new
     assert latest['terminations']['success']['time_out'] is True
     assert list(latest['terminations'])[-1] == 'success'
+    Final = envs.WrenchRefactorRelativeIKV0_2_2_5EnvCfg
+    final = Final().to_dict()
+    expected_final = copy.deepcopy(latest)
+    expected_final['rewards']['goal_distance'] = final['rewards']['goal_distance']
+    expected_final['rewards']['direction_deviation'] = final['rewards']['direction_deviation']
+    expected_final['rewards']['hand_contact'] = None
+    assert final == expected_final
+    assert Final.__bases__ == (Latest,)
+    assert Latest().to_dict() == latest
 
 
 def test_integrated_reset_writes_final_selected_states_once(configs):

@@ -91,3 +91,15 @@ class WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg(WrenchRefactorRelativeI
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_4RewardsCfg(WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg):
     object_acceleration = None
+
+
+from ..reward_functions.wrench_refactor_relative_ik_test import ContactConditionedSweep
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_5RewardsCfg(WrenchRefactorRelativeIKV0_2_2_4RewardsCfg):
+    goal_distance = RewTerm(func=ContactConditionedSweep, weight=120.0,
+                           params={'component': 'approach', 'threshold_n': .01, 'eef_height_limit': .15})
+    direction_deviation = RewTerm(func=ContactConditionedSweep, weight=-6.0,
+                                 params={'component': 'direction', 'threshold_n': .01, 'eef_height_limit': .15})
+    hand_contact = None

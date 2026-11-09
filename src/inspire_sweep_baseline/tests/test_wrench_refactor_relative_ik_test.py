@@ -509,3 +509,89 @@ def test_v0224_timeout_ratio_counts_episodes_before_reset_and_training_no_overla
     env._reset_idx(torch.tensor([1]))
     assert env._timeout_outcome_totals.tolist() == [2, 3]
     assert env.extras['log']['Metrics/timeout_success_rate'] == pytest.approx(2/3)
+
+
+@pytest.mark.parametrize('contact', [True, False])
+def test_v0225_sweep_weighted_formula_and_contact_gates(configs, contact):
+    from test_wrench_v0_1 import reward_env
+    env, pos, force = reward_env(4)
+    env.step_dt = .02
+    goal = torch.tensor([[.1, 0., 0.]], dtype=pos.dtype).repeat(4, 1)
+    env.command_manager.get_command = lambda _: goal
+    env.sweep_dir = torch.tensor([[.1, 0., 0.]], dtype=pos.dtype).repeat(4, 1)
+    cfg = configs('rewards', STEM).WrenchRefactorRelativeIKV0_2_2_5RewardsCfg()
+    assert cfg.hand_contact is None and cfg.goal_hold is None and cfg.object_acceleration is None
+    assert cfg.target_inverse_distance.weight == -25.94
+    terms = [cfg.goal_distance, cfg.target_inverse_distance, cfg.direction_deviation]
+    instances = [x.func(x, env) for x in terms]
+    # Four movements: toward, backward, lateral, stationary (Z-only).
+    delta = pos.new_tensor([[.01, 0., 0.], [-.01, 0., 0.], [0., .01, 0.], [0., 0., .2]])
+    old = pos[:, 0, :2].clone()
+    pos[:, 0] += delta
+    if not contact:
+        force.zero_()
+        env.scene['object_collection'].object_names.append('obstacle')
+        env.scene['hand_contact_obstacle'] = NS(data=NS(force_matrix_w=torch.ones_like(force)*100.))
+    expected_change = (goal[:, :2]-old).norm(dim=-1) - (goal[:, :2]-pos[:, 0, :2]).norm(dim=-1)
+    expected = [120*expected_change.clamp_min(0)*contact,
+                -25.94*(-expected_change).clamp_min(0),
+                -6*(delta[:, :2].norm(dim=-1)-delta[:, 0])*contact]
+    for cfg_term, term, reference in zip(terms, instances, expected):
+        actual = term(env, **cfg_term.params)*cfg_term.weight*env.step_dt
+        torch.testing.assert_close(actual, reference)
+        torch.testing.assert_close(term(env, **cfg_term.params)*cfg_term.weight*env.step_dt, reference)
+    # No free-motion credit is carried into the next contact step.
+    env.common_step_counter += 1
+    force[:, 0, 0, 0] = .02
+    for cfg_term, term in zip(terms, instances):
+        assert not term(env, **cfg_term.params).any()
+
+
+@pytest.mark.parametrize('component', ['approach', 'direction'])
+def test_v0225_instant_contact_height_freshness_and_pair_cancellation(configs, component):
+    from test_wrench_v0_1 import reward_env
+    env, pos, force = reward_env(6)
+    env.step_dt = .02
+    env.sweep_dir = pos.new_tensor([[-1., 0., 0.]]).repeat(6, 1)
+    term = configs('reward_functions', STEM).ContactConditionedSweep(NS(params={}), env)
+    pos[:, 0, 0] -= .01
+    pos[:, 0, 1] += .005  # positive approach and direction deviation
+    force[:, 0, 0, 0] = .02
+    force[:, 0, 1, 0] = -.02  # opposed pairs still count as physical contact
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = pos.new_tensor([1.199999, 1.2, 1.200001, 1.1, 1.1, 1.1])
+    env.sensor_data_fresh[3] = False
+    force[4] = float('nan')
+    force[5] = 0.
+    result = term(env, component=component)
+    assert result[0] > 0 and not result[1:].any()
+    # A single current contact suffices; neither a 2-of-3 history nor count is used.
+    env.common_step_counter += 1
+    force[:] = 0.; force[:, 0, 0, 0] = .01
+    env.sensor_data_fresh[:] = True
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = 1.1
+    pos[:, 0, 0] -= .005; pos[:, 0, 1] += .002
+    assert (term(env, component=component) > 0).all()
+
+
+@pytest.mark.parametrize('component', ['approach', 'direction'])
+def test_v0225_partial_reset_new_goal_no_spawn_credit(configs, component):
+    from test_wrench_v0_1 import reward_env
+    env, pos, force = reward_env(2)
+    env.step_dt = .02
+    env.sweep_dir = pos.new_tensor([[-1., 0., 0.]]).repeat(2, 1)
+    goal = pos.new_zeros(2, 3)
+    env.command_manager.get_command = lambda _: goal
+    term = configs('reward_functions', STEM).ContactConditionedSweep(NS(params={}), env)
+    pos[:, 0, 0] -= .01; pos[:, 0, 1] += .005
+    before = term(env, component=component).clone()
+    pos[0, 0] = pos.new_tensor([.8, .2, 0.])
+    term.reset(torch.tensor([0]))  # before command reset, as in production
+    goal[0] = pos.new_tensor([.9, .2, 0.])
+    env.sweep_dir[0] = pos.new_tensor([.1, 0., 0.])
+    result = term(env, component=component)
+    assert result[0] == 0 and result[1] == before[1]
+    env.common_step_counter += 1
+    pos[0, 0, 0] += .01
+    result = term(env, component=component)
+    assert result[0] == pytest.approx(.5 if component == 'approach' else 0.)
+    assert result[1] == 0
