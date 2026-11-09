@@ -38,3 +38,8 @@ class WrenchRefactorRelativeIKV0_2_1TestPPORunnerCfg(WrenchRefactorRelativeIKV0_
 @configclass
 class WrenchRefactorRelativeIKV0_2_1ResetTestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_1TestPPORunnerCfg):
     experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_1-Reset-Test'
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2TestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_1TestPPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2-Test'

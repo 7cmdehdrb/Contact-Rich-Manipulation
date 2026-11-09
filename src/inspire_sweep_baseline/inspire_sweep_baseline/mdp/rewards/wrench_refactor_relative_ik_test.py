@@ -52,3 +52,12 @@ class WrenchRefactorRelativeIKV0_2_1TestRewardsCfg(WrenchRefactorRelativeIKV0_2T
                                     params={'displacement_max_cost': 0.04})
     eef_linear_speed = None
     pushing_speed = None
+
+
+from ..reward_functions.wrench_refactor_relative_ik_test import TargetContactMaintenance
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2TestRewardsCfg(WrenchRefactorRelativeIKV0_2_1TestRewardsCfg):
+    hand_contact = RewTerm(func=TargetContactMaintenance, weight=0.1,
+                          params={'threshold_n': 0.01, 'eef_height_limit': 0.15})

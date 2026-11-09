@@ -14,6 +14,7 @@ parser.add_argument('--num-envs', type=int, default=32)
 parser.add_argument('--output', type=Path, default=Path('outputs/relative_ik_v0_2_test_validation'))
 parser.add_argument('--config-only', action='store_true')
 parser.add_argument('--child', action='store_true')
+parser.add_argument('--contact-child', action='store_true')
 parser.add_argument('--benchmark', action='store_true')
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
@@ -54,7 +55,7 @@ try:
     expected_runner = WrenchRefactorRelativeIKV0_1PPORunnerCfg().to_dict()
     expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2-Test'
     assert runner.to_dict() == expected_runner
-    if args.child:
+    if args.child or args.contact_child:
         task = 'Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Test'
         child = load_cfg_from_registry(task, 'env_cfg_entry_point')
         child_dict = child.to_dict()
@@ -70,6 +71,22 @@ try:
         expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_1-Test'
         assert child_runner == expected_runner
         cfg = child
+    if args.contact_child:
+        from inspire_sweep_baseline.envs.wrench_refactor_relative_ik_test_envs import WrenchRefactorRelativeIKV0_2_1TestEnvCfg
+        from inspire_sweep_baseline.mdp.reward_functions.wrench_refactor_relative_ik_test import TargetContactMaintenance
+        task = 'Inspire-Wrench-Refactor-Relative-IK-v0_2_2-Test'
+        before_contact = cfg.to_dict()
+        cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
+        expected_contact = copy.deepcopy(before_contact)
+        expected_contact['rewards']['hand_contact'] = cfg.rewards.hand_contact.to_dict()
+        assert cfg.to_dict() == expected_contact
+        assert cfg.rewards.hand_contact.func is TargetContactMaintenance
+        assert cfg.rewards.hand_contact.weight == .1
+        assert cfg.rewards.hand_contact.params == {'threshold_n': .01, 'eef_height_limit': .15}
+        assert type(cfg).__bases__ == (WrenchRefactorRelativeIKV0_2_1TestEnvCfg,)
+        assert WrenchRefactorRelativeIKV0_2_1TestEnvCfg().to_dict() == before_contact
+        expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_2-Test'
+        assert load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point').to_dict() == expected_runner
     args.output.mkdir(parents=True, exist_ok=True)
     result = {'task':task, 'full_config_comparison':True, 'ppo_comparison':True, 'parent_preserved':True}
     print('FULL CONFIG COMPARISON PASSED', flush=True)
@@ -177,6 +194,15 @@ try:
             # No cumulative 3-second hold budget or success termination remains.
             for _ in range(151):
                 assert (hold_cfg.func(raw,**hold_cfg.params) > .99).all()
+            if args.contact_child:
+                contact = raw.reward_manager.get_term_cfg('hand_contact')
+                assert isinstance(contact.func, TargetContactMaintenance)
+                raw.sensor_data_fresh[:] = False
+                for _ in range(7):
+                    raw.common_step_counter += 1
+                    score = contact.func(raw, **contact.params)
+                assert not score.any(), 'Goal occupancy must not count as contact'
+                result['contact_goal_bypass_removed'] = True
             result.update(num_envs=args.num_envs,rollout_steps=120,done_count=done,
                           partial_reset=True,goal_hold_at_rest=True,hold_over_3s_uncapped=True)
         env.close()

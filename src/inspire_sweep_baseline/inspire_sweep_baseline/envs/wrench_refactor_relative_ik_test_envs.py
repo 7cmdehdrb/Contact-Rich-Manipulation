@@ -100,3 +100,11 @@ class WrenchRefactorRelativeIKV0_2_1ResetTestEnvCfg(WrenchRefactorRelativeIKV0_2
             values = copy.deepcopy(vars(obj.spawn))
             values.pop('func')
             obj.spawn = GroupedResetObjectSpawnerCfg(**values, reset_scale_groups=self.reset_size_groups)
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2TestRewardsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2TestEnvCfg(WrenchRefactorRelativeIKV0_2_1TestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2TestRewardsCfg = WrenchRefactorRelativeIKV0_2_2TestRewardsCfg()

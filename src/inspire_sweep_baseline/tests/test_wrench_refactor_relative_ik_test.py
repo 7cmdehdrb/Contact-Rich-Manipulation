@@ -135,12 +135,12 @@ def test_no_task_configuration_or_runtime_ancestry():
         'RslRlMLPModelCfg','RslRlOnPolicyRunnerCfg'}
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node,ast.ClassDef) and 'V0_2_1' not in node.name and node.name != 'GroupedResetObjectSpawnerCfg':
+            if isinstance(node,ast.ClassDef) and not node.name.startswith('WrenchRefactorRelativeIKV0_2_') and node.name != 'GroupedResetObjectSpawnerCfg':
                 assert all(isinstance(b,ast.Name) and b.id in allowed for b in node.bases), path
             if isinstance(node,ast.ImportFrom):
                 for alias in node.names:
                     if alias.name.endswith('Cfg') and node.level:
-                        assert alias.name.startswith(('WrenchRefactorRelativeIKV0_2Test', 'WrenchRefactorRelativeIKV0_2_1')) or 'SpawnerCfg' in alias.name, (path,alias.name)
+                        assert alias.name.startswith(('WrenchRefactorRelativeIKV0_2Test', 'WrenchRefactorRelativeIKV0_2_')) or 'SpawnerCfg' in alias.name, (path,alias.name)
 
 
 def test_child_only_changes_requested_rewards_and_schedules(configs):
@@ -226,3 +226,100 @@ def test_metrics_temporal_mean_peak_and_partial_reset():
     env.record_goal_accuracy_metrics()
     env._reset_idx(torch.tensor([0]))
     assert all(torch.isfinite(v) for v in env.extras['log'].values())
+
+
+def test_v022_only_changes_contact_reward(configs):
+    module = configs('rewards', STEM)
+    before = module.WrenchRefactorRelativeIKV0_2_1TestRewardsCfg().to_dict()
+    new = module.WrenchRefactorRelativeIKV0_2_2TestRewardsCfg()
+    expected = copy.deepcopy(before)
+    expected['hand_contact'] = new.hand_contact.to_dict()
+    assert_ordered_equal(new.to_dict(), expected)
+    assert new.hand_contact.func.__name__ == 'TargetContactMaintenance'
+    assert new.hand_contact.weight == .1
+    assert new.hand_contact.params == {'threshold_n': .01, 'eef_height_limit': .15}
+    assert module.WrenchRefactorRelativeIKV0_2_1TestRewardsCfg().to_dict() == before
+    assert new.eef_linear_speed is None and new.pushing_speed is None
+
+
+def contact_count_fixture(configs, n=2):
+    from test_wrench_v0_1 import reward_env
+    env, pos, force = reward_env(n)
+    # Contact uses its own 15 cm parameter, independent of other reward gates.
+    del env.cfg
+    pos[:, 0, :2] = 0.  # Being at the goal must not fabricate contact.
+    term = configs('reward_functions', STEM).TargetContactMaintenance(NS(params={}), env)
+    return env, force, term
+
+
+def test_target_count_window_cap_and_five_consecutive_rejections(configs):
+    env, force, term = contact_count_fixture(configs)
+    force.zero_()
+    assert not term(env).any()  # goal occupancy without force is zero
+    for index in range(12):
+        env.common_step_counter += 1
+        force[:,0,0,0] = .01
+        result = term(env)
+        assert result.tolist() == [float(min(index,10))]*2
+        torch.testing.assert_close(term(env),result)  # duplicate call never increments
+    force.zero_()
+    for index in range(6):
+        env.common_step_counter += 1
+        result = term(env)
+        if index == 0:
+            assert result.tolist() == [10.,10.]  # two preceding contacts still in window
+        else:
+            assert not result.any()
+        assert term._count.tolist() == ([0,0] if index == 5 else [10,10])
+
+
+def test_target_count_partial_reset_freshness_and_skipped_step(configs):
+    env, force, term = contact_count_fixture(configs)
+    for _ in range(4):
+        term(env);env.common_step_counter += 1
+    term.reset(torch.tensor([0]))
+    assert term(env).tolist() == [0.,4.]
+    env.common_step_counter += 1
+    assert term(env).tolist() == [1.,5.]
+    env.common_step_counter += 2  # missing window cannot preserve continuity
+    assert not term(env).any()
+    env.sensor_data_fresh[:] = False
+    for _ in range(3):
+        env.common_step_counter += 1
+        assert not term(env).any()
+    env.sensor_data_fresh[:] = True
+    force[:] = float('nan')
+    for _ in range(3):
+        env.common_step_counter += 1
+        assert not term(env).any()
+
+
+def test_only_target_hand_force_counts(configs):
+    env, force, term = contact_count_fixture(configs)
+    env.scene['object_collection'].object_names.append('obstacle')
+    env.scene['hand_contact_obstacle'] = NS(data=NS(force_matrix_w=torch.ones_like(force)*100))
+    force.zero_()
+    for _ in range(4):
+        assert not term(env).any()
+        env.common_step_counter += 1
+
+
+@pytest.mark.parametrize('height', [.15-1e-6, .15, .15+1e-6, float('nan'), float('inf')])
+def test_target_contact_height_boundary_and_immediate_gate(configs, height):
+    env, force, term = contact_count_fixture(configs)
+    for _ in range(4):
+        term(env)
+        env.common_step_counter += 1
+    before = term._count.clone()
+    # A nonzero shelf world height proves that the limit is relative, not world Z.
+    env._revision_initial_shelf_pos[:,2] = .3
+    env.scene['ee_frame'].data.target_pos_w[:,0,2] = .3 + 1.05 + height
+    valid = height < .15
+    for i in range(5):
+        reward = term(env)
+        if valid:
+            torch.testing.assert_close(reward, (before+i+1).clamp(max=10).float())
+        else:
+            assert not reward.any()  # old 2-of-3 history cannot bypass the ceiling
+            torch.testing.assert_close(term._count, torch.zeros_like(before) if i==4 else before)
+        env.common_step_counter += 1

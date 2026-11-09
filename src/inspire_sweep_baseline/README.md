@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2-Test`**는 일반 v0_2_1-Test를 상속하며 Contact만 타겟 전용 유지 카운트(weight0.1)로 변경한다. Contact의 EEF 높이는 초기 선반 표면 위15cm 미만으로 제한하며, 목표 점유 접촉 간주는 없다. Reset-Test 방식은 잠정 보류한다. [계약·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_contact.md).
+
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Reset-Test`**는 v0_2_1-Test의 초기화 비교 환경이다. 크기 그룹별 배치·목표·IK를 공유/교체하며 질량·관성·마찰은 매 reset 갱신한다. [설정·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_reset_test.md).
 
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_1-Test`**는 v0_2-Test 직접 상속. object를 기울기/변위로 분리하고 EEF·타겟 속도 비용과 일정을 제거한다. 두 환경 모두 목표 거리·속도 Metrics를 기록한다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_ENVIRONMENT.md).
