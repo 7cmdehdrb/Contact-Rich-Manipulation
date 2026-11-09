@@ -120,3 +120,132 @@ def fixed_pool_layout(bounds, spawn_z, generator, requested, *, red_margin=.023,
     local[rows, selected] = torch.where(result.active[..., None], candidate, local[rows, selected])
     yaw = torch.where(active, yaw, 0.)
     return local, yaw, active, goal - target, result.actual
+
+
+class CircleResetLayout:
+    """Cached, scale-aware circles and conservative continuous cell sampling.
+
+    No rejection sampling, count reduction or goal redraw. Geometry is immutable
+    for this instance; recreate it after any scale/shape configuration change.
+    """
+    def __init__(self, bounds, spawn_z, clearance=.01, cell_size=.005, epsilon=1e-6):
+        if bounds.ndim != 4 or bounds.shape[1:] != (17, 2, 3):
+            raise ValueError('Expected fixed pool bounds [N,17,2,3]')
+        if not all(math.isfinite(v) and v > 0 for v in (clearance, cell_size, epsilon)):
+            raise ValueError('Circle placement settings must be finite and positive')
+        if not bool(torch.isfinite(bounds).all() & (bounds[:, :, 1] > bounds[:, :, 0]).all()):
+            raise ValueError('Invalid circle geometry')
+        nx, ny = round(.4 / cell_size), round(1. / cell_size)
+        if nx < 1 or ny < 1 or abs(nx * cell_size - .4) > 1e-7 or abs(ny * cell_size - 1.) > 1e-7:
+            raise ValueError('Cell size must exactly partition the shelf')
+        self.bounds, self.spawn_z = bounds, spawn_z
+        self.offset = bounds[..., :2].mean(-2)
+        self.radius = ((bounds[:, :, 1, :2] - bounds[:, :, 0, :2]) / 2).norm(dim=-1)
+        self.expanded = self.radius + clearance
+        self.cell_size, self.epsilon = cell_size, epsilon
+        self.cell_margin = cell_size / math.sqrt(2.) + epsilon
+        x = (torch.arange(nx, device=bounds.device, dtype=bounds.dtype) + .5) * cell_size - .2
+        y = (torch.arange(ny, device=bounds.device, dtype=bounds.dtype) + .5) * cell_size - .5
+        self.cells = torch.cartesian_prod(x, y)
+        self.boundary = torch.minimum(.2 - self.cells[:, 0].abs(), .5 - self.cells[:, 1].abs())
+        self._scratch = None
+
+    @staticmethod
+    def red_distance(points, start, goal):
+        """Distance [B,K] to the extruded segment, including degenerate cases."""
+        extension = torch.zeros_like(start)
+        extension[:, 0] = (.2 - torch.minimum(start[:, 0], goal[:, 0])).clamp_min(0)
+        vertices = torch.stack((start, goal, goal + extension, start + extension), 1)
+        p = points[None]
+        minimum = torch.full((len(start), len(points)), float('inf'), device=start.device)
+        positive = torch.ones_like(minimum, dtype=torch.bool)
+        negative = positive.clone()
+        for i in range(4):
+            a, b = vertices[:, i, None], vertices[:, (i + 1) % 4, None]
+            edge, delta = b - a, p - a
+            t = (delta * edge).sum(-1) / edge.square().sum(-1).clamp_min(1e-20)
+            minimum = torch.minimum(minimum, (delta - t.clamp(0, 1)[..., None] * edge).square().sum(-1))
+            cross = edge[..., 0] * delta[..., 1] - edge[..., 1] * delta[..., 0]
+            positive &= cross >= 0
+            negative &= cross <= 0
+        area = ((goal[:, 1] - start[:, 1]) * extension[:, 0]).abs()
+        inside = (positive | negative) & (area[:, None] > 1e-12)
+        return torch.where(inside, 0., minimum.sqrt())
+
+    @torch.no_grad()
+    def sample(self, ids, generator, **command_params):
+        bounds = self.bounds[ids]
+        n, device = len(ids), bounds.device
+        target, goal = sample_commands(bounds[:, 0], generator, **command_params)
+        requested = torch.randint(0, 7, (n,), device=device, generator=generator)
+        selected = torch.rand((n, 16), device=device, generator=generator).argsort(-1)[:, :6] + 1
+        radii = self.expanded[ids[:, None], selected]
+        # Sort only the selected N IDs; unused candidates must not displace them.
+        eligible = torch.arange(6, device=device)[None] < requested[:, None]
+        order = torch.where(eligible, radii, -1.).argsort(dim=-1, descending=True, stable=True)
+        selected, radii = selected.gather(1, order), radii.gather(1, order)
+        draws = torch.rand((n, 6, 4), device=device, generator=generator)
+        local = bounds.new_zeros(n, 17, 3)
+        local[..., 2] = 50. + 2. * torch.arange(17, device=device)
+        local[:, 0, :2], local[:, 0, 2] = target, self.spawn_z[ids, 0]
+        yaw = bounds.new_zeros(n, 17)
+        yaw[:, 0] = -math.pi / 2
+        active = torch.zeros((n, 17), device=device, dtype=torch.bool)
+        active[:, 0] = True
+        complete = torch.ones(n, device=device, dtype=torch.bool)
+        failed_slot = torch.full((n,), -1, device=device, dtype=torch.long)
+        # Rotate the target centre offset by the fixed -pi/2 yaw.
+        off = self.offset[ids, 0]
+        off = torch.stack((off[:, 1], -off[:, 0]), -1)
+        working = (requested > 0).nonzero().flatten()
+        if len(working) and self._scratch is None:
+            # Ordinary tensors also permit explicit reset outside InferenceMode.
+            with torch.inference_mode(False):
+                self._scratch = (torch.empty((64, len(self.cells)), dtype=torch.bool, device=device),
+                                 torch.empty((64, len(self.cells)), dtype=torch.int32, device=device),
+                                 torch.empty((6, 64, len(self.cells)), device=device, dtype=bounds.dtype))
+        for begin in range(0, len(working), 64):
+            rows = working[begin:begin + 64]
+            red = self.red_distance(self.cells, target[rows] + off[rows], goal[rows] + off[rows])
+            valid_buffer, prefix_buffer, distance_buffer = self._scratch
+            valid, prefix = valid_buffer[:len(rows)], prefix_buffer[:len(rows)]
+            distances = []
+            for slot in range(6):
+                radius = radii[rows, slot]
+                needed = requested[rows] > slot
+                torch.ge(self.boundary[None], radius[:, None] + self.cell_margin, out=valid)
+                valid &= red >= self.expanded[ids[rows], 0, None] + radius[:, None] + self.cell_margin
+                for previous, distance in enumerate(distances):
+                    valid &= distance >= (radius + radii[rows, previous] + self.cell_margin)[:, None].square()
+                torch.cumsum(valid, dim=-1, dtype=torch.int32, out=prefix)
+                totals = prefix[:, -1]
+                ok = (totals > 0) | ~needed
+                failed_slot[rows] = torch.where(complete[rows] & ~ok, slot, failed_slot[rows])
+                complete[rows] &= ok
+                rank = (draws[rows, slot, 0] * totals).long()
+                index = torch.searchsorted(prefix, rank.to(torch.int32)[:, None], right=True).squeeze(-1)
+                index = index.clamp_max(len(self.cells) - 1)
+                centers = self.cells[index] + (draws[rows, slot, 1:3] - .5) * self.cell_size
+                angle = draws[rows, slot, 3] * (2 * math.pi) - math.pi
+                object_ids = selected[rows, slot]
+                offset = self.offset[ids[rows], object_ids]
+                rotated = torch.stack((angle.cos() * offset[:, 0] - angle.sin() * offset[:, 1],
+                                       angle.sin() * offset[:, 0] + angle.cos() * offset[:, 1]), -1)
+                pose = torch.cat((centers - rotated, self.spawn_z[ids[rows], object_ids, None]), -1)
+                enabled = needed & complete[rows]
+                local[rows, object_ids] = torch.where(enabled[:, None], pose, local[rows, object_ids])
+                yaw[rows, object_ids] = torch.where(enabled, angle, 0.)
+                active[rows, object_ids] = enabled
+                distance = distance_buffer[slot, :len(rows)]
+                torch.sum((self.cells[None] - centers[:, None]).square(), dim=-1, out=distance)
+                distance.masked_fill_(~enabled[:, None], float('inf'))
+                distances.append(distance)
+        if not bool(complete.all()):
+            bad = ~complete
+            raise RuntimeError('Circle reset has no certified free cell: ' + str(dict(
+                env_ids=ids[bad].cpu().tolist(), requested=requested[bad].cpu().tolist(),
+                selected=selected[bad].cpu().tolist(), radii=radii[bad].cpu().tolist(),
+                target=target[bad].cpu().tolist(), goal=goal[bad].cpu().tolist(),
+                failed_slot=failed_slot[bad].cpu().tolist(), partial_roots=local[bad].cpu().tolist(),
+                seed=generator.initial_seed())))
+        return local, yaw, active, goal - target, requested

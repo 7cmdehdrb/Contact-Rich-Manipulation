@@ -25,3 +25,8 @@ class WrenchRefactorRelativeIKV0_2TestCurriculumCfg:
 class WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg(WrenchRefactorRelativeIKV0_2TestCurriculumCfg):
     eef_free_speed = None
     pushing_free_speed = None
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg(WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg):
+    goal_speed_scale = None

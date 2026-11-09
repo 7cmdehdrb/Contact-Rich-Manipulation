@@ -124,3 +124,35 @@ from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativ
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_2TestEnvCfg(WrenchRefactorRelativeIKV0_2_2_1TestEnvCfg):
     rewards: WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg = WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg()
+
+
+from ..mdp.events.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_2FastTestEventsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_2FastTestEnvCfg(WrenchRefactorRelativeIKV0_2_2_2TestEnvCfg):
+    events: WrenchRefactorRelativeIKV0_2_2_2FastTestEventsCfg = WrenchRefactorRelativeIKV0_2_2_2FastTestEventsCfg()
+    max_obstacles: int = 6
+    placement_clearance: float = .01
+    layout_cell_size: float = .005
+    layout_geometry_epsilon: float = 1e-6
+    reset_ik_backend: str = 'warp'
+    debug_initial_ik_bounds: bool = False
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.max_obstacles != 6 or self.reset_ik_backend != 'warp':
+            raise ValueError('Fast reset requires max_obstacles=6 and Warp IK')
+        # Legacy fields remain serializable but cannot govern Fast placement.
+        self.max_gray_obstacles = self.max_white_obstacles = None
+        self.gray_padding = self.red_margin = self.rear_offset = None
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg
+from ..mdp.curricula.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_3FastTestEnvCfg(WrenchRefactorRelativeIKV0_2_2_2FastTestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg = WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg()
+    curriculum: WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg = WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg()

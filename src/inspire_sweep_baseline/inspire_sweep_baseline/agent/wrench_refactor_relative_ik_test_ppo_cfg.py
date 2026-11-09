@@ -53,3 +53,13 @@ class WrenchRefactorRelativeIKV0_2_2_1TestPPORunnerCfg(WrenchRefactorRelativeIKV
 @configclass
 class WrenchRefactorRelativeIKV0_2_2_2TestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_2_1TestPPORunnerCfg):
     experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2_2-Test'
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_2FastTestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_2_2TestPPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2_2-Fast-Test'
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_3FastTestPPORunnerCfg(WrenchRefactorRelativeIKV0_2_2_2FastTestPPORunnerCfg):
+    experiment_name = 'inspire_wrench_refactor_relative_ik_v0_2_2_3-Fast-Test'

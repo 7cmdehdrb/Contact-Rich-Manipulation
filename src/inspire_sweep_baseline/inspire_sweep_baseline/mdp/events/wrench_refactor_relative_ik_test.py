@@ -34,3 +34,16 @@ class WrenchRefactorRelativeIKV0_2_1ResetTestEventsCfg(WrenchRefactorRelativeIKV
         self.object_spawn.func = grouped_reset_scene
         self.object_spawn.params['ik_params'] = dict(self.robot_initial_pose.params)
         self.robot_initial_pose = None
+
+
+from ..event_functions.wrench_refactor_relative_ik_test import initialize_fast_geometry, fast_reset_scene
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_2FastTestEventsCfg(WrenchRefactorRelativeIKV0_2TestEventsCfg):
+    def __post_init__(self):
+        self.object_geometry.func = initialize_fast_geometry
+        self.reset_all = None
+        self.object_spawn.func = fast_reset_scene
+        self.object_spawn.params['ik_params'] = dict(self.robot_initial_pose.params)
+        self.robot_initial_pose = None

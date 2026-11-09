@@ -1356,3 +1356,29 @@ if WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_TEST_TASK_ID not in gym.registry:
         },
     )
 __all__.append("WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_TEST_TASK_ID")
+
+WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_FAST_TEST_TASK_ID = "Inspire-Wrench-Refactor-Relative-IK-v0_2_2_2-Fast-Test"
+if WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_FAST_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_FAST_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor_relative_ik_test:WrenchRefactorRelativeIKV0_2_2_2FastTestEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_relative_ik_test_envs:WrenchRefactorRelativeIKV0_2_2_2FastTestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_relative_ik_test_ppo_cfg:WrenchRefactorRelativeIKV0_2_2_2FastTestPPORunnerCfg",
+        },
+    )
+__all__.append("WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_2_FAST_TEST_TASK_ID")
+
+WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_3_FAST_TEST_TASK_ID = "Inspire-Wrench-Refactor-Relative-IK-v0_2_2_3-Fast-Test"
+if WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_3_FAST_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_3_FAST_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor_relative_ik_test:WrenchRefactorRelativeIKV0_2_2_2FastTestEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_relative_ik_test_envs:WrenchRefactorRelativeIKV0_2_2_3FastTestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_relative_ik_test_ppo_cfg:WrenchRefactorRelativeIKV0_2_2_3FastTestPPORunnerCfg",
+        },
+    )
+__all__.append("WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_3_FAST_TEST_TASK_ID")

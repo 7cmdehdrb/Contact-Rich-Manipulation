@@ -462,3 +462,6 @@ outputs/
 !/reports/COLCON_IGNORE
 !/reports/AMENT_IGNORE
 !/reports/CATKIN_IGNORE
+
+
+example/contact_rich_manipulation_task_learning

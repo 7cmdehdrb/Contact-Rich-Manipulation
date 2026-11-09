@@ -14,7 +14,10 @@ class WrenchRefactorRelativeIKV0_2TestEnv(ManagerBasedRLEnv):
         # Preserve IK runtime configuration; Holding rewards have no EEF height gate.
         cfg.contact_height_limit = cfg.goal_reward_height_limit
         count, device = cfg.scene.num_envs, cfg.sim.device
-        if (cfg.max_gray_obstacles, cfg.max_white_obstacles, cfg.obstacle_observation_slots) != (3, 3, 16):
+        fast = getattr(cfg, 'reset_ik_backend', None) == 'warp'
+        if fast and (cfg.max_obstacles != 6 or cfg.obstacle_observation_slots != 16):
+            raise ValueError('Fast reset requires six obstacles and sixteen observation slots')
+        if not fast and (cfg.max_gray_obstacles, cfg.max_white_obstacles, cfg.obstacle_observation_slots) != (3, 3, 16):
             raise ValueError('Wrench Refactor requires Gray3/White3 capacity and 16 observation slots')
         self.learning_iteration = 0
         self.target_id = torch.zeros((count, 1), device=device, dtype=torch.long)
@@ -26,7 +29,7 @@ class WrenchRefactorRelativeIKV0_2TestEnv(ManagerBasedRLEnv):
         self._initial_obstacle_observation = torch.zeros((count, 64), device=device)
         self._initial_object_positions_w = torch.zeros((count, 17, 3), device=device)
         self._revision_spawn_positions = torch.zeros_like(self._initial_object_positions_w)
-        self._final_actual_population = torch.zeros((count, 2), device=device, dtype=torch.long)
+        self._final_actual_population = torch.zeros((count,) if fast else (count, 2), device=device, dtype=torch.long)
         self._revision_layout_complete = torch.zeros(count, device=device, dtype=torch.bool)
         self._revision_layout_rng = torch.Generator(device=device).manual_seed(int(cfg.seed or 0))
         self._metric_sums = torch.zeros((count, 4), device=device)
@@ -197,4 +200,14 @@ class WrenchRefactorRelativeIKV0_2_1ResetTestEnv(WrenchRefactorRelativeIKV0_2Tes
             if hasattr(self, '_grouped_reset_pool'):
                 del self._grouped_reset_pool
             self._reset_physics_rng = torch.Generator().manual_seed(seed + 173)
+        return super().reset(seed=seed, env_ids=env_ids, options=options)
+
+
+class WrenchRefactorRelativeIKV0_2_2_2FastTestEnv(WrenchRefactorRelativeIKV0_2TestEnv):
+    """Same runtime contract with independently seeded integrated Warp reset."""
+    def reset(self, seed=None, env_ids=None, options=None):
+        if seed is not None:
+            self._goal_reset_seed = seed + 1707
+            if hasattr(self, '_goal_reset_rng'):
+                self._goal_reset_rng.manual_seed(self._goal_reset_seed)
         return super().reset(seed=seed, env_ids=env_ids, options=options)

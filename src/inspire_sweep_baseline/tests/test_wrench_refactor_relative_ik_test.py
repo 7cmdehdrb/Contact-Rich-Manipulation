@@ -384,3 +384,51 @@ def test_v0222_only_adds_doubled_inverse_distance(configs):
     env.common_step_counter += 1
     pos[:, 0, 2] += .1
     assert not term(env).any()  # Only XY distance contributes.
+
+
+def test_v0223_contact_decay_and_no_holding(configs):
+    rewards = configs('rewards', STEM)
+    parent = rewards.WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg().to_dict()
+    cfg = rewards.WrenchRefactorRelativeIKV0_2_2_3FastTestRewardsCfg()
+    expected = copy.deepcopy(parent)
+    expected['hand_contact'] = cfg.hand_contact.to_dict()
+    expected['goal_hold'] = None
+    assert_ordered_equal(cfg.to_dict(), expected)
+    assert cfg.hand_contact.weight == .1
+    assert cfg.hand_contact.params == {'threshold_n': .01, 'eef_height_limit': .15}
+    assert rewards.WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg().to_dict() == parent
+    curricula = configs('curricula', STEM)
+    before = curricula.WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg().to_dict()
+    expected = copy.deepcopy(before)
+    expected['goal_speed_scale'] = None
+    assert curricula.WrenchRefactorRelativeIKV0_2_2_3FastTestCurriculumCfg().to_dict() == expected
+    assert curricula.WrenchRefactorRelativeIKV0_2_1TestCurriculumCfg().to_dict() == before
+    env, force, _ = contact_count_fixture(configs)
+    term = cfg.hand_contact.func(cfg.hand_contact, env)
+    for i in range(25):
+        result = term(env, **cfg.hand_contact.params)
+        assert result.tolist() == [float(min(i, 20))]*2
+        torch.testing.assert_close(term(env), result)
+        env.common_step_counter += 1
+    force.zero_()
+    assert term(env).tolist() == [20., 20.]  # raw miss still accepted by 2-of-3
+    for i in range(12):
+        env.common_step_counter += 1
+        assert not term(env).any()  # rejected steps pay zero despite retained count
+        assert term._count.tolist() == [max(20 - 2*(i+1), 0)]*2
+        term(env)  # same-step cache must not decay twice
+        assert term._count.tolist() == [max(20 - 2*(i+1), 0)]*2
+    force[:, 0, 0, 0] = .01
+    for i in range(6):
+        env.common_step_counter += 1
+        assert term(env).tolist() == [float(i)]*2
+    term.reset(torch.tensor([0]))
+    assert term._count.tolist() == [0, 5]
+    env.common_step_counter += 1
+    assert term(env).tolist() == [0., 6.]
+    env.common_step_counter += 1
+    assert term(env).tolist() == [1., 7.]
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = 1.05 + .15
+    env.common_step_counter += 1
+    assert not term(env).any()  # height gate overrides past contacts immediately
+    assert term._count.tolist() == [0, 5]

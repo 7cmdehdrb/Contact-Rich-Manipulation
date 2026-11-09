@@ -48,3 +48,35 @@ class TargetContactMaintenance(RefactorContactMaintenance):
             self._cached_reward[:] = torch.where(accepted, self._count, 0).float()
             self._cached_step = step
         return self._cached_reward.clone()
+
+
+class TargetContactDecayMaintenance(RefactorContactMaintenance):
+    """Target-only 2-of-3 windows: increment to 20, decay by two on rejection.
+
+    Rejected windows pay zero. Episode reset clears count and contact history.
+    """
+
+    def __call__(self, env, threshold_n=0.01, eef_height_limit=0.15):
+        if not math.isfinite(threshold_n) or threshold_n <= 0:
+            raise ValueError('Contact threshold must be finite and positive')
+        if not math.isfinite(eef_height_limit) or eef_height_limit <= 0:
+            raise ValueError('EEF height limit must be finite and positive')
+        step = env.common_step_counter
+        if step != self._cached_step:
+            if self._cached_step is not None and step != self._cached_step + 1:
+                self.reset()
+            force = target_hand_contact_force_w(env)
+            eef_z = env.scene['ee_frame'].data.target_pos_w[:, 0, 2]
+            surface_z = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT
+            height_valid = (torch.isfinite(eef_z) & torch.isfinite(surface_z)
+                            & (eef_z < surface_z + eef_height_limit))
+            contact = (height_valid & env.sensor_data_fresh & torch.isfinite(force).all(-1)
+                       & (force.norm(dim=-1) >= threshold_n))
+            self._history[:, :2] = self._history[:, 1:].clone()
+            self._history[:, 2] = contact
+            accepted = (self._history.sum(-1) >= 2) & height_valid
+            self._misses[:] = torch.where(accepted, 0, self._misses + 1)
+            self._count[:] = torch.where(accepted, self._count + 1, self._count - 2).clamp(0, 20)
+            self._cached_reward[:] = torch.where(accepted, self._count, 0).float()
+            self._cached_step = step
+        return self._cached_reward.clone()
