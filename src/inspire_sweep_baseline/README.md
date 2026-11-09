@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2-Test`** 독립 환경. IK-v0_1 Scene·제어·대칭 관측과 Holding OSC v2 보상, 고정3cm·성공 종료 제거. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_ENVIRONMENT.md).
+
 Relative 활성 환경은 **v0·v2·v2_1·v3**다. v0부터 Axia 질량280g을 공통 적용한다. 타겟·목표·장애물·F/T는 EEF 기준이며 EEF pose만 Base 기준이다. Relative-v1은 삭제했고 기존 학습 로그는 보존한다.
 
 `Inspire-Wrench-Refactor-Relative-v2_1`은 v2 직접 상속으로 **거리 항만 시작→목표와 시작→현재의 XY 누적 변위 cosine**으로 교체한다. 기존 거리 증가 페널티−12.97, 성공 보상·종료와 나머지 v2 설정은 유지한다. 아래 실시간 이동 cosine 공통 설명에서 v2_1만 이 예외를 적용한다. [계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/WRENCH_REFACTOR_RELATIVE_V2_ENVIRONMENT.md#relative-v2_1-시작점-기준-누적-변위-cosine).

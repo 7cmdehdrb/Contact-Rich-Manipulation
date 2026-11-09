@@ -1278,3 +1278,16 @@ for _version, _cfg_version in (("v2_1", "V2_1"), ("v3", "V3")):
                     "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.wrench_refactor_ppo_cfg:WrenchRefactorRelative{_cfg_version}PPORunnerCfg",
                 },
             )
+
+WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_TASK_ID = "Inspire-Wrench-Refactor-Relative-IK-v0_2-Test"
+if WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.wrench_refactor_relative_ik_test:WrenchRefactorRelativeIKV0_2TestEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.wrench_refactor_relative_ik_test_envs:WrenchRefactorRelativeIKV0_2TestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.wrench_refactor_relative_ik_test_ppo_cfg:WrenchRefactorRelativeIKV0_2TestPPORunnerCfg",
+        },
+    )
+__all__.append("WRENCH_REFACTOR_RELATIVE_IK_V0_2_TEST_TASK_ID")
