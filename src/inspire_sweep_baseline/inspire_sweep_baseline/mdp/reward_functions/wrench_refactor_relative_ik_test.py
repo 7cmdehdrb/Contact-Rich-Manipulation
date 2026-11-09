@@ -18,11 +18,11 @@ class TargetContactMaintenance(RefactorContactMaintenance):
     """Target-only 2-of-3 count below the EEF ceiling; no goal occupancy bypass.
 
     Accepted windows increment the count to 10. Rejected windows pay zero,
-    preserve the count for four rejections, and clear it on the fifth.
+    clear the count after reset_after_misses consecutive rejections (default five).
     Inherited reset clears only the selected episodes. RewardManager applies dt.
     """
 
-    def __call__(self, env, threshold_n=0.01, eef_height_limit=0.15):
+    def __call__(self, env, threshold_n=0.01, eef_height_limit=0.15, reset_after_misses=5):
         if not math.isfinite(threshold_n) or threshold_n <= 0:
             raise ValueError('Contact threshold must be finite and positive')
         if not math.isfinite(eef_height_limit) or eef_height_limit <= 0:
@@ -44,7 +44,7 @@ class TargetContactMaintenance(RefactorContactMaintenance):
             self._misses[:] = torch.where(accepted, 0, self._misses + 1)
             self._count += accepted.long()
             self._count.clamp_(max=10)
-            self._count[self._misses >= 5] = 0
+            self._count[self._misses >= reset_after_misses] = 0
             self._cached_reward[:] = torch.where(accepted, self._count, 0).float()
             self._cached_step = step
         return self._cached_reward.clone()

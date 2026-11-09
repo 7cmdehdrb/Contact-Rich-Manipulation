@@ -15,9 +15,15 @@ parser.add_argument('--output', type=Path, default=Path('outputs/relative_ik_v0_
 parser.add_argument('--config-only', action='store_true')
 parser.add_argument('--child', action='store_true')
 parser.add_argument('--contact-child', action='store_true')
+parser.add_argument('--strict-contact-child', action='store_true')
+parser.add_argument('--inverse-distance-child', action='store_true')
 parser.add_argument('--benchmark', action='store_true')
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
+if args.inverse_distance_child:
+    args.strict_contact_child = True
+if args.strict_contact_child:
+    args.contact_child = True
 app = AppLauncher(args).app
 try:
     import torch
@@ -86,6 +92,33 @@ try:
         assert type(cfg).__bases__ == (WrenchRefactorRelativeIKV0_2_1TestEnvCfg,)
         assert WrenchRefactorRelativeIKV0_2_1TestEnvCfg().to_dict() == before_contact
         expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_2-Test'
+        assert load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point').to_dict() == expected_runner
+    if args.strict_contact_child:
+        parent_type = type(cfg)
+        before_strict = cfg.to_dict()
+        task = 'Inspire-Wrench-Refactor-Relative-IK-v0_2_2_1-Test'
+        cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
+        expected_strict = copy.deepcopy(before_strict)
+        expected_strict['rewards']['hand_contact']['params']['reset_after_misses'] = 1
+        assert cfg.to_dict() == expected_strict
+        assert type(cfg).__bases__ == (parent_type,)
+        assert parent_type().to_dict() == before_strict
+        expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_2_1-Test'
+        assert load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point').to_dict() == expected_runner
+    if args.inverse_distance_child:
+        from inspire_sweep_baseline.mdp.reward_functions.wrench_refactor import RelativeInverseDistance
+        parent_type = type(cfg)
+        before_inverse = cfg.to_dict()
+        task = 'Inspire-Wrench-Refactor-Relative-IK-v0_2_2_2-Test'
+        cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
+        expected_inverse = copy.deepcopy(before_inverse)
+        term = cfg.rewards.target_inverse_distance
+        assert term.func is RelativeInverseDistance and term.weight == -25.94
+        expected_inverse['rewards']['target_inverse_distance'] = term.to_dict()
+        assert cfg.to_dict() == expected_inverse
+        assert type(cfg).__bases__ == (parent_type,)
+        assert parent_type().to_dict() == before_inverse
+        expected_runner['experiment_name'] = 'inspire_wrench_refactor_relative_ik_v0_2_2_2-Test'
         assert load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point').to_dict() == expected_runner
     args.output.mkdir(parents=True, exist_ok=True)
     result = {'task':task, 'full_config_comparison':True, 'ppo_comparison':True, 'parent_preserved':True}

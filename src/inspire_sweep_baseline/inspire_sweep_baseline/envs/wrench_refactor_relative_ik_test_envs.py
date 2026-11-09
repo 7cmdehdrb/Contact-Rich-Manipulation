@@ -108,3 +108,19 @@ from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativ
 @configclass
 class WrenchRefactorRelativeIKV0_2_2TestEnvCfg(WrenchRefactorRelativeIKV0_2_1TestEnvCfg):
     rewards: WrenchRefactorRelativeIKV0_2_2TestRewardsCfg = WrenchRefactorRelativeIKV0_2_2TestRewardsCfg()
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_1TestEnvCfg(WrenchRefactorRelativeIKV0_2_2TestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg = WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg()
+
+
+from ..mdp.rewards.wrench_refactor_relative_ik_test import WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_2TestEnvCfg(WrenchRefactorRelativeIKV0_2_2_1TestEnvCfg):
+    rewards: WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg = WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg()

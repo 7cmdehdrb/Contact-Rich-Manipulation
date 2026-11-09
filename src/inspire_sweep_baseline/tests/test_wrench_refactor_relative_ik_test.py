@@ -323,3 +323,64 @@ def test_target_contact_height_boundary_and_immediate_gate(configs, height):
             assert not reward.any()  # old 2-of-3 history cannot bypass the ceiling
             torch.testing.assert_close(term._count, torch.zeros_like(before) if i==4 else before)
         env.common_step_counter += 1
+
+
+def test_v0221_only_changes_rejection_reset(configs):
+    module = configs('rewards', STEM)
+    parent = module.WrenchRefactorRelativeIKV0_2_2TestRewardsCfg().to_dict()
+    child = module.WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg()
+    expected = copy.deepcopy(parent)
+    expected['hand_contact']['params']['reset_after_misses'] = 1
+    assert_ordered_equal(child.to_dict(), expected)
+    assert module.WrenchRefactorRelativeIKV0_2_2TestRewardsCfg().to_dict() == parent
+
+
+def test_single_rejection_resets_count_but_keeps_two_of_three(configs):
+    env, force, term = contact_count_fixture(configs)
+    params = {'reset_after_misses': 1}
+    for _ in range(5):
+        term(env, **params)
+        env.common_step_counter += 1
+    assert term._count.tolist() == [4, 4]
+    force.zero_()
+    # One raw missed contact still passes the two-of-three window.
+    assert term(env, **params).tolist() == [5., 5.]
+    env.common_step_counter += 1
+    assert not term(env, **params).any()
+    assert term._count.tolist() == [0, 0]
+    force[:, 0, 0, 0] = .01
+    env.common_step_counter += 1
+    assert not term(env, **params).any()
+    env.common_step_counter += 1
+    assert term(env, **params).tolist() == [1., 1.]
+
+
+def test_v0222_only_adds_doubled_inverse_distance(configs):
+    module = configs('rewards', STEM)
+    parent = module.WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg().to_dict()
+    child = module.WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg()
+    reference = configs('rewards', 'wrench_refactor').WrenchRefactorRelativeRewardsCfg().target_inverse_distance
+    expected = copy.deepcopy(parent)
+    expected_term = reference.to_dict()
+    expected_term['weight'] *= 2
+    expected['target_inverse_distance'] = expected_term
+    assert_ordered_equal(child.to_dict(), expected)
+    assert module.WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg().to_dict() == parent
+    from test_wrench_refactor_relative import motion_reward_env
+    env, pos, forces, goal = motion_reward_env(2)
+    forces.zero_()
+    cfg = child.target_inverse_distance
+    term = cfg.func(cfg, env)
+    # Initial reverse movement versus progress toward the goal.
+    pos[:, 0, 0] = torch.tensor([-.01, .01])
+    torch.testing.assert_close(cfg.weight * term(env) * env.step_dt, pos.new_tensor([-.2594, 0.]))
+    env.common_step_counter += 1
+    pos[:, 0, :2] = goal[:, :2]
+    assert not term(env).any()
+    # Overshoot starting at the goal is charged even inside the 3 cm radius.
+    env.common_step_counter += 1
+    pos[:, 0, 0] += .01
+    torch.testing.assert_close(cfg.weight * term(env) * env.step_dt, pos.new_full((2,), -.2594))
+    env.common_step_counter += 1
+    pos[:, 0, 2] += .1
+    assert not term(env).any()  # Only XY distance contributes.

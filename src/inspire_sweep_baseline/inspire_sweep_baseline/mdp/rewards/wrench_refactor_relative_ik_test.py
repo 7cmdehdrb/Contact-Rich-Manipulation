@@ -61,3 +61,18 @@ from ..reward_functions.wrench_refactor_relative_ik_test import TargetContactMai
 class WrenchRefactorRelativeIKV0_2_2TestRewardsCfg(WrenchRefactorRelativeIKV0_2_1TestRewardsCfg):
     hand_contact = RewTerm(func=TargetContactMaintenance, weight=0.1,
                           params={'threshold_n': 0.01, 'eef_height_limit': 0.15})
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg(WrenchRefactorRelativeIKV0_2_2TestRewardsCfg):
+    hand_contact = RewTerm(func=TargetContactMaintenance, weight=0.1,
+                          params={'threshold_n': 0.01, 'eef_height_limit': 0.15,
+                                  'reset_after_misses': 1})
+
+
+from ..reward_functions.wrench_refactor import RelativeInverseDistance
+
+
+@configclass
+class WrenchRefactorRelativeIKV0_2_2_2TestRewardsCfg(WrenchRefactorRelativeIKV0_2_2_1TestRewardsCfg):
+    target_inverse_distance = RewTerm(func=RelativeInverseDistance, weight=-25.94)
