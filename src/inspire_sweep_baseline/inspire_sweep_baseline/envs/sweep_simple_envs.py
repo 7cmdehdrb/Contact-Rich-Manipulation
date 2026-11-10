@@ -1,4 +1,9 @@
 """Independent Simple v0; Prof changes goal rewards, v1 changes only Reach."""
+from ..mdp.actions.sweep_simple import SweepSimpleFingerV1ActionsCfg
+from ..mdp.observations.sweep_simple import SweepSimpleFingerV1ObservationsCfg
+from ..mdp.rewards.sweep_simple import SweepSimpleFingerV1RewardsCfg, SweepSimpleFingerV2RewardsCfg
+from ..mdp.curricula.sweep_simple import SweepSimpleFingerV1CurriculumCfg
+from ..mdp.terminations.sweep_simple import SweepSimpleFingerV1TerminationsCfg, SweepSimpleFingerV2TerminationsCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
@@ -109,3 +114,18 @@ class SweepSimpleFingerEnvCfg(SweepSimpleV1EnvCfg):
     actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
     observations: SweepSimpleFingerObservationsCfg = SweepSimpleFingerObservationsCfg()
     rewards: SweepSimpleFingerRewardsCfg = SweepSimpleFingerRewardsCfg()
+
+
+@configclass
+class SweepSimpleFingerV1EnvCfg(SweepSimpleFingerEnvCfg):
+    actions: SweepSimpleFingerV1ActionsCfg = SweepSimpleFingerV1ActionsCfg()
+    observations: SweepSimpleFingerV1ObservationsCfg = SweepSimpleFingerV1ObservationsCfg()
+    rewards: SweepSimpleFingerV1RewardsCfg = SweepSimpleFingerV1RewardsCfg()
+    terminations: SweepSimpleFingerV1TerminationsCfg = SweepSimpleFingerV1TerminationsCfg()
+    curriculum: SweepSimpleFingerV1CurriculumCfg = SweepSimpleFingerV1CurriculumCfg()
+
+
+@configclass
+class SweepSimpleFingerV2EnvCfg(SweepSimpleFingerV1EnvCfg):
+    rewards: SweepSimpleFingerV2RewardsCfg = SweepSimpleFingerV2RewardsCfg()
+    terminations: SweepSimpleFingerV2TerminationsCfg = SweepSimpleFingerV2TerminationsCfg()

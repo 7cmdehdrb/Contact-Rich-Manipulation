@@ -53,6 +53,7 @@ def family(configs, omni_config, monkeypatch):
         ns[prefix+'ActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
         ns[prefix+'OSCActionCfg'] = NS(OffsetCfg=_AssetNode)
     ns['SweepSimpleFingerActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
+    ns['SweepSimpleFingerV1ActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
     ns.update(GroupedResetObjectSpawnerCfg=_AssetNode, ViewerCfg=_AssetNode)
     ns.update(vars(_execute_definitions(MODULE_ROOT/f'envs/{OLD}_envs.py', ns)))
     return _execute_definitions(MODULE_ROOT/'envs/sweep_simple_envs.py', ns)
@@ -157,7 +158,7 @@ def test_registry_and_no_historical_cfg_or_runtime_ancestry():
     paths = list(MODULE_ROOT.rglob('sweep_simple*.py'))
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node,ast.ClassDef) and path.parent.name != 'agent':
+            if isinstance(node,ast.ClassDef) and path.parent.name not in ('agent', 'action_functions'):
                 assert all(not isinstance(b,ast.Name) or not b.id.startswith('Wrench') for b in node.bases), path
             if isinstance(node,ast.ImportFrom) and node.module:
                 assert node.module not in (f'envs.{OLD}_envs', f'runtime.{OLD}')

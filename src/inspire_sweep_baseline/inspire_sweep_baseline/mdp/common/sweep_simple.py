@@ -56,3 +56,38 @@ class HardCircleResetLayout(CircleResetLayout):
         # If 15 cm does not fit, use the farthest feasible point, even below 7 cm.
         distance = torch.where(maximum < params['max_goal_distance'], maximum, sampled)
         return target, target + direction * distance[:, None]
+
+
+class FingerRetreatState:
+    """Shared, once-per-policy-step continuous hold timer and episode latch."""
+    def __init__(self, env):
+        self.required_steps = math.ceil(3.0 / env.step_dt - 1e-9)
+        self.steps = torch.zeros(env.num_envs, dtype=torch.long, device=env.device)
+        self.active = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+        self.target = torch.zeros((env.num_envs, 3), device=env.device)
+        self._last_step = torch.full_like(self.steps, -1)
+
+    def reset(self, env, ids):
+        from .contact_sweep_clutter_fusion import SHELF_SURFACE_HEIGHT
+        self.steps[ids] = 0
+        self.active[ids] = False
+        # A reset/observation call in this same policy step must not add dwell time.
+        self._last_step[ids] = env.common_step_counter
+        goal = env.command_manager.get_command('target_goal_pos')[ids, :3]
+        initial = env._initial_object_positions_w[ids, 0, :2]
+        direction = initial - goal[:, :2]
+        direction = direction / direction.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+        self.target[ids, :2] = goal[:, :2] + .05 * direction
+        self.target[ids, 2] = env._revision_initial_shelf_pos[ids, 2] + SHELF_SURFACE_HEIGHT + .08
+
+    def update(self, env):
+        fresh = self._last_step != env.common_step_counter
+        position = env.scene['object_collection'].data.object_pos_w[:, 0, :2]
+        goal = env.command_manager.get_command('target_goal_pos')[:, :2]
+        distance = (position - goal).norm(dim=-1)
+        inside = torch.isfinite(distance) & (distance < .02)
+        steps = torch.where(inside, (self.steps + 1).clamp_max(self.required_steps), 0)
+        self.steps[:] = torch.where(fresh & ~self.active, steps, self.steps)
+        self.active |= self.steps >= self.required_steps
+        self._last_step[:] = env.common_step_counter
+        return self.active

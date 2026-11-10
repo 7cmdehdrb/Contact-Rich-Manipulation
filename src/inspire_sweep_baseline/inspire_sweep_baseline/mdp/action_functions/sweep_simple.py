@@ -51,3 +51,9 @@ class FingerJointPositionAction(ActionTerm):
         self._asset.set_joint_position_target(
             self._joint_targets[index], joint_ids=self._joint_ids, env_ids=env_ids,
         )
+
+
+class BoundedFingerJointPositionAction(FingerJointPositionAction):
+    def process_actions(self, actions):
+        # Bound the term's raw history too, before the existing follower mapping.
+        super().process_actions(torch.minimum(torch.nan_to_num(actions).clamp_min(0.), self._upper_limits))

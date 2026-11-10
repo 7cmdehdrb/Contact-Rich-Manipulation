@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-11: `Inspire-Sweep-Simple-Finger-v1`은 Finger-v0의 정책 출력·입력 범위와 속도 비용/종료를 변경하고 Last Action tanh를 제거한다. 이를 상속하는 `Inspire-Sweep-Simple-Finger-v2`는 로그 Distance·2cm/3초 달성 후 후퇴 Reach·gate 기반 Contact/성공을 적용한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_SIMPLE_ENVIRONMENTS.md#finger-v1v2-출력-범위와-정밀-이동후퇴).
+
 2026-11-10: 병렬 정책 평가를 위한 원시 로그 수집·데이터 추출·플롯 실행기를 추가했다. Timeout 최종 분포(전체/6방향), 생성 목표, 움직임 중 Contact 비율을 반복 수집한다. [실행 명령과 데이터 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_EVALUATION.md).
 
 2026-11-10: `Inspire-Sweep-Simple-Finger-v0`는 Simple-v1을 상속해 손의 실제 구동관절6D 관측·독립 절대 관절 위치6D 제어를 사용한다. Last Action tanh 유지, 전체 액션12D·원시 관측130D. [Simple 계열 설명](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_SIMPLE_ENVIRONMENTS.md#finger-v0-독립-손가락-제어).

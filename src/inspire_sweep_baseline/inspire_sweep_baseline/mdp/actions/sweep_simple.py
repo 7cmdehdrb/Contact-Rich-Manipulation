@@ -1,4 +1,6 @@
 """Independent Simple action configuration with Final/Revision root-frame bounded OSC."""
+from ..action_functions.sweep_simple import BoundedFingerJointPositionAction
+from ..action_functions.sweep_simple_osc import BoundedFingerOSCAction
 
 from isaaclab.controllers import OperationalSpaceControllerCfg
 from isaaclab.envs.mdp.actions import OperationalSpaceControllerActionCfg
@@ -60,3 +62,10 @@ class SweepSimpleFingerHandActionCfg(ActionTermCfg):
 @configclass
 class SweepSimpleFingerActionsCfg(SweepSimpleActionsCfg):
     gripper_action = SweepSimpleFingerHandActionCfg()
+
+
+@configclass
+class SweepSimpleFingerV1ActionsCfg(SweepSimpleFingerActionsCfg):
+    def __post_init__(self):
+        self.arm_action.class_type = BoundedFingerOSCAction
+        self.gripper_action.class_type = BoundedFingerJointPositionAction

@@ -1,4 +1,5 @@
 """Simple family: pinned effective v0_2_2_4 configuration, without historical Cfg inheritance."""
+from ..reward_functions.sweep_simple import AreaMatchedLogGoalProgress, RetreatReach, RetreatContactMaintenance
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
@@ -63,3 +64,19 @@ class SweepSimpleFingerRewardsCfg(SweepSimpleV1RewardsCfg):
     def __post_init__(self):
         self.arm_action_rate.func = finger_action_rate_l2
         self.hand_action_rate.func = finger_action_rate_l2
+
+
+@configclass
+class SweepSimpleFingerV1RewardsCfg(SweepSimpleFingerRewardsCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.arm_joint_velocity.weight = -.06
+
+
+@configclass
+class SweepSimpleFingerV2RewardsCfg(SweepSimpleFingerV1RewardsCfg):
+    goal_distance = RewTerm(func=AreaMatchedLogGoalProgress, weight=100., params={'epsilon': .01})
+    reaching = RewTerm(func=RetreatReach, weight=30., params={
+        'near_radius': .1, 'distance_scale': .1, 'frame_name': 'ee_frame', 'retreat_radius': .02})
+    hand_contact = RewTerm(func=RetreatContactMaintenance, weight=.1, params={
+        'threshold_n': .01, 'eef_height_limit': .15})

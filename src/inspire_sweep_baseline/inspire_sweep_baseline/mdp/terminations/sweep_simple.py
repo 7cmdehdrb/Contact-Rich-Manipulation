@@ -1,4 +1,5 @@
 """Simple family: pinned effective v0_2_2_4 configuration, without historical Cfg inheritance."""
+from ..termination_functions.sweep_simple import retreat_success_at_timeout
 from ..termination_functions.wrench_refactor_relative_ik_test import timeout_with_metrics
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils import configclass
@@ -15,3 +16,14 @@ class SweepSimpleTerminationsCfg:
     arm_joint_velocity = DoneTerm(func=arm_velocity, params={'asset_cfg': arm_entity(), 'threshold': 4.0})
     timeout = DoneTerm(func=timeout_with_metrics, time_out=True)
     success = DoneTerm(func=success_at_timeout, time_out=True)
+
+
+@configclass
+class SweepSimpleFingerV1TerminationsCfg(SweepSimpleTerminationsCfg):
+    def __post_init__(self):
+        self.arm_joint_velocity.params['threshold'] = 2.
+
+
+@configclass
+class SweepSimpleFingerV2TerminationsCfg(SweepSimpleFingerV1TerminationsCfg):
+    success = DoneTerm(func=retreat_success_at_timeout, time_out=True)
