@@ -62,3 +62,20 @@ class SweepSimpleFingerPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_finger_v0'
     actor = SweepSimpleFingerModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
     critic = SweepSimpleFingerModelCfg()
+
+
+@configclass
+class SweepSimpleFingerBoundedDistributionCfg:
+    class_name: str = 'inspire_sweep_baseline.agent.sweep_simple_distributions:FingerBoundedGaussian'
+    init_std: float = 1.0
+
+
+@configclass
+class SweepSimpleFingerV1PPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_v1'
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerBoundedDistributionCfg())
+
+
+@configclass
+class SweepSimpleFingerV2PPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_v2'

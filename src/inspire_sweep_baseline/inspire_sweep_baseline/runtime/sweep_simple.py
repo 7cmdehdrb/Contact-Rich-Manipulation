@@ -303,3 +303,26 @@ class SweepSimpleFingerEnv(SweepSimpleEnv):
         super()._reset_idx(env_ids)
         self.action_manager._action[env_ids, 6:] = 0.
         self.action_manager._prev_action[env_ids, 6:] = 0.
+
+
+class SweepSimpleFingerV1Env(SweepSimpleFingerEnv):
+    def load_managers(self):
+        from ..assets.hand_kinematics import finger_action_bounds
+        self._finger_action_lower, self._finger_action_upper = finger_action_bounds(self.device)
+        super().load_managers()
+
+    def step(self, action):
+        from ..assets.hand_kinematics import clip_finger_actions
+        return super().step(clip_finger_actions(action, self._finger_action_lower, self._finger_action_upper))
+
+
+class SweepSimpleFingerV2Env(SweepSimpleFingerV1Env):
+    def load_managers(self):
+        from ..mdp.common.sweep_simple import FingerRetreatState
+        self._finger_retreat = FingerRetreatState(self)
+        super().load_managers()
+
+    def _reset_idx(self, env_ids):
+        # Parent records terminal success before clearing the episode state.
+        super()._reset_idx(env_ids)
+        self._finger_retreat.reset(self, env_ids)

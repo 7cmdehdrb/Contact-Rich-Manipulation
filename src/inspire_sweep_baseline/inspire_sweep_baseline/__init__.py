@@ -1456,3 +1456,17 @@ if SWEEP_SIMPLE_FINGER_TASK_ID not in gym.registry:
         },
     )
 __all__.append("SWEEP_SIMPLE_FINGER_TASK_ID")
+
+
+for _version in (1, 2):
+    _finger_id = f"Inspire-Sweep-Simple-Finger-v{_version}"
+    if _finger_id not in gym.registry:
+        gym.register(
+            id=_finger_id,
+            entry_point=f"inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleFingerV{_version}Env",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": f"inspire_sweep_baseline.envs.sweep_simple_envs:SweepSimpleFingerV{_version}EnvCfg",
+                "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleFingerV{_version}PPORunnerCfg",
+            },
+        )

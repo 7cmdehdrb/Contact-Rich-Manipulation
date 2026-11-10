@@ -41,3 +41,60 @@ def finger_action_rate_l2(env, action_group="arm", max_cost=100.0):
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
     return (current[:, selection] - previous[:, selection]).square().sum(dim=-1).clamp_max(max_cost)
+
+
+from .dex_rewards import DexPlanarGoalProgress
+from .wrench_refactor_relative_ik_test import InverseDistanceReach
+from .goal_rewards import _target_state
+
+
+class AreaMatchedLogGoalProgress(DexPlanarGoalProgress):
+    """Log distance potential; match cumulative-curve area for each reset distance.
+
+    Epsilon=1cm, tolerance=0. AUC refers to integral of cumulative reward over
+    distance, NOT equal total episode reward (9cm gives 13.92398 vs 9).
+    """
+    def __call__(self, env, command_name='target_goal_pos', epsilon=.01):
+        if not math.isfinite(epsilon) or epsilon <= 0:
+            raise ValueError('epsilon must be positive and finite')
+        goal = env.command_manager.get_command(command_name)[:, :2]
+        initial = (self._initial_position - goal).norm(dim=-1)
+        distance = (_target_state(env)[:, :2] - goal).norm(dim=-1)
+        # float64 avoids cancellation for very short initial distances. This is
+        # tensor-only; the usual reset distribution is 6–12cm.
+        d0 = initial.double()
+        x = d0 / epsilon
+        log = torch.log1p(x)
+        denominator = epsilon * (x - log)
+        small = x < 1e-3
+        series = epsilon * x.square() * (.5 - x / 3 + x.square() / 4)
+        denominator = torch.where(small, series, denominator).clamp_min(1e-30)
+        coefficient = .5 * d0.square() / denominator
+        remaining = torch.minimum(distance.double(), d0)
+        progress = (coefficient * (log - torch.log1p(remaining / epsilon))).float().clamp_min(0.)
+        best = torch.maximum(self._best_progress, progress)
+        increment = best - self._best_progress
+        self._best_progress[:] = best
+        return increment / env.step_dt
+
+
+class RetreatReach(InverseDistanceReach):
+    def __call__(self, env, near_radius=.10, distance_scale=.10, frame_name='ee_frame', retreat_radius=.02):
+        normal = super().__call__(env, near_radius, distance_scale, frame_name)
+        state = env._finger_retreat
+        active = state.update(env)
+        reference = env.scene[frame_name].data.target_pos_w[:, 0]
+        gap = ((reference - state.target).norm(dim=-1) - retreat_radius).clamp_min(0.)
+        retreat = self._initial_distance / env.cfg.episode_length_s * distance_scale / (distance_scale + gap)
+        return torch.where(active, retreat, normal)
+
+
+class RetreatContactMaintenance(TargetContactDecayMaintenance):
+    """No 3cm bypass. Only the latched 2cm/3s gate grants unconditional 20."""
+    def __call__(self, env, threshold_n=.01, eef_height_limit=.15):
+        reward = super().__call__(env, threshold_n, eef_height_limit)
+        active = env._finger_retreat.update(env)
+        self._count[active] = 20
+        self._misses[active] = 0
+        self._cached_reward[active] = 20.
+        return torch.where(active, self._cached_reward, reward).clone()

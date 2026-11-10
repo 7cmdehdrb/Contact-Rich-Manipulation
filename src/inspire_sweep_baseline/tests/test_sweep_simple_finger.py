@@ -168,6 +168,7 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
     ns = dict(configclass=cc, ActionTermCfg=Cfg, OperationalSpaceControllerActionCfg=OscCfg,
               OperationalSpaceControllerCfg=_AssetNode, WrenchRefactorOSCAction=object,
               HandOpennessAction=hand, FingerJointPositionAction=finger,
+              BoundedFingerJointPositionAction=type("BoundedHand", (), {}), BoundedFingerOSCAction=type("BoundedOSC", (), {}),
               ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES)
     actions = _execute_definitions(MODULE_ROOT/'mdp/actions/sweep_simple.py',ns)
     base, child = actions.SweepSimpleActionsCfg(), actions.SweepSimpleFingerActionsCfg()
@@ -175,6 +176,15 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
     assert base.gripper_action.class_type is hand
     assert child.gripper_action.class_type is finger
     assert child.gripper_action.asset_name == 'robot'
+    bounded = actions.SweepSimpleFingerV1ActionsCfg()
+    expected = child.to_dict()
+    assert bounded.arm_action.class_type is ns['BoundedFingerOSCAction']
+    expected['arm_action']['class_type'] = bounded.to_dict()['arm_action']['class_type']
+    assert bounded.gripper_action.class_type is ns['BoundedFingerJointPositionAction']
+    expected['gripper_action']['class_type'] = bounded.to_dict()['gripper_action']['class_type']
+    assert_ordered_equal(bounded.to_dict(), expected)
+    assert actions.SweepSimpleFingerActionsCfg().gripper_action.class_type is finger
+
     runner = _execute_definitions(MODULE_ROOT/'agent/sweep_simple_ppo_cfg.py', dict(
         configclass=cc, MISSING=MISSING, RslRlMLPModelCfg=Cfg,
         RslRlOnPolicyRunnerCfg=Cfg, RslRlPpoAlgorithmCfg=_AssetNode))
