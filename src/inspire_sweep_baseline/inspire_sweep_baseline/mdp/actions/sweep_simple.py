@@ -8,6 +8,7 @@ from isaaclab.utils import configclass
 from ...assets.robot import ARM_JOINT_NAMES
 from ..action_functions.wrench_refactor import WrenchRefactorOSCAction
 from ..action_functions.hand_openness import HandOpennessAction
+from ..action_functions.sweep_simple import FingerJointPositionAction
 
 
 @configclass
@@ -48,3 +49,14 @@ class SweepSimpleActionsCfg:
         effort_limit_scale=1.0,
     )
     gripper_action = SweepSimpleHandActionCfg(asset_name="robot")
+
+
+@configclass
+class SweepSimpleFingerHandActionCfg(ActionTermCfg):
+    class_type: type = FingerJointPositionAction
+    asset_name: str = "robot"
+
+
+@configclass
+class SweepSimpleFingerActionsCfg(SweepSimpleActionsCfg):
+    gripper_action = SweepSimpleFingerHandActionCfg()

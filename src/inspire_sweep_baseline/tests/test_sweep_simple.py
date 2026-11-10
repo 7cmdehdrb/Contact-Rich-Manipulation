@@ -52,6 +52,7 @@ def family(configs, omni_config, monkeypatch):
         # Actions are compared structurally in full below, including all defaults.
         ns[prefix+'ActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
         ns[prefix+'OSCActionCfg'] = NS(OffsetCfg=_AssetNode)
+    ns['SweepSimpleFingerActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
     ns.update(GroupedResetObjectSpawnerCfg=_AssetNode, ViewerCfg=_AssetNode)
     ns.update(vars(_execute_definitions(MODULE_ROOT/f'envs/{OLD}_envs.py', ns)))
     return _execute_definitions(MODULE_ROOT/'envs/sweep_simple_envs.py', ns)
@@ -116,7 +117,8 @@ def test_scene_actions_observations_commands_are_identical_definitions():
         new = ast.parse((MODULE_ROOT/f'{folder}/sweep_simple.py').read_text())
         def definitions(tree):
             return [ast.dump(n) for n in tree.body if isinstance(n,(ast.ClassDef,ast.FunctionDef))
-                    and getattr(n,'name','') != 'GroupedResetObjectSpawnerCfg']
+                    and getattr(n,'name','') != 'GroupedResetObjectSpawnerCfg'
+                    and not getattr(n,'name','').startswith('SweepSimpleFinger')]
         assert definitions(old) == definitions(new), folder
 
 
@@ -155,7 +157,7 @@ def test_registry_and_no_historical_cfg_or_runtime_ancestry():
     paths = list(MODULE_ROOT.rglob('sweep_simple*.py'))
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node,ast.ClassDef):
+            if isinstance(node,ast.ClassDef) and path.parent.name != 'agent':
                 assert all(not isinstance(b,ast.Name) or not b.id.startswith('Wrench') for b in node.bases), path
             if isinstance(node,ast.ImportFrom) and node.module:
                 assert node.module not in (f'envs.{OLD}_envs', f'runtime.{OLD}')

@@ -1442,3 +1442,17 @@ for _suffix, _cfg in (
                 "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:{_cfg}PPORunnerCfg",
             },
         )
+
+
+SWEEP_SIMPLE_FINGER_TASK_ID = "Inspire-Sweep-Simple-Finger-v0"
+if SWEEP_SIMPLE_FINGER_TASK_ID not in gym.registry:
+    gym.register(
+        id=SWEEP_SIMPLE_FINGER_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleFingerEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.sweep_simple_envs:SweepSimpleFingerEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleFingerPPORunnerCfg",
+        },
+    )
+__all__.append("SWEEP_SIMPLE_FINGER_TASK_ID")

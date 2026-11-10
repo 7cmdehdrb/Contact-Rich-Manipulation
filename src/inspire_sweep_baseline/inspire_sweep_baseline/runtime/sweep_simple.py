@@ -294,3 +294,12 @@ class SweepSimpleEnv(ManagerBasedRLEnv):
             orientations=self._spawn_region_rotations[active].reshape(-1, 4),
             marker_indices=self._spawn_region_colors[active].flatten(),
         )
+
+
+class SweepSimpleFingerEnv(SweepSimpleEnv):
+    """Keep the parent lifecycle, with zero-radian hand reset commands."""
+
+    def _reset_idx(self, env_ids):
+        super()._reset_idx(env_ids)
+        self.action_manager._action[env_ids, 6:] = 0.
+        self.action_manager._prev_action[env_ids, 6:] = 0.

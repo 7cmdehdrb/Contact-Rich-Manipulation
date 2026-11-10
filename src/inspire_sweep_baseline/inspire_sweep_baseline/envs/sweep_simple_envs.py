@@ -3,13 +3,13 @@ from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
 from ..assets.scenes.sweep_simple import SweepSimpleSceneCfg
-from ..mdp.actions.sweep_simple import SweepSimpleActionsCfg, SweepSimpleOSCActionCfg
+from ..mdp.actions.sweep_simple import SweepSimpleActionsCfg, SweepSimpleOSCActionCfg, SweepSimpleFingerActionsCfg
 from ..mdp.commands.sweep_simple import SweepSimpleCommandsCfg
-from ..mdp.observations.sweep_simple import SweepSimpleObservationsCfg
+from ..mdp.observations.sweep_simple import SweepSimpleObservationsCfg, SweepSimpleFingerObservationsCfg
 from ..mdp.events.sweep_simple import SweepSimpleEventsCfg, SweepSimpleHardEventsCfg
 from ..mdp.curricula.sweep_simple import SweepSimpleCurriculumCfg, SweepSimpleHardCurriculumCfg
 from ..mdp.terminations.sweep_simple import SweepSimpleTerminationsCfg
-from ..mdp.rewards.sweep_simple import SweepSimpleRewardsCfg, SweepSimpleProfRewardsCfg, SweepSimpleV1RewardsCfg, SweepSimpleProfV1RewardsCfg
+from ..mdp.rewards.sweep_simple import SweepSimpleRewardsCfg, SweepSimpleProfRewardsCfg, SweepSimpleV1RewardsCfg, SweepSimpleProfV1RewardsCfg, SweepSimpleFingerRewardsCfg
 
 @configclass
 class SweepSimpleEnvCfg(ManagerBasedRLEnvCfg):
@@ -102,3 +102,10 @@ class SweepSimpleHardEnvCfg(SweepSimpleV1EnvCfg):
 class SweepSimpleProfHardEnvCfg(SweepSimpleProfV1EnvCfg):
     events: SweepSimpleHardEventsCfg = SweepSimpleHardEventsCfg()
     curriculum: SweepSimpleHardCurriculumCfg = SweepSimpleHardCurriculumCfg()
+
+
+@configclass
+class SweepSimpleFingerEnvCfg(SweepSimpleV1EnvCfg):
+    actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
+    observations: SweepSimpleFingerObservationsCfg = SweepSimpleFingerObservationsCfg()
+    rewards: SweepSimpleFingerRewardsCfg = SweepSimpleFingerRewardsCfg()

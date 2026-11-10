@@ -50,3 +50,15 @@ class SweepSimpleHardPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
 @configclass
 class SweepSimpleProfHardPPORunnerCfg(SweepSimpleProfV1PPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_prof_hard_v0'
+
+
+@configclass
+class SweepSimpleFingerModelCfg(SweepSimpleModelCfg):
+    class_name = 'inspire_sweep_baseline.agent.sweep_simple_models:SweepSimpleFingerModel'
+
+
+@configclass
+class SweepSimpleFingerPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_v0'
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
+    critic = SweepSimpleFingerModelCfg()

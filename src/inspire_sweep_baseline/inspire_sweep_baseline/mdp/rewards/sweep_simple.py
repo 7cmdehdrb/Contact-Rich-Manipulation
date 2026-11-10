@@ -16,7 +16,7 @@ from isaaclab.utils import configclass
 import math as math
 from ..reward_functions.wrench_refactor_relative_ik_test import holding_shelf_failure
 from ..reward_functions.wrench_refactor import RelativeInverseDistance
-from ..reward_functions.sweep_simple import GoalContactMaintenance
+from ..reward_functions.sweep_simple import GoalContactMaintenance, finger_action_rate_l2
 from ..reward_functions.wrench_refactor_relative_ik_test import ContactConditionedSweep
 from ..reward_functions.wrench_refactor_relative_ik_test import InverseDistanceReach
 
@@ -56,3 +56,10 @@ class SweepSimpleV1RewardsCfg(SweepSimpleRewardsCfg):
 @configclass
 class SweepSimpleProfV1RewardsCfg(SweepSimpleProfRewardsCfg):
     reaching = RewTerm(func=InverseDistanceReach, weight=30.0, params={'near_radius': 0.1, 'distance_scale': 0.1, 'frame_name': 'ee_frame'})
+
+
+@configclass
+class SweepSimpleFingerRewardsCfg(SweepSimpleV1RewardsCfg):
+    def __post_init__(self):
+        self.arm_action_rate.func = finger_action_rate_l2
+        self.hand_action_rate.func = finger_action_rate_l2

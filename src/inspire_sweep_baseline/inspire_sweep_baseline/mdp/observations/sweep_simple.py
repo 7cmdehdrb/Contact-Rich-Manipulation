@@ -3,6 +3,8 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup, ObservationTermCf
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import NoiseCfg
 from ...assets.robot import ARM_JOINT_NAMES, HAND_JOINT_NAMES
+from ...assets.hand_kinematics import HAND_DRIVE_JOINT_NAMES
+from ..observation_functions.sweep_simple import hand_drive_positions
 from ..observation_functions.contact_sweep_clutter import PureWristWrench
 from ..observation_functions.final import hand_configuration, previous_action_command, wrist_wrench_observation_noise
 from ..observation_functions.revision import arm_joint_positions, arm_joint_velocities
@@ -41,3 +43,14 @@ class SweepSimpleObservationsCfg:
     obstacles: ObstaclesCfg = ObstaclesCfg()
     critic = None
     critic_obstacles = None
+
+
+@configclass
+class SweepSimpleFingerObservationsCfg(SweepSimpleObservationsCfg):
+    @configclass
+    class PolicyCfg(SweepSimpleObservationsCfg.PolicyCfg):
+        hand_configuration = ObsTerm(func=hand_drive_positions, params={
+            'asset_cfg': SceneEntityCfg('robot', joint_names=list(HAND_DRIVE_JOINT_NAMES), preserve_order=True),
+        })
+
+    policy: PolicyCfg = PolicyCfg()
