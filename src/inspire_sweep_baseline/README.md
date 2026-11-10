@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-10: 병렬 정책 평가를 위한 원시 로그 수집·데이터 추출·플롯 실행기를 추가했다. Timeout 최종 분포(전체/6방향), 생성 목표, 움직임 중 Contact 비율을 반복 수집한다. [실행 명령과 데이터 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_EVALUATION.md).
+
 2026-11-10: `Inspire-Sweep-Simple-Finger-v0`는 Simple-v1을 상속해 손의 실제 구동관절6D 관측·독립 절대 관절 위치6D 제어를 사용한다. Last Action tanh 유지, 전체 액션12D·원시 관측130D. [Simple 계열 설명](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_SIMPLE_ENVIRONMENTS.md#finger-v0-독립-손가락-제어).
 
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_6`**는 v0_2_2_4 직접 상속으로 Reach만 현재3D 중심의 지속 근접 보상으로 변경한다. v0_2_2_4부터 timeout/success 집계를 최근10,000개 완료 에피소드로 변경했다. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_6.md).
