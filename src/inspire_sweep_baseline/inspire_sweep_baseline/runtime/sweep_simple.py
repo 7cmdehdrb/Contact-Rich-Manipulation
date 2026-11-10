@@ -254,6 +254,9 @@ class SweepSimpleFingerV1Env(SweepSimpleFingerEnv):
 
     def step(self, action):
         from ..assets.hand_kinematics import clip_finger_actions
+        # Out-of-place: PPO retains its original Gaussian sample and log-prob.
+        # ActionManager stores the execution command for Last Action and both
+        # current/previous action-rate penalties, before applying OSC scales.
         return super().step(clip_finger_actions(action, self._finger_action_lower, self._finger_action_upper))
 
 

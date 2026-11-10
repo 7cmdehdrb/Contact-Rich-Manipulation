@@ -135,6 +135,13 @@ class NumericalPPO(PPO):
     def process_env_step(self, obs, rewards, dones, extras):
         self._check_observations(obs)
         self._check("environment/rewards", rewards, self.max_abs_return)
+        diagnostics = getattr(self.actor.distribution, 'action_diagnostics', None)
+        if diagnostics is not None:
+            # Sample likelihood/storage use the original, unclipped actions.
+            self._check('policy/raw_actions', self.transition.actions)
+            self._check('policy/log_prob', self.transition.actions_log_prob)
+            # Fresh mapping: the logger retains earlier steps' dictionaries.
+            extras['log'] = {**extras.get('log', {}), **diagnostics(self.transition.actions)}
         super().process_env_step(obs, rewards, dones, extras)
         # PPO clears transition after copying it into storage.
         self._check("bootstrap/stored_rewards", self.storage.rewards[self.storage.step - 1], self.max_abs_return)

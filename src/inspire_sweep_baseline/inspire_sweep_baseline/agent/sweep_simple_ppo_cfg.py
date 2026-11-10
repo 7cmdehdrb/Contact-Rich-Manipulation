@@ -65,15 +65,16 @@ class SweepSimpleFingerPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
 
 
 @configclass
-class SweepSimpleFingerBoundedDistributionCfg:
-    class_name: str = 'inspire_sweep_baseline.agent.sweep_simple_distributions:FingerBoundedGaussian'
-    init_std: float = 1.0
+class SweepSimpleFingerGaussianDistributionCfg:
+    class_name: str = 'inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian'
+    # None selects raw-unit stds: translation .2, rotation .5, hand range / 6.
+    init_std: float | None = None
 
 
 @configclass
 class SweepSimpleFingerV1PPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_finger_v1'
-    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerBoundedDistributionCfg())
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerGaussianDistributionCfg())
 
 
 @configclass

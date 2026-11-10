@@ -193,31 +193,46 @@ def test_contact_bypass_only_after_gate(configs):
     assert term(env).tolist()==[0,0]
 
 
-def test_policy_density_bounds_kl_and_export(load_mdp):
-    cls=module('agent.sweep_simple_distributions').FingerBoundedGaussian
+def test_policy_gaussian_density_kl_initialization_and_export(load_mdp):
+    cls=module('agent.sweep_simple_distributions').FingerGaussian
     bounds=module('assets.hand_kinematics')
     lo,hi=bounds.finger_action_bounds('cpu')
     distribution=cls(12)
     mu=torch.randn(1024,12)*.4
     distribution.update(mu)
     actions=distribution.sample()
-    assert ((actions>=lo)&(actions<=hi)).all()
+    assert ((actions<lo)|(actions>hi)).any()
     assert torch.isfinite(distribution.log_prob(actions)).all()
-    # Verify the change of variables against independent torch transforms.
-    from torch.distributions import TransformedDistribution,Normal,TanhTransform,AffineTransform
-    reference=TransformedDistribution(Normal(mu,torch.ones_like(mu)),[
-        TanhTransform(),AffineTransform((hi+lo)/2,(hi-lo)/2)])
-    torch.testing.assert_close(distribution.log_prob(actions),reference.log_prob(actions).sum(-1),atol=2e-4,rtol=1e-4)
+    from torch.distributions import Normal,kl_divergence
+    std=torch.tensor([.2]*3+[.5]*3+[(float(u)-float(l))/6 for l,u in zip(lo[6:],hi[6:])])
+    torch.testing.assert_close(distribution.std,std.expand_as(mu))
+    reference=Normal(mu,std)
+    torch.testing.assert_close(distribution.log_prob(actions),reference.log_prob(actions).sum(-1))
+    torch.testing.assert_close(distribution.entropy,reference.entropy().sum(-1))
     old=tuple(x.clone() for x in distribution.params)
     torch.testing.assert_close(distribution.kl_divergence(old,old),torch.zeros(1024))
     distribution.update(mu+.2)
-    torch.testing.assert_close(distribution.kl_divergence(old,distribution.params),torch.full((1024,),.24),atol=2e-6,rtol=1e-5)
+    torch.testing.assert_close(distribution.kl_divergence(old,distribution.params),kl_divergence(reference,Normal(mu+.2,std)).sum(-1))
     extreme=distribution.deterministic_output(torch.full((1,12),1000.))
-    assert ((extreme>=lo)&(extreme<=hi)).all()
+    assert (extreme==1000.).all()
     assert torch.isfinite(distribution.log_prob(extreme)).all()
     export=torch.jit.script(distribution.as_deterministic_output_module())
     torch.testing.assert_close(export(mu),distribution.deterministic_output(mu))
     assert torch.isfinite(distribution.entropy).all()
+    layer=torch.nn.Linear(8,12)
+    distribution.init_mlp_weights(layer)
+    torch.testing.assert_close(layer.bias,(hi+lo)/2)
+
+
+def test_old_transformed_checkpoint_rejected_even_non_strict(load_mdp):
+    cls=module('agent.sweep_simple_distributions').FingerGaussian
+    distribution=cls(12)
+    state=distribution.state_dict()
+    state['transform.center']=torch.zeros(12)
+    state['transform.half_range']=torch.ones(12)
+    for strict in (True,False):
+        with pytest.raises(RuntimeError,match='tanh policy checkpoint'):
+            distribution.load_state_dict(state,strict=strict)
 
 
 def test_raw_last_action_and_input_clipping_before_scale(load_mdp):
@@ -281,7 +296,7 @@ def test_bounded_hand_raw_and_urdf_limits(load_mdp):
 def test_real_bounded_ppo_update_checkpoint_and_full_export(load_mdp,tmp_path):
     from rsl_rl.algorithms import PPO
     model=module('agent.sweep_simple_models').SweepSimpleFingerModel
-    dist=module('agent.sweep_simple_distributions').FingerBoundedGaussian
+    dist=module('agent.sweep_simple_distributions').FingerGaussian
     obs=TensorDict({'policy':torch.randn(8,66),'obstacles':torch.randn(8,64)},batch_size=[8])
     obs['obstacles'][:,::4]=1
     cfg=dict(actor=dict(class_name=model,distribution_cfg=dict(class_name=dist,init_std=1.)),
@@ -295,8 +310,9 @@ def test_real_bounded_ppo_update_checkpoint_and_full_export(load_mdp,tmp_path):
     with torch.inference_mode():
         for _ in range(4):
             actions=alg.act(obs)
-            assert ((actions>=lo)&(actions<=hi)).all()
-            alg.process_env_step(obs,-(actions-.2).square().sum(-1),torch.zeros(8,dtype=torch.long),{})
+            executed=actions.clamp(lo,hi)
+            alg.process_env_step(obs,-(executed-.2).square().sum(-1),torch.zeros(8,dtype=torch.long),{})
+            torch.testing.assert_close(alg.storage.actions[alg.storage.step-1],actions)
         alg.compute_returns(obs)
     losses=alg.update()
     assert all(math.isfinite(v) for v in losses.values())
@@ -326,7 +342,7 @@ def test_new_registry_and_ppo_inheritance(omni_config):
     parent=runner.SweepSimpleFingerPPORunnerCfg().to_dict()
     actual=runner.SweepSimpleFingerV1PPORunnerCfg().to_dict()
     expected=copy.deepcopy(parent);expected['experiment_name']='inspire_sweep_simple_finger_v1'
-    expected['actor']['distribution_cfg']=dict(class_name='inspire_sweep_baseline.agent.sweep_simple_distributions:FingerBoundedGaussian',init_std=1.)
+    expected['actor']['distribution_cfg']=dict(class_name='inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian',init_std=None)
     assert_ordered_equal(actual,expected)
     expected['experiment_name']='inspire_sweep_simple_finger_v2'
     assert_ordered_equal(runner.SweepSimpleFingerV2PPORunnerCfg().to_dict(),expected)
