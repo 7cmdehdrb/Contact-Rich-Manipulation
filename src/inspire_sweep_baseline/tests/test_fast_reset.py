@@ -181,8 +181,6 @@ def test_full_fast_config_matches_parent_except_reset(configs, omni_config, monk
     expected_latest['curriculum']['object_free_acceleration'] = None
     expected_latest['curriculum']['acceleration_weight'] = None
     expected_latest['terminations']['success'] = latest['terminations']['success']
-    expected_latest['debug_spawn_regions'] = False
-    expected_latest['debug_spawn_max_envs'] = 4
     expected_latest['timeout_metric_window'] = 10000
     assert latest == expected_latest
     assert Latest.__bases__ == (newest,)
@@ -393,78 +391,3 @@ def test_warp_actual_usd_chain(load_mdp, tensor_math):
     (out/'usd_ik_cpu.json').write_text(json.dumps(dict(samples=n,device='Warp CPU',
         max_joint_difference=float((actual[0]-expected[0]).abs().max()),
         max_position_error=float(pe.max()),max_rotation_error=float(re.max())),indent=2))
-
-
-def test_spawn_region_footprints_match_circle_geometry(load_mdp):
-    m = module('wrench_refactor_layout')
-    bounds = pool_bounds(2)
-    layout = m.CircleResetLayout(bounds, 1.05-bounds[..., 0, 2])
-    ids = torch.arange(2)
-    start = torch.tensor([[0., 0.], [0., .1]])
-    goal = start + torch.tensor([0., .1])
-    centers = torch.zeros(2, 17, 2)
-    centers[:, 1] = torch.tensor([-.1, -.3])
-    active = torch.zeros(2, 17, dtype=torch.bool)
-    active[0, 1] = True
-    colors = m.spawn_region_classes(layout, ids, start, goal, centers, active)
-    red = layout.red_distance(layout.cells, start, goal) <= layout.expanded[:, 0, None] + layout.cell_margin
-    assert torch.equal(colors == 1, red)
-    assert (colors[0] == 2).any() and not (colors[1] == 2).any()
-    assert (colors == 0).any()
-    occupied = (layout.cells - centers[0, 1]).norm(dim=-1) <= layout.expanded[0, 1] + layout.cell_margin
-    assert torch.equal(colors[0] == 2, occupied & ~red[0])
-    # Deterministic overlay leaves the sampler and its random stream untouched.
-    assert layout._scratch is None
-
-
-def test_spawn_overlay_partial_reset_snapshots_and_no_colliders(configs, monkeypatch):
-    import ast
-    import sys
-    from types import SimpleNamespace as NS, ModuleType
-    from conftest import MODULE_ROOT
-    from isaaclab.utils.math import quat_apply
-    sim = ModuleType('isaaclab.sim')
-    monkeypatch.setitem(sys.modules, 'isaaclab.sim', sim)
-    monkeypatch.setattr(sim, 'CuboidCfg', lambda **kw: NS(**kw), raising=False)
-    monkeypatch.setattr(sim, 'PreviewSurfaceCfg', lambda **kw: NS(**kw), raising=False)
-    markers = ModuleType('isaaclab.markers')
-    class Marker:
-        def __init__(self, cfg): self.cfg = cfg
-        def visualize(self, **kw): self.payload = kw
-    markers.VisualizationMarkers = Marker
-    markers.VisualizationMarkersCfg = lambda **kw: NS(**kw)
-    monkeypatch.setitem(sys.modules, 'isaaclab.markers', markers)
-    tree = ast.parse((MODULE_ROOT/'runtime/wrench_refactor_relative_ik_test.py').read_text())
-    node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'WrenchRefactorRelativeIKV0_2_2_4Env')
-    ns = {'torch': torch, 'WrenchRefactorRelativeIKV0_2_2_2FastTestEnv': object,
-          '__package__': '_baseline_cpu_pkg.runtime'}
-    exec(compile(ast.Module(body=[node], type_ignores=[]), '<overlay-runtime>', 'exec'), ns)
-    env = ns[node.name].__new__(ns[node.name])
-    env.num_envs, env.device = 3, 'cpu'
-    env.cfg = NS(debug_spawn_max_envs=2)
-    bounds = pool_bounds(3)
-    env._fast_layout = module('wrench_refactor_layout').CircleResetLayout(bounds, 1.05-bounds[..., 0, 2])
-    env._revision_initial_shelf_pos = torch.tensor([[0., 0., 0.], [2., 0., 0.], [4., 0., 0.]])
-    env._revision_initial_shelf_quat = torch.tensor([[1., 0., 0., 0.]]).repeat(3, 1)
-    env._revision_initial_shelf_quat[1] = torch.tensor([2**-.5, 0., 0., 2**-.5])
-    local = torch.zeros(3, 17, 3); local[..., 2] = 1.1
-    env._revision_spawn_positions = env._revision_initial_shelf_pos[:, None] + quat_apply(
-        env._revision_initial_shelf_quat[:, None].expand(-1, 17, -1), local)
-    q = env._revision_initial_shelf_quat[:, None].expand(-1, 17, -1).clone()
-    env.scene = {'object_collection': NS(data=NS(object_quat_w=q))}
-    goals = env._revision_spawn_positions[:, 0].clone(); goals[:, 1] += .1
-    env.command_manager = NS(get_command=lambda _: goals)
-    env._active_object_mask = torch.zeros(3, 17, dtype=torch.bool)
-    env._update_spawn_regions(torch.tensor([0]))
-    first = env._spawn_region_positions[0].clone()
-    assert env._spawn_region_marker.payload['translations'].shape == (16000, 3)
-    env._update_spawn_regions(torch.tensor([1, 2]))
-    assert env._spawn_region_marker.payload['translations'].shape == (32000, 3)
-    torch.testing.assert_close(env._spawn_region_positions[0], first)
-    assert env._spawn_region_active.tolist() == [True, True]
-    for cfg in env._spawn_region_marker.cfg.markers.values():
-        assert cfg.rigid_props is None and cfg.collision_props is None
-    local_cells = torch.cat((env._fast_layout.cells, torch.full((16000, 1), 1.052)), -1)
-    expected = env._revision_initial_shelf_pos[1] + quat_apply(
-        env._revision_initial_shelf_quat[1].expand(16000, -1), local_cells)
-    torch.testing.assert_close(env._spawn_region_positions[1], expected)

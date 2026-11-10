@@ -480,7 +480,7 @@ def test_v0224_success_only_at_deadline_strict_xy_and_failure_priority(configs, 
     assert list(cfg.to_dict())[-1] == 'success'  # failure terms computed first
 
 
-def test_v0224_timeout_ratio_counts_episodes_before_reset_and_training_no_overlay():
+def test_v0224_timeout_ratio_counts_episodes_before_reset():
     tree = ast.parse((MODULE_ROOT / f'runtime/{STEM}.py').read_text())
     nodes = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name in
              ('_RecentEpisodeOutcomes', 'WrenchRefactorRelativeIKV0_2_2_4Env')]
@@ -493,8 +493,6 @@ def test_v0224_timeout_ratio_counts_episodes_before_reset_and_training_no_overla
     exec(compile(ast.Module(body=nodes, type_ignores=[]), '<timeout-metrics>', 'exec'), ns)
     cls = ns['WrenchRefactorRelativeIKV0_2_2_4Env']
     env = cls.__new__(cls)
-    env.cfg = NS(debug_spawn_regions=False)
-    env._update_spawn_regions = lambda ids: pytest.fail('training must not build visual regions')
     env._timeout_outcomes = ns['_RecentEpisodeOutcomes'](3, 'cpu')
     env.max_episode_length = 500
     env.episode_length_buf = torch.tensor([500, 500, 125, 0])

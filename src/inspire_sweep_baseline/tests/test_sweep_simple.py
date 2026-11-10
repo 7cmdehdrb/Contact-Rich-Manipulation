@@ -212,7 +212,7 @@ def test_runtime_lifecycle_rng_partial_resets_and_rolling_metrics_equivalent():
     cfg = NS(scene=NS(num_envs=4),sim=NS(device='cpu'),seed=42,
              timeout_metric_window=3,goal_reward_height_limit=.14,reset_ik_backend='warp',
              max_obstacles=6,obstacle_observation_slots=16,events=NS(robot_initial_pose=None),
-             debug_spawn_regions=False,goal_success_radius=.03)
+             goal_success_radius=.03)
     envs = [cls(copy.deepcopy(cfg)) for cls in runtime_classes()]
     for env in envs:
         env._goal_reset_rng = torch.Generator().manual_seed(42)

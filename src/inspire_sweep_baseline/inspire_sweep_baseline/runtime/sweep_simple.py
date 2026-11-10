@@ -34,7 +34,7 @@ class _RecentEpisodeOutcomes:
 
 
 class SweepSimpleEnv(ManagerBasedRLEnv):
-    """Independent Fast runtime with bounded timeout metrics and play-only spawn overlay."""
+    """Independent Fast runtime with bounded timeout metrics."""
 
     _mean_metrics = ('target_goal_distance_xy_m', 'eef_linear_speed_m_s',
                      'target_linear_speed_m_s', 'target_within_goal_radius_fraction')
@@ -234,66 +234,7 @@ class SweepSimpleEnv(ManagerBasedRLEnv):
             'Metrics/timeout_success_count': totals[0].clone(),
             'Metrics/timeout_episode_count': totals[1].clone(),
         })
-        if self.cfg.debug_spawn_regions:
-            self._update_spawn_regions(env_ids)
 
-    def _update_spawn_regions(self, env_ids):
-        """Snapshot the initial spawn domain; no per-step work or physical colliders."""
-        import isaaclab.sim as sim_utils
-        from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
-        from isaaclab.utils.math import quat_apply, quat_apply_inverse
-        from ..mdp.common.wrench_refactor_layout import spawn_region_classes
-        from ..mdp.common.contact_sweep_clutter_fusion import SHELF_SURFACE_HEIGHT
-
-        count = min(self.num_envs, self.cfg.debug_spawn_max_envs)
-        ids = env_ids[env_ids < count]
-        if not len(ids):
-            return
-        layout = self._fast_layout
-        if not hasattr(self, '_spawn_region_marker'):
-            self._spawn_region_marker = VisualizationMarkers(VisualizationMarkersCfg(
-                prim_path='/Visuals/InspireWrenchRefactor/spawn_regions',
-                markers={name: sim_utils.CuboidCfg(
-                    size=(layout.cell_size, layout.cell_size, .001),
-                    rigid_props=None, collision_props=None,
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=color, opacity=.45),
-                ) for name, color in [('white', (.85, .85, .85)), ('red', (.9, .08, .08)),
-                                      ('occupied', (1., .6, .05))]},
-            ))
-            k = len(layout.cells)
-            self._spawn_region_positions = torch.zeros((count, k, 3), device=self.device)
-            self._spawn_region_rotations = torch.zeros((count, k, 4), device=self.device)
-            self._spawn_region_colors = torch.zeros((count, k), dtype=torch.long, device=self.device)
-            self._spawn_region_active = torch.zeros(count, dtype=torch.bool, device=self.device)
-        shelf_pos = self._revision_initial_shelf_pos[ids]
-        shelf_quat = self._revision_initial_shelf_quat[ids]
-        objects = self.scene['object_collection'].data
-        offsets = layout.offset[ids]
-        offset3 = torch.cat((offsets, torch.zeros_like(offsets[..., :1])), -1)
-        center_world = (self._revision_spawn_positions[ids]
-                        + quat_apply(objects.object_quat_w[ids], offset3))
-        centers = quat_apply_inverse(shelf_quat[:, None].expand(-1, 17, -1),
-                                     center_world - shelf_pos[:, None])[..., :2]
-        goal_world = self.command_manager.get_command('target_goal_pos')[ids, :3]
-        # Goal command refers to the root; apply the same fixed target-center offset.
-        goal = quat_apply_inverse(shelf_quat, goal_world - shelf_pos)[..., :2]
-        root_local = quat_apply_inverse(shelf_quat, self._revision_spawn_positions[ids, 0] - shelf_pos)
-        goal += centers[:, 0] - root_local[:, :2]
-        colors = spawn_region_classes(layout, ids, centers[:, 0], goal, centers,
-                                       self._active_object_mask[ids])
-        local = torch.cat((layout.cells, layout.cells.new_full((len(layout.cells), 1),
-                                                              SHELF_SURFACE_HEIGHT + .002)), -1)
-        rotations = shelf_quat[:, None].expand(-1, len(local), -1)
-        self._spawn_region_positions[ids] = shelf_pos[:, None] + quat_apply(rotations, local.expand(len(ids), -1, -1))
-        self._spawn_region_rotations[ids] = rotations
-        self._spawn_region_colors[ids] = colors
-        self._spawn_region_active[ids] = True
-        active = self._spawn_region_active
-        self._spawn_region_marker.visualize(
-            translations=self._spawn_region_positions[active].reshape(-1, 3),
-            orientations=self._spawn_region_rotations[active].reshape(-1, 4),
-            marker_indices=self._spawn_region_colors[active].flatten(),
-        )
 
 
 class SweepSimpleFingerEnv(SweepSimpleEnv):
@@ -326,3 +267,36 @@ class SweepSimpleFingerV2Env(SweepSimpleFingerV1Env):
         # Parent records terminal success before clearing the episode state.
         super()._reset_idx(env_ids)
         self._finger_retreat.reset(self, env_ids)
+
+
+class SweepSimpleSemiProfEnv(SweepSimpleFingerV1Env):
+    """Sample target contact after each scene update without copying the RL loop."""
+
+    def load_managers(self):
+        super().load_managers()
+        from ..mdp.common.sweep_simple_force import SemiProfForceSamples
+        self._semi_prof_forces = SemiProfForceSamples(self)
+        self._semi_collecting = False
+
+    def step(self, action):
+        self._semi_prof_forces.begin(self)
+        original_update = self.scene.update
+
+        def update_and_sample(*args, **kwargs):
+            original_update(*args, **kwargs)
+            if self._semi_collecting:
+                self._semi_prof_forces.capture(self)
+
+        # Instance-local hook, scoped to this call; all parent reset/recorder/
+        # reward/observation ordering stays intact, including exceptions.
+        self.scene.update = update_and_sample
+        self._semi_collecting = True
+        try:
+            return super().step(action)
+        finally:
+            self._semi_collecting = False
+            self.scene.update = original_update
+
+    def _reset_idx(self, env_ids):
+        super()._reset_idx(env_ids)
+        self._semi_prof_forces.reset(env_ids)

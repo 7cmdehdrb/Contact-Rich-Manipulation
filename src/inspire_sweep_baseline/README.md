@@ -10,7 +10,9 @@
 
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_5`**는 v0_2_2_4 직접 상속. 접촉 조건부 policy step 접근120·방향 이탈−6, 후퇴−25.94 유지, 접촉 유지 보상 삭제. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_5.md).
 
-2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_4`**는 v0_2_2_3-Fast-Test 직접 상속. play 전용 스폰 영역 표시, 물체 가속도 비용/일정 제거,10초 timeout 중 XY 거리<3cm 성공률 기록. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_4.md).
+2026-11-11: 물체 스폰 영역 시각화는 Simple/Relative-IK 양쪽에서 삭제했다. 실제 스폰 배치 로직은 유지한다. [삭제 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-11_remove_spawn_region_visualization.md).
+
+2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_4`**는 v0_2_2_3-Fast-Test 직접 상속. 물체 가속도 비용/일정 제거,10초 timeout 중 XY 거리<3cm 성공률 기록. [계약·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_4.md).
 
 2026-11-09: **`Inspire-Wrench-Refactor-Relative-IK-v0_2_2_2-Test`**는 v0_2_2_1-Test를 직접 상속하고, 목표에서 멀어진 XY 거리에만 역방향 페널티(weight -25.94)를 추가한다. [계약·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-09_relative_ik_v0_2_2_2_inverse_distance.md).
 

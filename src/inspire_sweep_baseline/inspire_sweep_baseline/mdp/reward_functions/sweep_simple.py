@@ -98,3 +98,73 @@ class RetreatContactMaintenance(TargetContactDecayMaintenance):
         self._misses[active] = 0
         self._cached_reward[active] = 20.
         return torch.where(active, self._cached_reward, reward).clone()
+
+
+class ContactLogGoalProgress(AreaMatchedLogGoalProgress):
+    """Log record improvements gated by 2-of-3 contact and current EEF height.
+
+    Advance the record even on rejected steps: free motion cannot be banked
+    for later contact. History contains contact only, never a reward count.
+    """
+
+    def __init__(self, cfg, env):
+        self._contact_history = torch.zeros((env.num_envs, 3), dtype=torch.bool, device=env.device)
+        self._contact_step = torch.full((env.num_envs,), -1, dtype=torch.long, device=env.device)
+        self._contact_value = torch.zeros(env.num_envs, device=env.device)
+        super().__init__(cfg, env)
+
+    def reset(self, env_ids=None):
+        super().reset(env_ids)
+        ids = slice(None) if env_ids is None else env_ids
+        self._contact_history[ids] = False
+        self._contact_step[ids] = -1
+        self._contact_value[ids] = 0.
+
+    def __call__(self, env, command_name='target_goal_pos', epsilon=.01,
+                 threshold_n=.01, eef_height_limit=.15):
+        from ..common.contact_sweep_clutter_fusion_contacts import object_hand_sensor_name
+        from ..common.contact_sweep_clutter_fusion import SHELF_SURFACE_HEIGHT
+
+        fresh = self._contact_step != env.common_step_counter
+        # Parent always advances best progress, independently of the contact mask.
+        increment = super().__call__(env, command_name, epsilon)
+        name = env.scene['object_collection'].object_names[0]
+        normal = env.scene[object_hand_sensor_name(name)].data.force_matrix_w
+        force = normal.norm(dim=-1).sum(dim=(1, 2))
+        contact = env.sensor_data_fresh & torch.isfinite(force) & (force >= threshold_n)
+        history = torch.cat((self._contact_history[:, 1:], contact[:, None]), dim=-1)
+        self._contact_history[fresh] = history[fresh]
+        eef_z = env.scene['ee_frame'].data.target_pos_w[:, 0, 2]
+        surface_z = env._revision_initial_shelf_pos[:, 2] + SHELF_SURFACE_HEIGHT
+        accepted = ((self._contact_history.sum(-1) >= 2) & env.sensor_data_fresh
+                    & torch.isfinite(eef_z) & torch.isfinite(surface_z)
+                    & (eef_z < surface_z + eef_height_limit))
+        self._contact_value[fresh] = torch.where(accepted, increment, 0.)[fresh]
+        self._contact_step[fresh] = env.common_step_counter
+        return self._contact_value.clone()
+
+
+def semi_prof_force_direction(env, min_force=1., near_radius=.01):
+    """Compare full 3D force against live planar goal direction (reference Z=0).
+
+    Real contact and >=1N horizontal resultant remain required inside the
+    radius. No velocity/height/progress gate and no goal-visit latch.
+    RewardManager alone applies weight and dt.
+    """
+    from isaaclab.utils.math import quat_apply_inverse
+
+    force_w, valid = env._semi_prof_forces.mean(env)
+    quat = env._revision_initial_shelf_quat
+    force = quat_apply_inverse(quat, force_w)
+    goal = env.command_manager.get_command('target_goal_pos')[:, :3]
+    direction = quat_apply_inverse(quat, goal - _target_state(env)[:, :3])[:, :2]
+    distance = direction.norm(dim=-1)
+    horizontal_magnitude = force[:, :2].norm(dim=-1)
+    magnitude = force.norm(dim=-1)
+    finite = torch.isfinite(direction).all(-1) & torch.isfinite(force).all(-1)
+    cosine = (force[:, :2] * direction).sum(-1) / (magnitude * distance).clamp_min(1e-12)
+    cosine = torch.nan_to_num(cosine).clamp(-1., 1.)
+    score = (1. - torch.acos(cosine) / (math.pi / 2.)).clamp_min(0.).square()
+    score = torch.where(cosine > 0., score, 0.)
+    score = torch.where(distance < near_radius, 1., score)
+    return torch.where(valid & finite & (horizontal_magnitude >= min_force), score, 0.)

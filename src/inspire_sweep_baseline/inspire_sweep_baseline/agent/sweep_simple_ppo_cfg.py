@@ -79,3 +79,8 @@ class SweepSimpleFingerV1PPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
 @configclass
 class SweepSimpleFingerV2PPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_finger_v2'
+
+
+@configclass
+class SweepSimpleSemiProfPPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_semi_prof_v0'

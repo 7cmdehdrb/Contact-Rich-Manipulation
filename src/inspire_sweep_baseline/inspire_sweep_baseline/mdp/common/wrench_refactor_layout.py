@@ -253,19 +253,3 @@ class CircleResetLayout:
                 failed_slot=failed_slot[bad].cpu().tolist(), partial_roots=local[bad].cpu().tolist(),
                 seed=generator.initial_seed())))
         return local, yaw, active, goal - target, requested
-
-
-def spawn_region_classes(layout, ids, start, goal, centers, active):
-    """Physical reset regions: white=0, RED sweep=1, occupied expanded circles=2.
-
-    These are footprint regions, not object-specific feasible center masks.
-    Whole-cell conservative coloring uses the sampler's own circle geometry.
-    """
-    red = layout.red_distance(layout.cells, start, goal)
-    forbidden = red <= layout.expanded[ids, 0, None] + layout.cell_margin
-    classes = forbidden.long()
-    for slot in range(1, 17):
-        occupied = ((layout.cells[None] - centers[:, slot, None]).norm(dim=-1)
-                    <= layout.expanded[ids, slot, None] + layout.cell_margin)
-        classes = torch.where(occupied & active[:, slot, None] & ~forbidden, 2, classes)
-    return classes

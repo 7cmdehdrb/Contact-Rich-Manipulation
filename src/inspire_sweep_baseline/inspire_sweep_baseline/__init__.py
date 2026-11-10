@@ -1470,3 +1470,17 @@ for _version in (1, 2):
                 "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleFingerV{_version}PPORunnerCfg",
             },
         )
+
+
+SWEEP_SIMPLE_SEMI_PROF_TASK_ID = "Inspire-Sweep-Simple-Semi-Prof-v0"
+if SWEEP_SIMPLE_SEMI_PROF_TASK_ID not in gym.registry:
+    gym.register(
+        id=SWEEP_SIMPLE_SEMI_PROF_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleSemiProfEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.sweep_simple_envs:SweepSimpleSemiProfEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleSemiProfPPORunnerCfg",
+        },
+    )
+__all__.append("SWEEP_SIMPLE_SEMI_PROF_TASK_ID")

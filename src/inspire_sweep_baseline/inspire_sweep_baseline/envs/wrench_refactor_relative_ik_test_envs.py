@@ -168,8 +168,6 @@ class WrenchRefactorRelativeIKV0_2_2_4EnvCfg(WrenchRefactorRelativeIKV0_2_2_3Fas
     rewards: WrenchRefactorRelativeIKV0_2_2_4RewardsCfg = WrenchRefactorRelativeIKV0_2_2_4RewardsCfg()
     curriculum: WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg = WrenchRefactorRelativeIKV0_2_2_4CurriculumCfg()
     terminations: WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg = WrenchRefactorRelativeIKV0_2_2_4TerminationsCfg()
-    debug_spawn_regions: bool = False  # play.py enables; train.py forces off, including video runs.
-    debug_spawn_max_envs: int = 4
     timeout_metric_window: int = 10000
 
 

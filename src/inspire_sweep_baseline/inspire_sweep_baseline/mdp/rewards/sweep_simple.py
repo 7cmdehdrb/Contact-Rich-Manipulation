@@ -1,5 +1,6 @@
 """Simple family: pinned effective v0_2_2_4 configuration, without historical Cfg inheritance."""
 from ..reward_functions.sweep_simple import AreaMatchedLogGoalProgress, RetreatReach, RetreatContactMaintenance
+from ..reward_functions.sweep_simple import ContactLogGoalProgress, semi_prof_force_direction
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
@@ -80,3 +81,13 @@ class SweepSimpleFingerV2RewardsCfg(SweepSimpleFingerV1RewardsCfg):
         'near_radius': .1, 'distance_scale': .1, 'frame_name': 'ee_frame', 'retreat_radius': .02})
     hand_contact = RewTerm(func=RetreatContactMaintenance, weight=.1, params={
         'threshold_n': .01, 'eef_height_limit': .15})
+
+
+@configclass
+class SweepSimpleSemiProfRewardsCfg(SweepSimpleFingerV1RewardsCfg):
+    goal_distance = RewTerm(func=ContactLogGoalProgress, weight=120., params={
+        'epsilon': .01, 'threshold_n': .01, 'eef_height_limit': .15})
+    hand_contact = None
+    target_inverse_distance = RewTerm(func=RelativeInverseDistance, weight=-31.128)
+    force_direction = RewTerm(func=semi_prof_force_direction, weight=.33, params={
+        'min_force': 1., 'near_radius': .01})

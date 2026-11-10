@@ -2,6 +2,7 @@
 from ..mdp.actions.sweep_simple import SweepSimpleFingerV1ActionsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleFingerV1ObservationsCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleFingerV1RewardsCfg, SweepSimpleFingerV2RewardsCfg
+from ..mdp.rewards.sweep_simple import SweepSimpleSemiProfRewardsCfg
 from ..mdp.curricula.sweep_simple import SweepSimpleFingerV1CurriculumCfg
 from ..mdp.terminations.sweep_simple import SweepSimpleFingerV1TerminationsCfg, SweepSimpleFingerV2TerminationsCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
@@ -47,8 +48,6 @@ class SweepSimpleEnvCfg(ManagerBasedRLEnvCfg):
     layout_cell_size: float = 0.005
     layout_geometry_epsilon: float = 1e-06
     reset_ik_backend: str = 'warp'
-    debug_spawn_regions: bool = False  # play enables; train disables, including videos.
-    debug_spawn_max_envs: int = 4
     timeout_metric_window: int = 10000
 
     def __post_init__(self):
@@ -129,3 +128,8 @@ class SweepSimpleFingerV1EnvCfg(SweepSimpleFingerEnvCfg):
 class SweepSimpleFingerV2EnvCfg(SweepSimpleFingerV1EnvCfg):
     rewards: SweepSimpleFingerV2RewardsCfg = SweepSimpleFingerV2RewardsCfg()
     terminations: SweepSimpleFingerV2TerminationsCfg = SweepSimpleFingerV2TerminationsCfg()
+
+
+@configclass
+class SweepSimpleSemiProfEnvCfg(SweepSimpleFingerV1EnvCfg):
+    rewards: SweepSimpleSemiProfRewardsCfg = SweepSimpleSemiProfRewardsCfg()
