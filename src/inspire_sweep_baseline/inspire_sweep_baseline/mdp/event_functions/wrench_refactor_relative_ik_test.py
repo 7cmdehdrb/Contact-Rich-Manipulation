@@ -173,13 +173,14 @@ def grouped_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearanc
             marker_indices=indices.repeat(int(mask.sum())))
 
 
-def initialize_fast_geometry(env, env_ids):
+def initialize_fast_geometry(env, env_ids, layout_class=None):
     """Extend immutable startup metadata without changing the parent lifecycle."""
     import numpy as np
     from .wrench_refactor import initialize_geometry
     from ..common.wrench_refactor_layout import CircleResetLayout
     initialize_geometry(env, env_ids)
-    env._fast_layout = CircleResetLayout(env._revision_bounds_t, env._refactor_spawn_z,
+    layout_class = CircleResetLayout if layout_class is None else layout_class
+    env._fast_layout = layout_class(env._revision_bounds_t, env._refactor_spawn_z,
         env.cfg.placement_clearance, env.cfg.layout_cell_size, env.cfg.layout_geometry_epsilon)
     # Preserve the original root-centred visibility radius, not placement circles.
     half = np.max(np.abs(env._final_object_bounds[..., :2]), axis=2)

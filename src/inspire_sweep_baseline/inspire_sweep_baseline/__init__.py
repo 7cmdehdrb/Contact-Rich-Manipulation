@@ -1421,3 +1421,24 @@ if WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_6_TASK_ID not in gym.registry:
         },
     )
 __all__.append("WRENCH_REFACTOR_RELATIVE_IK_V0_2_2_6_TASK_ID")
+
+# Independent Simple family: shared runtime, reward and goal-sampling descendants.
+for _suffix, _cfg in (
+    ("v0", "SweepSimple"),
+    ("Prof-v0", "SweepSimpleProf"),
+    ("v1", "SweepSimpleV1"),
+    ("Prof-v1", "SweepSimpleProfV1"),
+    ("Hard-v0", "SweepSimpleHard"),
+    ("Prof-Hard-v0", "SweepSimpleProfHard"),
+):
+    _task_id = f"Inspire-Sweep-Simple-{_suffix}"
+    if _task_id not in gym.registry:
+        gym.register(
+            id=_task_id,
+            entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleEnv",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": f"inspire_sweep_baseline.envs.sweep_simple_envs:{_cfg}EnvCfg",
+                "rsl_rl_cfg_entry_point": f"inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:{_cfg}PPORunnerCfg",
+            },
+        )

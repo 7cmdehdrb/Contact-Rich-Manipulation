@@ -172,11 +172,15 @@ class CircleResetLayout:
         inside = (positive | negative) & (area[:, None] > 1e-12)
         return torch.where(inside, 0., minimum.sqrt())
 
+    def sample_commands(self, ids, generator, **command_params):
+        """Default goal distribution; specialized layouts may cache another domain."""
+        return sample_commands(self.bounds[ids, 0], generator, **command_params)
+
     @torch.no_grad()
     def sample(self, ids, generator, **command_params):
         bounds = self.bounds[ids]
         n, device = len(ids), bounds.device
-        target, goal = sample_commands(bounds[:, 0], generator, **command_params)
+        target, goal = self.sample_commands(ids, generator, **command_params)
         requested = torch.randint(0, 7, (n,), device=device, generator=generator)
         selected = torch.rand((n, 16), device=device, generator=generator).argsort(-1)[:, :6] + 1
         radii = self.expanded[ids[:, None], selected]
