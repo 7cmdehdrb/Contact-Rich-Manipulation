@@ -18,7 +18,7 @@ def fusion_rewards(load_mdp, monkeypatch):
 
 
 @pytest.mark.parametrize("dt", [0.01, 0.02, 0.1])
-def test_merged_action_keeps_raw_inputs_separate_caps_and_exact_reward(fusion_rewards, make_env, dt):
+def test_merged_action_keeps_raw_inputs_uncapped_and_exact_reward(fusion_rewards, make_env, dt):
     env = make_env(5)
     env.action_manager.action[:] = torch.tensor([
         [1., -2., 3., -4., 5., -6., 8., -9.],
@@ -29,11 +29,11 @@ def test_merged_action_keeps_raw_inputs_separate_caps_and_exact_reward(fusion_re
     ])
     env.action_manager.prev_action[:, -2:] = 1.
     delta = env.action_manager.action - env.action_manager.prev_action
-    arm = delta[:, :6].square().sum(-1).clamp_max(100)
-    hand = delta[:, 6:].square().sum(-1).clamp_max(100)
+    arm = delta[:, :6].square().sum(-1)
+    hand = delta[:, 6:].square().sum(-1)
     merged = fusion_rewards.combined_action_rate(env)
     assert torch.equal(merged, arm + hand)
-    assert merged[-1] == 200  # A cap on the combined sum would change the reward.
+    assert merged[-1] == 19802  # Both groups continue growing beyond the old cap.
     assert torch.allclose(-.03 * merged * dt, (-.03 * arm - .03 * hand) * dt)
     assert torch.allclose(-.06 * merged * dt, 2 * (-.03 * arm - .03 * hand) * dt)
 

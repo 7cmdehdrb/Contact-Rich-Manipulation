@@ -62,7 +62,7 @@ class WrenchV0_3ActionRatePenalty(ManagerTermBase):
 
     Sample the final physics substep's applied Arm efforts. Normalize by the
     same per-joint bounds as the OSC action; keep the parent's 0.03 coefficients
-    and group caps. Reset starts the selected Arm histories at zero.
+    without reward output caps. Reset starts the selected Arm histories at zero.
     """
 
     def __init__(self, cfg, env):
@@ -84,9 +84,9 @@ class WrenchV0_3ActionRatePenalty(ManagerTermBase):
             limits = (arm._asset.data.joint_effort_limits[:, arm._joint_ids]
                       * arm.cfg.effort_limit_scale).clamp_min(arm.cfg.minimum_effort_limit)
             current = (arm.joint_efforts / limits).clamp(-1.0, 1.0)
-            arm_cost = (current - self._previous_arm).square().sum(-1).clamp_max(100.0)
+            arm_cost = (current - self._previous_arm).square().sum(-1)
             self._cached_cost[:] = 0.03 * arm_cost + 0.03 * action_rate_l2(
-                env, action_group="hand", max_cost=100.0
+                env, action_group="hand"
             )
             self._previous_arm[:] = current
             self._cached_step = env.common_step_counter
@@ -129,8 +129,8 @@ def desired_wrench_action_rate_penalty(env):
     limit = env.action_manager.get_term("arm_action").cfg.normalized_wrench_limit
     current_arm = current[:, :6].clamp(-limit, limit) / limit
     previous_arm = previous[:, :6].clamp(-limit, limit) / limit
-    arm_cost = (current_arm - previous_arm).square().sum(dim=-1).clamp_max(100.0)
-    return 0.03 * arm_cost + 0.03 * action_rate_l2(env, action_group="hand", max_cost=100.0)
+    arm_cost = (current_arm - previous_arm).square().sum(dim=-1)
+    return 0.03 * arm_cost + 0.03 * action_rate_l2(env, action_group="hand")
 
 
 def goal_distance_cosine(env, distance_scale=0.05, command_name="target_goal_pos"):

@@ -99,7 +99,7 @@ def test_osc_output_rate_uses_joint_bounds_not_policy_inputs_and_resets(configs)
     arm.joint_efforts *= -1
     env.action_manager.action[:,6:] += 100
     env.common_step_counter += 1
-    assert term(env).tolist() == pytest.approx([.03*24 + .03*100]*2)
+    assert term(env).tolist() == pytest.approx([.03*24 + .03*20000]*2)
 
 
 @pytest.mark.parametrize('height,valid', [(.14-1e-8, True), (.14, False), (.14+1e-8, False)])

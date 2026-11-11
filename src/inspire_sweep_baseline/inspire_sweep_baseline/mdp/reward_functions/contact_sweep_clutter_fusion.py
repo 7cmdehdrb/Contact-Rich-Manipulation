@@ -28,10 +28,10 @@ from isaaclab.utils.math import quat_apply
 import math as math
 import torch as torch
 
-def combined_action_rate(env, max_cost=100.0):
-    """Preserve each group's output cap before adding raw-action square sums."""
-    return (action_rate_l2(env, action_group="arm", max_cost=max_cost)
-            + action_rate_l2(env, action_group="hand", max_cost=max_cost))
+def combined_action_rate(env):
+    """Add uncapped Arm and Hand action-change square sums."""
+    return (action_rate_l2(env, action_group="arm")
+            + action_rate_l2(env, action_group="hand"))
 
 
 def combined_joint_velocity(env, arm_cfg, hand_cfg, hand_ratio=1.0 / 3.0, max_cost=100.0):
@@ -287,6 +287,9 @@ class WrenchMagnitudeChangePenalty(WrenchRatePenalty):
     [0, 1] raw cap, and cumulative 5% earned-positive-reward budget. Saturation
     tracks each current free threshold at ratio 2.5, preserving the parent's
     saturation/free ratio throughout the new threshold curriculum.
+
+    Set ``max_positive_fraction=None`` to apply the physical change cost
+    independently of positive rewards, with no reward-order dependency.
     """
 
     def reset(self, env_ids=None):
@@ -309,8 +312,10 @@ class WrenchMagnitudeChangePenalty(WrenchRatePenalty):
             raise ValueError("saturation_ratio must be finite and greater than one")
         if not math.isfinite(sharpness) or not 0.0 < sharpness <= 50.0:
             raise ValueError("sharpness must be finite and in (0, 50]")
-        if not math.isfinite(max_positive_fraction) or not 0.0 <= max_positive_fraction <= 0.05:
-            raise ValueError("max_positive_fraction must be in [0, 0.05]")
+        if max_positive_fraction is not None and (
+            not math.isfinite(max_positive_fraction) or not 0.0 <= max_positive_fraction <= 0.05
+        ):
+            raise ValueError("max_positive_fraction must be None or in [0, 0.05]")
 
         key = (env.common_step_counter, env._sim_step_counter)
         if key != self._cached_key:
@@ -339,6 +344,8 @@ class WrenchMagnitudeChangePenalty(WrenchRatePenalty):
             self._previous_wrench[:] = torch.where((fresh & finite)[:, None], current, 0.0)
             self._previous_valid[:] = fresh & finite
             self._cached_key = key
+        if max_positive_fraction is None:
+            return self._cached_raw
         return torch.minimum(self._cached_raw, self._reward_budget(env, max_positive_fraction))
 
 

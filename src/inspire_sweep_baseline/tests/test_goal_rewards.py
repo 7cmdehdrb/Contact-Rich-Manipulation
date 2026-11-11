@@ -111,18 +111,16 @@ def test_joint_speed_squared_sum_uses_only_named_group(load_mdp, make_env):
 
 
 @pytest.mark.parametrize("group,column", [("arm", 0), ("hand", 6)])
-def test_raw_action_cost_caps_each_group_without_mutating_commands(load_mdp, make_env, group, column):
+def test_raw_action_cost_is_uncapped_without_mutating_commands(load_mdp, make_env, group, column):
     rewards = load_mdp("goal_rewards")
     env = make_env(5)
     current, previous = env.action_manager.action, env.action_manager.prev_action
     current[:, column] = torch.tensor([0., 3., 10., -20., 1.e20])
     snapshot = current.clone()
-    assert torch.equal(rewards.action_rate_l2(env, group), torch.tensor([0., 9., 100., 100., 100.]))
-    assert torch.equal(rewards.action_rate_l2(env, group, max_cost=25.), torch.tensor([0., 9., 25., 25., 25.]))
-    assert rewards.action_rate_l2(env, group, max_cost=0.).count_nonzero() == 0
+    assert torch.equal(rewards.action_rate_l2(env, group), torch.tensor([0., 9., 100., 400., float("inf")]))
     assert torch.equal(current, snapshot)
     assert previous.count_nonzero() == 0
-    # Saturating one group's output must not affect the other group's cost.
+    # One group's changes must not affect the other group's cost.
     other_group = "hand" if group == "arm" else "arm"
     assert rewards.action_rate_l2(env, other_group).count_nonzero() == 0
 
@@ -141,7 +139,7 @@ def test_actual_joint_speed_cost_caps_selected_sum_without_mutating_state(load_m
     assert torch.equal(velocity, snapshot)
 
 
-@pytest.mark.parametrize("function", ["action_rate_l2", "joint_vel_l2"])
+@pytest.mark.parametrize("function", ["joint_vel_l2"])
 def test_squared_sum_caps_reject_invalid_bounds(load_mdp, make_env, function):
     rewards = load_mdp("goal_rewards")
     env = make_env(1)

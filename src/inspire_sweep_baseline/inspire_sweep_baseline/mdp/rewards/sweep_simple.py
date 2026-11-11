@@ -28,8 +28,8 @@ class SweepSimpleRewardsCfg:
     goal_distance = RewTerm(func=DexPlanarGoalProgress, weight=100.0, params={'position_tolerance': 0.0})
     goal_hold = None
     hand_contact = RewTerm(func=GoalContactMaintenance, weight=0.1, params={'threshold_n': 0.01, 'eef_height_limit': 0.15})
-    arm_action_rate = RewTerm(func=action_rate_l2, weight=-0.03, params={'action_group': 'arm', 'max_cost': 100.0})
-    hand_action_rate = RewTerm(func=action_rate_l2, weight=-0.03, params={'action_group': 'hand', 'max_cost': 100.0})
+    arm_action_rate = RewTerm(func=action_rate_l2, weight=-0.03, params={'action_group': 'arm'})
+    hand_action_rate = RewTerm(func=action_rate_l2, weight=-0.03, params={'action_group': 'hand'})
     arm_joint_velocity = RewTerm(func=joint_vel_l2, weight=-0.03, params={'asset_cfg': arm_entity(), 'max_cost': 100.0})
     hand_joint_velocity = RewTerm(func=joint_vel_l2, weight=-0.01, params={'asset_cfg': SceneEntityCfg('robot', joint_names=list(HAND_JOINT_NAMES), preserve_order=True), 'max_cost': 100.0})
     object = None
@@ -71,7 +71,7 @@ class SweepSimpleFingerRewardsCfg(SweepSimpleV1RewardsCfg):
 class SweepSimpleFingerV1RewardsCfg(SweepSimpleFingerRewardsCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.arm_joint_velocity.weight = -.06
+        self.arm_joint_velocity.weight = -.03
 
 
 @configclass
@@ -91,3 +91,29 @@ class SweepSimpleSemiProfRewardsCfg(SweepSimpleFingerV1RewardsCfg):
     target_inverse_distance = RewTerm(func=RelativeInverseDistance, weight=-31.128)
     force_direction = RewTerm(func=semi_prof_force_direction, weight=.33, params={
         'min_force': 1., 'near_radius': .01})
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Reward weights express relative importance, not a hard reward budget.
+        self.wrench_change.params['max_positive_fraction'] = None
+
+
+@configclass
+class SweepSimpleFingerRawV1RewardsCfg(SweepSimpleFingerV1RewardsCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.arm_joint_velocity.weight = -.03
+
+
+@configclass
+class SweepSimpleFingerRawV2RewardsCfg(SweepSimpleFingerV2RewardsCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.arm_joint_velocity.weight = -.03
+
+
+@configclass
+class SweepSimpleSemiProfRawRewardsCfg(SweepSimpleSemiProfRewardsCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.arm_joint_velocity.weight = -.03

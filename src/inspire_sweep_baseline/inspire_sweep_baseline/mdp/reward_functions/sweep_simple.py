@@ -27,10 +27,8 @@ class GoalContactMaintenance(TargetContactDecayMaintenance):
         return reward
 
 
-def finger_action_rate_l2(env, action_group="arm", max_cost=100.0):
+def finger_action_rate_l2(env, action_group="arm"):
     """Parent raw-command squared-sum cost, extended to six hand channels."""
-    if not math.isfinite(max_cost) or max_cost < 0.0:
-        raise ValueError("max_cost must be finite and nonnegative")
     current, previous = env.action_manager.action, env.action_manager.prev_action
     if current.shape[-1] != 12 or previous.shape != current.shape:
         raise ValueError("Finger penalties require six Arm and six Hand actions")
@@ -40,7 +38,7 @@ def finger_action_rate_l2(env, action_group="arm", max_cost=100.0):
         selection = slice(6, 12)
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
-    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1).clamp_max(max_cost)
+    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1)
 
 
 from .dex_rewards import DexPlanarGoalProgress

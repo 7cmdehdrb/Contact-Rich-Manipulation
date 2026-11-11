@@ -374,7 +374,7 @@ def test_motion_merge_is_numerically_equal_with_separate_caps(final_rewards, mak
     arm = NS(name='robot', joint_ids=[0, 3, 6, 9, 12, 15])
     hand = NS(name='robot', joint_ids=[i for i in range(18) if i not in arm.joint_ids])
     for dt in (.01, .02, .1):
-        expected = sum(-.03 * final_rewards.action_rate_l2(env, action_group=group, max_cost=100.) for group in ('arm', 'hand'))
+        expected = sum(-.03 * final_rewards.action_rate_l2(env, action_group=group) for group in ('arm', 'hand'))
         torch.testing.assert_close(-final_rewards.action_rate_penalty(env) * dt, expected * dt)
         expected = (-.03 * final_rewards.joint_vel_l2(env, asset_cfg=arm, max_cost=100.)
                     -.01 * final_rewards.joint_vel_l2(env, asset_cfg=hand, max_cost=100.))

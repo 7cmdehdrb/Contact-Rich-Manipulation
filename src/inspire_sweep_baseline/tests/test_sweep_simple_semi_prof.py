@@ -9,7 +9,7 @@ import pytest
 import torch
 import warp as wp
 
-from conftest import MODULE_ROOT
+from conftest import MODULE_ROOT, PROJECT_ROOT
 from test_sweep_simple import family, configs, omni_config
 from test_final_configuration import assert_ordered_equal
 from test_omni_configuration import _execute_definitions, _AssetNode
@@ -34,6 +34,7 @@ def test_complete_parent_contract_and_isolation(family):
     expected = copy.deepcopy(before)
     for name in ('goal_distance', 'hand_contact', 'target_inverse_distance', 'force_direction'):
         expected['rewards'][name] = cfg.to_dict()['rewards'][name]
+    expected['rewards']['wrench_change']['params']['max_positive_fraction'] = None
     assert_ordered_equal(cfg.to_dict(), expected)
     assert cfg.rewards.goal_distance.weight == 120.
     assert cfg.rewards.target_inverse_distance.weight == -31.128
@@ -42,8 +43,54 @@ def test_complete_parent_contract_and_isolation(family):
     assert not hasattr(cfg.rewards, 'direction_deviation')
     assert cfg.rewards.reaching.func is family.SweepSimpleProfV1EnvCfg().rewards.reaching.func
     cfg.rewards.goal_distance.weight = 999
-    cfg.curriculum.arm_joint_velocity_threshold.params['initial'] = 999
+    cfg.terminations.arm_joint_velocity.params['threshold'] = 999
     assert_ordered_equal(parent().to_dict(), before)
+
+
+@pytest.mark.parametrize('direction_rate', [0., 1.])
+def test_reward_manager_wrench_activation_without_positive_budget(configs, direction_rate):
+    """Run real RewardManager.compute across the previously untested activation."""
+    cfg = configs('rewards', 'sweep_simple').SweepSimpleSemiProfRewardsCfg()
+    env = NS(num_envs=2, device='cpu', step_dt=.02, common_step_counter=0,
+             _sim_step_counter=0, sensor_data_fresh=torch.ones(2, dtype=torch.bool))
+    wrench = torch.zeros(2, 6)
+    env.observation_manager = NS(cfg=NS(policy=NS(wrist_wrench=NS(
+        func=lambda env: wrench, params={}))))
+    term = cfg.wrench_change
+    term.func = term.func(term, env)
+    names = [name for name, value in vars(cfg).items() if value is not None and hasattr(value, 'weight')]
+    for name in names:
+        if name != 'wrench_change':
+            # Wrench cost must also apply when NO positive reward was earned.
+            getattr(cfg, name).func = lambda env, _name=name, **kw: torch.full(
+                (env.num_envs,), direction_rate * float(_name == 'force_direction'))
+    cls = _execute_definitions(
+        PROJECT_ROOT / 'IsaacLab/source/isaaclab/isaaclab/managers/reward_manager.py',
+        {'torch': torch, 'ManagerBase': object}, {'RewardManager'}).RewardManager
+    manager = cls.__new__(cls)
+    manager._env = env
+    manager._term_names = names
+    manager._term_cfgs = [getattr(cfg, name) for name in names]
+    manager._class_term_cfgs = [term]
+    manager._episode_sums = {name: torch.zeros(2) for name in names}
+    manager._reward_buf = torch.zeros(2)
+    manager._step_reward = torch.zeros(2, len(names))
+    env.reward_manager = manager
+    schedule = configs('curricula', 'sweep_simple').SweepSimpleCurriculumCfg().wrench_weight
+    for iteration in (0, 1000, 1250, 3000, 6000):
+        env.learning_iteration = iteration
+        schedule.func(env, None, **schedule.params)
+        for _ in range(2):
+            env.common_step_counter += 1
+            env._sim_step_counter += 2
+            wrench[:, 0] = 1000. if env.common_step_counter % 2 else 0.
+            assert torch.isfinite(manager.compute(env.step_dt)).all()
+            spent = -manager._episode_sums['wrench_change']
+            earned = manager._episode_sums['force_direction']
+        assert term.func._term_name is None  # no budget lookup or order dependency
+        assert term.func._positive_names is None
+    assert (spent > .05 * earned).all()
+    torch.testing.assert_close(spent, torch.full((2,), .02 * (.00375 + 2 * .03 + 2 * .1)))
 
 
 def test_contact_history_no_banking_height_partial_reset_and_no_repay(configs):

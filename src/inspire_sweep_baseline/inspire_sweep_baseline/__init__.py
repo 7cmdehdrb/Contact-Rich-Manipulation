@@ -1458,6 +1458,34 @@ if SWEEP_SIMPLE_FINGER_TASK_ID not in gym.registry:
 __all__.append("SWEEP_SIMPLE_FINGER_TASK_ID")
 
 
+SWEEP_SIMPLE_FINGER_WRENCH_TASK_ID = "Inspire-Sweep-Simple-Finger-v0-Wrench"
+if SWEEP_SIMPLE_FINGER_WRENCH_TASK_ID not in gym.registry:
+    gym.register(
+        id=SWEEP_SIMPLE_FINGER_WRENCH_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleFingerEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.sweep_simple_envs:SweepSimpleFingerWrenchEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleFingerWrenchPPORunnerCfg",
+        },
+    )
+__all__.append("SWEEP_SIMPLE_FINGER_WRENCH_TASK_ID")
+
+
+SWEEP_SIMPLE_FINGER_V0_TEST_TASK_ID = "Inspire-Sweep-Simple-Finger-v0-Test"
+if SWEEP_SIMPLE_FINGER_V0_TEST_TASK_ID not in gym.registry:
+    gym.register(
+        id=SWEEP_SIMPLE_FINGER_V0_TEST_TASK_ID,
+        entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleFingerEnv",
+        disable_env_checker=True,
+        kwargs={
+            "env_cfg_entry_point": "inspire_sweep_baseline.envs.sweep_simple_envs:SweepSimpleFingerV0TestEnvCfg",
+            "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:SweepSimpleFingerV0TestPPORunnerCfg",
+        },
+    )
+__all__.append("SWEEP_SIMPLE_FINGER_V0_TEST_TASK_ID")
+
+
 for _version in (1, 2):
     _finger_id = f"Inspire-Sweep-Simple-Finger-v{_version}"
     if _finger_id not in gym.registry:
@@ -1484,3 +1512,22 @@ if SWEEP_SIMPLE_SEMI_PROF_TASK_ID not in gym.registry:
         },
     )
 __all__.append("SWEEP_SIMPLE_SEMI_PROF_TASK_ID")
+
+
+# Separate raw-action experiments preserve each original task for playback.
+for _raw_suffix, _cfg_prefix, _runtime in (
+    ('Finger-Raw-v1', 'SweepSimpleFingerRawV1', 'SweepSimpleFingerV1Env'),
+    ('Finger-Raw-v2', 'SweepSimpleFingerRawV2', 'SweepSimpleFingerV2Env'),
+    ('Semi-Prof-Raw-v0', 'SweepSimpleSemiProfRaw', 'SweepSimpleSemiProfEnv'),
+):
+    _raw_id = f'Inspire-Sweep-Simple-{_raw_suffix}'
+    if _raw_id not in gym.registry:
+        gym.register(
+            id=_raw_id,
+            entry_point=f'inspire_sweep_baseline.runtime.sweep_simple:{_runtime}',
+            disable_env_checker=True,
+            kwargs={
+                'env_cfg_entry_point': f'inspire_sweep_baseline.envs.sweep_simple_envs:{_cfg_prefix}EnvCfg',
+                'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:{_cfg_prefix}PPORunnerCfg',
+            },
+        )

@@ -19,7 +19,7 @@ class FingerGaussian(GaussianDistribution):
                     'rotation_x', 'rotation_y', 'rotation_z',
                     'thumb', 'index', 'middle', 'ring', 'little', 'thumb_opposition')
 
-    def __init__(self, output_dim, init_std=None):
+    def __init__(self, output_dim, init_std=None, report_clip_fraction=True):
         if output_dim != 12:
             raise ValueError('Finger policy requires 12 outputs')
         lower, upper = torch.tensor(FINGER_ACTION_LOWER), torch.tensor(FINGER_ACTION_UPPER)
@@ -30,6 +30,7 @@ class FingerGaussian(GaussianDistribution):
         if not bool((torch.isfinite(std) & (std > 0)).all()):
             raise ValueError('Initial standard deviations must be finite and positive')
         super().__init__(output_dim, init_std=std, std_type='log')
+        self.report_clip_fraction = report_clip_fraction
         # Constants move with the module but are not checkpoint parameters.
         self.register_buffer('_action_lower', lower, persistent=False)
         self.register_buffer('_action_upper', upper, persistent=False)
@@ -54,8 +55,11 @@ class FingerGaussian(GaussianDistribution):
     @torch.no_grad()
     def action_diagnostics(self, raw_actions):
         """Per-policy-step, environment-mean telemetry in original raw units."""
-        clipped = ((raw_actions < self._action_lower) | (raw_actions > self._action_upper)).float().mean(0)
         mean, std = self.mean.detach().mean(0), self.std.detach().mean(0)
+        metrics = [('mean', mean), ('std', std)]
+        if self.report_clip_fraction:
+            clipped = ((raw_actions < self._action_lower) | (raw_actions > self._action_upper)).float().mean(0)
+            metrics.insert(0, ('clip_fraction', clipped))
         return {f'PolicyAction/{kind}/{name}': values[i].clone()
-                for kind, values in (('clip_fraction', clipped), ('mean', mean), ('std', std))
+                for kind, values in metrics
                 for i, name in enumerate(self.action_names)}

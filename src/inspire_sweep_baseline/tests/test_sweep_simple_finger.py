@@ -85,16 +85,40 @@ def test_action_mapping_limits_raw_observation_and_partial_reset(load_mdp):
     torch.testing.assert_close(last(env), env.action_manager.action.tanh())
 
 
-def test_all_six_hand_channels_cost_and_raw_cap(load_mdp):
+def test_v0_test_only_changes_fixed_arm_velocity_termination(family, load_mdp):
+    parent = family.SweepSimpleFingerEnvCfg()
+    before = parent.to_dict()
+    cls = family.SweepSimpleFingerV0TestEnvCfg
+    assert cls.__bases__ == (family.SweepSimpleFingerEnvCfg,)
+    child = cls()
+    expected = copy.deepcopy(before)
+    expected['terminations']['arm_joint_velocity']['params']['threshold'] = 1.0
+    expected['curriculum']['arm_joint_velocity_threshold'] = None
+    assert_ordered_equal(child.to_dict(), expected)
+    # Exercise the actual termination function: strict absolute boundary,
+    # selected arm joints only (the last column represents an excluded hand joint).
+    fn = importlib.import_module('_baseline_cpu_pkg.mdp.termination_functions.sweep').arm_velocity
+    env = NS(scene={'robot': NS(data=NS(joint_vel=torch.tensor([
+        [1., -1., 10.], [1.001, 0., 0.], [0., -1.001, 0.], [0., 0., 0.],
+    ])))})
+    term = child.terminations.arm_joint_velocity
+    assert term.params['asset_cfg'].joint_names == parent.terminations.arm_joint_velocity.params['asset_cfg'].joint_names
+    result = fn(env, asset_cfg=NS(name='robot', joint_ids=[0, 1]), threshold=term.params['threshold'])
+    assert result.tolist() == [False, True, True, False]
+    child.terminations.arm_joint_velocity.params['threshold'] = 99.
+    assert_ordered_equal(parent.to_dict(), before)
+    assert_ordered_equal(family.SweepSimpleFingerEnvCfg().to_dict(), before)
+
+
+def test_all_six_hand_channels_cost_without_output_cap(load_mdp):
     fn = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.sweep_simple').finger_action_rate_l2
     current = torch.zeros(7,12)
     current[:6,6:] = torch.eye(6)*2
     current[6,0] = 20
     env = NS(action_manager=NS(action=current,prev_action=torch.zeros_like(current)))
     torch.testing.assert_close(fn(env,'hand'),torch.tensor([4.]*6+[0.]))
-    torch.testing.assert_close(fn(env,'arm'),torch.tensor([0.]*6+[100.]))
+    torch.testing.assert_close(fn(env,'arm'),torch.tensor([0.]*6+[400.]))
     with pytest.raises(ValueError): fn(env,'invalid')
-    with pytest.raises(ValueError): fn(env,max_cost=float('nan'))
 
 
 def test_runtime_reset_clears_six_channels_only_selected_rows():
@@ -122,6 +146,10 @@ def test_registration_and_actual_model_gradients_export(load_mdp):
     assert entry['entry_point'].endswith(':SweepSimpleFingerEnv')
     assert entry['kwargs']['env_cfg_entry_point'].endswith(':SweepSimpleFingerEnvCfg')
     assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':SweepSimpleFingerPPORunnerCfg')
+    test_entry = entries['Inspire-Sweep-Simple-Finger-v0-Test']
+    assert test_entry['entry_point'] == entry['entry_point']
+    assert test_entry['kwargs']['env_cfg_entry_point'].endswith(':SweepSimpleFingerV0TestEnvCfg')
+    assert test_entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':SweepSimpleFingerV0TestPPORunnerCfg')
     module = importlib.import_module('_baseline_cpu_pkg.agent.sweep_simple_models')
     cls = module.SweepSimpleFingerModel
     obs = TensorDict({'policy':torch.randn(8,66),'obstacles':torch.randn(8,64)},batch_size=[8])
@@ -169,6 +197,7 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
               OperationalSpaceControllerCfg=_AssetNode, WrenchRefactorOSCAction=object,
               HandOpennessAction=hand, FingerJointPositionAction=finger,
               BoundedFingerJointPositionAction=type("BoundedHand", (), {}), BoundedFingerOSCAction=type("BoundedOSC", (), {}),
+              SensorFrameWrenchOSCAction=type("SensorWrenchOSC", (), {}),
               ARM_JOINT_NAMES=omni_config.baseline.ARM_JOINT_NAMES)
     actions = _execute_definitions(MODULE_ROOT/'mdp/actions/sweep_simple.py',ns)
     base, child = actions.SweepSimpleActionsCfg(), actions.SweepSimpleFingerActionsCfg()
@@ -184,6 +213,25 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
     expected['gripper_action']['class_type'] = bounded.to_dict()['gripper_action']['class_type']
     assert_ordered_equal(bounded.to_dict(), expected)
     assert actions.SweepSimpleFingerActionsCfg().gripper_action.class_type is finger
+    wrench = actions.SweepSimpleFingerWrenchActionsCfg()
+    expected_hand = child.gripper_action.to_dict()
+    expected_hand['class_type'] = wrench.gripper_action.to_dict()['class_type']
+    assert wrench.gripper_action.class_type is ns['BoundedFingerJointPositionAction']
+    assert_ordered_equal(wrench.gripper_action.to_dict(), expected_hand)
+    arm = wrench.arm_action
+    assert arm.class_type is ns['SensorFrameWrenchOSCAction']
+    assert arm.body_name == 'axia80_link' and arm.body_offset is None
+    assert arm.task_frame_rel_path == 'Robot/axia80_link'
+    assert arm.wrench_scale == (10., 10., 10., 1., 1., 1.)
+    assert arm.effort_limit_scale == child.arm_action.effort_limit_scale == 1.
+    assert arm.controller_cfg.target_types == ['wrench_abs']
+    assert arm.controller_cfg.motion_control_axes_task == (0,)*6
+    assert arm.controller_cfg.contact_wrench_control_axes_task == (1,)*6
+    assert arm.controller_cfg.gravity_compensation
+    assert not arm.controller_cfg.inertial_dynamics_decoupling
+    assert arm.controller_cfg.contact_wrench_stiffness_task is None
+    assert arm.controller_cfg.nullspace_control == arm.nullspace_joint_pos_target == 'none'
+    assert_ordered_equal(actions.SweepSimpleFingerActionsCfg().to_dict(), child.to_dict())
 
     runner = _execute_definitions(MODULE_ROOT/'agent/sweep_simple_ppo_cfg.py', dict(
         configclass=cc, MISSING=MISSING, RslRlMLPModelCfg=Cfg,
@@ -196,3 +244,12 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
         expected[name]['class_name'] = 'inspire_sweep_baseline.agent.sweep_simple_models:SweepSimpleFingerModel'
     assert_ordered_equal(actual,expected)
     assert_ordered_equal(runner.SweepSimpleV1PPORunnerCfg().to_dict(),parent)
+    test_expected = copy.deepcopy(actual)
+    test_expected['experiment_name'] = 'inspire_sweep_simple_finger_v0_test'
+    assert runner.SweepSimpleFingerV0TestPPORunnerCfg.__bases__ == (runner.SweepSimpleFingerPPORunnerCfg,)
+    assert_ordered_equal(runner.SweepSimpleFingerV0TestPPORunnerCfg().to_dict(), test_expected)
+    assert_ordered_equal(runner.SweepSimpleFingerPPORunnerCfg().to_dict(), actual)
+    wrench_expected = copy.deepcopy(actual)
+    wrench_expected['experiment_name'] = 'inspire_sweep_simple_finger_v0_wrench'
+    assert runner.SweepSimpleFingerWrenchPPORunnerCfg.__bases__ == (runner.SweepSimpleFingerPPORunnerCfg,)
+    assert_ordered_equal(runner.SweepSimpleFingerWrenchPPORunnerCfg().to_dict(), wrench_expected)

@@ -1,9 +1,17 @@
 """Independent Simple v0; Prof changes goal rewards, v1 changes only Reach."""
 from ..mdp.actions.sweep_simple import SweepSimpleFingerV1ActionsCfg
+from ..mdp.actions.sweep_simple import SweepSimpleFingerWrenchActionsCfg
+from ..mdp.observations.sweep_simple import SweepSimpleFingerWrenchObservationsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleFingerV1ObservationsCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleFingerV1RewardsCfg, SweepSimpleFingerV2RewardsCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleSemiProfRewardsCfg
+from ..mdp.rewards.sweep_simple import (
+    SweepSimpleFingerRawV1RewardsCfg, SweepSimpleFingerRawV2RewardsCfg,
+    SweepSimpleSemiProfRawRewardsCfg,
+)
 from ..mdp.curricula.sweep_simple import SweepSimpleFingerV1CurriculumCfg
+from ..mdp.curricula.sweep_simple import SweepSimpleFingerV0TestCurriculumCfg
+from ..mdp.terminations.sweep_simple import SweepSimpleFingerV0TestTerminationsCfg
 from ..mdp.terminations.sweep_simple import SweepSimpleFingerV1TerminationsCfg, SweepSimpleFingerV2TerminationsCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
@@ -116,7 +124,29 @@ class SweepSimpleFingerEnvCfg(SweepSimpleV1EnvCfg):
 
 
 @configclass
+class SweepSimpleFingerWrenchEnvCfg(SweepSimpleFingerEnvCfg):
+    actions: SweepSimpleFingerWrenchActionsCfg = SweepSimpleFingerWrenchActionsCfg()
+    observations: SweepSimpleFingerWrenchObservationsCfg = SweepSimpleFingerWrenchObservationsCfg()
+    terminations: SweepSimpleFingerV0TestTerminationsCfg = SweepSimpleFingerV0TestTerminationsCfg()
+    curriculum: SweepSimpleFingerV0TestCurriculumCfg = SweepSimpleFingerV0TestCurriculumCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Parent aligns pose control with its offset EEF. Wrench control uses
+        # the sensor origin; preserve the scene EEF used by observations/rewards.
+        self.actions.arm_action.body_name = 'axia80_link'
+        self.actions.arm_action.body_offset = None
+
+
+@configclass
+class SweepSimpleFingerV0TestEnvCfg(SweepSimpleFingerEnvCfg):
+    terminations: SweepSimpleFingerV0TestTerminationsCfg = SweepSimpleFingerV0TestTerminationsCfg()
+    curriculum: SweepSimpleFingerV0TestCurriculumCfg = SweepSimpleFingerV0TestCurriculumCfg()
+
+
+@configclass
 class SweepSimpleFingerV1EnvCfg(SweepSimpleFingerEnvCfg):
+    clip_raw_actions: bool = True
     actions: SweepSimpleFingerV1ActionsCfg = SweepSimpleFingerV1ActionsCfg()
     observations: SweepSimpleFingerV1ObservationsCfg = SweepSimpleFingerV1ObservationsCfg()
     rewards: SweepSimpleFingerV1RewardsCfg = SweepSimpleFingerV1RewardsCfg()
@@ -133,3 +163,27 @@ class SweepSimpleFingerV2EnvCfg(SweepSimpleFingerV1EnvCfg):
 @configclass
 class SweepSimpleSemiProfEnvCfg(SweepSimpleFingerV1EnvCfg):
     rewards: SweepSimpleSemiProfRewardsCfg = SweepSimpleSemiProfRewardsCfg()
+
+
+@configclass
+class SweepSimpleFingerRawV1EnvCfg(SweepSimpleFingerV1EnvCfg):
+    clip_raw_actions: bool = False
+    actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
+    observations: SweepSimpleFingerObservationsCfg = SweepSimpleFingerObservationsCfg()
+    rewards: SweepSimpleFingerRawV1RewardsCfg = SweepSimpleFingerRawV1RewardsCfg()
+
+
+@configclass
+class SweepSimpleFingerRawV2EnvCfg(SweepSimpleFingerV2EnvCfg):
+    clip_raw_actions: bool = False
+    actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
+    observations: SweepSimpleFingerObservationsCfg = SweepSimpleFingerObservationsCfg()
+    rewards: SweepSimpleFingerRawV2RewardsCfg = SweepSimpleFingerRawV2RewardsCfg()
+
+
+@configclass
+class SweepSimpleSemiProfRawEnvCfg(SweepSimpleSemiProfEnvCfg):
+    clip_raw_actions: bool = False
+    actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
+    observations: SweepSimpleFingerObservationsCfg = SweepSimpleFingerObservationsCfg()
+    rewards: SweepSimpleSemiProfRawRewardsCfg = SweepSimpleSemiProfRawRewardsCfg()

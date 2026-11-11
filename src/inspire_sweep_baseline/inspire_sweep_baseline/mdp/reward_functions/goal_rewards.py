@@ -132,16 +132,13 @@ def exponential_joint_speed_cost_limit(
     return _exponential_speed_excess_limit(velocity.abs().amax(dim=-1), free_speed, max_cost)
 
 
-def action_rate_l2(env, action_group="arm", max_cost=100.0):
-    """Sum squared raw command changes, capped at max_cost after summation.
+def action_rate_l2(env, action_group="arm"):
+    """Sum squared raw command changes, without an output cap.
 
     Match the reference Inspire action-rate cost before action processing:
     no input clipping, scaling, averaging or division by the control timestep.
-    The cost is nonnegative, so only its upper bound is applied.
     RewardManager applies the configured weight and step_dt once.
     """
-    if not math.isfinite(max_cost) or max_cost < 0.0:
-        raise ValueError("max_cost must be finite and nonnegative")
     current = env.action_manager.action
     previous = env.action_manager.prev_action
     if current.shape[-1] != 8 or previous.shape != current.shape:
@@ -152,7 +149,7 @@ def action_rate_l2(env, action_group="arm", max_cost=100.0):
         selection = slice(6, 8)
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
-    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1).clamp_max(max_cost)
+    return (current[:, selection] - previous[:, selection]).square().sum(dim=-1)
 
 
 def joint_vel_l2(env, asset_cfg=SceneEntityCfg("robot"), max_cost=100.0):

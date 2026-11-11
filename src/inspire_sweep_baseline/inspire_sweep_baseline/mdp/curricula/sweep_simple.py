@@ -27,6 +27,10 @@ class SweepSimpleHardCurriculumCfg(SweepSimpleCurriculumCfg):
 
 
 @configclass
+class SweepSimpleFingerV0TestCurriculumCfg(SweepSimpleCurriculumCfg):
+    arm_joint_velocity_threshold = None
+
+
+@configclass
 class SweepSimpleFingerV1CurriculumCfg(SweepSimpleCurriculumCfg):
-    arm_joint_velocity_threshold = CurriculumTermCfg(func=arm_velocity_threshold_schedule, params={
-        'initial': 2., 'minimum': 1., 'start_iteration': 2000, 'interval': 250, 'decrement': 1. / 12.})
+    arm_joint_velocity_threshold = None

@@ -1,6 +1,6 @@
 """Independent Simple action configuration with Final/Revision root-frame bounded OSC."""
 from ..action_functions.sweep_simple import BoundedFingerJointPositionAction
-from ..action_functions.sweep_simple_osc import BoundedFingerOSCAction
+from ..action_functions.sweep_simple_osc import BoundedFingerOSCAction, SensorFrameWrenchOSCAction
 
 from isaaclab.controllers import OperationalSpaceControllerCfg
 from isaaclab.envs.mdp.actions import OperationalSpaceControllerActionCfg
@@ -62,6 +62,29 @@ class SweepSimpleFingerHandActionCfg(ActionTermCfg):
 @configclass
 class SweepSimpleFingerActionsCfg(SweepSimpleActionsCfg):
     gripper_action = SweepSimpleFingerHandActionCfg()
+
+
+@configclass
+class SweepSimpleFingerWrenchActionsCfg(SweepSimpleFingerActionsCfg):
+    def __post_init__(self):
+        self.gripper_action.class_type = BoundedFingerJointPositionAction
+        self.arm_action.class_type = SensorFrameWrenchOSCAction
+        self.arm_action.body_name = 'axia80_link'
+        self.arm_action.body_offset = None
+        self.arm_action.task_frame_rel_path = 'Robot/axia80_link'
+        self.arm_action.wrench_scale = (10.0, 10.0, 10.0, 1.0, 1.0, 1.0)
+        self.arm_action.controller_cfg = OperationalSpaceControllerCfg(
+            target_types=['wrench_abs'],
+            impedance_mode='fixed',
+            motion_control_axes_task=(0, 0, 0, 0, 0, 0),
+            contact_wrench_control_axes_task=(1, 1, 1, 1, 1, 1),
+            inertial_dynamics_decoupling=False,
+            partial_inertial_dynamics_decoupling=False,
+            gravity_compensation=True,
+            contact_wrench_stiffness_task=None,
+            nullspace_control='none',
+        )
+        self.arm_action.nullspace_joint_pos_target = 'none'
 
 
 @configclass

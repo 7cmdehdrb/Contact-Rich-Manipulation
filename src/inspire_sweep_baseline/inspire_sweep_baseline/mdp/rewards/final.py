@@ -55,12 +55,12 @@ class FinalRewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,

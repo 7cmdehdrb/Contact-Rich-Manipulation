@@ -40,7 +40,7 @@ try:
     expected['rewards']['target_goal_distance'] = cfg.rewards.target_goal_distance.to_dict()
     expected['rewards']['target_inverse_distance'] = cfg.rewards.target_inverse_distance.to_dict()
     expected['wrist_wrench_observation_limits'] = (150.,150.,150.,8.,8.,8.)
-    expected['rewards']['robot_action_rate_penalty']['params'] = {'arm_max_cost':100., 'hand_max_cost':100.}
+    expected['rewards']['robot_action_rate_penalty']['params'] = {}
     expected['scene']['robot']['actuators']['arm']['velocity_limit_sim'] = dict.fromkeys(cfg.scene.robot.actuators['arm'].velocity_limit_sim, 3.14)
     expected['scene']['robot']['actuators']['arm']['effort_limit_sim'] = dict(zip(cfg.scene.robot.actuators['arm'].effort_limit_sim, (150.,150.,150.,28.,28.,28.)))
     expected['terminations']['arm_joint_velocity']['params']['threshold'] = 4.0

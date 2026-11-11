@@ -12,7 +12,7 @@ from test_final_configuration import configs
 from test_omni_configuration import omni_config
 
 
-def test_capped_raw_action_rate_preserves_parent_and_group_semantics(configs):
+def test_uncapped_raw_action_rate_preserves_group_semantics(configs):
     func = configs('reward_functions', 'wrench_refactor').policy_action_rate_penalty
     action = torch.tensor([[3., 4., 0., 0., 0., 0., 1., -2.],
                            [6., 8., 0., 0., 0., 0., 1., 1.],
@@ -20,13 +20,11 @@ def test_capped_raw_action_rate_preserves_parent_and_group_semantics(configs):
                            [12000., -9000., 0., 0., 0., 0., -40000., 40000.]])
     env = NS(action_manager=NS(action=action, prev_action=torch.zeros_like(action)))
     original = action.clone()
-    capped = func(env, arm_max_cost=100., hand_max_cost=100.)
-    torch.testing.assert_close(capped, torch.tensor([.78, 3.06, 3.06, 3.03]))
-    assert func(env)[-1] > 1e6  # Unrelated Refactor callers retain the uncapped default.
-    # Independent caps: a smaller Hand cap cannot consume the Arm budget.
-    torch.testing.assert_close(func(env, arm_max_cost=100., hand_max_cost=1.)[1], torch.tensor(3.03))
+    cost = func(env)
+    expected = .03 * action[:, :6].square().sum(-1) + .03 * action[:, -2:].clamp(0., 1.).square().sum(-1)
+    torch.testing.assert_close(cost, expected)
+    assert cost[-1] > 1e6
     assert torch.equal(action, original)
-    assert (capped * .02 <= .061201).all()
 
 
 def test_runtime_installs_final_clip_without_changing_reader_or_saved_cfg():

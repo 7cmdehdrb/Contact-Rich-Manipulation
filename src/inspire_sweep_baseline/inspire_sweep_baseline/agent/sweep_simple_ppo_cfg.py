@@ -65,10 +65,21 @@ class SweepSimpleFingerPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
 
 
 @configclass
+class SweepSimpleFingerWrenchPPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_v0_wrench'
+
+
+@configclass
+class SweepSimpleFingerV0TestPPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_v0_test'
+
+
+@configclass
 class SweepSimpleFingerGaussianDistributionCfg:
     class_name: str = 'inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian'
     # None selects raw-unit stds: translation .2, rotation .5, hand range / 6.
     init_std: float | None = None
+    report_clip_fraction: bool = True
 
 
 @configclass
@@ -85,3 +96,26 @@ class SweepSimpleFingerV2PPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
 @configclass
 class SweepSimpleSemiProfPPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_semi_prof_v0'
+
+
+@configclass
+class SweepSimpleFingerRawGaussianDistributionCfg(SweepSimpleFingerGaussianDistributionCfg):
+    report_clip_fraction: bool = False
+
+
+@configclass
+class SweepSimpleFingerRawV1PPORunnerCfg(SweepSimpleFingerV1PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_raw_v1'
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerRawGaussianDistributionCfg())
+
+
+@configclass
+class SweepSimpleFingerRawV2PPORunnerCfg(SweepSimpleFingerV2PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_raw_v2'
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerRawGaussianDistributionCfg())
+
+
+@configclass
+class SweepSimpleSemiProfRawPPORunnerCfg(SweepSimpleSemiProfPPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_semi_prof_raw_v0'
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=SweepSimpleFingerRawGaussianDistributionCfg())

@@ -389,7 +389,7 @@ def test_complete_scene_and_env_composition(configs, omni_config, monkeypatch):
     parent = env_module.WrenchRefactorRelativeEnvCfg()
     before = parent.to_dict()
     assert parent.wrist_wrench_observation_limits == (150.,150.,150.,8.,8.,8.)
-    assert parent.rewards.robot_action_rate_penalty.params == {'arm_max_cost':100., 'hand_max_cost':100.}
+    assert parent.rewards.robot_action_rate_penalty.params == {}
     assert env_module.WrenchRefactorV3_1EnvCfg().rewards.robot_action_rate_penalty.params == {}
     assert list(parent.scene.robot.actuators['arm'].velocity_limit_sim.values()) == [3.14] * 6
     assert list(parent.scene.robot.actuators['arm'].effort_limit_sim.values()) == [150.] * 3 + [28.] * 3

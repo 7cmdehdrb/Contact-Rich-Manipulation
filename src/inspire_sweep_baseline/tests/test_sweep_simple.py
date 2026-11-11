@@ -54,6 +54,7 @@ def family(configs, omni_config, monkeypatch):
         ns[prefix+'OSCActionCfg'] = NS(OffsetCfg=_AssetNode)
     ns['SweepSimpleFingerActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
     ns['SweepSimpleFingerV1ActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
+    ns['SweepSimpleFingerWrenchActionsCfg'] = lambda: _AssetNode(arm_action=_AssetNode())
     ns.update(GroupedResetObjectSpawnerCfg=_AssetNode, ViewerCfg=_AssetNode)
     ns.update(vars(_execute_definitions(MODULE_ROOT/f'envs/{OLD}_envs.py', ns)))
     return _execute_definitions(MODULE_ROOT/'envs/sweep_simple_envs.py', ns)

@@ -65,7 +65,7 @@ class ddContactSweepClutterFusionRewardsCfg:
     contact_count = RewTerm(func=contact_count, weight=0.4, params={"max_contacts": 5})
     # The merged action and velocity costs retain the original per-group caps.
     action_rate = RewTerm(
-        func=combined_action_rate, weight=-0.03, params={"max_cost": 100.0}
+        func=combined_action_rate, weight=-0.03
     )
     joint_velocity = RewTerm(
         func=combined_joint_velocity,
@@ -163,12 +163,12 @@ class ContactSweepClutterFusionV1_0RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -270,12 +270,12 @@ class ContactSweepClutterFusionV1_1RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -374,12 +374,12 @@ class ContactSweepClutterFusionV1_1_1RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -478,12 +478,12 @@ class ContactSweepClutterFusionV1_1_2RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -582,12 +582,12 @@ class ContactSweepClutterFusionV1_2RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -686,12 +686,12 @@ class ContactSweepClutterFusionV1_3RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,
@@ -790,12 +790,12 @@ class ContactSweepClutterFusionV1_3_1RewardsCfg:
     arm_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "arm", "max_cost": 100.0},
+        params={"action_group": "arm"},
     )
     hand_action_rate = RewTerm(
         func=action_rate_l2,
         weight=-0.03,
-        params={"action_group": "hand", "max_cost": 100.0},
+        params={"action_group": "hand"},
     )
     arm_joint_velocity = RewTerm(
         func=joint_vel_l2,

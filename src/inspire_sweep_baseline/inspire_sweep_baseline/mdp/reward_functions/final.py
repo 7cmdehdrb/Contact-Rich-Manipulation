@@ -37,8 +37,8 @@ def goal_accuracy_settling_centered(env, position_tolerance=0.01, speed_scale=0.
 
 
 def action_rate_penalty(env):
-    return (0.03 * action_rate_l2(env, action_group="arm", max_cost=100.0)
-            + 0.03 * action_rate_l2(env, action_group="hand", max_cost=100.0))
+    return (0.03 * action_rate_l2(env, action_group="arm")
+            + 0.03 * action_rate_l2(env, action_group="hand"))
 
 
 def joint_velocity_penalty(env, arm_cfg: SceneEntityCfg, hand_cfg: SceneEntityCfg):

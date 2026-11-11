@@ -49,7 +49,8 @@ def test_finite_saturated_rollout_has_finite_update(load_mdp, mean, std, entropy
     assert torch.isfinite(alg.actor.distribution.log_std_param.grad).all()
 
 
-def test_large_raw_actions_do_not_feed_back_into_observation_or_cost(load_mdp):
+@pytest.mark.parametrize('clip_actions', [True, False])
+def test_large_raw_actions_feedback_and_cost_follow_environment_variant(load_mdp, clip_actions):
     """Real runtime clip, observation/cost functions and PPO storage/update.
 
     Only physics and observation concatenation are replaced by a small CPU
@@ -57,7 +58,8 @@ def test_large_raw_actions_do_not_feed_back_into_observation_or_cost(load_mdp):
     """
     torch.manual_seed(42)
     bounds = module('assets.hand_kinematics')
-    observe = module('mdp.observation_functions.sweep_simple').bounded_previous_action
+    observe = (module('mdp.observation_functions.sweep_simple').bounded_previous_action if clip_actions
+               else module('mdp.observation_functions.final').previous_action_command)
     cost = module('mdp.reward_functions.sweep_simple').finger_action_rate_l2
     model = module('agent.sweep_simple_models').SweepSimpleFingerModel
     dist = module('agent.sweep_simple_distributions').FingerGaussian
@@ -71,17 +73,19 @@ def test_large_raw_actions_do_not_feed_back_into_observation_or_cost(load_mdp):
             next_obs = obs.clone()
             # Synthetic layout; use the actual Last Action calculation.
             next_obs['policy'][:, :12] = observe(self)
-            reward = -.03 * (cost(self, 'arm') + cost(self, 'hand'))
+            # Match RewardManager's 0.02 s integration in the actual environments.
+            reward = -.03 * (cost(self, 'arm') + cost(self, 'hand')) * .02
             return next_obs, reward, torch.zeros(8, dtype=torch.long), {'log': {'existing': torch.tensor(7.)}}
 
     runtime = _execute_definitions(MODULE_ROOT / 'runtime/sweep_simple.py', dict(
         SweepSimpleFingerEnv=PhysicsParent, __package__='_baseline_cpu_pkg.runtime'), {'SweepSimpleFingerV1Env'})
     env = runtime.SweepSimpleFingerV1Env()
+    env.cfg = NS(clip_raw_actions=clip_actions)
     env.num_envs, env.num_actions = 8, 12
     lo, hi = bounds.finger_action_bounds('cpu')
     env._finger_action_lower, env._finger_action_upper = lo, hi
     env.action_manager = NS(action=torch.zeros(8, 12), prev_action=torch.zeros(8, 12))
-    cfg = dict(actor=dict(class_name=model, hidden_dims=[8], distribution_cfg=dict(class_name=dist)),
+    cfg = dict(actor=dict(class_name=model, hidden_dims=[8], distribution_cfg=dict(class_name=dist, report_clip_fraction=clip_actions)),
                critic=dict(class_name=model, hidden_dims=[8]),
                algorithm=dict(class_name=numerical, num_learning_epochs=2, num_mini_batches=2),
                obs_groups={'actor': ['policy', 'obstacles'], 'critic': ['policy', 'obstacles']},
@@ -101,16 +105,26 @@ def test_large_raw_actions_do_not_feed_back_into_observation_or_cost(load_mdp):
                 log_prob = alg.actor.get_output_log_prob(raw).clone()
                 obs, reward, dones, extras = env.step(raw)
                 torch.testing.assert_close(raw, saved)  # No in-place clipping of PPO samples.
-                torch.testing.assert_close(obs['policy'][:, :12], raw.clamp(lo, hi))
+                expected_command = raw.clamp(lo, hi) if clip_actions else raw
+                torch.testing.assert_close(env.action_manager.action, expected_command)
+                torch.testing.assert_close(obs['policy'][:, :12], expected_command if clip_actions else raw.tanh())
                 assert obs['policy'].abs().max() <= hi.max()
-                assert reward.abs().max() < 1.
-                if iteration or step:
+                delta = expected_command - env.action_manager.prev_action
+                expected_reward = -.03 * (delta[:, :6].square().sum(-1)
+                                         + delta[:, 6:].square().sum(-1)) * .02
+                torch.testing.assert_close(reward, expected_reward)
+                if clip_actions and (iteration or step):
                     torch.testing.assert_close(reward, torch.zeros_like(reward))
+                if not clip_actions and iteration == 0 and step == 0:
+                    assert (reward < -.12).all()  # Exceeds both former caps after dt integration.
                 alg.process_env_step(obs, reward, dones, extras)
                 torch.testing.assert_close(alg.storage.actions[step], saved)
                 torch.testing.assert_close(alg.storage.actions_log_prob[step].squeeze(-1), log_prob)
                 assert extras['log']['existing'] == 7.
-                assert extras['log']['PolicyAction/clip_fraction/translation_x'] == 1.
+                if clip_actions:
+                    assert extras['log']['PolicyAction/clip_fraction/translation_x'] == 1.
+                else:
+                    assert not any('clip_fraction' in key for key in extras['log'])
                 assert extras['log']['PolicyAction/mean/translation_x'] > 99.
                 if previous_logs is not None:
                     assert extras['log'] is not previous_logs

@@ -28,10 +28,16 @@ def test_parent_and_complete_config_diff(family):
     a, b = v1(), v2()
     expected = copy.deepcopy(snapshot)
     expected['observations']['policy']['actions'] = a.to_dict()['observations']['policy']['actions']
-    expected['rewards']['arm_joint_velocity']['weight'] = -.06
-    expected['terminations']['arm_joint_velocity']['params']['threshold'] = 2.
-    expected['curriculum']['arm_joint_velocity_threshold']['params'] = dict(
-        initial=2.,minimum=1.,start_iteration=2000,interval=250,decrement=1/12)
+    expected['rewards']['arm_joint_velocity']['weight'] = -.03
+    expected['terminations']['arm_joint_velocity']['params']['threshold'] = 1.
+    expected['curriculum']['arm_joint_velocity_threshold'] = None
+    # Declared subclass fields precede fields added by EnvCfg.__post_init__.
+    ordered = {}
+    for name, value in expected.items():
+        if name == 'decimation':
+            ordered['clip_raw_actions'] = True
+        ordered[name] = value
+    expected = ordered
     # This EnvCfg fixture replaces action construction with doubles. The action
     # child is checked separately, including pre-scale raw bounds.
     assert_ordered_equal(a.to_dict(),expected)
@@ -41,21 +47,28 @@ def test_parent_and_complete_config_diff(family):
     expected['terminations']['success'] = b.to_dict()['terminations']['success']
     assert_ordered_equal(b.to_dict(),expected)
     assert b.rewards.target_inverse_distance.func is a.rewards.target_inverse_distance.func
-    b.curriculum.arm_joint_velocity_threshold.params['initial'] = 99
+    b.terminations.arm_joint_velocity.params['threshold'] = 99
     a.rewards.arm_joint_velocity.weight = -99
     assert_ordered_equal(base().to_dict(),snapshot)
-    assert v2().curriculum.arm_joint_velocity_threshold.params['initial'] == 2.
+    assert v2().terminations.arm_joint_velocity.params['threshold'] == 1.
+    assert v2().curriculum.arm_joint_velocity_threshold is None
 
 
-@pytest.mark.parametrize('iteration,value',[(0,2),(1999,2),(2000,2),(2249,2),(2250,2-1/12),
-    (4750,1+1/12),(4999,1+1/12),(5000,1),(99999,1)])
-def test_velocity_schedule(configs,iteration,value):
-    cfg = configs('curricula','sweep_simple').SweepSimpleFingerV1CurriculumCfg().arm_joint_velocity_threshold
-    term = NS(params={'threshold':99.})
-    env = NS(learning_iteration=iteration,termination_manager=NS(
-        get_term_cfg=lambda _:term,set_term_cfg=lambda name,new:None))
-    assert cfg.func(env,None,**cfg.params) == pytest.approx(value)
-    assert term.params['threshold'] == pytest.approx(value)
+@pytest.mark.parametrize('name', [
+    'SweepSimpleFingerV1EnvCfg', 'SweepSimpleFingerV2EnvCfg', 'SweepSimpleSemiProfEnvCfg',
+    'SweepSimpleFingerRawV1EnvCfg', 'SweepSimpleFingerRawV2EnvCfg', 'SweepSimpleSemiProfRawEnvCfg',
+])
+def test_fixed_velocity_termination_and_cost(family, name, load_mdp):
+    cfg = getattr(family, name)()
+    assert cfg.curriculum.arm_joint_velocity_threshold is None
+    assert cfg.rewards.arm_joint_velocity.weight == -.03
+    term = cfg.terminations.arm_joint_velocity
+    assert term.params['threshold'] == 1.
+    env = NS(scene={'robot': NS(data=NS(joint_vel=torch.tensor([
+        [1., -1., 20.], [1.0001, 0., 0.], [0., -1.0001, 0.],
+    ])))})
+    result = term.func(env, asset_cfg=NS(name='robot', joint_ids=[0, 1]), threshold=term.params['threshold'])
+    assert result.tolist() == [False, True, True]
 
 
 def gate_env(load_mdp,n=4):
@@ -250,7 +263,7 @@ def test_raw_last_action_and_input_clipping_before_scale(load_mdp):
             self.raw=actions
             self.processed=actions*torch.tensor([.03]*3+[.15]*3)
     ns=_execute_definitions(MODULE_ROOT/'mdp/action_functions/sweep_simple_osc.py',dict(
-        WrenchRefactorOSCAction=Parent,clip_finger_actions=bounds.clip_finger_actions))
+        WrenchRefactorOSCAction=Parent,clip_finger_actions=bounds.clip_finger_actions), {'BoundedFingerOSCAction'})
     action=ns.BoundedFingerOSCAction.__new__(ns.BoundedFingerOSCAction)
     action._finger_lower,action._finger_upper=lo[:6],hi[:6]
     action.process_actions(raw[:,:6])
@@ -264,6 +277,7 @@ def test_raw_last_action_and_input_clipping_before_scale(load_mdp):
     runtime=_execute_definitions(MODULE_ROOT/'runtime/sweep_simple.py',dict(
         SweepSimpleFingerEnv=EnvParent,__package__='_baseline_cpu_pkg.runtime'),{'SweepSimpleFingerV1Env'})
     live=runtime.SweepSimpleFingerV1Env()
+    live.cfg=NS(clip_raw_actions=True)
     live._finger_action_lower,live._finger_action_upper=lo,hi
     torch.testing.assert_close(live.step(raw),observed)
 
@@ -342,7 +356,7 @@ def test_new_registry_and_ppo_inheritance(omni_config):
     parent=runner.SweepSimpleFingerPPORunnerCfg().to_dict()
     actual=runner.SweepSimpleFingerV1PPORunnerCfg().to_dict()
     expected=copy.deepcopy(parent);expected['experiment_name']='inspire_sweep_simple_finger_v1'
-    expected['actor']['distribution_cfg']=dict(class_name='inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian',init_std=None)
+    expected['actor']['distribution_cfg']=dict(class_name='inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian',init_std=None,report_clip_fraction=True)
     assert_ordered_equal(actual,expected)
     expected['experiment_name']='inspire_sweep_simple_finger_v2'
     assert_ordered_equal(runner.SweepSimpleFingerV2PPORunnerCfg().to_dict(),expected)
@@ -353,6 +367,50 @@ def test_new_registry_and_ppo_inheritance(omni_config):
         assert entry['entry_point'].endswith(f':SweepSimpleFingerV{v}Env')
         assert entry['kwargs']['env_cfg_entry_point'].endswith(f':SweepSimpleFingerV{v}EnvCfg')
         assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(f':SweepSimpleFingerV{v}PPORunnerCfg')
+    for suffix, prefix, parent_prefix, runtime_name, experiment in (
+        ('Finger-Raw-v1', 'SweepSimpleFingerRawV1', 'SweepSimpleFingerV1', 'SweepSimpleFingerV1Env', 'inspire_sweep_simple_finger_raw_v1'),
+        ('Finger-Raw-v2', 'SweepSimpleFingerRawV2', 'SweepSimpleFingerV2', 'SweepSimpleFingerV2Env', 'inspire_sweep_simple_finger_raw_v2'),
+        ('Semi-Prof-Raw-v0', 'SweepSimpleSemiProfRaw', 'SweepSimpleSemiProf', 'SweepSimpleSemiProfEnv', 'inspire_sweep_simple_semi_prof_raw_v0'),
+    ):
+        entry = entries[f'Inspire-Sweep-Simple-{suffix}']
+        assert entry['entry_point'].endswith(':' + runtime_name)
+        assert entry['kwargs']['env_cfg_entry_point'].endswith(':' + prefix + 'EnvCfg')
+        assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':' + prefix + 'PPORunnerCfg')
+        before = getattr(runner, parent_prefix + 'PPORunnerCfg')().to_dict()
+        expected = copy.deepcopy(before)
+        expected['experiment_name'] = experiment
+        expected['actor']['distribution_cfg']['report_clip_fraction'] = False
+        cls = getattr(runner, prefix + 'PPORunnerCfg')
+        assert cls.__bases__ == (getattr(runner, parent_prefix + 'PPORunnerCfg'),)
+        assert_ordered_equal(cls().to_dict(), expected)
+        assert_ordered_equal(getattr(runner, parent_prefix + 'PPORunnerCfg')().to_dict(), before)
+
+
+@pytest.mark.parametrize('parent_name,raw_name', [
+    ('SweepSimpleFingerV1EnvCfg', 'SweepSimpleFingerRawV1EnvCfg'),
+    ('SweepSimpleFingerV2EnvCfg', 'SweepSimpleFingerRawV2EnvCfg'),
+    ('SweepSimpleSemiProfEnvCfg', 'SweepSimpleSemiProfRawEnvCfg'),
+])
+def test_raw_variants_change_only_actions_observation_velocity_cost(family, parent_name, raw_name):
+    parent, child = getattr(family, parent_name), getattr(family, raw_name)
+    assert child.__bases__ == (parent,)
+    before = parent().to_dict()
+    raw = child()
+    baseline = family.SweepSimpleFingerEnvCfg()
+    expected = copy.deepcopy(before)
+    expected['clip_raw_actions'] = False
+    expected['actions'] = baseline.to_dict()['actions']
+    expected['observations'] = baseline.to_dict()['observations']
+    expected['rewards']['arm_joint_velocity']['weight'] = -.03
+    assert_ordered_equal(raw.to_dict(), expected)
+    assert raw.observations.policy.actions.func is baseline.observations.policy.actions.func
+    assert before['rewards']['arm_joint_velocity']['weight'] == -.03
+    if 'SemiProf' in raw_name:
+        assert raw.rewards.wrench_change.params['max_positive_fraction'] is None
+        assert parent().rewards.wrench_change.params['max_positive_fraction'] is None
+    raw.rewards.arm_joint_velocity.weight = -999.
+    raw.terminations.arm_joint_velocity.params['threshold'] = 99.
+    assert_ordered_equal(parent().to_dict(), before)
 
 
 def test_runtime_retreat_reset_records_old_outcome_first(load_mdp):

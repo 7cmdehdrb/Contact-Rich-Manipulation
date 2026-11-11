@@ -59,18 +59,14 @@ class OppositeReachProgress(DexReachProgress):
         return increment / env.step_dt
 
 
-def policy_action_rate_penalty(env, arm_max_cost=None, hand_max_cost=None):
-    """Raw Arm and clamped Hand changes; optional caps apply to each squared sum."""
+def policy_action_rate_penalty(env):
+    """Raw Arm and clamped Hand changes, without reward output caps."""
     action = env.action_manager.action
     previous = env.action_manager.prev_action
     arm_delta = action[:, :6] - previous[:, :6]
     hand_delta = action[:, -2:].clamp(0., 1.) - previous[:, -2:].clamp(0., 1.)
     arm_cost = arm_delta.square().sum(-1)
     hand_cost = hand_delta.square().sum(-1)
-    if arm_max_cost is not None:
-        arm_cost = arm_cost.clamp_max(arm_max_cost)
-    if hand_max_cost is not None:
-        hand_cost = hand_cost.clamp_max(hand_max_cost)
     return 0.03 * arm_cost + 0.03 * hand_cost
 
 
@@ -79,7 +75,7 @@ class RefactorActionRatePenalty(ManagerTermBase):
 
     Sample the final physics substep's applied Arm efforts. Normalize by the
     same per-joint bounds as the OSC action; keep the parent's 0.03 coefficients
-    and Arm cap. Reset starts the selected Arm histories at zero.
+    without an Arm reward cap. Reset starts the selected Arm histories at zero.
     """
 
     def __init__(self, cfg, env):
@@ -99,7 +95,7 @@ class RefactorActionRatePenalty(ManagerTermBase):
             limits = (arm._asset.data.joint_effort_limits[:, arm._joint_ids]
                       * arm.cfg.effort_limit_scale).clamp_min(arm.cfg.minimum_effort_limit)
             current = (arm.joint_efforts / limits).clamp(-1.0, 1.0)
-            arm_cost = (current - self._previous_arm).square().sum(-1).clamp_max(100.0)
+            arm_cost = (current - self._previous_arm).square().sum(-1)
             hand_delta = env.action_manager.action[:, -2:].clamp(0., 1.) - env.action_manager.prev_action[:, -2:].clamp(0., 1.)
             self._cached_cost[:] = 0.03 * arm_cost + 0.03 * hand_delta.square().sum(-1)
             # TEMP paired diagnostic only: keep the original returned reward.
@@ -113,7 +109,6 @@ class RefactorActionRatePenalty(ManagerTermBase):
                 fields = {
                     'old_cost': self._cached_cost,
                     'proposed_cost': proposed,
-                    'proposed_cost_with_arm_cap100': 0.03 * action_delta.square().sum(-1).clamp_max(100.) + hand_cost,
                     'old_arm_axes': old_axes,
                     'proposed_position_cost': proposed_axes[:, :3].sum(-1),
                     'proposed_rotation_cost': proposed_axes[:, 3:].sum(-1),

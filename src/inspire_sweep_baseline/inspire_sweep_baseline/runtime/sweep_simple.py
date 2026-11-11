@@ -257,7 +257,9 @@ class SweepSimpleFingerV1Env(SweepSimpleFingerEnv):
         # Out-of-place: PPO retains its original Gaussian sample and log-prob.
         # ActionManager stores the execution command for Last Action and both
         # current/previous action-rate penalties, before applying OSC scales.
-        return super().step(clip_finger_actions(action, self._finger_action_lower, self._finger_action_upper))
+        if self.cfg.clip_raw_actions:
+            action = clip_finger_actions(action, self._finger_action_lower, self._finger_action_upper)
+        return super().step(action)
 
 
 class SweepSimpleFingerV2Env(SweepSimpleFingerV1Env):

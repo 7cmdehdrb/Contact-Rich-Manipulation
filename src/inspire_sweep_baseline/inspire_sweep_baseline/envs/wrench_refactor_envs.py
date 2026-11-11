@@ -159,9 +159,7 @@ class WrenchRefactorRelativeEnvCfg(WrenchRefactorV3_1EnvCfg):
         # Vendor right-hand URDF: all twelve revolute joints effort=10, velocity=1.
         self.scene.robot.actuators['hand'].effort_limit_sim = 10.0
         self.rewards.target_goal_first_entry_bonus.weight = 10.0
-        self.rewards.robot_action_rate_penalty.params = {
-            'arm_max_cost': 100.0, 'hand_max_cost': 100.0,
-        }
+        self.rewards.robot_action_rate_penalty.params = {}
         self.scene.robot.actuators['arm'].velocity_limit_sim = dict.fromkeys(ARM_JOINT_NAMES, 3.14)
         self.scene.robot.actuators['arm'].effort_limit_sim = dict(
             zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0)))
