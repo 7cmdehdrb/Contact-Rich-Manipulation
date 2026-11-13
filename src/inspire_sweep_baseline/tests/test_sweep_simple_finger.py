@@ -3,6 +3,7 @@ import ast
 import copy
 import importlib
 import importlib.util
+import math
 import sys
 from types import SimpleNamespace as NS
 
@@ -10,7 +11,7 @@ import pytest
 import torch
 from tensordict import TensorDict
 
-from conftest import MODULE_ROOT
+from conftest import MODULE_ROOT, PROJECT_ROOT
 from test_sweep_simple import family, configs, omni_config
 from test_final_configuration import assert_ordered_equal
 from test_omni_configuration import _execute_definitions
@@ -85,7 +86,7 @@ def test_action_mapping_limits_raw_observation_and_partial_reset(load_mdp):
     torch.testing.assert_close(last(env), env.action_manager.action.tanh())
 
 
-def test_v0_test_only_changes_fixed_arm_velocity_termination(family, load_mdp):
+def test_v0_test_only_changes_last_action_and_fixed_arm_velocity_termination(family, load_mdp):
     parent = family.SweepSimpleFingerEnvCfg()
     before = parent.to_dict()
     cls = family.SweepSimpleFingerV0TestEnvCfg
@@ -94,6 +95,9 @@ def test_v0_test_only_changes_fixed_arm_velocity_termination(family, load_mdp):
     expected = copy.deepcopy(before)
     expected['terminations']['arm_joint_velocity']['params']['threshold'] = 1.0
     expected['curriculum']['arm_joint_velocity_threshold'] = None
+    raw_last = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.sweep_simple').raw_previous_action
+    assert child.observations.policy.actions.func is raw_last
+    expected['observations']['policy']['actions']['func'] = f'{raw_last.__module__}:{raw_last.__name__}'
     assert_ordered_equal(child.to_dict(), expected)
     # Exercise the actual termination function: strict absolute boundary,
     # selected arm joints only (the last column represents an excluded hand joint).
@@ -108,6 +112,66 @@ def test_v0_test_only_changes_fixed_arm_velocity_termination(family, load_mdp):
     child.terminations.arm_joint_velocity.params['threshold'] = 99.
     assert_ordered_equal(parent.to_dict(), before)
     assert_ordered_equal(family.SweepSimpleFingerEnvCfg().to_dict(), before)
+
+
+@pytest.mark.parametrize('config_name', ['SweepSimpleFingerV0TestEnvCfg', 'SweepSimpleProfV2EnvCfg'])
+def test_runner_wrapper_bounds_history_and_rate_before_osc_scale(family, config_name):
+    """Execute upstream wrapper/manager/scaling methods; simulator I/O is a double."""
+    def method(path, class_name, name):
+        tree = ast.parse(path.read_text())
+        cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == class_name)
+        fn = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == name)
+        ns = dict(torch=torch, TensorDict=TensorDict)
+        exec(compile(ast.Module(body=[fn], type_ignores=[]), str(path), 'exec'), ns)
+        return ns[name]
+
+    step = method(PROJECT_ROOT/'IsaacLab/source/isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py',
+                  'RslRlVecEnvWrapper', 'step')
+    process = method(PROJECT_ROOT/'IsaacLab/source/isaaclab/isaaclab/managers/action_manager.py',
+                     'ActionManager', 'process_action')
+    scale = method(PROJECT_ROOT/'IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/task_space_actions.py',
+                   'OperationalSpaceControllerAction', '_preprocess_actions')
+    cfg = getattr(family, config_name)()
+    observe = cfg.observations.policy.actions.func
+    cost = cfg.rewards.arm_action_rate.func
+    arm = NS(_raw_actions=torch.zeros(2, 6), _processed_actions=torch.zeros(2, 6),
+             _pose_abs_idx=None, _pose_rel_idx=0, _wrench_abs_idx=None,
+             _stiffness_idx=None, _damping_ratio_idx=None,
+             _position_scale=.03, _orientation_scale=.15, action_dim=6)
+    arm.process_actions = lambda action: scale(arm, action)
+    manager = NS(_action=torch.zeros(2, 12), _prev_action=torch.zeros(2, 12),
+                 total_action_dim=12, device='cpu', _terms={'arm': arm})
+    manager.action, manager.prev_action = manager._action, manager._prev_action
+    env = NS(action_manager=manager, cfg=NS(is_finite_horizon=True))
+
+    def env_step(action):
+        process(manager, action)
+        reward = -.03 * .02 * (cost(env, 'arm') + cost(env, 'hand'))
+        return {'policy': observe(env)}, reward, torch.zeros(2, dtype=torch.bool), torch.zeros(2, dtype=torch.bool), {}
+
+    env.step = env_step
+    wrapper = NS(env=env, unwrapped=env, num_envs=2, clip_actions=math.pi/2)
+    # Include values inside the boundary, exactly on it and the diagnosed ~9045 outlier.
+    raw = torch.tensor([[-9045., -math.pi/2, -1., 0., 1., math.pi/2, 9045., -9045., .1, -.2, 2., -2.]])
+    raw = torch.cat((raw, -raw))
+    original = raw.clone()
+    first = raw.clamp(-math.pi/2, math.pi/2)
+    obs, _, _, _ = step(wrapper, raw)
+    torch.testing.assert_close(raw, original)  # PPO's original sample is not modified.
+    torch.testing.assert_close(obs['policy'], first, rtol=0, atol=0)
+    assert obs['policy'][0, 1].item() == pytest.approx(-math.pi/2)  # No tanh.
+    torch.testing.assert_close(arm._raw_actions, first[:, :6])
+    torch.testing.assert_close(arm._processed_actions[:, :3], first[:, :3] * .03)
+    torch.testing.assert_close(arm._processed_actions[:, 3:], first[:, 3:6] * .15)
+    obs, reward, _, _ = step(wrapper, -raw)
+    torch.testing.assert_close(manager.prev_action, first)
+    torch.testing.assert_close(obs['policy'], -first)
+    torch.testing.assert_close(reward, -.0006 * (-first-first).square().sum(-1))
+    assert reward.abs().max() <= .0006 * 12 * math.pi**2
+    # The observation function itself does not silently clamp or squash its input.
+    manager.action[:] = 3.
+    assert observe(env) is manager.action
+    assert (observe(env) == 3.).all()
 
 
 def test_all_six_hand_channels_cost_without_output_cap(load_mdp):
@@ -246,6 +310,7 @@ def test_live_action_and_runner_configuration(omni_config, load_mdp):
     assert_ordered_equal(runner.SweepSimpleV1PPORunnerCfg().to_dict(),parent)
     test_expected = copy.deepcopy(actual)
     test_expected['experiment_name'] = 'inspire_sweep_simple_finger_v0_test'
+    test_expected['clip_actions'] = math.pi / 2
     assert runner.SweepSimpleFingerV0TestPPORunnerCfg.__bases__ == (runner.SweepSimpleFingerPPORunnerCfg,)
     assert_ordered_equal(runner.SweepSimpleFingerV0TestPPORunnerCfg().to_dict(), test_expected)
     assert_ordered_equal(runner.SweepSimpleFingerPPORunnerCfg().to_dict(), actual)

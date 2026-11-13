@@ -27,6 +27,11 @@ class SweepSimpleHardCurriculumCfg(SweepSimpleCurriculumCfg):
 
 
 @configclass
+class SweepSimpleProfV2CurriculumCfg(SweepSimpleCurriculumCfg):
+    arm_joint_velocity_threshold = None
+
+
+@configclass
 class SweepSimpleFingerV0TestCurriculumCfg(SweepSimpleCurriculumCfg):
     arm_joint_velocity_threshold = None
 

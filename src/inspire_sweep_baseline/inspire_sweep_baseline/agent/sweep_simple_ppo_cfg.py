@@ -58,6 +58,15 @@ class SweepSimpleFingerModelCfg(SweepSimpleModelCfg):
 
 
 @configclass
+class SweepSimpleProfV2PPORunnerCfg(SweepSimpleProfV1PPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_prof_v2'
+    # Shared 12D raw ceiling, applied by RslRlVecEnvWrapper before OSC scales.
+    clip_actions = 1.5707963267948966  # pi/2
+    actor = SweepSimpleFingerModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
+    critic = SweepSimpleFingerModelCfg()
+
+
+@configclass
 class SweepSimpleFingerPPORunnerCfg(SweepSimpleV1PPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_finger_v0'
     actor = SweepSimpleFingerModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
@@ -72,6 +81,8 @@ class SweepSimpleFingerWrenchPPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
 @configclass
 class SweepSimpleFingerV0TestPPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
     experiment_name = 'inspire_sweep_simple_finger_v0_test'
+    # RslRlVecEnvWrapper clips all 12 raw channels BEFORE OSC scaling.
+    clip_actions = 1.5707963267948966  # pi/2; common translation/rotation/hand ceiling
 
 
 @configclass

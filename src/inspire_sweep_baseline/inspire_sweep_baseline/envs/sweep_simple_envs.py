@@ -3,7 +3,12 @@ from ..mdp.actions.sweep_simple import SweepSimpleFingerV1ActionsCfg
 from ..mdp.actions.sweep_simple import SweepSimpleFingerWrenchActionsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleFingerWrenchObservationsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleFingerV1ObservationsCfg
+from ..mdp.observations.sweep_simple import SweepSimpleFingerV0TestObservationsCfg
+from ..mdp.observations.sweep_simple import SweepSimpleProfV2ObservationsCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleFingerV1RewardsCfg, SweepSimpleFingerV2RewardsCfg
+from ..mdp.rewards.sweep_simple import SweepSimpleProfV2RewardsCfg
+from ..mdp.terminations.sweep_simple import SweepSimpleProfV2TerminationsCfg
+from ..mdp.curricula.sweep_simple import SweepSimpleProfV2CurriculumCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleSemiProfRewardsCfg
 from ..mdp.rewards.sweep_simple import (
     SweepSimpleFingerRawV1RewardsCfg, SweepSimpleFingerRawV2RewardsCfg,
@@ -105,6 +110,15 @@ class SweepSimpleProfV1EnvCfg(SweepSimpleProfEnvCfg):
 
 
 @configclass
+class SweepSimpleProfV2EnvCfg(SweepSimpleProfV1EnvCfg):
+    actions: SweepSimpleFingerActionsCfg = SweepSimpleFingerActionsCfg()
+    observations: SweepSimpleProfV2ObservationsCfg = SweepSimpleProfV2ObservationsCfg()
+    rewards: SweepSimpleProfV2RewardsCfg = SweepSimpleProfV2RewardsCfg()
+    terminations: SweepSimpleProfV2TerminationsCfg = SweepSimpleProfV2TerminationsCfg()
+    curriculum: SweepSimpleProfV2CurriculumCfg = SweepSimpleProfV2CurriculumCfg()
+
+
+@configclass
 class SweepSimpleHardEnvCfg(SweepSimpleV1EnvCfg):
     events: SweepSimpleHardEventsCfg = SweepSimpleHardEventsCfg()
     curriculum: SweepSimpleHardCurriculumCfg = SweepSimpleHardCurriculumCfg()
@@ -140,6 +154,7 @@ class SweepSimpleFingerWrenchEnvCfg(SweepSimpleFingerEnvCfg):
 
 @configclass
 class SweepSimpleFingerV0TestEnvCfg(SweepSimpleFingerEnvCfg):
+    observations: SweepSimpleFingerV0TestObservationsCfg = SweepSimpleFingerV0TestObservationsCfg()
     terminations: SweepSimpleFingerV0TestTerminationsCfg = SweepSimpleFingerV0TestTerminationsCfg()
     curriculum: SweepSimpleFingerV0TestCurriculumCfg = SweepSimpleFingerV0TestCurriculumCfg()
 

@@ -61,6 +61,15 @@ class SweepSimpleProfV1RewardsCfg(SweepSimpleProfRewardsCfg):
 
 
 @configclass
+class SweepSimpleProfV2RewardsCfg(SweepSimpleProfV1RewardsCfg):
+    def __post_init__(self):
+        self.goal_distance.params['eef_height_limit'] = .12
+        self.direction_deviation.params['eef_height_limit'] = .12
+        self.arm_action_rate.func = finger_action_rate_l2
+        self.hand_action_rate.func = finger_action_rate_l2
+
+
+@configclass
 class SweepSimpleFingerRewardsCfg(SweepSimpleV1RewardsCfg):
     def __post_init__(self):
         self.arm_action_rate.func = finger_action_rate_l2

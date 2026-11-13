@@ -93,6 +93,69 @@ def test_prof_v1_only_changes_reach_and_required_hierarchy(family):
     assert both().rewards.goal_distance.params['threshold_n'] == .01
 
 
+def test_prof_v2_complete_config_diff_parent_isolation_and_velocity(family):
+    parent = family.SweepSimpleProfV1EnvCfg()
+    before = parent.to_dict()
+    assert family.SweepSimpleProfV2EnvCfg.__bases__ == (family.SweepSimpleProfV1EnvCfg,)
+    child = family.SweepSimpleProfV2EnvCfg()
+    expected = copy.deepcopy(before)
+    expected['terminations']['arm_joint_velocity']['params']['threshold'] = 1.
+    expected['curriculum']['arm_joint_velocity_threshold'] = None
+    raw_last = importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.sweep_simple').raw_previous_action
+    assert child.observations.policy.actions.func is raw_last
+    expected['observations']['policy']['actions']['func'] = f'{raw_last.__module__}:{raw_last.__name__}'
+    finger = family.SweepSimpleFingerEnvCfg()
+    expected['observations']['policy']['hand_configuration'] = finger.to_dict()['observations']['policy']['hand_configuration']
+    for name in ('arm_action_rate', 'hand_action_rate'):
+        expected['rewards'][name]['func'] = finger.to_dict()['rewards'][name]['func']
+        assert getattr(child.rewards, name).func is getattr(finger.rewards, name).func
+    clipped = torch.tensor([[-1.5707963, -.5, 0., .5, 1., 1.5707963, -.2, .7, .3, .4, .5, .6]])
+    assert torch.equal(child.observations.policy.actions.func(NS(action_manager=NS(action=clipped))), clipped)
+    assert not torch.equal(parent.observations.policy.actions.func(NS(action_manager=NS(action=clipped))), clipped)
+    for name in ('goal_distance', 'direction_deviation'):
+        expected['rewards'][name]['params']['eef_height_limit'] = .12
+    assert_ordered_equal(child.to_dict(), expected)
+    assert child.rewards.hand_contact is None
+    assert child.rewards.reaching.func is parent.rewards.reaching.func
+    term = child.terminations.arm_joint_velocity
+    env = NS(scene={'robot': NS(data=NS(joint_vel=torch.tensor([
+        [1., -1., 20.], [1.0001, 0., 0.], [0., -1.0001, 0.],
+    ])))})
+    assert term.func(env, asset_cfg=NS(name='robot', joint_ids=[0, 1]),
+                     threshold=term.params['threshold']).tolist() == [False, True, True]
+    child.rewards.goal_distance.params['eef_height_limit'] = .01
+    child.terminations.arm_joint_velocity.params['threshold'] = 99.
+    child.observations.policy.hand_configuration.params['asset_cfg'].joint_names.reverse()
+    assert_ordered_equal(parent.to_dict(), before)
+    assert_ordered_equal(family.SweepSimpleProfV1EnvCfg().to_dict(), before)
+    assert family.SweepSimpleProfV2EnvCfg().rewards.goal_distance.params['eef_height_limit'] == .12
+
+
+@pytest.mark.parametrize('name', ['goal_distance', 'direction_deviation'])
+def test_prof_v2_contact_height_boundary_and_no_deferred_reward(configs, name):
+    from test_wrench_v0_1 import reward_env
+    env, pos, force = reward_env(6)
+    env.step_dt = .02
+    env.sweep_dir = pos.new_tensor([[-1., 0., 0.]]).repeat(6, 1)
+    cfg = getattr(configs('rewards', 'sweep_simple').SweepSimpleProfV2RewardsCfg(), name)
+    term = cfg.func(cfg, env)
+    pos[:, 0, 0] -= .01
+    pos[:, 0, 1] += .005
+    constants = importlib.import_module('_baseline_cpu_pkg.mdp.common.contact_sweep_clutter_fusion')
+    threshold = env._revision_initial_shelf_pos[:, 2] + constants.SHELF_SURFACE_HEIGHT + cfg.params['eef_height_limit']
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = threshold + pos.new_tensor([-1e-6, 0., 1e-6, -.01, -.01, -.01])
+    force[3] = 0.
+    env.sensor_data_fresh[4] = False
+    force[5] = float('nan')
+    result = term(env, **cfg.params)
+    assert result[0] > 0 and not result[1:].any()
+    env.common_step_counter += 1
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = threshold - .01
+    force[:] = .02
+    env.sensor_data_fresh[:] = True
+    assert not term(env, **cfg.params).any()  # No credit for movement above the gate.
+
+
 @pytest.mark.parametrize('role,suffix,version', [
     ('commands','CommandsCfg','Test'), ('observations','ObservationsCfg','Test'),
     ('events','EventsCfg','_2_2FastTest'), ('curricula','CurriculumCfg','_2_4'),
@@ -120,7 +183,7 @@ def test_scene_actions_observations_commands_are_identical_definitions():
         def definitions(tree):
             return [ast.dump(n) for n in tree.body if isinstance(n,(ast.ClassDef,ast.FunctionDef))
                     and getattr(n,'name','') != 'GroupedResetObjectSpawnerCfg'
-                    and not getattr(n,'name','').startswith('SweepSimpleFinger')]
+                    and not getattr(n,'name','').startswith(('SweepSimpleFinger', 'SweepSimpleProfV2'))]
         assert definitions(old) == definitions(new), folder
 
 
@@ -144,15 +207,25 @@ def test_ppo_complete_config_and_network_checkpoint_contract(omni_config):
         assert actual['experiment_name'].startswith('inspire_sweep_simple_')
         actual['experiment_name'] = expected['experiment_name']
         assert_ordered_equal(actual, expected)
+    parent = new.SweepSimpleProfV1PPORunnerCfg().to_dict()
+    expected = copy.deepcopy(parent)
+    expected['experiment_name'] = 'inspire_sweep_simple_prof_v2'
+    expected['clip_actions'] = 1.5707963267948966
+    for model in ('actor', 'critic'):
+        expected[model]['class_name'] = new.SweepSimpleFingerPPORunnerCfg().to_dict()[model]['class_name']
+    assert new.SweepSimpleProfV2PPORunnerCfg.__bases__ == (new.SweepSimpleProfV1PPORunnerCfg,)
+    assert_ordered_equal(new.SweepSimpleProfV2PPORunnerCfg().to_dict(), expected)
+    assert_ordered_equal(new.SweepSimpleProfV1PPORunnerCfg().to_dict(), parent)
 
 
 def test_registry_and_no_historical_cfg_or_runtime_ancestry():
     entries = {}
     gym = NS(registry=entries, register=lambda **kw: entries.update({kw['id']:kw}))
     _execute_definitions(MODULE_ROOT/'__init__.py', {'gym':gym})
-    for suffix, name in [('v0','SweepSimple'),('Prof-v0','SweepSimpleProf'),('v1','SweepSimpleV1'),('Prof-v1','SweepSimpleProfV1'), ('Hard-v0','SweepSimpleHard'), ('Prof-Hard-v0','SweepSimpleProfHard')]:
+    for suffix, name in [('v0','SweepSimple'),('Prof-v0','SweepSimpleProf'),('v1','SweepSimpleV1'),('Prof-v1','SweepSimpleProfV1'), ('Prof-v2','SweepSimpleProfV2'), ('Hard-v0','SweepSimpleHard'), ('Prof-Hard-v0','SweepSimpleProfHard')]:
         entry = entries['Inspire-Sweep-Simple-'+suffix]
-        assert entry['entry_point'] == 'inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleEnv'
+        runtime = 'SweepSimpleFingerEnv' if suffix == 'Prof-v2' else 'SweepSimpleEnv'
+        assert entry['entry_point'] == f'inspire_sweep_baseline.runtime.sweep_simple:{runtime}'
         assert entry['kwargs'] == dict(
             env_cfg_entry_point=f'inspire_sweep_baseline.envs.sweep_simple_envs:{name}EnvCfg',
             rsl_rl_cfg_entry_point=f'inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:{name}PPORunnerCfg')

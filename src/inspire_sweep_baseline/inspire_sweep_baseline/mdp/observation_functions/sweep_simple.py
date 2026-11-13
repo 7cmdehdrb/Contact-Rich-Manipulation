@@ -6,6 +6,11 @@ def hand_drive_positions(env, asset_cfg):
     return env.scene[asset_cfg.name].data.joint_pos[:, asset_cfg.joint_ids]
 
 
+def raw_previous_action(env):
+    """Return the manager command unchanged; the Runner wrapper owns clipping."""
+    return env.action_manager.action
+
+
 def bounded_previous_action(env):
     from ...assets.hand_kinematics import clip_finger_actions
     return clip_finger_actions(env.action_manager.action, env._finger_action_lower, env._finger_action_upper)

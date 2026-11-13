@@ -1,5 +1,6 @@
 """Shared initial-only 58D policy and 64D obstacles for Actor and Critic."""
 from ..observation_functions.sweep_simple import bounded_previous_action
+from ..observation_functions.sweep_simple import raw_previous_action
 from ..observation_functions.sweep_simple import wrench_previous_action
 from isaaclab.managers import ObservationGroupCfg as ObsGroup, ObservationTermCfg as ObsTerm, SceneEntityCfg
 from isaaclab.utils import configclass
@@ -54,6 +55,24 @@ class SweepSimpleFingerObservationsCfg(SweepSimpleObservationsCfg):
         hand_configuration = ObsTerm(func=hand_drive_positions, params={
             'asset_cfg': SceneEntityCfg('robot', joint_names=list(HAND_DRIVE_JOINT_NAMES), preserve_order=True),
         })
+
+    policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class SweepSimpleProfV2ObservationsCfg(SweepSimpleFingerObservationsCfg):
+    @configclass
+    class PolicyCfg(SweepSimpleFingerObservationsCfg.PolicyCfg):
+        actions = ObsTerm(func=raw_previous_action)
+
+    policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class SweepSimpleFingerV0TestObservationsCfg(SweepSimpleFingerObservationsCfg):
+    @configclass
+    class PolicyCfg(SweepSimpleFingerObservationsCfg.PolicyCfg):
+        actions = ObsTerm(func=raw_previous_action)
 
     policy: PolicyCfg = PolicyCfg()
 

@@ -1428,14 +1428,16 @@ for _suffix, _cfg in (
     ("Prof-v0", "SweepSimpleProf"),
     ("v1", "SweepSimpleV1"),
     ("Prof-v1", "SweepSimpleProfV1"),
+    ("Prof-v2", "SweepSimpleProfV2"),
     ("Hard-v0", "SweepSimpleHard"),
     ("Prof-Hard-v0", "SweepSimpleProfHard"),
 ):
     _task_id = f"Inspire-Sweep-Simple-{_suffix}"
+    _runtime = "SweepSimpleFingerEnv" if _suffix == "Prof-v2" else "SweepSimpleEnv"
     if _task_id not in gym.registry:
         gym.register(
             id=_task_id,
-            entry_point="inspire_sweep_baseline.runtime.sweep_simple:SweepSimpleEnv",
+            entry_point=f"inspire_sweep_baseline.runtime.sweep_simple:{_runtime}",
             disable_env_checker=True,
             kwargs={
                 "env_cfg_entry_point": f"inspire_sweep_baseline.envs.sweep_simple_envs:{_cfg}EnvCfg",

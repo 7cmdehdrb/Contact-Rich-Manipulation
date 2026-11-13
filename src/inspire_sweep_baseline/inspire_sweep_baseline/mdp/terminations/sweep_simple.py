@@ -19,6 +19,12 @@ class SweepSimpleTerminationsCfg:
 
 
 @configclass
+class SweepSimpleProfV2TerminationsCfg(SweepSimpleTerminationsCfg):
+    def __post_init__(self):
+        self.arm_joint_velocity.params['threshold'] = 1.0
+
+
+@configclass
 class SweepSimpleFingerV0TestTerminationsCfg(SweepSimpleTerminationsCfg):
     def __post_init__(self):
         self.arm_joint_velocity.params['threshold'] = 1.0
