@@ -86,6 +86,11 @@ class SweepSimpleFingerV0TestPPORunnerCfg(SweepSimpleFingerPPORunnerCfg):
 
 
 @configclass
+class SweepSimpleFingerForceDirectionPPORunnerCfg(SweepSimpleFingerV0TestPPORunnerCfg):
+    experiment_name = 'inspire_sweep_simple_finger_force_direction_v0'
+
+
+@configclass
 class SweepSimpleFingerGaussianDistributionCfg:
     class_name: str = 'inspire_sweep_baseline.agent.sweep_simple_distributions:FingerGaussian'
     # None selects raw-unit stds: translation .2, rotation .5, hand range / 6.

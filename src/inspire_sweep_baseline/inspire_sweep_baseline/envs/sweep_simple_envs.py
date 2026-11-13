@@ -6,7 +6,7 @@ from ..mdp.observations.sweep_simple import SweepSimpleFingerV1ObservationsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleFingerV0TestObservationsCfg
 from ..mdp.observations.sweep_simple import SweepSimpleProfV2ObservationsCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleFingerV1RewardsCfg, SweepSimpleFingerV2RewardsCfg
-from ..mdp.rewards.sweep_simple import SweepSimpleProfV2RewardsCfg
+from ..mdp.rewards.sweep_simple import SweepSimpleProfV2RewardsCfg, SweepSimpleFingerForceDirectionRewardsCfg
 from ..mdp.terminations.sweep_simple import SweepSimpleProfV2TerminationsCfg
 from ..mdp.curricula.sweep_simple import SweepSimpleProfV2CurriculumCfg
 from ..mdp.rewards.sweep_simple import SweepSimpleSemiProfRewardsCfg
@@ -157,6 +157,11 @@ class SweepSimpleFingerV0TestEnvCfg(SweepSimpleFingerEnvCfg):
     observations: SweepSimpleFingerV0TestObservationsCfg = SweepSimpleFingerV0TestObservationsCfg()
     terminations: SweepSimpleFingerV0TestTerminationsCfg = SweepSimpleFingerV0TestTerminationsCfg()
     curriculum: SweepSimpleFingerV0TestCurriculumCfg = SweepSimpleFingerV0TestCurriculumCfg()
+
+
+@configclass
+class SweepSimpleFingerForceDirectionEnvCfg(SweepSimpleFingerV0TestEnvCfg):
+    rewards: SweepSimpleFingerForceDirectionRewardsCfg = SweepSimpleFingerForceDirectionRewardsCfg()
 
 
 @configclass

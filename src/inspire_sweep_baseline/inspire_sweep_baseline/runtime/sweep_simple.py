@@ -305,3 +305,36 @@ class SweepSimpleSemiProfEnv(SweepSimpleFingerV1Env):
     def _reset_idx(self, env_ids):
         super()._reset_idx(env_ids)
         self._semi_prof_forces.reset(env_ids)
+
+
+class SweepSimpleFingerForceDirectionEnv(SweepSimpleFingerEnv):
+    """Test lifecycle plus force sampling; never enter Finger-v1 raw clipping."""
+
+    def load_managers(self):
+        super().load_managers()
+        from ..mdp.common.sweep_simple_force import SemiProfForceSamples
+        self._semi_prof_forces = SemiProfForceSamples(self)
+        self._semi_collecting = False
+
+    def step(self, action):
+        self._semi_prof_forces.begin(self)
+        original_update = self.scene.update
+
+        def update_and_sample(*args, **kwargs):
+            original_update(*args, **kwargs)
+            if self._semi_collecting:
+                self._semi_prof_forces.capture(self)
+
+        # Instance-local hook, scoped to this call; all parent reset/recorder/
+        # reward/observation ordering stays intact, including exceptions.
+        self.scene.update = update_and_sample
+        self._semi_collecting = True
+        try:
+            return super().step(action)
+        finally:
+            self._semi_collecting = False
+            self.scene.update = original_update
+
+    def _reset_idx(self, env_ids):
+        super()._reset_idx(env_ids)
+        self._semi_prof_forces.reset(env_ids)

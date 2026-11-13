@@ -7,19 +7,21 @@ from ..termination_functions.goal_terminations import _object_position
 
 
 class GoalContactMaintenance(TargetContactDecayMaintenance):
-    """XY distance < 3 cm sets count/reward to 20, regardless of contact or height.
+    """XY distance < goal_radius grants full contact credit (default 3 cm).
 
     Outside the goal, retain the parent's real contact history and decay rule.
     Goal occupancy does not fabricate tactile samples in the 2-of-3 history.
     """
 
-    def __call__(self, env, threshold_n=.01, eef_height_limit=.15):
+    def __call__(self, env, threshold_n=.01, eef_height_limit=.15, goal_radius=.03):
+        if not math.isfinite(goal_radius) or goal_radius <= 0:
+            raise ValueError("Contact reward goal_radius must be positive and finite")
         fresh = self._cached_step != env.common_step_counter
         reward = super().__call__(env, threshold_n, eef_height_limit)
         if fresh:
             goal = env.command_manager.get_command('target_goal_pos')[:, :2]
             distance = (_object_position(env)[:, :2] - goal).norm(dim=-1)
-            inside = torch.isfinite(distance) & (distance < .03)
+            inside = torch.isfinite(distance) & (distance < goal_radius)
             self._count[inside] = 20
             self._misses[inside] = 0
             self._cached_reward[inside] = 20.

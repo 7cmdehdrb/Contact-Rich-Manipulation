@@ -1,4 +1,5 @@
 """Semi-Prof contracts and physical-sample math; CPU, no simulated physics."""
+import ast
 import copy
 import importlib
 import math
@@ -47,10 +48,12 @@ def test_complete_parent_contract_and_isolation(family):
     assert_ordered_equal(parent().to_dict(), before)
 
 
+@pytest.mark.parametrize('config_name', ['SweepSimpleSemiProfRewardsCfg', 'SweepSimpleFingerForceDirectionRewardsCfg'])
 @pytest.mark.parametrize('direction_rate', [0., 1.])
-def test_reward_manager_wrench_activation_without_positive_budget(configs, direction_rate):
+def test_reward_manager_wrench_activation(configs, direction_rate, config_name):
     """Run real RewardManager.compute across the previously untested activation."""
-    cfg = configs('rewards', 'sweep_simple').SweepSimpleSemiProfRewardsCfg()
+    cfg = getattr(configs('rewards', 'sweep_simple'), config_name)()
+    bounded = config_name == 'SweepSimpleFingerForceDirectionRewardsCfg'
     env = NS(num_envs=2, device='cpu', step_dt=.02, common_step_counter=0,
              _sim_step_counter=0, sensor_data_fresh=torch.ones(2, dtype=torch.bool))
     wrench = torch.zeros(2, 6)
@@ -87,10 +90,19 @@ def test_reward_manager_wrench_activation_without_positive_budget(configs, direc
             assert torch.isfinite(manager.compute(env.step_dt)).all()
             spent = -manager._episode_sums['wrench_change']
             earned = manager._episode_sums['force_direction']
-        assert term.func._term_name is None  # no budget lookup or order dependency
-        assert term.func._positive_names is None
-    assert (spent > .05 * earned).all()
-    torch.testing.assert_close(spent, torch.full((2,), .02 * (.00375 + 2 * .03 + 2 * .1)))
+        if bounded:
+            assert (spent <= .05 * earned + 1e-7).all()
+        else:
+            assert term.func._term_name is None  # no budget lookup or order dependency
+            assert term.func._positive_names is None
+    if bounded:
+        assert 'force_direction' in term.func._positive_names
+        assert term.params['max_positive_fraction'] == .05
+        if direction_rate:
+            assert (spent > 0).all()
+    else:
+        assert (spent > .05 * earned).all()
+        torch.testing.assert_close(spent, torch.full((2,), .02 * (.00375 + 2 * .03 + 2 * .1)))
 
 
 def test_contact_history_no_banking_height_partial_reset_and_no_repay(configs):
@@ -276,8 +288,9 @@ def test_planar_reference_full_force_penalizes_vertical_but_keeps_near_exception
     assert fn(env).item() < 1e-5  # instantaneous, never latched
 
 
+@pytest.mark.parametrize('runtime_name,parent_name', [('SweepSimpleSemiProfEnv', 'SweepSimpleFingerV1Env'), ('SweepSimpleFingerForceDirectionEnv', 'SweepSimpleFingerEnv')])
 @pytest.mark.parametrize('fail', [False, True])
-def test_runtime_hooks_physics_before_reward_and_restores_on_error(load_mdp, fail):
+def test_runtime_hooks_physics_before_reward_and_restores_on_error(load_mdp, fail, runtime_name, parent_name):
     events = []
     class Parent:
         def step(self, action):
@@ -294,9 +307,8 @@ def test_runtime_hooks_physics_before_reward_and_restores_on_error(load_mdp, fai
         def _reset_idx(self, ids):
             events.append('parent_reset')
             assert self._semi_prof_forces.valid[ids].all()
-    cls = _execute_definitions(MODULE_ROOT/'runtime/sweep_simple.py', dict(
-        SweepSimpleFingerV1Env=Parent, __package__='_baseline_cpu_pkg.runtime'),
-        {'SweepSimpleSemiProfEnv'}).SweepSimpleSemiProfEnv
+    cls = _execute_definitions(MODULE_ROOT/'runtime/sweep_simple.py', {parent_name: Parent, '__package__': '_baseline_cpu_pkg.runtime'},
+        {runtime_name}).__dict__[runtime_name]
     base, normal, _, _ = force_env(load_mdp)
     normal[:, 0, 0] = 2
     env = cls.__new__(cls); env.__dict__.update(base.__dict__)
@@ -335,3 +347,99 @@ def test_registry_and_runner_only_experiment_diff(omni_config):
     assert entry['entry_point'].endswith(':SweepSimpleSemiProfEnv')
     assert entry['kwargs']['env_cfg_entry_point'].endswith(':SweepSimpleSemiProfEnvCfg')
     assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':SweepSimpleSemiProfPPORunnerCfg')
+    parent = runners.SweepSimpleFingerV0TestPPORunnerCfg().to_dict()
+    expected = copy.deepcopy(parent)
+    expected['experiment_name'] = 'inspire_sweep_simple_finger_force_direction_v0'
+    cls = runners.SweepSimpleFingerForceDirectionPPORunnerCfg
+    assert cls.__bases__ == (runners.SweepSimpleFingerV0TestPPORunnerCfg,)
+    assert_ordered_equal(cls().to_dict(), expected)
+    assert_ordered_equal(runners.SweepSimpleFingerV0TestPPORunnerCfg().to_dict(), parent)
+    entry = entries['Inspire-Sweep-Simple-Finger-ForceDirection-v0']
+    assert entry['entry_point'].endswith(':SweepSimpleFingerForceDirectionEnv')
+    assert entry['kwargs']['env_cfg_entry_point'].endswith(':SweepSimpleFingerForceDirectionEnvCfg')
+    assert entry['kwargs']['rsl_rl_cfg_entry_point'].endswith(':SweepSimpleFingerForceDirectionPPORunnerCfg')
+
+
+
+def test_test_force_direction_only_two_reward_changes_and_parent_isolation(family):
+    parent_cls = family.SweepSimpleFingerV0TestEnvCfg
+    child_cls = family.SweepSimpleFingerForceDirectionEnvCfg
+    assert child_cls.__bases__ == (parent_cls,)
+    parent = parent_cls()
+    before = parent.to_dict()
+    child = child_cls()
+    expected = copy.deepcopy(before)
+    expected['rewards']['hand_contact']['params']['goal_radius'] = .01
+    rewards = {}
+    for name, value in expected['rewards'].items():
+        if name == 'wrench_change':
+            rewards['force_direction'] = child.to_dict()['rewards']['force_direction']
+        rewards[name] = value
+    expected['rewards'] = rewards
+    assert_ordered_equal(child.to_dict(), expected)
+    assert child.goal_success_radius == child.commands.target_goal_pos.goal_radius == .03
+    assert child.rewards.force_direction.weight == .33
+    assert child.rewards.force_direction.params == dict(min_force=1., near_radius=.01)
+    assert child.rewards.force_direction.func is family.SweepSimpleSemiProfEnvCfg().rewards.force_direction.func
+    names = list(vars(child.rewards))
+    assert names.index('force_direction') < names.index('wrench_change')
+    child.rewards.hand_contact.params['goal_radius'] = 99.
+    child.rewards.force_direction.params['near_radius'] = 99.
+    assert_ordered_equal(parent.to_dict(), before)
+    assert_ordered_equal(parent_cls().to_dict(), before)
+    assert child_cls().rewards.force_direction.params['near_radius'] == .01
+
+
+def test_test_force_direction_reward_radii_independent_of_success_and_metrics(configs, family, monkeypatch):
+    from test_wrench_refactor_relative_ik_test import contact_count_fixture
+    from test_sweep_simple import runtime_classes
+    cfg = family.SweepSimpleFingerForceDirectionEnvCfg()
+    n = 7
+    env, force, _ = contact_count_fixture(configs, n=n)
+    env.cfg = cfg
+    pos = env.scene['object_collection'].data.object_pos_w
+    distances = pos.new_tensor([.009999, .01, .010001, .02, .029999, .03, .030001])
+    pos[:, 0, :2] = 0.
+    pos[:, 0, 0] = distances
+    env.command_manager = NS(get_command=lambda _: pos.new_zeros(n, 3))
+    force.zero_()
+    env.sensor_data_fresh[:] = False
+    env.scene['ee_frame'].data.target_pos_w[:, 0, 2] = 2.
+    term_cfg = cfg.rewards.hand_contact
+    term = term_cfg.func(term_cfg, env)
+    assert term(env, **term_cfg.params).tolist() == [20., 0., 0., 0., 0., 0., 0.]
+    assert not term._history.any()
+    torch.testing.assert_close(term(env, **term_cfg.params), term._cached_reward)
+    env.common_step_counter += 1
+    pos[0, 0, 0] = .02
+    assert not term(env, **term_cfg.params).any()  # no near-goal latch
+    assert term._count[0] == 18
+    pos[0, 0, 0] = distances[0]
+    env.target_id = torch.zeros(n, 1, dtype=torch.long)
+    env.episode_length_buf = torch.full((n,), 500)
+    env.max_episode_length = 500
+    env.termination_manager = NS(get_term=lambda _: torch.zeros(n, dtype=torch.bool))
+    path = PROJECT_ROOT / 'IsaacLab/source/isaaclab/isaaclab/envs/mdp/terminations.py'
+    node = next(n for n in ast.parse(path.read_text()).body if isinstance(n, ast.FunctionDef) and n.name == 'time_out')
+    ns = {'ManagerBasedRLEnv': object, 'torch': torch}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), ns)
+    monkeypatch.setitem(cfg.terminations.success.func.__globals__, 'time_out', ns['time_out'])
+    assert cfg.terminations.success.func(env).tolist() == [True]*5 + [False, False]
+    env.scene['object_collection'].data.object_lin_vel_w = pos.new_zeros(n, 1, 3)
+    env.scene['robot'] = NS(data=NS(body_link_pos_w=pos.new_zeros(n, 1, 3),
+        body_link_lin_vel_w=pos.new_zeros(n, 1, 3), body_link_ang_vel_w=pos.new_zeros(n, 1, 3)))
+    env._metric_eef_body = 0
+    env._metric_sums = pos.new_zeros(n, 4)
+    env._metric_counts = pos.new_zeros(n, 4)
+    env._metric_peaks = pos.new_zeros(n, 2)
+    env._metric_min_distance = pos.new_full((n,), float('inf'))
+    runtime_classes()[1].record_goal_accuracy_metrics(env)
+    assert env._metric_sums[:, 3].tolist() == [1.]*6 + [0.]
+    # Reuse the actual force reward with live target vectors at the same distances.
+    direction, target, resultant, valid = direction_env(configs, n)
+    target[:, 0, 0] = distances
+    resultant[:, 0] = 1.  # away from goal, except angle bypass below1cm
+    force_term = cfg.rewards.force_direction
+    assert force_term.func(direction, **force_term.params).tolist() == [1., 0., 0., 0., 0., 0., 0.]
+    resultant[0] = 0.
+    assert not force_term.func(direction, **force_term.params).any()  # real force still required

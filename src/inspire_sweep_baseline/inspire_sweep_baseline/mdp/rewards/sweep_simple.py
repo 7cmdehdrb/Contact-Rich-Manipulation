@@ -77,6 +77,26 @@ class SweepSimpleFingerRewardsCfg(SweepSimpleV1RewardsCfg):
 
 
 @configclass
+class SweepSimpleFingerForceDirectionRewardsCfg(SweepSimpleFingerRewardsCfg):
+    force_direction = RewTerm(func=semi_prof_force_direction, weight=.33, params={
+        'min_force': 1., 'near_radius': .01})
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.hand_contact.params['goal_radius'] = .01
+        # The inherited Wrench budget requires all positive terms before it.
+        # Insert only the new term; preserve every parent's relative term order.
+        terms = list(vars(self).items())
+        direction = self.force_direction
+        self.__dict__.clear()
+        for name, term in terms:
+            if name == 'wrench_change':
+                self.force_direction = direction
+            if name != 'force_direction':
+                setattr(self, name, term)
+
+
+@configclass
 class SweepSimpleFingerV1RewardsCfg(SweepSimpleFingerRewardsCfg):
     def __post_init__(self):
         super().__post_init__()
