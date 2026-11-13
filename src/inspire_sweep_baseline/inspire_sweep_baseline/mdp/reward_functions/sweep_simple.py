@@ -168,3 +168,26 @@ def semi_prof_force_direction(env, min_force=1., near_radius=.01):
     score = torch.where(cosine > 0., score, 0.)
     score = torch.where(distance < near_radius, 1., score)
     return torch.where(valid & finite & (horizontal_magnitude >= min_force), score, 0.)
+
+
+def cosine_force_direction(env, min_force=1., near_radius=.01):
+    """Signed 3D force cosine against the live planar goal direction.
+
+    Keep the existing contact/minimum horizontal force checks and <1cm angle
+    exception. Outside that exception, opposing force produces negative reward.
+    """
+    from isaaclab.utils.math import quat_apply_inverse
+
+    force_w, valid = env._semi_prof_forces.mean(env)
+    quat = env._revision_initial_shelf_quat
+    force = quat_apply_inverse(quat, force_w)
+    goal = env.command_manager.get_command('target_goal_pos')[:, :3]
+    direction = quat_apply_inverse(quat, goal - _target_state(env)[:, :3])[:, :2]
+    distance = direction.norm(dim=-1)
+    horizontal_magnitude = force[:, :2].norm(dim=-1)
+    magnitude = force.norm(dim=-1)
+    finite = torch.isfinite(direction).all(-1) & torch.isfinite(force).all(-1)
+    cosine = (force[:, :2] * direction).sum(-1) / (magnitude * distance).clamp_min(1e-12)
+    cosine = torch.nan_to_num(cosine).clamp(-1., 1.)
+    score = torch.where(distance < near_radius, 1., cosine)
+    return torch.where(valid & finite & (horizontal_magnitude >= min_force), score, 0.)

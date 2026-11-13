@@ -67,6 +67,9 @@ def test_complete_env_config_matches_and_is_isolated(family, new_name, old_versi
     before = old_cls().to_dict()
     new = new_cls()
     expected = copy.deepcopy(before)
+    for term in expected['rewards'].values():
+        if isinstance(term, dict) and 'eef_height_limit' in term.get('params', {}):
+            term['params']['eef_height_limit'] = .12
     if expected['rewards']['hand_contact'] is not None:
         expected['rewards']['hand_contact']['func'] = new.to_dict()['rewards']['hand_contact']['func']
         assert new.rewards.hand_contact.func.__name__ == 'GoalContactMaintenance'
@@ -167,6 +170,9 @@ def test_manager_order_values_and_callable_identity(configs, monkeypatch, role, 
     new = getattr(configs(role,'sweep_simple'),'SweepSimple'+suffix)()
     expected = old.to_dict()
     if role == 'rewards':
+        for term in expected.values():
+            if isinstance(term, dict) and 'eef_height_limit' in term.get('params', {}):
+                term['params']['eef_height_limit'] = .12
         expected['hand_contact']['func'] = new.to_dict()['hand_contact']['func']
         assert new.hand_contact.func.__name__ == 'GoalContactMaintenance'
     assert_ordered_equal(expected,new.to_dict())
@@ -406,3 +412,39 @@ def test_goal_contact_scope_including_prof_and_historical_parents(family):
         assert getattr(family,name+'EnvCfg')().rewards.hand_contact is None
     for version in ('_2_4','_2_6'):
         assert getattr(family,PREFIX+version+'EnvCfg')().rewards.hand_contact.func.__name__ == 'TargetContactDecayMaintenance'
+
+
+def test_all_registered_simple_environments_use_twelve_cm_reward_gate(family):
+    names = ('SweepSimple', 'SweepSimpleV1', 'SweepSimpleHard', 'SweepSimpleProf',
+             'SweepSimpleProfV1', 'SweepSimpleProfV2', 'SweepSimpleProfHard',
+             'SweepSimpleFinger', 'SweepSimpleFingerWrench', 'SweepSimpleFingerV0Test',
+             'SweepSimpleFingerForceDirection', 'SweepSimpleFingerV1', 'SweepSimpleFingerV2',
+             'SweepSimpleSemiProf', 'SweepSimpleFingerRawV1', 'SweepSimpleFingerRawV2',
+             'SweepSimpleSemiProfRaw')
+    for name in names:
+        cfg = getattr(family, name + 'EnvCfg')()
+        heights = [term.params['eef_height_limit'] for term in vars(cfg.rewards).values()
+                   if hasattr(term, 'params') and 'eef_height_limit' in term.params]
+        assert heights and all(value == .12 for value in heights), name
+        assert cfg.goal_success_radius == .03, name
+
+
+def test_contact_twelve_cm_boundary_preserves_goal_exception(configs):
+    from test_wrench_refactor_relative_ik_test import contact_count_fixture
+    env, force, _ = contact_count_fixture(configs, n=3)
+    cfg = configs('rewards', 'sweep_simple').SweepSimpleRewardsCfg().hand_contact
+    pos = env.scene['object_collection'].data.object_pos_w
+    pos[:,0,0] = .05
+    env.command_manager = NS(get_command=lambda _: pos.new_zeros(3,3))
+    eef = env.scene['ee_frame'].data.target_pos_w
+    surface = env._revision_initial_shelf_pos[:,2] + 1.05
+    eef[:,0,2] = surface + .12 + eef.new_tensor([-1e-6,0.,1e-6])
+    force[:] = .02
+    term = cfg.func(cfg, env)
+    term(env, **cfg.params)
+    env.common_step_counter += 1
+    result = term(env, **cfg.params)
+    assert result[0] > 0 and not result[1:].any()
+    pos[:,0,0] = .02  # Parent's3cm goal exception still overrides the height gate.
+    env.common_step_counter += 1
+    assert (term(env, **cfg.params) == 20).all()

@@ -107,9 +107,10 @@ def test_reward_manager_wrench_activation(configs, direction_rate, config_name):
 
 def test_contact_history_no_banking_height_partial_reset_and_no_repay(configs):
     env, pos, eef, _, _ = inverse_reach_fixture(configs, 2)
+    env._revision_initial_shelf_pos = env._revision_initial_shelf_pos.to(eef.dtype)
     force = env.scene['hand_contact_target'].data.force_matrix_w
     pos[:, 0, 0] = .09
-    eef[:, 0, 2] = 1.19999
+    eef[:, 0, 2] = 1.16999
     cfg = configs('rewards', 'sweep_simple').SweepSimpleSemiProfRewardsCfg().goal_distance
     term = cfg.func(cfg, env)
     force.zero_()
@@ -128,7 +129,7 @@ def test_contact_history_no_banking_height_partial_reset_and_no_repay(configs):
     assert term._contact_history.sum(-1).tolist() == [3, 3]
     force.zero_()
     pos[:, 0, 0] = .06
-    eef[1, 0, 2] = 1.2  # exactly ceiling: rejected, including while history accepted
+    eef[1, 0, 2] = env._revision_initial_shelf_pos[1, 2] + 1.05 + cfg.params['eef_height_limit']  # exact computed ceiling
     env.common_step_counter += 1
     value = term(env, **cfg.params)
     assert value[0] > 0 and value[1] == 0  # current miss may pass 2-of-3
@@ -136,7 +137,7 @@ def test_contact_history_no_banking_height_partial_reset_and_no_repay(configs):
     pos[:, 0, 0] = .05
     assert not term(env, **cfg.params).any()  # second miss rejected
     force[:, 0, 0, 0] = .02
-    eef[:, 0, 2] = 1.19
+    eef[:, 0, 2] = 1.16
     for _ in range(2):
         env.common_step_counter += 1
         assert not term(env, **cfg.params).any()  # lost height/contact increments never banked
@@ -380,7 +381,8 @@ def test_test_force_direction_only_two_reward_changes_and_parent_isolation(famil
     assert child.goal_success_radius == child.commands.target_goal_pos.goal_radius == .03
     assert child.rewards.force_direction.weight == .33
     assert child.rewards.force_direction.params == dict(min_force=1., near_radius=.01)
-    assert child.rewards.force_direction.func is family.SweepSimpleSemiProfEnvCfg().rewards.force_direction.func
+    assert child.rewards.force_direction.func.__name__ == 'cosine_force_direction'
+    assert family.SweepSimpleSemiProfEnvCfg().rewards.force_direction.func.__name__ == 'semi_prof_force_direction'
     names = list(vars(child.rewards))
     assert names.index('force_direction') < names.index('wrench_change')
     child.rewards.hand_contact.params['goal_radius'] = 99.
@@ -440,6 +442,22 @@ def test_test_force_direction_reward_radii_independent_of_success_and_metrics(co
     target[:, 0, 0] = distances
     resultant[:, 0] = 1.  # away from goal, except angle bypass below1cm
     force_term = cfg.rewards.force_direction
-    assert force_term.func(direction, **force_term.params).tolist() == [1., 0., 0., 0., 0., 0., 0.]
+    assert force_term.func(direction, **force_term.params).tolist() == [1., -1., -1., -1., -1., -1., -1.]
     resultant[0] = 0.
-    assert not force_term.func(direction, **force_term.params).any()  # real force still required
+    assert force_term.func(direction, **force_term.params)[0] == 0  # real force still required
+
+
+def test_signed_force_direction_angles_vertical_near_and_invalid(configs):
+    env, pos, forces, valid = direction_env(configs, 7)
+    term = configs('rewards', 'sweep_simple').SweepSimpleFingerForceDirectionRewardsCfg().force_direction
+    forces[:] = torch.tensor([[2.,0.,0.], [2.,2.,0.], [0.,2.,0.], [-2.,2.,0.], [-2.,0.,0.], [0.,0.,2.], [2.,0.,2.]])
+    expected = torch.tensor([1., 2**-.5, 0., -2**-.5, -1., 0., 2**-.5])
+    torch.testing.assert_close(term.func(env, **term.params), expected)
+    # Target overshoot reverses the live direction; no initial-direction latch.
+    pos[:,0,0] = .05
+    torch.testing.assert_close(term.func(env, **term.params), -expected)
+    # Below1cm ignores angle only; exactly1cm/above retain opposing penalty.
+    pos[:,0,0] = pos.new_tensor([.009999, .01, .010001, .005, .005, .005, .005])
+    forces[:] = torch.tensor([2.,0.,0.])
+    forces[3] = 0.; forces[4,0] = .99; valid[5] = False; forces[6,0] = float('nan')
+    assert term.func(env, **term.params).tolist() == [1., -1., -1., 0., 0., 0., 0.]
