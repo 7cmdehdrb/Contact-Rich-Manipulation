@@ -33,3 +33,13 @@ class StabilizeSweepPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class SweepOnlyPPORunnerCfg(StabilizeSweepPPORunnerCfg):
     experiment_name = 'inspire_sweep_only_v0'
+
+
+@configclass
+class StabilizeSweepTestPPORunnerCfg(StabilizeSweepPPORunnerCfg):
+    experiment_name = 'inspire_stabilize_sweep_v0_test'
+
+
+@configclass
+class SweepOnlyTestPPORunnerCfg(SweepOnlyPPORunnerCfg):
+    experiment_name = 'inspire_sweep_only_v0_test'

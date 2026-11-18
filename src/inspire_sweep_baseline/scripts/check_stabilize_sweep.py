@@ -14,7 +14,7 @@ from isaaclab.app import AppLauncher
 
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--num-envs',type=int,default=4)
-parser.add_argument('--task',choices=['Inspire-Stabilize-Sweep-v0','Inspire-Sweep-Only-v0'],default='Inspire-Stabilize-Sweep-v0')
+parser.add_argument('--task',choices=['Inspire-Stabilize-Sweep-v0','Inspire-Sweep-Only-v0','Inspire-Stabilize-Sweep-v0-Test','Inspire-Sweep-Only-v0-Test'],default='Inspire-Stabilize-Sweep-v0')
 parser.add_argument('--audit-resets',type=int,default=8)
 parser.add_argument('--inject-reset-failures',action='store_true')
 parser.add_argument('--output',type=Path,default=Path('/tmp/stabilize_sweep_validation.json'))
@@ -31,8 +31,28 @@ def validate():
     from isaaclab.utils.math import quat_apply,quat_apply_inverse
     from inspire_sweep_baseline.mdp.common.stabilize_sweep_contact import centroid
     cfg=load_cfg_from_registry(args.task,'env_cfg_entry_point')
-    sweep_only=args.task=='Inspire-Sweep-Only-v0'
-    if sweep_only:
+    sweep_only=args.task.startswith('Inspire-Sweep-Only-v0')
+    finger_test=args.task.endswith('-Test')
+    if finger_test:
+        if args.inject_reset_failures:raise ValueError('Failure injection belongs to the original reset, not Finger reset')
+        from inspire_sweep_baseline.mdp.events.sweep_simple import SweepSimpleEventsCfg
+        from inspire_sweep_baseline.mdp.rewards.sweep_simple import SweepSimpleFingerRewardsCfg
+        from inspire_sweep_baseline.mdp.event_functions.stabilize_sweep import reset_scene_finger_test
+        parent_cfg=load_cfg_from_registry(args.task.removesuffix('-Test'),'env_cfg_entry_point')
+        parent_dict=parent_cfg.to_dict();child_dict=cfg.to_dict()
+        assert cfg.events.object_spawn.func is reset_scene_finger_test
+        assert cfg.events.object_spawn.params==SweepSimpleEventsCfg().object_spawn.params
+        child_dict['events']['object_spawn']=parent_dict['events']['object_spawn']
+        assert parent_cfg.rewards.reaching is None
+        assert cfg.rewards.reaching.to_dict()==SweepSimpleFingerRewardsCfg().reaching.to_dict()
+        child_dict['rewards']['reaching']=parent_dict['rewards']['reaching']
+        assert child_dict==parent_dict, 'Test variant changed more than reset and Reach'
+        base_runner=load_cfg_from_registry(args.task.removesuffix('-Test'),'rsl_rl_cfg_entry_point').to_dict()
+        runner=load_cfg_from_registry(args.task,'rsl_rl_cfg_entry_point').to_dict()
+        assert runner['experiment_name']==base_runner['experiment_name']+'_test'
+        runner['experiment_name']=base_runner['experiment_name']
+        assert runner==base_runner
+    if sweep_only and not finger_test:
         from inspire_sweep_baseline.envs.stabilize_sweep_envs import StabilizeSweepEnvCfg,SweepOnlyEnvCfg
         from inspire_sweep_baseline.runtime.stabilize_sweep import StabilizeSweepEnv,SweepOnlyEnv
         assert issubclass(SweepOnlyEnvCfg,StabilizeSweepEnvCfg) and issubclass(SweepOnlyEnv,StabilizeSweepEnv)
@@ -52,6 +72,9 @@ def validate():
     cfg.scene.ee_frame.debug_vis=False;cfg.commands.target_goal_pos.debug_vis=False
     env=gym.make(args.task,cfg=cfg).unwrapped
     result={'task':args.task,'seed':42,'num_envs':n,'reset_audit':[]}
+    if finger_test:
+        assert 'reaching' in env.reward_manager.active_terms
+        result['test_contract_reset_and_reach_only']=True
     if sweep_only:
         assert not {'stage','initial_movement','initial_rotation'} & set(env.reward_manager.active_terms)
         assert 'squeeze' in env.reward_manager.active_terms
@@ -100,6 +123,17 @@ def validate():
         shelf=env.scene['shelf'].data
         target=env.scene['object_collection'].data.object_link_pos_w[:,0]
         goal=env.command_manager.get_command('target_goal_pos')[:,:3]
+        if finger_test:
+            assert not hasattr(env,'_stabilize_robot_geometry')
+            assert (env._goal_reset_errors[:,0]<=.0005).all() and (env._goal_reset_errors[:,1]<=.003).all()
+            desired=quat_apply_inverse(shelf.root_quat_w,env._goal_reset_desired_pos_w-shelf.root_pos_w)
+            local_target=quat_apply_inverse(shelf.root_quat_w,target-shelf.root_pos_w)
+            assert ((desired[:,0]>=.28-1e-5)&(desired[:,0]<=.30+1e-5)).all()
+            lateral=(desired[:,1]-local_target[:,1]).abs()
+            assert ((lateral>=.10-1e-5)&(lateral<=.18+1e-5)).all()
+            assert ((env._surface_target_w-centroid(env)).norm(dim=-1)>.01).all()
+            result['finger_initial_pose_and_surface_observation']=True
+            return
         torch.testing.assert_close(quat_apply_inverse(shelf.root_quat_w,target-shelf.root_pos_w)[:,:2],plans[-1][1],atol=2e-5,rtol=0)
         torch.testing.assert_close(quat_apply_inverse(shelf.root_quat_w,goal-shelf.root_pos_w)[:,:2],plans[-1][2],atol=2e-5,rtol=0)
         assert (env._goal_reset_errors[:,0]<=.0005).all()
@@ -153,7 +187,7 @@ def validate():
             assert not env.episode_length_buf.any() and not env.termination_manager.dones.any()
             assert not env._timeout_outcomes.totals.any()
             result['injected_initial_ik_failure_recovered']=True
-        else:assert len(sampled)==1
+        elif not finger_test:assert len(sampled)==1
         check_commands()
         result['training_wrapper_initial_reset']=True
         # Audit ordinary resets separately from injected failures.
@@ -161,7 +195,7 @@ def validate():
             start=perf_counter();before=len(sampled)
             try:
                 obs,_=env.reset(seed=seed)
-                assert sum(len(v[0]) for v in sampled[before:])==n+int(plans[-1][3].sum())
+                if not finger_test:assert sum(len(v[0]) for v in sampled[before:])==n+int(plans[-1][3].sum())
                 check_commands()
                 torch.cuda.synchronize()
                 result['reset_audit'].append(dict(seed=seed,ok=True,ms=1000*(perf_counter()-start),
@@ -172,7 +206,24 @@ def validate():
                 if 'layouts (4 poses/layout)' not in str(error):raise
                 result['reset_audit'].append(dict(seed=seed,ok=False,error=str(error),ms=1000*(perf_counter()-start)))
         assert all(row['ok'] for row in result['reset_audit']), 'Initial pose failed in reset audit'
-        result['bounded_failed_row_resampling']=True
+        if not finger_test:result['bounded_failed_row_resampling']=True
+        else:
+            # Differential check against the exact Finger reset on identical assets/RNG.
+            from inspire_sweep_baseline.mdp.event_functions.wrench_refactor_relative_ik_test import fast_reset_scene
+            env.reset(seed=123)
+            expected_joints=env.scene['robot'].data.joint_pos.clone()
+            expected_objects=env.scene['object_collection'].data.object_link_state_w.clone()
+            expected_active=env._active_object_mask.clone()
+            expected_goal=env.command_manager.get_command('target_goal_pos')[:,:3].clone()
+            env._revision_layout_rng.manual_seed(123);env._goal_reset_rng.manual_seed(123+1707)
+            fast_reset_scene(env,torch.arange(n,device=env.device),**cfg.events.object_spawn.params)
+            torch.testing.assert_close(env.scene['robot'].data.joint_pos,expected_joints,atol=1e-6,rtol=0)
+            torch.testing.assert_close(env.scene['object_collection'].data.object_link_state_w[expected_active],
+                                       expected_objects[expected_active],atol=1e-5,rtol=0)
+            assert not (expected_active&~env._active_object_mask).any()
+            target_root=env.scene['object_collection'].data.object_link_pos_w[:,0]
+            torch.testing.assert_close(target_root+env.sweep_dir,expected_goal,atol=1e-5,rtol=0)
+            result['same_seed_matches_original_finger_initialization']=True
         # Separate selected-row resets use an explicit reproducible fixture seed.
         for row in range(n):obs,_=env.reset(seed=42,env_ids=torch.tensor([row],device=env.device))
         assert obs['policy'].shape==(n,67) and obs['obstacles'].shape==(n,64)
@@ -185,6 +236,10 @@ def validate():
             'com_minus_root':(data.object_com_pos_w[:,0]-data.object_link_pos_w[:,0]).tolist()}
         held=env.scene['object_collection'].data.object_link_state_w[1].clone()
         joints=env.scene['robot'].data.joint_pos[1].clone();clock=env._sim_step_counter
+        if finger_test:
+            reach_cfg=env.reward_manager.get_term_cfg('reaching')
+            reach=reach_cfg.func
+            held_reach=reach._initial_distance[1].clone()
         if args.inject_reset_failures:injection.update(kind='collision',remaining=4)
         env.reset(seed=42,env_ids=torch.tensor([0],device=env.device))
         if args.inject_reset_failures:
@@ -195,6 +250,11 @@ def validate():
         torch.testing.assert_close(held,env.scene['object_collection'].data.object_link_state_w[1],atol=0,rtol=0)
         torch.testing.assert_close(joints,env.scene['robot'].data.joint_pos[1],atol=0,rtol=0)
         torch.testing.assert_close(target[1],env._surface_target_w[1],atol=0,rtol=0)
+        if finger_test:
+            torch.testing.assert_close(reach._initial_distance[1],held_reach,atol=0,rtol=0)
+            expected_initial=((env.scene['ee_frame'].data.target_pos_w[0,0]
+                               -env.scene['object_collection'].data.object_pos_w[0,env.target_id[0,0].long()]).norm()-.1).clamp_min(0.)
+            torch.testing.assert_close(reach._initial_distance[0],expected_initial)
         result['partial_reset_isolation']=True
         start=perf_counter()
         for _ in range(4):
@@ -202,6 +262,14 @@ def validate():
             assert torch.isfinite(reward).all() and torch.isfinite(obs['policy']).all()
             assert not (terminated|truncated).any()
             if sweep_only:assert (obs['policy'][:,-1]==1.).all() and env._stabilize_state.reward_phase.all()
+            if finger_test:
+                distance=(env.scene['ee_frame'].data.target_pos_w[:,0]-centroid(env)).norm(dim=-1)
+                expected_reach=reach._initial_distance/env.cfg.episode_length_s*.1/(.1+(distance-.1).clamp_min(0.))
+                torch.testing.assert_close(reach(env,**reach_cfg.params),expected_reach)
+                index=env.reward_manager.active_terms.index('reaching')
+                torch.testing.assert_close(env.reward_manager._step_reward[:,index],expected_reach*30.)
+                assert (expected_reach>0).all()
+                result['reach_matches_finger_formula_and_partial_reset']=True
         torch.cuda.synchronize();result['real_step_ms']=1000*(perf_counter()-start)/4
         assert env._stabilize_contacts.samples==2
         torch.testing.assert_close(env._surface_target_w,target)

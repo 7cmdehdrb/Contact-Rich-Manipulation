@@ -1,4 +1,5 @@
-from ..event_functions.stabilize_sweep import reset_scene
+from ..event_functions.stabilize_sweep import reset_scene, reset_scene_finger_test
+from .sweep_simple import SweepSimpleEventsCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.utils import configclass
 from ..event_functions.wrench_refactor import initialize_physics
@@ -11,3 +12,10 @@ class StabilizeSweepEventsCfg:
     reset_all = None
     object_spawn = EventTerm(func=reset_scene, mode='reset')
     robot_initial_pose = None
+
+
+@configclass
+class StabilizeSweepTestEventsCfg(StabilizeSweepEventsCfg):
+    # Copy the exact common Finger reset parameters; do not mutate its term.
+    object_spawn = SweepSimpleEventsCfg().object_spawn.copy()
+    object_spawn.func = reset_scene_finger_test

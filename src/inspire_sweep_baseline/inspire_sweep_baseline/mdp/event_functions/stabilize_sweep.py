@@ -232,3 +232,71 @@ def snapshot(env,ids,local,yaw,active,shelf_state):
     q=shelf_state[:,3:7]
     return (shelf_state[:,:3]+quat_apply(q,targets),
             shelf_state[:,None,:3]+quat_apply(q[:,None].expand(-1,16,-1),obstacles),valid,timings)
+
+
+def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
+                            excluded_x_half_angle=math.pi/6, min_goal_distance=.06,
+                            max_goal_distance=.12, observation_noise=.01,
+                            visibility_threshold=.35, visibility_flip_probability=.01,
+                            observation_swap_probability=.1):
+    """Finger's unchanged circle/IK reset, followed by the parent's surface snapshot.
+
+    The legacy centroid observation produced by fast_reset_scene is not exposed
+    to this policy. No robot hull construction or Stabilize pose search is used.
+    """
+    from .wrench_refactor_relative_ik_test import fast_reset_scene
+    from isaaclab.utils.math import quat_conjugate
+    start=perf_counter()
+    ids=torch.arange(env.num_envs,device=env.device) if env_ids is None else torch.as_tensor(env_ids,device=env.device,dtype=torch.long)
+    if not len(ids):return
+    fast_reset_scene(env,ids,ik_params=ik_params,spawn_radius=spawn_radius,edge_clearance=edge_clearance,
+        excluded_x_half_angle=excluded_x_half_angle,min_goal_distance=min_goal_distance,max_goal_distance=max_goal_distance,
+        observation_noise=observation_noise,visibility_threshold=visibility_threshold,
+        visibility_flip_probability=visibility_flip_probability,observation_swap_probability=observation_swap_probability)
+    placement_ms=1000*(perf_counter()-start)
+    objects=env.scene['object_collection']
+    shelf_state=env.scene['shelf'].data.root_state_w[ids]
+    states=objects.data.object_link_state_w[ids].clone()
+    q=shelf_state[:,None,3:7].expand(-1,17,-1)
+    local=quat_apply_inverse(q,states[:,:,:3]-shelf_state[:,None,:3])
+    relative=quat_mul(quat_conjugate(q),states[:,:,3:7])
+    w,x,y,z=relative.unbind(-1)
+    yaw=torch.atan2(2*(w*z+x*y),1-2*(y.square()+z.square()))
+    active=env._active_object_mask[ids].clone()
+    requested=active[:,1:].sum(-1)
+    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state)
+    changed=(active!=env._active_object_mask[ids]).any(-1)
+    if bool(changed.any()):
+        # Preserve the surface observer's target-only fallback, without physics
+        # steps or writes to environments outside this partial reset.
+        world=shelf_state[:,None,:3]+quat_apply(q,local)
+        states[:,:,:3]=world
+        rotation=relative.new_zeros(relative.shape)
+        rotation[:,:,0]=(yaw/2).cos();rotation[:,:,3]=(yaw/2).sin()
+        states[:,:,3:7]=quat_mul(q,rotation)
+        objects.write_object_link_state_to_sim(states[changed],env_ids=ids[changed])
+        env._active_object_mask[ids]=active
+        apply_fixed_pool_gravity_mask(env,ids[changed])
+        env._revision_spawn_positions[ids]=world
+    env._surface_target_w[ids]=targets
+    env._surface_obstacles_w[ids]=obstacles
+    env._surface_valid[ids]=valid
+    actual=active[:,1:].sum(-1)
+    env._final_actual_population[ids]=actual
+    env._reset_diagnostics={
+        'Reset/requested_obstacles':requested.float().mean(),
+        'Reset/actual_obstacles':actual.float().mean(),
+        'Reset/placement_skipped':0.,
+        'Reset/empty_fraction':(actual==0).float().mean(),
+        'Reset/ik_attempts':1.,
+        'Reset/layout_resamples':0.,
+        'Reset/ik_recovery_fraction':0.,
+        'Reset/finger_placement_ms':placement_ms,
+        'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
+        **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
+           for key in ('upload_ms','readback_ms','ray_ms','components_ms')},
+        'Reset/observation_fallbacks':sum(t['fallback'] for t in timings)/len(ids),
+        'Reset/target_missing_fallbacks':sum(t['target_missing'] for t in timings)/len(ids),
+        'Reset/slot_overflow_fallbacks':sum(t['slot_overflow'] for t in timings)/len(ids),
+        'Reset/batch_ms':1000*(perf_counter()-start),
+    }

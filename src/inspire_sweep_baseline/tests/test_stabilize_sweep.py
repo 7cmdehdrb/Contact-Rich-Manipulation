@@ -522,3 +522,57 @@ def test_sweep_only_bypasses_gate_from_reset_and_keeps_sweep_contact_formula(loa
     assert child.achieved.all() and child.reward_phase.all()
     assert child.contact_count[0]==0 and child.positive[0]==0 and child.retreat[0]==0
     torch.testing.assert_close(child.previous_distance[1],held)
+
+
+def test_finger_test_tasks_keep_each_parent_runtime():
+    entries={}
+    _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':NS(
+        registry=entries,register=lambda **kw:entries.update({kw['id']:kw}))})
+    for parent,prefix in [('Inspire-Stabilize-Sweep-v0','StabilizeSweepTest'),
+                          ('Inspire-Sweep-Only-v0','SweepOnlyTest')]:
+        child=entries[parent+'-Test']
+        assert child['entry_point']==entries[parent]['entry_point']
+        assert child['kwargs']['env_cfg_entry_point'].endswith(':'+prefix+'EnvCfg')
+        assert child['kwargs']['rsl_rl_cfg_entry_point'].endswith(':'+prefix+'PPORunnerCfg')
+
+
+def test_finger_reset_adapter_keeps_surface_snapshot_and_isolates_fallback(load_mdp,monkeypatch):
+    import sys,torch
+    from isaaclab.utils.math import quat_apply,quat_apply_inverse,quat_mul
+    scope=_reset_layout_planner()
+    scope.update(__package__='_baseline_cpu_pkg.mdp.event_functions',
+                 quat_apply=quat_apply,quat_apply_inverse=quat_apply_inverse,quat_mul=quat_mul)
+    calls=[];writes=[];gravity=[]
+    def fast(env,ids,**params):
+        calls.append((ids.tolist(),params))
+        # Physical state is already committed by Finger; no physics step.
+        env._active_object_mask[ids,0:2]=True
+    monkeypatch.setitem(sys.modules,'_baseline_cpu_pkg.mdp.event_functions.wrench_refactor_relative_ik_test',
+                        NS(fast_reset_scene=fast))
+    scope['apply_fixed_pool_gravity_mask']=lambda env,ids:gravity.append(ids.tolist())
+    states=torch.zeros(3,17,13);states[:,:,3]=1.;states[:,:,2]=1.05
+    shelf=torch.zeros(3,13);shelf[:,3]=1.
+    objects=NS(data=NS(object_link_state_w=states),
+               write_object_link_state_to_sim=lambda value,env_ids:writes.append((env_ids.tolist(),value.clone())))
+    env=NS(num_envs=3,device='cpu',scene={'object_collection':objects,'shelf':NS(data=NS(root_state_w=shelf))},
+        _active_object_mask=torch.zeros(3,17,dtype=torch.bool),_revision_spawn_positions=torch.zeros(3,17,3),
+        _surface_target_w=torch.full((3,3),7.),_surface_obstacles_w=torch.full((3,16,3),7.),
+        _surface_valid=torch.ones(3,16,dtype=torch.bool),_final_actual_population=torch.zeros(3,dtype=torch.long))
+    def snapshot(env,ids,local,yaw,active,shelf):
+        active[:,1:]=False;local[:,1:]=0.;local[:,1:,2]=52.
+        return torch.full((1,3),9.),torch.full((1,16,3),8.),torch.zeros(1,16,dtype=torch.bool),[
+            dict(total_ms=1.,fallback=1,target_missing=1,slot_overflow=0)]
+    scope['snapshot']=snapshot
+    scope['reset_scene_finger_test'](env,torch.tensor([2]),ik_params={'height_offset':.01})
+    assert len(calls)==1 and calls[0][0]==[2] and calls[0][1]['ik_params']=={'height_offset':.01}
+    assert gravity==[[2]]
+    assert len(writes)==1 and writes[0][0]==[2]
+    assert writes[0][1][0,1,2]==52.
+    assert env._surface_target_w[2].tolist()==[9.,9.,9.]
+    assert env._surface_obstacles_w[2,0].tolist()==[8.,8.,8.]
+    assert (env._surface_target_w[:2]==7.).all() and (env._surface_obstacles_w[:2]==7.).all()
+    assert not env._active_object_mask[2,1:].any() and env._final_actual_population[2]==0
+    assert env._reset_diagnostics['Reset/requested_obstacles']==1
+    assert env._reset_diagnostics['Reset/actual_obstacles']==0
+    assert env._reset_diagnostics['Reset/observation_fallbacks']==1
+    assert env._reset_diagnostics['Reset/ik_attempts']==1

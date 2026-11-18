@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-18: `Inspire-Stabilize-Sweep-v0-Test`와 `Inspire-Sweep-Only-v0-Test`는 각각 원본을 상속하고 초기 배치·IK만 기존 Finger 방식으로 교체한다. 대표 표면점 관측을 유지하고, 후속 요청으로 Test에만 Finger Reach(weight30)를 추가했다. 나머지 부모 보상/Gate는 유지한다. [차이와 실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/STABILIZE_SWEEP.md#finger-초기화-test-환경).
+
 2026-11-18: `Inspire-Sweep-Only-v0`는 `Inspire-Stabilize-Sweep-v0`를 상속해 안정화 보상·전용 초기 이동/회전 비용과 Gate를 제거한다. 초기화 직후부터 Sweep을 적용하며 압착 비용과 나머지 구성은 유지한다. [환경 차이·실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/STABILIZE_SWEEP.md#sweep-only-파생-환경).
 
 2026-11-11: `Inspire-Sweep-Simple-Finger-v1`은 Finger-v0의 정책 출력·입력 범위와 속도 비용/종료를 변경하고 Last Action tanh를 제거한다. 이를 상속하는 `Inspire-Sweep-Simple-Finger-v2`는 로그 Distance·2cm/3초 달성 후 후퇴 Reach·gate 기반 Contact/성공을 적용한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_SIMPLE_ENVIRONMENTS.md#finger-v1v2-출력-범위와-정밀-이동후퇴).

@@ -6,8 +6,10 @@ from ..mdp.actions.stabilize_sweep import StabilizeSweepActionsCfg
 from ..mdp.observations.stabilize_sweep import StabilizeSweepObservationsCfg
 from ..mdp.commands.stabilize_sweep import StabilizeSweepCommandsCfg
 from ..mdp.rewards.stabilize_sweep import StabilizeSweepRewardsCfg, SweepOnlyRewardsCfg
+from ..mdp.rewards.stabilize_sweep import StabilizeSweepTestRewardsCfg, SweepOnlyTestRewardsCfg
 from ..mdp.terminations.stabilize_sweep import StabilizeSweepTerminationsCfg
 from ..mdp.events.stabilize_sweep import StabilizeSweepEventsCfg
+from ..mdp.events.stabilize_sweep import StabilizeSweepTestEventsCfg
 from ..mdp.curricula.stabilize_sweep import StabilizeSweepCurriculumCfg
 from ..mdp.actions.stabilize_sweep import StabilizeSweepOSCActionCfg
 
@@ -81,3 +83,15 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
 @configclass
 class SweepOnlyEnvCfg(StabilizeSweepEnvCfg):
     rewards: SweepOnlyRewardsCfg = SweepOnlyRewardsCfg()
+
+
+@configclass
+class StabilizeSweepTestEnvCfg(StabilizeSweepEnvCfg):
+    events: StabilizeSweepTestEventsCfg = StabilizeSweepTestEventsCfg()
+    rewards: StabilizeSweepTestRewardsCfg = StabilizeSweepTestRewardsCfg()
+
+
+@configclass
+class SweepOnlyTestEnvCfg(SweepOnlyEnvCfg):
+    events: StabilizeSweepTestEventsCfg = StabilizeSweepTestEventsCfg()
+    rewards: SweepOnlyTestRewardsCfg = SweepOnlyTestRewardsCfg()

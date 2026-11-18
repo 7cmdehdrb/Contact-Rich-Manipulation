@@ -13,6 +13,7 @@ from isaaclab.utils import configclass
 import math as math
 from ..reward_functions.wrench_refactor_relative_ik_test import holding_shelf_failure
 from ..reward_functions.sweep_simple import finger_action_rate_l2
+from .sweep_simple import SweepSimpleFingerRewardsCfg
 
 @configclass
 class StabilizeSweepRewardsCfg:
@@ -49,3 +50,13 @@ class SweepOnlyRewardsCfg(StabilizeSweepRewardsCfg):
     stage = None
     initial_movement = None
     initial_rotation = None
+
+
+@configclass
+class StabilizeSweepTestRewardsCfg(StabilizeSweepRewardsCfg):
+    reaching = SweepSimpleFingerRewardsCfg().reaching.copy()
+
+
+@configclass
+class SweepOnlyTestRewardsCfg(SweepOnlyRewardsCfg):
+    reaching = SweepSimpleFingerRewardsCfg().reaching.copy()

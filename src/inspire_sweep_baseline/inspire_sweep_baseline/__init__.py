@@ -1569,3 +1569,17 @@ gym.register(
         "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:SweepOnlyPPORunnerCfg",
     },
 )
+
+for _test_id, _test_prefix, _parent_runtime in (
+    ('Inspire-Stabilize-Sweep-v0-Test', 'StabilizeSweepTest', 'StabilizeSweepEnv'),
+    ('Inspire-Sweep-Only-v0-Test', 'SweepOnlyTest', 'SweepOnlyEnv'),
+):
+    gym.register(
+        id=_test_id,
+        entry_point=f'inspire_sweep_baseline.runtime.stabilize_sweep:{_parent_runtime}',
+        disable_env_checker=True,
+        kwargs={
+            'env_cfg_entry_point': f'inspire_sweep_baseline.envs.stabilize_sweep_envs:{_test_prefix}EnvCfg',
+            'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_test_prefix}PPORunnerCfg',
+        },
+    )
