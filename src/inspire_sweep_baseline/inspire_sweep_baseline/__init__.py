@@ -1547,3 +1547,14 @@ for _raw_suffix, _cfg_prefix, _runtime in (
                 'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.sweep_simple_ppo_cfg:{_cfg_prefix}PPORunnerCfg',
             },
         )
+
+# Independent Stabilize -> Sweep, without existing environment inheritance.
+gym.register(
+    id="Inspire-Stabilize-Sweep-v0",
+    entry_point="inspire_sweep_baseline.runtime.stabilize_sweep:StabilizeSweepEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "inspire_sweep_baseline.envs.stabilize_sweep_envs:StabilizeSweepEnvCfg",
+        "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:StabilizeSweepPPORunnerCfg",
+    },
+)
