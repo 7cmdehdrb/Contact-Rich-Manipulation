@@ -1,6 +1,7 @@
 """Plan a reset without advancing physics, then commit selected environment rows."""
 import math
 from time import perf_counter
+from typing import NamedTuple
 import torch
 from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_mul, subtract_frame_transforms, matrix_from_quat
 from .wrench_refactor_relative_ik_test import _prepare_fast_ik
@@ -9,6 +10,15 @@ from ..common.wrench_refactor_layout import sample_commands
 from ..common.stabilize_sweep_reset import hand_pose
 from ..common.stabilize_sweep_geometry import RobotResetGeometry, collision_bounds
 from ...assets.robot import HAND_CONTACT_BODY_NAMES, HAND_JOINT_NAMES
+
+
+class InitialPose(NamedTuple):
+    joints: torch.Tensor
+    boxes: tuple
+    position_w: torch.Tensor
+    quaternion_w: torch.Tensor
+    errors: torch.Tensor
+    attempts: torch.Tensor
 
 
 def _geometry(env):
@@ -78,10 +88,10 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
     if not bool(valid.all()):
         raise RuntimeError(f'Stabilize IK/collision exhausted 4 candidates: env_ids={ids[~valid].tolist()}, attempts={diagnostics}')
     boxes=env._stabilize_robot_geometry.boxes(joints,base_local,base_local_quat)
-    return joints,boxes,desired_world,desired_quat,errors,attempts
+    return InitialPose(joints,boxes,desired_world,desired_quat,errors,attempts)
 
 
-def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, joints, pose_info):
+def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, pose):
     robot,shelf,objects=env.scene['robot'],env.scene['shelf'],env.scene['object_collection']
     shelf_pos,shelf_quat=shelf_state[:,:3],shelf_state[:,3:7]
     world=shelf_pos[:,None]+quat_apply(shelf_quat[:,None].expand(-1,17,-1),local)
@@ -89,9 +99,9 @@ def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, j
     states=torch.cat((world,quat_mul(shelf_quat[:,None].expand(-1,17,-1),q),local.new_zeros(len(ids),17,6)),-1)
     shelf.write_root_state_to_sim(shelf_state,env_ids=ids)
     robot.write_root_state_to_sim(root_state,env_ids=ids)
-    robot.write_joint_state_to_sim(joints,torch.zeros_like(joints),env_ids=ids)
-    robot.set_joint_position_target(joints,env_ids=ids)
-    robot.set_joint_velocity_target(torch.zeros_like(joints),env_ids=ids)
+    robot.write_joint_state_to_sim(pose.joints,torch.zeros_like(pose.joints),env_ids=ids)
+    robot.set_joint_position_target(pose.joints,env_ids=ids)
+    robot.set_joint_velocity_target(torch.zeros_like(pose.joints),env_ids=ids)
     objects.write_object_link_state_to_sim(states,env_ids=ids)
     env._active_object_mask[ids]=active;apply_fixed_pool_gravity_mask(env,ids)
     env.target_id[ids,0]=0
@@ -103,7 +113,9 @@ def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, j
     env._initial_obstacle_observation[ids]=0.
     _=robot.data.body_link_pos_w
     env.scene['ee_frame'].reset(ids)
-    env._goal_reset_desired_pos_w[ids],env._goal_reset_desired_quat_w[ids],env._goal_reset_errors[ids]=pose_info[:3]
+    env._goal_reset_desired_pos_w[ids]=pose.position_w
+    env._goal_reset_desired_quat_w[ids]=pose.quaternion_w
+    env._goal_reset_errors[ids]=pose.errors
 
 
 def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
@@ -121,14 +133,14 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     shelf_state=env.scene['shelf'].data.default_root_state[ids].clone()
     root_state=env.scene['robot'].data.default_root_state[ids].clone()
     shelf_state[:,:3]+=env.scene.env_origins[ids];root_state[:,:3]+=env.scene.env_origins[ids]
-    joints,boxes,*info=choose_initial_pose(env,ids,local,goal-target,shelf_state,root_state)
+    pose=choose_initial_pose(env,ids,local,goal-target,shelf_state,root_state)
     from ..common.stabilize_sweep_layout import place_obstacles
     requested=torch.randint(0,7,(len(ids),),device=env.device,generator=env._revision_layout_rng)
     selected=torch.rand((len(ids),16),device=env.device,generator=env._revision_layout_rng).argsort(-1)[:,:6]+1
-    place_obstacles(env._fast_layout,ids,local,yaw,active,goal-target,boxes,selected,requested,env._revision_layout_rng)
+    place_obstacles(env._fast_layout,ids,local,yaw,active,goal-target,pose.boxes,selected,requested,env._revision_layout_rng)
     skipped=requested-active[:,1:].sum(-1)
     targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state)
-    commit_scene(env,ids,local,yaw,active,goal-target,shelf_state,root_state,joints,info)
+    commit_scene(env,ids,local,yaw,active,goal-target,shelf_state,root_state,pose)
     env._surface_target_w[ids]=targets
     env._surface_obstacles_w[ids]=obstacles
     env._surface_valid[ids]=valid
@@ -139,8 +151,10 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
         'Reset/actual_obstacles':actual.float().mean(),
         'Reset/placement_skipped':skipped.float().mean(),
         'Reset/empty_fraction':(actual==0).float().mean(),
-        'Reset/ik_attempts':info[-1].float().mean(),
+        'Reset/ik_attempts':pose.attempts.float().mean(),
         'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
+        **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
+           for key in ('upload_ms','readback_ms','ray_ms','components_ms')},
         'Reset/observation_fallbacks':sum(t['fallback'] for t in timings)/len(ids),
         'Reset/target_missing_fallbacks':sum(t['target_missing'] for t in timings)/len(ids),
         'Reset/slot_overflow_fallbacks':sum(t['slot_overflow'] for t in timings)/len(ids),
@@ -167,7 +181,8 @@ def snapshot(env,ids,local,yaw,active,shelf_state):
             yaw[row,1:]=0.
             point,others,second=env._surface_geometry.observe(env.scene.env_prim_paths[index],
                 local_cpu[row],yaw_cpu[row],active_cpu[row],names,device=env.device)
-            timing['total_ms']+=second['total_ms']
+            for key in ('total_ms','build_ms','upload_ms','readback_ms','ray_ms','components_ms','rays'):
+                timing[key]=timing.get(key,0.)+second.get(key,0.)
             if point is None:
                 raise RuntimeError(f'Target-only visible snapshot missing after bounded fallback: env={index}')
         targets[row]=torch.as_tensor(point,device=env.device)

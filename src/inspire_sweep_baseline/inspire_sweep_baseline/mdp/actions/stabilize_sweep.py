@@ -41,4 +41,3 @@ class StabilizeSweepActionsCfg:
         effort_limit_scale=1.0,
     )
     gripper_action = StabilizeSweepFingerHandActionCfg(asset_name="robot")
-

@@ -229,3 +229,123 @@ def test_snapshot_target_missing_fallback_is_bounded_and_removes_obstacles(load_
     with pytest.raises(RuntimeError,match='Target-only'):
         snapshot(env,torch.tensor([0]),local,yaw,active,shelf)
     assert env._surface_geometry.calls==2
+
+
+def test_target_surface_width_exposure_and_largest_fragment(load_mdp):
+    import importlib, numpy as np
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_surface')
+    def observe(width, occluder=None):
+        vertices,faces=module.box_mesh((0.,0.,0.),(.1,width,.1))
+        owners=np.zeros(len(faces),dtype=np.int32)
+        if occluder is not None:
+            y,cover_width=occluder
+            v,f=module.box_mesh((.12,y,0.),(.02,cover_width,.12))
+            owners=np.concatenate((owners,np.ones(len(f),dtype=np.int32)))
+            faces=np.concatenate((faces,f+len(vertices)));vertices=np.concatenate((vertices,v))
+        return module.observe_mesh(vertices,faces,owners,device='cpu')
+    assert observe(.018)[0] is None
+    assert observe(.022)[0] is not None
+    # 3cm is over the absolute minimum, but under 20% of the 20cm source.
+    assert observe(.2,(.015,.17))[0] is None
+    assert observe(.2,(.025,.15))[0] is not None
+    target,others,timing=observe(.12,(.01,.02))
+    assert target is not None and target[1]<0 and len(others)==1
+    assert all(timing[key]>=0 for key in ('upload_ms','readback_ms','ray_ms','components_ms'))
+
+
+import pytest
+
+
+@pytest.mark.parametrize('violation',[
+    'invalid','no_contact','undefined_direction','nonfinite','parallel_low','parallel_high',
+    'perpendicular','moment_z','moment_xy','translation','rotation','linear_speed','angular_speed','squeeze',
+])
+def test_each_gate_condition_breaks_continuity(load_mdp,violation):
+    import importlib,torch,math
+    cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state').StabilizeState
+    state=cls(1,'cpu');p=torch.zeros(1,3);q=torch.tensor([[1.,0.,0.,0.]]);g=torch.tensor([[1.,0.,0.]])
+    state.reset(torch.tensor([0]),p,q,g);state.begin()
+    force=torch.tensor([[.5,0.,0.]]);moment=torch.zeros(1,3);load=torch.tensor([.5])
+    valid=torch.tensor([True]);linear=torch.zeros(1);angular=torch.zeros(1)
+    state.consecutive[:]=29
+    if violation=='invalid':valid[:]=False
+    elif violation=='no_contact':load[:]=.009
+    elif violation=='undefined_direction':g.zero_()
+    elif violation=='nonfinite':force[0,0]=float('nan')
+    elif violation=='parallel_low':force[0,0]=.299
+    elif violation=='parallel_high':force[0,0]=.701
+    elif violation=='perpendicular':force[0,1]=.201
+    elif violation=='moment_z':moment[0,2]=.0051
+    elif violation=='moment_xy':moment[0,0]=.0101
+    elif violation=='translation':p[0,2]=.0031
+    elif violation=='rotation':q[0]=torch.tensor([math.cos(math.radians(3.1)/2),math.sin(math.radians(3.1)/2),0.,0.])
+    elif violation=='linear_speed':linear[:]=.0051
+    elif violation=='angular_speed':angular[:]=.0501
+    elif violation=='squeeze':load[:]=5.001
+    state.sample(p,q,g,force,moment,load,valid,linear,angular)
+    assert state.consecutive.item()==0 and not state.achieved.item()
+    if violation in ('invalid','no_contact','undefined_direction','nonfinite'):
+        assert state.stage_score.item()==0
+
+
+def test_initial_pose_cost_allowances_and_sweep_dt_cancellation(load_mdp):
+    import importlib,torch,math
+    cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state').StabilizeState
+    reward=importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep')
+    state=cls(1,'cpu');p=torch.zeros(1,3);q=torch.tensor([[1.,0.,0.,0.]]);g=torch.tensor([[1.,0.,0.]])
+    state.reset(torch.tensor([0]),p,q,g);state.begin()
+    for ratio,expected in ((.999,0.),(2.,1.)):
+        angle=ratio*math.radians(3.)
+        rotated=torch.tensor([[math.cos(angle/2),0.,0.,math.sin(angle/2)]])
+        state.sample(torch.tensor([[0.,0.,ratio*.003]]),rotated,g,torch.tensor([[.5,0.,0.]]),
+                     torch.zeros(1,3),torch.tensor([.5]),torch.tensor([True]),torch.zeros(1),torch.zeros(1))
+        torch.testing.assert_close(state.move_cost,torch.tensor([expected]),atol=1e-6,rtol=0)
+        torch.testing.assert_close(state.rotate_cost,torch.tensor([expected]),atol=1e-6,rtol=0)
+    state.positive[:]=.02;state.retreat[:]=.03
+    for dt in (.01,.02,.04):
+        env=NS(_stabilize_state=state,step_dt=dt)
+        torch.testing.assert_close(reward.sweep_progress(env)*dt,torch.tensor([.02]))
+        torch.testing.assert_close(reward.sweep_retreat(env)*dt,torch.tensor([.03]))
+
+
+@pytest.mark.parametrize('force,contact,valid,height,expected',[
+    ((1.,0.,0.),True,True,.119,True),
+    ((.999,0.,0.),True,True,.119,False),
+    ((1.,0.,0.),False,True,.119,False),
+    ((1.,0.,0.),True,False,.119,False),
+    ((1.,0.,0.),True,True,.12,False),
+    ((-1.,0.,0.),True,True,.119,False),
+])
+def test_sweep_contact_height_and_force_boundaries(load_mdp,force,contact,valid,height,expected):
+    import importlib,torch
+    cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state').StabilizeState
+    state=cls(1,'cpu');p=torch.zeros(1,3);q=torch.tensor([[1.,0.,0.,0.]]);g=torch.tensor([[1.,0.,0.]])
+    state.reset(torch.tensor([0]),p,q,g);state.achieved[:]=True;state.begin()
+    state.contact_history[:]=True;state.contact_count[:]=20
+    state.finish(torch.tensor([[.02,0.,0.]]),g,torch.tensor([force]),torch.tensor([contact]),
+                 torch.tensor([valid]),torch.tensor([height]),torch.zeros(1))
+    assert bool(state.positive.item()>0)==expected
+
+
+def test_squeeze_is_per_sample_before_policy_average(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_contact')
+    reward=importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep')
+    # External PhysX view fixture: spare packed entry avoids a full-buffer rejection.
+    class View:
+        sensor_count=1;filter_count=1;load=5.
+        def get_contact_data(self,dt):
+            return (torch.tensor([[self.load],[0.]]),torch.zeros(2,3),torch.tensor([[1.,0.,0.],[0.,0.,0.]]),
+                    None,torch.tensor([[1]]),torch.tensor([[0]]))
+        def get_friction_data(self,dt):
+            return torch.zeros(2,3),torch.zeros(2,3),torch.tensor([[0]]),torch.tensor([[0]])
+    view=View()
+    env=NS(num_envs=1,device='cpu',physics_dt=.01,scene={
+        'object_collection':NS(object_names=['target'],data=NS(object_com_pos_w=torch.zeros(1,1,3))),
+        module.object_hand_sensor_name('target'):NS(contact_physx_view=view)})
+    samples=module.ContactSamples(env);env._stabilize_contacts=samples;samples.begin()
+    samples.capture(env)
+    assert reward.squeeze(env).item()==0.
+    view.load=10.;samples.capture(env)
+    # mean(0,1)=.5; applying the square after averaging load would give .25.
+    assert reward.squeeze(env).item()==.5

@@ -46,12 +46,22 @@ def observe_mesh(vertices, faces, owners, *, device, spacing=.001):
     high=np.ceil(visible[:,1:].max(0)/spacing)*spacing+spacing
     width,height=np.ceil((high-low)/spacing).astype(int)
     count=int(width*height)
+    cuda=wp.get_device(device).is_cuda
+    if cuda:wp.synchronize_device(device)
+    transfer_start=perf_counter()
     points=wp.array(vertices,dtype=wp.vec3,device=device)
-    mesh=wp.Mesh(points=points,indices=wp.array(faces.ravel(),dtype=int,device=device))
+    indices=wp.array(faces.ravel(),dtype=int,device=device)
+    source_ids=wp.array(owners,dtype=int,device=device)
+    if cuda:wp.synchronize_device(device)
+    upload_ms=1000*(perf_counter()-transfer_start)
+    mesh=wp.Mesh(points=points,indices=indices)
     labels=wp.empty(count,dtype=int,device=device);hits=wp.empty(count,dtype=wp.vec3,device=device)
+    if cuda:wp.synchronize_device(device)
     build=perf_counter()
-    wp.launch(_cast,dim=count,inputs=[mesh.id,wp.array(owners,dtype=int,device=device),int(width),
+    wp.launch(_cast,dim=count,inputs=[mesh.id,source_ids,int(width),
               float(vertices[:,0].max()+.05),float(low[0]),float(low[1]),spacing,labels,hits],device=device)
+    if cuda:wp.synchronize_device(device)
+    ray_end=perf_counter()
     mask=labels.numpy().reshape(height,width);points=hits.numpy().reshape(height,width,3)
     readback=perf_counter()
     target=None;target_area=0;obstacles=[]
@@ -70,7 +80,8 @@ def observe_mesh(vertices, faces, owners, *, device, spacing=.001):
             else:obstacles.append(point)
     return target,np.asarray(obstacles,dtype=np.float32).reshape(-1,3),dict(
         total_ms=1000*(perf_counter()-start),build_ms=1000*(build-start),
-        ray_readback_ms=1000*(readback-build),rays=count)
+        ray_ms=1000*(ray_end-build),upload_ms=upload_ms,readback_ms=1000*(readback-ray_end),
+        components_ms=1000*(perf_counter()-readback),rays=count)
 
 
 def _triangles(prim):
