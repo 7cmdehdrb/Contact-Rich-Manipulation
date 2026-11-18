@@ -76,3 +76,22 @@ class StabilizeState:
         self.positive.copy_(torch.where(self.reward_phase,progress.clamp_min(0.)*h*alignment,0.))
         self.retreat.copy_(torch.where(self.reward_phase,(-progress).clamp_min(0.),0.))
         self.previous_distance.copy_(distance)
+
+
+class SweepOnlyState(StabilizeState):
+    """Use the existing Sweep accounting from reset, without sampling a Gate."""
+
+    def __init__(self,count,device):
+        super().__init__(count,device)
+        self.achieved.fill_(True)
+        self.reward_phase.fill_(True)
+
+    def reset(self,ids,center,quat,goal):
+        super().reset(ids,center,quat,goal)
+        self.achieved[ids]=True
+        self.reward_phase[ids]=True
+
+    def sample(self,center,quat,goal,force,moment,load,valid,linear_speed,angular_speed):
+        # Contact force/squeeze accumulation remains in ContactSamples. Only the
+        # stabilization score, initial-pose costs and Gate calculation are absent.
+        self.samples+=1

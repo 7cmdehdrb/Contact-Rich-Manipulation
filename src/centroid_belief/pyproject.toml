@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "centroid-belief"
+version = "0.3.0"
+description = "OBB-only single Gaussian centroid estimation with completion hypotheses"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.15", "matplotlib>=3.7", "observed-obb>=0.1.0", "Pillow>=9"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["centroid_belief*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "../observed_obb"]
+
+[tool.setuptools.package-data]
+centroid_belief = ["data/*.npz"]

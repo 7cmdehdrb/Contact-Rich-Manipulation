@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "observed-obb"
+version = "0.1.0"
+description = "Static initial partial-observation OBB inspection"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+viewer = ["inspire-sweep-baseline"]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["observed_obb*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

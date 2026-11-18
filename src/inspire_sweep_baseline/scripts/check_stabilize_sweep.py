@@ -13,7 +13,10 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from isaaclab.app import AppLauncher
 
 parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--num-envs',type=int,default=4)
+parser.add_argument('--task',choices=['Inspire-Stabilize-Sweep-v0','Inspire-Sweep-Only-v0'],default='Inspire-Stabilize-Sweep-v0')
 parser.add_argument('--audit-resets',type=int,default=8)
+parser.add_argument('--inject-reset-failures',action='store_true')
 parser.add_argument('--output',type=Path,default=Path('/tmp/stabilize_sweep_validation.json'))
 AppLauncher.add_app_launcher_args(parser)
 args=parser.parse_args()
@@ -27,26 +30,152 @@ def validate():
     from isaaclab_tasks.utils import load_cfg_from_registry
     from isaaclab.utils.math import quat_apply,quat_apply_inverse
     from inspire_sweep_baseline.mdp.common.stabilize_sweep_contact import centroid
-    cfg=load_cfg_from_registry('Inspire-Stabilize-Sweep-v0','env_cfg_entry_point')
-    cfg.seed=42;cfg.scene.num_envs=2
+    cfg=load_cfg_from_registry(args.task,'env_cfg_entry_point')
+    sweep_only=args.task=='Inspire-Sweep-Only-v0'
+    if sweep_only:
+        from inspire_sweep_baseline.envs.stabilize_sweep_envs import StabilizeSweepEnvCfg,SweepOnlyEnvCfg
+        from inspire_sweep_baseline.runtime.stabilize_sweep import StabilizeSweepEnv,SweepOnlyEnv
+        assert issubclass(SweepOnlyEnvCfg,StabilizeSweepEnvCfg) and issubclass(SweepOnlyEnv,StabilizeSweepEnv)
+        parent=StabilizeSweepEnvCfg().to_dict();child=cfg.to_dict()
+        for name in ('stage','initial_movement','initial_rotation'):
+            assert child['rewards'][name] is None and parent['rewards'][name] is not None
+            child['rewards'][name]=parent['rewards'][name]
+        assert child==parent, 'Unexpected environment configuration difference'
+        base_runner=load_cfg_from_registry('Inspire-Stabilize-Sweep-v0','rsl_rl_cfg_entry_point').to_dict()
+        runner=load_cfg_from_registry(args.task,'rsl_rl_cfg_entry_point').to_dict()
+        assert runner['experiment_name']=='inspire_sweep_only_v0'
+        runner['experiment_name']=base_runner['experiment_name']
+        assert runner==base_runner, 'Unexpected PPO configuration difference'
+    n=args.num_envs
+    if n<2:raise ValueError('Integration checks need at least two environments')
+    cfg.seed=42;cfg.scene.num_envs=n
     cfg.scene.ee_frame.debug_vis=False;cfg.commands.target_goal_pos.debug_vis=False
-    env=gym.make('Inspire-Stabilize-Sweep-v0',cfg=cfg).unwrapped
-    result={'seed':42,'num_envs':2,'reset_audit':[]}
+    env=gym.make(args.task,cfg=cfg).unwrapped
+    result={'task':args.task,'seed':42,'num_envs':n,'reset_audit':[]}
+    if sweep_only:
+        assert not {'stage','initial_movement','initial_rotation'} & set(env.reward_manager.active_terms)
+        assert 'squeeze' in env.reward_manager.active_terms
+        result['parent_contract_only_three_reward_terms_removed']=True
+        result['ppo_only_experiment_name_changed']=True
+    from inspire_sweep_baseline.mdp.event_functions import stabilize_sweep as events
+    sample_commands=events.sample_commands
+    sampled=[];plans=[]
+    plan_layout=events.plan_initial_layout
+    prepare_ik,prepare_geometry=events._prepare_fast_ik,events._geometry
+    injection={'kind':'ik','remaining':4 if args.inject_reset_failures else 0}
+    original={}
+    def capture_plan(env,ids,local,shelf,root,params,max_layout_resamples=8):
+        delta,pose,resamples=plan_layout(env,ids,local,shelf,root,params,max_layout_resamples)
+        plans.append((ids.clone(),local[:,0,:2].clone(),local[:,0,:2]+delta,resamples.clone()))
+        return delta,pose,resamples
+    def prepare_with_injection(env):
+        prepare_ik(env)
+        if 'solve' not in original:
+            original['solve']=env._fast_ik.solve
+            def solve(*values,**kwargs):
+                angles,ok,pe,re=original['solve'](*values,**kwargs)
+                if injection['kind']=='ik' and injection['remaining']:
+                    ok=ok.clone();ok[0]=False;injection['remaining']-=1
+                return angles,ok,pe,re
+            env._fast_ik.solve=solve
+    def geometry_with_injection(env):
+        prepare_geometry(env)
+        if 'valid' not in original:
+            original['valid']=env._stabilize_robot_geometry.valid
+            def valid(*values,**kwargs):
+                safe=original['valid'](*values,**kwargs)
+                if injection['kind']=='collision' and injection['remaining']:
+                    safe=safe.clone();safe[0]=False;injection['remaining']-=1
+                return safe
+            env._stabilize_robot_geometry.valid=valid
+    def capture_commands(*values,**kwargs):
+        commands=sample_commands(*values,**kwargs)
+        sampled.append(tuple(v.clone() for v in commands))
+        return commands
+    def check_commands():
+        if sweep_only:
+            state=env._stabilize_state
+            assert state.achieved.all() and state.reward_phase.all() and not state.consecutive.any()
+            assert (env.observation_manager.compute()['policy'][:,-1]==1.).all()
+        shelf=env.scene['shelf'].data
+        target=env.scene['object_collection'].data.object_link_pos_w[:,0]
+        goal=env.command_manager.get_command('target_goal_pos')[:,:3]
+        torch.testing.assert_close(quat_apply_inverse(shelf.root_quat_w,target-shelf.root_pos_w)[:,:2],plans[-1][1],atol=2e-5,rtol=0)
+        torch.testing.assert_close(quat_apply_inverse(shelf.root_quat_w,goal-shelf.root_pos_w)[:,:2],plans[-1][2],atol=2e-5,rtol=0)
+        assert (env._goal_reset_errors[:,0]<=.0005).all()
+        assert (env._goal_reset_errors[:,1]<=.003).all()
+        # Read the real right-hand tactile body, independently of the helper's EEF axis.
+        robot=env.scene['robot']
+        palm_id=robot.find_bodies('inspire_palm_force_sensor')[0][0]
+        palm_normal=quat_apply(robot.data.body_link_quat_w[:,palm_id],
+                               target.new_tensor([0.,0.,1.]).expand(n,-1))
+        direction=goal-target;direction[:,2]=0.
+        direction/=direction.norm(dim=-1,keepdim=True)
+        direction_shelf=quat_apply_inverse(shelf.root_quat_w,direction)
+        side=torch.where(direction_shelf[:,1]>0,-1.,1.)
+        alignment=(palm_normal*direction).sum(-1)*side
+        assert (alignment>0.98).all(), f'Palm/dorsum misaligned with goal: {alignment.tolist()}'
+        palm_shelf=quat_apply_inverse(shelf.root_quat_w,palm_normal)
+        assert (palm_shelf[:,1]<0).all(), 'Right palm must remain on the robot-left side'
+        result['minimum_actual_contact_face_goal_cosine']=min(
+            result.get('minimum_actual_contact_face_goal_cosine',1.),float(alignment.min()))
+        frame=env.scene['ee_frame'].data
+        vertices=env._stabilize_hand_vertices.expand(n,-1,-1)
+        surface=frame.target_pos_w[:,0,None]+quat_apply(
+            frame.target_quat_w[:,0,None].expand(-1,vertices.shape[1],-1),vertices)
+        surface=quat_apply_inverse(shelf.root_quat_w[:,None].expand(-1,vertices.shape[1],-1),
+                                   surface-shelf.root_pos_w[:,None])
+        center_shelf=quat_apply_inverse(shelf.root_quat_w,centroid(env)-shelf.root_pos_w)
+        half_height=(env._revision_bounds_t[:,0,1,2]-env._revision_bounds_t[:,0,0,2])/2
+        bottom=surface[...,2].amin(-1)
+        clearance=bottom-(center_shelf[:,2]-half_height)
+        torch.testing.assert_close(clearance,torch.full_like(clearance,.005),atol=.001,rtol=0)
+        assert (bottom<center_shelf[:,2]+half_height).all(), 'Target fits entirely under the hand'
+        for key,value,reduce in [('minimum_hand_bottom_clearance_m',float(clearance.min()),min),
+                                 ('maximum_hand_bottom_clearance_m',float(clearance.max()),max)]:
+            result[key]=reduce(result.get(key,value),value)
+        result['palm_always_left']=True
+    events.sample_commands=capture_commands
+    events.plan_initial_layout=capture_plan
+    if args.inject_reset_failures:
+        events._prepare_fast_ik=prepare_with_injection
+        events._geometry=geometry_with_injection
     try:
-        # Audit the specified distribution. Failed commands are reported, not redrawn inside reset.
+        # Match train.py's first reset, including the reported four-env seed-42 failure.
+        from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+        wrapper=RslRlVecEnvWrapper(env,clip_actions=1.5707963267948966)
+        assert torch.isfinite(wrapper.get_observations()['policy']).all()
+        if args.inject_reset_failures:
+            assert injection['remaining']==0 and len(sampled)>=2
+            assert plans[-1][3][0]>=1 and not plans[-1][3][1:].any()
+            torch.testing.assert_close(plans[-1][1][1:],sampled[0][0][1:])
+            torch.testing.assert_close(plans[-1][2][1:],sampled[0][1][1:])
+            assert not env.episode_length_buf.any() and not env.termination_manager.dones.any()
+            assert not env._timeout_outcomes.totals.any()
+            result['injected_initial_ik_failure_recovered']=True
+        else:assert len(sampled)==1
+        check_commands()
+        result['training_wrapper_initial_reset']=True
+        # Audit ordinary resets separately from injected failures.
         for seed in range(args.audit_resets):
-            start=perf_counter()
+            start=perf_counter();before=len(sampled)
             try:
                 obs,_=env.reset(seed=seed)
+                assert sum(len(v[0]) for v in sampled[before:])==n+int(plans[-1][3].sum())
+                check_commands()
                 torch.cuda.synchronize()
                 result['reset_audit'].append(dict(seed=seed,ok=True,ms=1000*(perf_counter()-start),
+                    max_position_error_m=float(env._goal_reset_errors[:,0].max()),
+                    max_rotation_error_rad=float(env._goal_reset_errors[:,1].max()),
                     metrics={k:float(v) for k,v in env.extras['log'].items() if k.startswith('Reset/')}))
             except RuntimeError as error:
-                if 'exhausted 4 candidates' not in str(error):raise
+                if 'layouts (4 poses/layout)' not in str(error):raise
                 result['reset_audit'].append(dict(seed=seed,ok=False,error=str(error),ms=1000*(perf_counter()-start)))
+        assert all(row['ok'] for row in result['reset_audit']), 'Initial pose failed in reset audit'
+        result['bounded_failed_row_resampling']=True
         # Separate selected-row resets use an explicit reproducible fixture seed.
-        for row in range(2):obs,_=env.reset(seed=42,env_ids=torch.tensor([row],device=env.device))
-        assert obs['policy'].shape==(2,67) and obs['obstacles'].shape==(2,64)
+        for row in range(n):obs,_=env.reset(seed=42,env_ids=torch.tensor([row],device=env.device))
+        assert obs['policy'].shape==(n,67) and obs['obstacles'].shape==(n,64)
         target=env._surface_target_w.clone();points=env._surface_obstacles_w.clone()
         center=centroid(env);data=env.scene['object_collection'].data
         offset=env._revision_bounds_t[:,0].mean(1)
@@ -56,7 +185,12 @@ def validate():
             'com_minus_root':(data.object_com_pos_w[:,0]-data.object_link_pos_w[:,0]).tolist()}
         held=env.scene['object_collection'].data.object_link_state_w[1].clone()
         joints=env.scene['robot'].data.joint_pos[1].clone();clock=env._sim_step_counter
+        if args.inject_reset_failures:injection.update(kind='collision',remaining=4)
         env.reset(seed=42,env_ids=torch.tensor([0],device=env.device))
+        if args.inject_reset_failures:
+            assert injection['remaining']==0 and plans[-1][3][0]>=1
+            result['injected_partial_collision_failure_recovered']=True
+            target[0]=env._surface_target_w[0];points[0]=env._surface_obstacles_w[0]
         assert env._sim_step_counter==clock
         torch.testing.assert_close(held,env.scene['object_collection'].data.object_link_state_w[1],atol=0,rtol=0)
         torch.testing.assert_close(joints,env.scene['robot'].data.joint_pos[1],atol=0,rtol=0)
@@ -64,9 +198,10 @@ def validate():
         result['partial_reset_isolation']=True
         start=perf_counter()
         for _ in range(4):
-            obs,reward,terminated,truncated,_=env.step(torch.zeros((2,12),device=env.device))
+            obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
             assert torch.isfinite(reward).all() and torch.isfinite(obs['policy']).all()
             assert not (terminated|truncated).any()
+            if sweep_only:assert (obs['policy'][:,-1]==1.).all() and env._stabilize_state.reward_phase.all()
         torch.cuda.synchronize();result['real_step_ms']=1000*(perf_counter()-start)/4
         assert env._stabilize_contacts.samples==2
         torch.testing.assert_close(env._surface_target_w,target)
@@ -84,31 +219,40 @@ def validate():
         goal=original_center+torch.tensor([.1,0.,0.],device=env.device)
         def replay(*unused):
             sample(original_center,original_quat,goal,
-                   torch.tensor([[.5,0.,0.]],device=env.device).expand(2,-1),
-                   torch.zeros((2,3),device=env.device),torch.full((2,),.5,device=env.device),
-                   torch.ones(2,device=env.device,dtype=torch.bool),torch.zeros(2,device=env.device),torch.zeros(2,device=env.device))
+                   torch.tensor([[.5,0.,0.]],device=env.device).expand(n,-1),
+                   torch.zeros((n,3),device=env.device),torch.full((n,),.5,device=env.device),
+                   torch.ones(n,device=env.device,dtype=torch.bool),torch.zeros(n,device=env.device),torch.zeros(n,device=env.device))
         state.sample=replay
         try:
             for step in range(15):
-                obs,reward,terminated,truncated,_=env.step(torch.zeros((2,12),device=env.device))
+                obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
                 assert not (terminated|truncated).any()
-                assert bool((obs['policy'][:,-1]==(1. if step==14 else 0.)).all())
-            assert not state.reward_phase.any() and state.achieved.all()
-            obs,*_=env.step(torch.zeros((2,12),device=env.device))
+                assert bool((obs['policy'][:,-1]==(1. if sweep_only or step==14 else 0.)).all())
+            if sweep_only:
+                assert state.reward_phase.all() and state.achieved.all() and not state.consecutive.any()
+                assert not state.setup_sum.any() and not state.move_cost.any() and not state.rotate_cost.any()
+            else:assert not state.reward_phase.any() and state.achieved.all()
+            obs,*_=env.step(torch.zeros((n,12),device=env.device))
             assert state.reward_phase.all() and (state.stage_score==1.).all()
-            result['controlled_gate_manager_boundary']=True
+            result['sweep_from_reset_without_gate' if sweep_only else 'controlled_gate_manager_boundary']=True
             # Accelerated terminal counter: same-step Gate latch counts at timeout,
             # and only that row resets while the other stays in Sweep.
-            state.achieved[0]=False;state.consecutive[0]=28
+            if not sweep_only:state.achieved[0]=False;state.consecutive[0]=28
             env.episode_length_buf[0]=env.max_episode_length-1
             env.command_manager.get_term('target_goal_pos').pos_command_w[0,:2]=centroid(env)[0,:2]+.005
             env._revision_layout_rng.manual_seed(42);env._goal_reset_rng.manual_seed(42+1707)
             before=int(env._timeout_outcomes.totals[0])
-            obs,reward,terminated,truncated,_=env.step(torch.zeros((2,12),device=env.device))
-            assert truncated.tolist()==[True,False] and not terminated.any()
+            if args.inject_reset_failures:injection.update(kind='ik',remaining=4)
+            obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
+            assert truncated.tolist()==[True]+[False]*(n-1) and not terminated.any()
             assert int(env._timeout_outcomes.totals[0])==before+1
-            assert obs['policy'][:,-1].tolist()==[0.,1.]
+            assert obs['policy'][:,-1].tolist()==([1.]*n if sweep_only else [0.]+[1.]*(n-1))
             result['same_step_gate_timeout_and_partial_reset']=True
+            if args.inject_reset_failures:
+                assert injection['remaining']==0 and plans[-1][3][0]>=1
+                assert torch.isfinite(reward).all() and torch.isfinite(obs['policy']).all()
+                assert env.episode_length_buf[0]==0
+                result['injected_auto_reset_ik_failure_recovered']=True
         finally:state.sample=sample
         # Controlled geometry probe: move the cylinder toward the hand until actual
         # contact exists, then compare packed point reductions with native force readback.
@@ -134,8 +278,8 @@ def validate():
             scalar,positions,normals,_,counts,starts=(v.cpu() for v in normal)
             tangent,anchors,fcounts,fstarts=(v.cpu() for v in friction)
             com=objects.data.object_com_pos_w[:,0].cpu()
-            normal_sum=torch.zeros(2,3);total=torch.zeros(2,3);torque=torch.zeros(2,3);load=torch.zeros(2)
-            for row in range(2):
+            normal_sum=torch.zeros(n,3);total=torch.zeros(n,3);torque=torch.zeros(n,3);load=torch.zeros(n)
+            for row in range(n):
                 for pair in range(counts.shape[1]):
                     for k in range(int(starts[row,pair]),int(starts[row,pair]+counts[row,pair])):
                         f=scalar.reshape(-1)[k]*normals[k]
@@ -152,6 +296,11 @@ def validate():
         assert measured,'No physical hand/target contact found in the controlled probe'
         result['final_reset_metrics']={k:float(v) for k,v in env.extras['log'].items() if k.startswith('Reset/')}
     finally:
+        events.sample_commands=sample_commands
+        events.plan_initial_layout=plan_layout
+        events._prepare_fast_ik=prepare_ik;events._geometry=prepare_geometry
+        if 'solve' in original:env._fast_ik.solve=original['solve']
+        if 'valid' in original:env._stabilize_robot_geometry.valid=original['valid']
         args.output.write_text(json.dumps(result,indent=2))
         env.close()
     print('STABILIZE_VALIDATION_PASS',args.output,flush=True)

@@ -1,7 +1,7 @@
 import torch
 from isaaclab.envs import ManagerBasedRLEnv
 from ..mdp.common.stabilize_sweep_contact import ContactSamples,centroid
-from ..mdp.common.stabilize_sweep_state import StabilizeState
+from ..mdp.common.stabilize_sweep_state import StabilizeState, SweepOnlyState
 
 
 class _RecentEpisodeOutcomes:
@@ -211,3 +211,12 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
             'Metrics/timeout_success_count': totals[0].clone(),
             'Metrics/timeout_episode_count': totals[1].clone(),
         })
+
+
+class SweepOnlyEnv(StabilizeSweepEnv):
+    """Parent scene/lifecycle with Sweep enabled from the initial observation."""
+
+    def __init__(self,cfg,render_mode=None,**kwargs):
+        super().__init__(cfg=cfg,render_mode=render_mode,**kwargs)
+        self._stabilize_state=SweepOnlyState(self.num_envs,self.device)
+        self._sweep_phase=self._stabilize_state.achieved

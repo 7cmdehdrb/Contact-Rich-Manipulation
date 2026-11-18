@@ -5,7 +5,7 @@ from ..assets.scenes.stabilize_sweep import StabilizeSweepSceneCfg
 from ..mdp.actions.stabilize_sweep import StabilizeSweepActionsCfg
 from ..mdp.observations.stabilize_sweep import StabilizeSweepObservationsCfg
 from ..mdp.commands.stabilize_sweep import StabilizeSweepCommandsCfg
-from ..mdp.rewards.stabilize_sweep import StabilizeSweepRewardsCfg
+from ..mdp.rewards.stabilize_sweep import StabilizeSweepRewardsCfg, SweepOnlyRewardsCfg
 from ..mdp.terminations.stabilize_sweep import StabilizeSweepTerminationsCfg
 from ..mdp.events.stabilize_sweep import StabilizeSweepEventsCfg
 from ..mdp.curricula.stabilize_sweep import StabilizeSweepCurriculumCfg
@@ -76,3 +76,8 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
             raise ValueError('Fast reset requires max_obstacles=6 and Warp IK')
         self.max_gray_obstacles = self.max_white_obstacles = None
         self.gray_padding = self.red_margin = self.rear_offset = None
+
+
+@configclass
+class SweepOnlyEnvCfg(StabilizeSweepEnvCfg):
+    rewards: SweepOnlyRewardsCfg = SweepOnlyRewardsCfg()

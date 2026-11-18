@@ -17,16 +17,72 @@ def test_registered_independent_environment_and_runner():
 def test_hand_starts_opposite_goal_with_surface_gap(load_mdp):
     import importlib, torch
     fn = importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_reset').hand_pose
-    # EEF -Z points along +X; hand's facing surface is 2cm ahead of EEF.
-    q = torch.tensor([[.70710678, 0., -.70710678, 0.]])
-    vertices = torch.tensor([[-.01,-.01,-.02],[.01,.01,0.]])
+    # A rightward goal uses the dorsum (EEF -Z), while the palm stays left.
+    q = torch.tensor([[.70710678, 0., .70710678, 0.]])
+    vertices = torch.tensor([[-.01,-.01,0.],[.01,.01,.02]])
     p, rot = fn(torch.tensor([[0.,0.,1.10]]), torch.tensor([[0.,1.,0.]]),
                 torch.tensor([.03]), torch.tensor([[0.,0.,1.13]]), q,
-                vertices, torch.full((1,3),.5))
-    torch.testing.assert_close(p,torch.tensor([[0.,-.10,1.13]]),atol=1e-6,rtol=0)
+                vertices, torch.full((1,3),.5),torch.tensor([[.7,0.,.79505]]),torch.tensor([-.1427,0.,0.]),target_half_height=torch.tensor([.05]))
+    torch.testing.assert_close(p,torch.tensor([[0.,-.08,1.065]]),atol=1e-6,rtol=0)
     from isaaclab.utils.math import quat_apply
-    torch.testing.assert_close(quat_apply(rot,torch.tensor([[0.,0.,-1.]])),
-                               torch.tensor([[0.,1.,0.]]),atol=1e-6,rtol=0)
+    torch.testing.assert_close(quat_apply(rot,torch.tensor([[0.,0.,1.]])),
+                               torch.tensor([[0.,-1.,0.]]),atol=1e-6,rtol=0)
+
+
+def test_initial_hand_keeps_palm_left_and_places_mount_toward_base(load_mdp):
+    import importlib, math, torch
+    from isaaclab.utils.math import quat_apply
+    fn=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_reset').hand_pose
+    angles=torch.tensor([30.,60.,90.,120.,150.,210.,240.,270.,300.,330.])*math.pi/180
+    direction=torch.stack((angles.cos(),angles.sin(),torch.zeros_like(angles)),-1)
+    n=len(angles)
+    center=torch.tensor([[0.,0.,1.10]]).expand(n,-1)
+    base=torch.tensor([[.7,0.,.79505]]).expand(n,-1)
+    default=torch.tensor([[0.,0.,1.211461]]).expand(n,-1)
+    q=torch.tensor([[.70710678,0.,-.70710678,0.]]).expand(n,-1)
+    mount=torch.tensor([-.1427,0.,0.])
+    vertices=torch.tensor([[-.01,-.01,-.02],[.01,.01,0.]])
+    p,rot=fn(center,direction,torch.full((n,),.03),default,q,vertices,
+             torch.full((n,3),.5),base,mount,target_half_height=torch.full((n,),.05))
+    palm=quat_apply(rot,torch.tensor([0.,0.,1.]).expand(n,-1))
+    assert (palm[:,1]<0).all()
+    expected=torch.where(direction[:,1:2]>0,-direction,direction)
+    torch.testing.assert_close(palm,expected,atol=1e-6,rtol=0)
+    toward=base-center;toward[:,2]=0.
+    toward-=direction*(toward*direction).sum(-1,keepdim=True)
+    toward/=toward.norm(dim=-1,keepdim=True)
+    torch.testing.assert_close(quat_apply(rot,mount.expand(n,-1)),.1427*toward,atol=1e-6,rtol=0)
+    surface=p[:,None]+quat_apply(rot[:,None].expand(-1,2,-1),vertices.expand(n,-1,-1))
+    gap=((center[:,None]-surface)*direction[:,None]).sum(-1).amin(-1)-.03
+    torch.testing.assert_close(gap,torch.full((n,),.05),atol=1e-6,rtol=0)
+    torch.testing.assert_close(surface[...,2].amin(-1),torch.full((n,),1.055),atol=1e-6,rtol=0)
+
+
+def test_hand_bottom_tracks_shelf_for_target_sizes_roll_and_yaw_jitter(load_mdp):
+    import importlib, math, torch
+    from isaaclab.utils.math import quat_apply
+    fn=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_reset').hand_pose
+    # Short/tall targets share a shelf. A deliberately high default EEF must not
+    # lift the hand; both contact faces and the two wrist elevations are covered.
+    half=torch.tensor([.045,.055,.045,.055])
+    center=torch.stack((torch.zeros(4),torch.zeros(4),1.05+half),-1)
+    direction=torch.tensor([[0.,1.,0.],[0.,-1.,0.],[0.,1.,0.],[0.,-1.,0.]])
+    default=torch.tensor([[0.,0.,2.]]).expand(4,-1)
+    q=torch.tensor([[.70710678,0.,-.70710678,0.]]).expand(4,-1)
+    vertices=torch.tensor([[-.10,-.02,-.03],[.02,.03,.02]])
+    draws=torch.tensor([[0.,1.,0.],[1.,0.,1.],[0.,1.,0.],[1.,0.,1.]])
+    for elevation in (0.,math.radians(2)):
+        p,rot=fn(center,direction,torch.full((4,),.04),default,q,vertices,draws,
+                 torch.tensor([[.7,0.,.79505]]).expand(4,-1),torch.tensor([-.1427,0.,0.]),
+                 elevation,target_half_height=half)
+        points=p[:,None]+quat_apply(rot[:,None].expand(-1,2,-1),vertices.expand(4,-1,-1))
+        bottom=points[...,2].amin(-1)
+        torch.testing.assert_close(bottom,torch.full((4,),1.055),atol=1e-6,rtol=0)
+        assert (bottom<center[:,2]+half).all()
+        normal=quat_apply(rot,torch.tensor([0.,0.,1.]).expand(4,-1))
+        assert (normal[:,1]<0).all()
+        torch.testing.assert_close((normal*direction).sum(-1).abs(),
+                                   torch.full((4,),math.cos(math.radians(10))),atol=1e-6,rtol=0)
 
 
 def test_collision_boxes_reject_overlap_without_rejecting_separation(load_mdp):
@@ -349,3 +405,120 @@ def test_squeeze_is_per_sample_before_policy_average(load_mdp):
     view.load=10.;samples.capture(env)
     # mean(0,1)=.5; applying the square after averaging load would give .25.
     assert reward.squeeze(env).item()==.5
+
+
+def _reset_layout_planner():
+    import math, torch
+    from typing import NamedTuple
+    from time import perf_counter
+    scope=dict(torch=torch,math=math,NamedTuple=NamedTuple,perf_counter=perf_counter)
+    _execute_definitions(MODULE_ROOT/'mdp/event_functions/stabilize_sweep.py',scope)
+    return scope
+
+
+def test_failed_initial_layout_redraws_only_failed_rows_and_retains_successes():
+    import torch
+    scope=_reset_layout_planner()
+    calls=[];draws=[]
+    def sample(bounds,generator,**params):
+        target=torch.rand((len(bounds),2),generator=generator)
+        goal=target+.1
+        draws.append((target.clone(),goal.clone()))
+        return target,goal
+    def choose(env,ids,local,delta,shelf,root):
+        calls.append(ids.tolist());n=len(ids)
+        valid=torch.ones(n,dtype=torch.bool)
+        if len(calls)==1:valid[-1]=False
+        marker=torch.full((n,3),float(len(calls)))
+        pose=scope['InitialPose'](marker.clone(),(marker.clone(),marker.clone(),marker.clone()),
+            marker.clone(),torch.ones(n,4),torch.zeros(n,2),torch.where(valid,1,4))
+        return pose,valid,[]
+    scope.update(sample_commands=sample,choose_initial_pose=choose)
+    env=NS(_revision_bounds_t=torch.zeros(3,17,2,3),_revision_layout_rng=torch.Generator().manual_seed(7))
+    local=torch.zeros(2,17,3);local[:,0,2]=1.05
+    delta,pose,resamples=scope['plan_initial_layout'](env,torch.tensor([2,0]),local,
+        torch.zeros(2,13),torch.zeros(2,13),{},max_layout_resamples=2)
+    assert calls==[[2,0],[0]]
+    assert resamples.tolist()==[0,1]
+    assert pose.attempts.tolist()==[1,5]
+    torch.testing.assert_close(local[0,0,:2],draws[0][0][0])
+    torch.testing.assert_close(local[1,0,:2],draws[1][0][0])
+    torch.testing.assert_close(local[:,0,2],torch.full((2,),1.05))
+    torch.testing.assert_close(delta,torch.full((2,2),.1))
+    for field in (pose.joints,*pose.boxes,pose.position_w):
+        torch.testing.assert_close(field,torch.tensor([[1.,1.,1.],[2.,2.,2.]]))
+    expected_local=local.clone();expected_joints=pose.joints.clone()
+    calls.clear();draws.clear();env._revision_layout_rng.manual_seed(7)
+    local[:,0,:2]=0.
+    _,again,counts=scope['plan_initial_layout'](env,torch.tensor([2,0]),local,
+        torch.zeros(2,13),torch.zeros(2,13),{},max_layout_resamples=2)
+    torch.testing.assert_close(local,expected_local)
+    torch.testing.assert_close(again.joints,expected_joints)
+    assert counts.tolist()==[0,1]
+
+
+def test_reset_layout_budget_is_bounded_and_does_not_commit_invalid_poses():
+    import torch,pytest
+    scope=_reset_layout_planner();calls=[]
+    def sample(bounds,generator,**params):return torch.zeros(len(bounds),2),torch.ones(len(bounds),2)
+    def choose(env,ids,local,delta,shelf,root):
+        calls.append(ids.tolist());n=len(ids);v=torch.zeros(n,3)
+        pose=scope['InitialPose'](v,(v.clone(),v.clone(),v.clone()),v.clone(),torch.zeros(n,4),
+                                  torch.ones(n,2),torch.full((n,),4))
+        return pose,torch.zeros(n,dtype=torch.bool),[{'test_failure':True}]
+    scope.update(sample_commands=sample,choose_initial_pose=choose)
+    env=NS(_revision_bounds_t=torch.zeros(1,17,2,3),_revision_layout_rng=torch.Generator())
+    # This planning seam has no scene or simulator, so no failed pose can be written.
+    with pytest.raises(RuntimeError,match='exhausted 3 layouts'):
+        scope['plan_initial_layout'](env,torch.tensor([0]),torch.zeros(1,17,3),
+            torch.zeros(1,13),torch.zeros(1,13),{},max_layout_resamples=2)
+    assert calls==[[0],[0],[0]]
+    def programming_error(*args):raise RuntimeError('unrelated solver failure')
+    scope['choose_initial_pose']=programming_error
+    with pytest.raises(RuntimeError,match='unrelated solver failure'):
+        scope['plan_initial_layout'](env,torch.tensor([0]),torch.zeros(1,17,3),
+            torch.zeros(1,13),torch.zeros(1,13),{},max_layout_resamples=2)
+
+
+def test_registered_sweep_only_child_and_separate_runner():
+    entries={}
+    _execute_definitions(MODULE_ROOT/'__init__.py',{'gym':NS(
+        registry=entries,register=lambda **kw:entries.update({kw['id']:kw}))})
+    child=entries['Inspire-Sweep-Only-v0']
+    assert child['entry_point'].endswith(':SweepOnlyEnv')
+    assert child['kwargs']['env_cfg_entry_point'].endswith(':SweepOnlyEnvCfg')
+    assert child['kwargs']['rsl_rl_cfg_entry_point'].endswith(':SweepOnlyPPORunnerCfg')
+    assert entries['Inspire-Stabilize-Sweep-v0']['entry_point'].endswith(':StabilizeSweepEnv')
+
+
+def test_sweep_only_bypasses_gate_from_reset_and_keeps_sweep_contact_formula(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state')
+    parent=module.StabilizeState(2,'cpu');child=module.SweepOnlyState(2,'cpu')
+    ids=torch.arange(2);center=torch.zeros(2,3);quat=torch.tensor([[1.,0.,0.,0.]]).expand(2,-1)
+    goal=torch.tensor([[.1,0.,0.]]).expand(2,-1)
+    for state in (parent,child):state.reset(ids,center,quat,goal)
+    assert not parent.achieved.any()
+    assert child.achieved.all() and child.reward_phase.all()
+    for step in range(2):
+        for state in (parent,child):
+            state.begin()
+            # Deliberately violates Gate: no stable force, high speed and moment.
+            state.sample(center,quat,goal,torch.zeros(2,3),torch.ones(2,3),
+                         torch.zeros(2),torch.zeros(2,dtype=torch.bool),torch.ones(2),torch.ones(2))
+            state.finish(center+torch.tensor([.01*(step+1),0.,0.]),goal,
+                         torch.tensor([[2.,0.,0.]]).expand(2,-1),torch.ones(2,dtype=torch.bool),
+                         torch.ones(2,dtype=torch.bool),torch.full((2,),1.1),torch.full((2,),1.05))
+    assert not parent.achieved.any() and not parent.positive.any()
+    assert child.achieved.all() and not child.consecutive.any()
+    assert not child.setup_sum.any() and not child.move_cost.any() and not child.rotate_cost.any()
+    # Keep the existing recent-contact recognition and normalized count (1/20).
+    torch.testing.assert_close(child.positive,torch.full((2,),.01/20))
+    child.begin()
+    child.finish(center,goal,torch.zeros(2,3),torch.zeros(2,dtype=torch.bool),
+                 torch.ones(2,dtype=torch.bool),torch.full((2,),1.1),torch.full((2,),1.05))
+    torch.testing.assert_close(child.retreat,torch.full((2,),.02))
+    held=child.previous_distance[1].clone();child.reset(torch.tensor([0]),center[:1],quat[:1],goal[:1])
+    assert child.achieved.all() and child.reward_phase.all()
+    assert child.contact_count[0]==0 and child.positive[0]==0 and child.retreat[0]==0
+    torch.testing.assert_close(child.previous_distance[1],held)

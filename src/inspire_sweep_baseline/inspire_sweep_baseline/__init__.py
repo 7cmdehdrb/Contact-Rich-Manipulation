@@ -1558,3 +1558,14 @@ gym.register(
         "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:StabilizeSweepPPORunnerCfg",
     },
 )
+
+# Stabilize/Sweep ablation: inherited scene and Sweep rewards, no stabilization Gate.
+gym.register(
+    id="Inspire-Sweep-Only-v0",
+    entry_point="inspire_sweep_baseline.runtime.stabilize_sweep:SweepOnlyEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "inspire_sweep_baseline.envs.stabilize_sweep_envs:SweepOnlyEnvCfg",
+        "rsl_rl_cfg_entry_point": "inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:SweepOnlyPPORunnerCfg",
+    },
+)

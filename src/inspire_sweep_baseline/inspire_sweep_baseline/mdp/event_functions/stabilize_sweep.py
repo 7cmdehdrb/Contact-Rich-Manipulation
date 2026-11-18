@@ -48,7 +48,7 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
     base_quat=quat_mul(root_state[:,3:7],env._fast_base_offset[1][ids])
     default_pos,default_quat=(v[ids] for v in env._fast_default_eef)
     default_world=base_pos+quat_apply(base_quat,default_pos)
-    default_local=quat_apply_inverse(shelf_quat,default_world-shelf_pos);default_local[:,2]+=.01
+    default_local=quat_apply_inverse(shelf_quat,default_world-shelf_pos)
     _,default_shelf_quat=subtract_frame_transforms(shelf_pos,shelf_quat,default_world,quat_mul(base_quat,default_quat))
     bounds=env._revision_bounds_t[ids,0]
     half=(bounds[:,1]-bounds[:,0])/2
@@ -62,18 +62,24 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
            torch.eye(3,device=env.device).expand(len(ids),len(shelf_centers),3,3))
     target=(center[:,None],half[:,None],matrix_from_quat(target_quat)[:,None])
     base_local,base_local_quat=subtract_frame_transforms(shelf_pos,shelf_quat,base_pos,base_quat)
+    offset=env.cfg.scene.ee_frame.target_frames[0].offset
+    mount_offset=quat_apply_inverse(local.new_tensor(offset.rot)[None],-local.new_tensor(offset.pos)[None])[0]
     robot=env.scene['robot'];joints=robot.data.default_joint_pos[ids].clone();joints[:,env._stabilize_hand_ids]=0.
     valid=torch.zeros(len(ids),device=env.device,dtype=torch.bool)
     attempts=torch.zeros(len(ids),device=env.device,dtype=torch.long)
     desired_world=local.new_zeros(len(ids),3);desired_quat=local.new_zeros(len(ids),4)
     errors=local.new_full((len(ids),2),float('inf'))
     diagnostics=[]
-    for _ in range(4):
+    # Keep commands fixed. Only failed rows try a different initial hand pose;
+    # small wrist-roll alternatives retain the same 5mm bottom clearance.
+    for elevation in (0.,2.,0.,2.):
         rows=(~valid).nonzero().flatten()
         if not len(rows):break
         attempts[rows]+=1
         draws=torch.rand((len(rows),3),device=env.device,generator=env._goal_reset_rng)
-        p,q=hand_pose(center[rows],direction[rows],radius[rows],default_local[rows],default_shelf_quat[rows],env._stabilize_hand_vertices,draws)
+        p,q=hand_pose(center[rows],direction[rows],radius[rows],default_local[rows],default_shelf_quat[rows],
+                      env._stabilize_hand_vertices,draws,base_local[rows],mount_offset,math.radians(elevation),
+                      target_half_height=half[rows,2])
         pw=shelf_pos[rows]+quat_apply(shelf_quat[rows],p);qw=quat_mul(shelf_quat[rows],q)
         pb,qb=subtract_frame_transforms(base_pos[rows],base_quat[rows],pw,qw)
         angles,ok,pe,re=env._fast_ik.solve(pb,qb,env._fast_initial[ids[rows]],env._fast_limits[ids[rows]])
@@ -81,14 +87,47 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
         boxes=env._stabilize_robot_geometry.boxes(candidate,base_local[rows],base_local_quat[rows])
         safe=env._stabilize_robot_geometry.valid(boxes,tuple(v[rows] for v in target),tuple(v[rows] for v in shelf))
         diagnostics.append(dict(env_ids=ids[rows].tolist(), ik_valid=ok.tolist(), collision_free=safe.tolist(),
+                                hand_bottom_clearance=.005, wrist_elevation_degrees=elevation,
                                 desired_position_shelf=p.tolist(), errors=torch.stack((pe,re),-1).tolist()))
         accepted=ok&safe
         chosen=rows[accepted];joints[chosen]=candidate[accepted];valid[chosen]=True
         desired_world[rows]=pw;desired_quat[rows]=qw;errors[rows]=torch.stack((pe,re),-1)
-    if not bool(valid.all()):
-        raise RuntimeError(f'Stabilize IK/collision exhausted 4 candidates: env_ids={ids[~valid].tolist()}, attempts={diagnostics}')
     boxes=env._stabilize_robot_geometry.boxes(joints,base_local,base_local_quat)
-    return InitialPose(joints,boxes,desired_world,desired_quat,errors,attempts)
+    return InitialPose(joints,boxes,desired_world,desired_quat,errors,attempts),valid,diagnostics
+
+
+def plan_initial_layout(env, ids, local, shelf_state, root_state, command_params, max_layout_resamples=8):
+    """Reject infeasible starts before committing; keep successful rows unchanged.
+
+    Reset failure is not an agent transition. Only IK/collision rejection retries;
+    exceptions from broken assets, solvers, or observation code still propagate.
+    """
+    if isinstance(max_layout_resamples,bool) or not isinstance(max_layout_resamples,int) or max_layout_resamples<0:
+        raise ValueError('max_layout_resamples must be a nonnegative integer')
+    target,goal=sample_commands(env._revision_bounds_t[ids,0],env._revision_layout_rng,**command_params)
+    local[:,0,:2]=target
+    pose,valid,diagnostics=choose_initial_pose(env,ids,local,goal-target,shelf_state,root_state)
+    # Geometry half-extents may be expanded views; merging requires owned rows.
+    pose=pose._replace(boxes=tuple(v.clone() for v in pose.boxes))
+    resamples=torch.zeros(len(ids),device=ids.device,dtype=torch.long)
+    for _ in range(max_layout_resamples):
+        rows=(~valid).nonzero().flatten()
+        if not len(rows):break
+        target[rows],goal[rows]=sample_commands(env._revision_bounds_t[ids[rows],0],
+            env._revision_layout_rng,**command_params)
+        local[rows,0,:2]=target[rows]
+        resamples[rows]+=1
+        retry,accepted,diagnostics=choose_initial_pose(env,ids[rows],local[rows],
+            goal[rows]-target[rows],shelf_state[rows],root_state[rows])
+        for destination,source in zip((pose.joints,*pose.boxes,pose.position_w,pose.quaternion_w,pose.errors),
+                                      (retry.joints,*retry.boxes,retry.position_w,retry.quaternion_w,retry.errors)):
+            destination[rows]=source
+        pose.attempts[rows]+=retry.attempts
+        valid[rows]=accepted
+    if not bool(valid.all()):
+        raise RuntimeError(f'Stabilize reset exhausted {max_layout_resamples+1} layouts (4 poses/layout): '
+                           f'env_ids={ids[~valid].tolist()}, last_attempts={diagnostics}')
+    return goal-target,pose,resamples
 
 
 def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, pose):
@@ -119,28 +158,28 @@ def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, p
 
 
 def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
-                min_goal_distance=.06,max_goal_distance=.12,excluded_x_half_angle=math.pi/6):
+                min_goal_distance=.06,max_goal_distance=.12,excluded_x_half_angle=math.pi/6,max_layout_resamples=8):
     start=perf_counter()
     ids=torch.arange(env.num_envs,device=env.device) if env_ids is None else torch.as_tensor(env_ids,device=env.device,dtype=torch.long)
     if not len(ids):return
-    target,goal=sample_commands(env._revision_bounds_t[ids,0],env._revision_layout_rng,
-        spawn_radius,edge_clearance,excluded_x_half_angle,min_goal_distance,max_goal_distance)
     local=torch.zeros((len(ids),17,3),device=env.device)
     local[...,2]=50.+2.*torch.arange(17,device=env.device)
-    local[:,0,:2]=target;local[:,0,2]=env._refactor_spawn_z[ids,0]
+    local[:,0,2]=env._refactor_spawn_z[ids,0]
     yaw=local.new_zeros(len(ids),17);yaw[:,0]=-math.pi/2
     active=torch.zeros((len(ids),17),device=env.device,dtype=torch.bool);active[:,0]=True
     shelf_state=env.scene['shelf'].data.default_root_state[ids].clone()
     root_state=env.scene['robot'].data.default_root_state[ids].clone()
     shelf_state[:,:3]+=env.scene.env_origins[ids];root_state[:,:3]+=env.scene.env_origins[ids]
-    pose=choose_initial_pose(env,ids,local,goal-target,shelf_state,root_state)
+    command_params=dict(spawn_radius=spawn_radius,edge_clearance=edge_clearance,
+        excluded_x_half_angle=excluded_x_half_angle,min_goal_distance=min_goal_distance,max_goal_distance=max_goal_distance)
+    delta,pose,resamples=plan_initial_layout(env,ids,local,shelf_state,root_state,command_params,max_layout_resamples)
     from ..common.stabilize_sweep_layout import place_obstacles
     requested=torch.randint(0,7,(len(ids),),device=env.device,generator=env._revision_layout_rng)
     selected=torch.rand((len(ids),16),device=env.device,generator=env._revision_layout_rng).argsort(-1)[:,:6]+1
-    place_obstacles(env._fast_layout,ids,local,yaw,active,goal-target,pose.boxes,selected,requested,env._revision_layout_rng)
+    place_obstacles(env._fast_layout,ids,local,yaw,active,delta,pose.boxes,selected,requested,env._revision_layout_rng)
     skipped=requested-active[:,1:].sum(-1)
     targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state)
-    commit_scene(env,ids,local,yaw,active,goal-target,shelf_state,root_state,pose)
+    commit_scene(env,ids,local,yaw,active,delta,shelf_state,root_state,pose)
     env._surface_target_w[ids]=targets
     env._surface_obstacles_w[ids]=obstacles
     env._surface_valid[ids]=valid
@@ -152,6 +191,8 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
         'Reset/placement_skipped':skipped.float().mean(),
         'Reset/empty_fraction':(actual==0).float().mean(),
         'Reset/ik_attempts':pose.attempts.float().mean(),
+        'Reset/layout_resamples':resamples.float().mean(),
+        'Reset/ik_recovery_fraction':(resamples>0).float().mean(),
         'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
         **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
            for key in ('upload_ms','readback_ms','ray_ms','components_ms')},

@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-18: `Inspire-Sweep-Only-v0`는 `Inspire-Stabilize-Sweep-v0`를 상속해 안정화 보상·전용 초기 이동/회전 비용과 Gate를 제거한다. 초기화 직후부터 Sweep을 적용하며 압착 비용과 나머지 구성은 유지한다. [환경 차이·실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/STABILIZE_SWEEP.md#sweep-only-파생-환경).
+
 2026-11-11: `Inspire-Sweep-Simple-Finger-v1`은 Finger-v0의 정책 출력·입력 범위와 속도 비용/종료를 변경하고 Last Action tanh를 제거한다. 이를 상속하는 `Inspire-Sweep-Simple-Finger-v2`는 로그 Distance·2cm/3초 달성 후 후퇴 Reach·gate 기반 Contact/성공을 적용한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_SIMPLE_ENVIRONMENTS.md#finger-v1v2-출력-범위와-정밀-이동후퇴).
 
 2026-11-10: 병렬 정책 평가를 위한 원시 로그 수집·데이터 추출·플롯 실행기를 추가했다. Timeout 최종 분포(전체/6방향), 생성 목표, 움직임 중 Contact 비율을 반복 수집한다. [실행 명령과 데이터 계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_EVALUATION.md).

@@ -42,3 +42,10 @@ class StabilizeSweepRewardsCfg:
     object_tilt = RewTerm(func=active_object_tilt_cost, weight=-30.0, params={'free_angle': math.radians(5.0), 'fail_angle': 0.9})
     obstacle_displacement = RewTerm(func=active_obstacle_displacement_cost, weight=-150.0, params={'displacement_max_cost': 0.04})
     target_inverse_distance = None
+
+
+@configclass
+class SweepOnlyRewardsCfg(StabilizeSweepRewardsCfg):
+    stage = None
+    initial_movement = None
+    initial_rotation = None

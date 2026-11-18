@@ -28,3 +28,8 @@ class StabilizeSweepPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     actor = StabilizeSweepModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
     critic = StabilizeSweepModelCfg()
     algorithm = RslRlPpoAlgorithmCfg(value_loss_coef=1.0, use_clipped_value_loss=True, clip_param=0.2, entropy_coef=0.005, num_learning_epochs=8, num_mini_batches=4, learning_rate=0.001, schedule='adaptive', gamma=0.98, lam=0.95, desired_kl=0.02, max_grad_norm=1.0)
+
+
+@configclass
+class SweepOnlyPPORunnerCfg(StabilizeSweepPPORunnerCfg):
+    experiment_name = 'inspire_sweep_only_v0'
