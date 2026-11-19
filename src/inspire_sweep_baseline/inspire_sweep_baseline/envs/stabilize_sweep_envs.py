@@ -99,3 +99,11 @@ class SweepOnlyTestEnvCfg(SweepOnlyEnvCfg):
     debug_surface_points: bool = True
     events: StabilizeSweepTestEventsCfg = StabilizeSweepTestEventsCfg()
     rewards: SweepOnlyTestRewardsCfg = SweepOnlyTestRewardsCfg()
+
+
+@configclass
+class SweepOnlyV1TestEnvCfg(SweepOnlyTestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress.weight = 50.0
+        self.rewards.sweep_retreat.weight = -10.0

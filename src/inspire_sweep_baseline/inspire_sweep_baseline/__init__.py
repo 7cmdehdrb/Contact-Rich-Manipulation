@@ -1573,6 +1573,7 @@ gym.register(
 for _test_id, _test_prefix, _parent_runtime in (
     ('Inspire-Stabilize-Sweep-v0-Test', 'StabilizeSweepTest', 'StabilizeSweepEnv'),
     ('Inspire-Sweep-Only-v0-Test', 'SweepOnlyTest', 'SweepOnlyEnv'),
+    ('Inspire-Sweep-Only-v1-Test', 'SweepOnlyV1Test', 'SweepOnlyEnv'),
 ):
     gym.register(
         id=_test_id,

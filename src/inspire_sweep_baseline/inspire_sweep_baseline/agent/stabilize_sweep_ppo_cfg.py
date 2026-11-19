@@ -51,3 +51,8 @@ class StabilizeSweepTestPPORunnerCfg(StabilizeSweepPPORunnerCfg):
 @configclass
 class SweepOnlyTestPPORunnerCfg(SweepOnlyPPORunnerCfg):
     experiment_name = 'inspire_sweep_only_v0_test'
+
+
+@configclass
+class SweepOnlyV1TestPPORunnerCfg(SweepOnlyTestPPORunnerCfg):
+    experiment_name = 'inspire_sweep_only_v1_test'
