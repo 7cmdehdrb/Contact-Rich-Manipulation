@@ -32,6 +32,7 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
     goal_hold_outer_radius: float | None = None
     goal_reward_height_limit: float = 0.14
     debug_initial_ik_bounds: bool = False
+    debug_surface_points: bool = False
     wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
     red_margin: float = 0.023
     rear_offset: float = 0.02
@@ -87,11 +88,13 @@ class SweepOnlyEnvCfg(StabilizeSweepEnvCfg):
 
 @configclass
 class StabilizeSweepTestEnvCfg(StabilizeSweepEnvCfg):
+    debug_surface_points: bool = True
     events: StabilizeSweepTestEventsCfg = StabilizeSweepTestEventsCfg()
     rewards: StabilizeSweepTestRewardsCfg = StabilizeSweepTestRewardsCfg()
 
 
 @configclass
 class SweepOnlyTestEnvCfg(SweepOnlyEnvCfg):
+    debug_surface_points: bool = True
     events: StabilizeSweepTestEventsCfg = StabilizeSweepTestEventsCfg()
     rewards: SweepOnlyTestRewardsCfg = SweepOnlyTestRewardsCfg()

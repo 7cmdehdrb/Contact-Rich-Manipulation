@@ -46,7 +46,9 @@ def validate():
         assert parent_cfg.rewards.reaching is None
         assert cfg.rewards.reaching.to_dict()==SweepSimpleFingerRewardsCfg().reaching.to_dict()
         child_dict['rewards']['reaching']=parent_dict['rewards']['reaching']
-        assert child_dict==parent_dict, 'Test variant changed more than reset and Reach'
+        assert cfg.debug_surface_points and not parent_cfg.debug_surface_points
+        child_dict['debug_surface_points']=parent_dict['debug_surface_points']
+        assert child_dict==parent_dict, 'Test variant changed more than reset, Reach and visualization'
         base_runner=load_cfg_from_registry(args.task.removesuffix('-Test'),'rsl_rl_cfg_entry_point').to_dict()
         runner=load_cfg_from_registry(args.task,'rsl_rl_cfg_entry_point').to_dict()
         assert runner['experiment_name']==base_runner['experiment_name']+'_test'
@@ -221,6 +223,32 @@ def validate():
                 forces=env.scene[object_hand_sensor_name(objects.object_names[source])].data.net_forces_w
                 assert not forces[inactive[:,source]].any(), f'Parked body contacted another body: {source}'
             result['test_inactive_bodies_stationary_and_contact_free_after_physics']=True
+    def check_surface_markers():
+        if not finger_test:
+            return
+        from pxr import Usd, UsdGeom, UsdPhysics
+        # Headless training must not allocate markers. Exercise the same visual
+        # path offscreen, without opening a GUI or altering physics settings.
+        original_mode=env.render_mode
+        if not env.sim.has_gui() and original_mode != 'rgb_array':
+            assert not hasattr(env,'_surface_point_markers') or not env._surface_point_markers.is_visible()
+        env.render_mode='rgb_array'
+        try:
+            env._update_surface_point_markers()
+            prim=env.scene.stage.GetPrimAtPath('/Visuals/StabilizeSweep/surface_points')
+            expected=torch.cat((env._surface_target_w[env._revision_layout_complete],
+                env._surface_obstacles_w[env._surface_valid & env._revision_layout_complete[:,None]]))
+            actual=torch.tensor(UsdGeom.PointInstancer(prim).GetPositionsAttr().Get(),device=env.device)
+            torch.testing.assert_close(actual,expected)
+            for child in Usd.PrimRange(prim):
+                assert not child.HasAPI(UsdPhysics.CollisionAPI)
+                assert not child.HasAPI(UsdPhysics.RigidBodyAPI)
+            assert collision_filter_state()==filter_before
+            result['surface_markers_match_policy_snapshot_and_have_no_physics']=True
+        finally:
+            env.render_mode=original_mode
+            env._update_surface_point_markers()
+
     def check_commands():
         if sweep_only:
             state=env._stabilize_state
@@ -231,6 +259,7 @@ def validate():
         goal=env.command_manager.get_command('target_goal_pos')[:,:3]
         check_static_local_com('reset')
         check_test_parking()
+        check_surface_markers()
         # Replay the same *pre-fallback* scene through the reference so an
         # unnecessary target-only fallback cannot hide an observer mismatch.
         before,actual_active,observed=snapshots[-1]

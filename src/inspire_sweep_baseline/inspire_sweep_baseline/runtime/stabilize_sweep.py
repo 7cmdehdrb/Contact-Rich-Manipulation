@@ -130,6 +130,36 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
             self.scene.update=update
 
 
+    def _update_surface_point_markers(self):
+        """Draw the episode-fixed policy snapshot; never create physics bodies.
+
+        Update only after reset (including partial reset). EEF transforms change
+        the policy coordinates, but these world-space snapshot points stay fixed.
+        """
+        enabled = self.cfg.debug_surface_points and (self.sim.has_gui() or self.render_mode == 'rgb_array')
+        if not enabled:
+            if hasattr(self, '_surface_point_markers'):
+                self._surface_point_markers.set_visibility(False)
+            return
+        if not hasattr(self, '_surface_point_markers'):
+            import isaaclab.sim as sim_utils
+            from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+            self._surface_point_markers = VisualizationMarkers(VisualizationMarkersCfg(
+                prim_path='/Visuals/StabilizeSweep/surface_points',
+                markers={'point': sim_utils.SphereCfg(
+                    radius=0.006, rigid_props=None, collision_props=None,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1., 0., 0.)),
+                )},
+            ))
+        ready = self._revision_layout_complete
+        points = torch.cat((self._surface_target_w[ready],
+                            self._surface_obstacles_w[self._surface_valid & ready[:, None]]), dim=0)
+        if len(points):
+            self._surface_point_markers.set_visibility(True)
+            self._surface_point_markers.visualize(translations=points)
+        else:
+            self._surface_point_markers.set_visibility(False)
+
     def set_learning_iteration(self, iteration):
         if not isinstance(iteration, int) or isinstance(iteration, bool) or iteration < 0:
             raise ValueError('Learning iteration must be a nonnegative integer')
@@ -203,6 +233,7 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
         self.action_manager._action[env_ids, 6:] = 0.
         self.action_manager._prev_action[env_ids, 6:] = 0.
         self._initial_object_positions_w[env_ids] = self.scene['object_collection'].data.object_pos_w[env_ids]
+        self._update_surface_point_markers()
         self.extras['log'].update(metrics)
         self.extras['log'].update(self._reset_diagnostics)
         totals = self._timeout_outcomes.totals
