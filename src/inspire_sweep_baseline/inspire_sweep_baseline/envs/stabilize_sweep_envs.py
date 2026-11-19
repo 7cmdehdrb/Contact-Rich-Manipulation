@@ -107,3 +107,10 @@ class SweepOnlyV1TestEnvCfg(SweepOnlyTestEnvCfg):
         super().__post_init__()
         self.rewards.sweep_progress.weight = 50.0
         self.rewards.sweep_retreat.weight = -10.0
+
+
+@configclass
+class SweepOnlyV2TestEnvCfg(SweepOnlyV1TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['excluded_x_half_angle'] = 0.0

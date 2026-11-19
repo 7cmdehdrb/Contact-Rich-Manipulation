@@ -56,3 +56,8 @@ class SweepOnlyTestPPORunnerCfg(SweepOnlyPPORunnerCfg):
 @configclass
 class SweepOnlyV1TestPPORunnerCfg(SweepOnlyTestPPORunnerCfg):
     experiment_name = 'inspire_sweep_only_v1_test'
+
+
+@configclass
+class SweepOnlyV2TestPPORunnerCfg(SweepOnlyV1TestPPORunnerCfg):
+    experiment_name = 'inspire_sweep_only_v2_test'

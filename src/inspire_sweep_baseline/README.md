@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-19: `Inspire-Sweep-Only-v2-Test`는 v1-Test 직접 자식으로 목표 방향 Deadzone만 **0° 고정**이다. 보상 50/−10 및 나머지 구성 유지, 로그 `inspire_sweep_only_v2_test`. 학습 중인 GPU 보호 요청에 따라 GPU·Isaac Sim 실행 없이 CPU 정적 검사만 수행했다.
+
 2026-11-19: `Inspire-Sweep-Only-v1-Test`를 `Inspire-Sweep-Only-v0-Test` 직접 자식으로 추가했다. `sweep_progress=50`, `sweep_retreat=−10`만 변경하며 로그 이름은 `inspire_sweep_only_v1_test`다. 부모의 30/−20과 나머지 환경은 유지한다.
 
 2026-11-19 후속: Sweep Only 일반·Test의 `sweep_retreat` weight를 −38.91에서 **−20**으로 변경했다. 정방향 weight 30과 거리 식은 유지하고 Stabilize 두 환경은 기존 −38.91을 유지한다.
