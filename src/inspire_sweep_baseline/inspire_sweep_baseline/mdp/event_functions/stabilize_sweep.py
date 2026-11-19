@@ -70,6 +70,7 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
     desired_world=local.new_zeros(len(ids),3);desired_quat=local.new_zeros(len(ids),4)
     errors=local.new_full((len(ids),2),float('inf'))
     diagnostics=[]
+    accepted_boxes=None
     # Keep commands fixed. Only failed rows try a different initial hand pose;
     # small wrist-roll alternatives retain the same 5mm bottom clearance.
     for elevation in (0.,2.,0.,2.):
@@ -84,16 +85,38 @@ def choose_initial_pose(env, ids, local, delta, shelf_state, root_state):
         pb,qb=subtract_frame_transforms(base_pos[rows],base_quat[rows],pw,qw)
         angles,ok,pe,re=env._fast_ik.solve(pb,qb,env._fast_initial[ids[rows]],env._fast_limits[ids[rows]])
         candidate=joints[rows].clone();candidate[:,env._goal_reset_arm_ids]=angles
-        boxes=env._stabilize_robot_geometry.boxes(candidate,base_local[rows],base_local_quat[rows])
-        safe=env._stabilize_robot_geometry.valid(boxes,tuple(v[rows] for v in target),tuple(v[rows] for v in shelf))
-        diagnostics.append(dict(env_ids=ids[rows].tolist(), ik_valid=ok.tolist(), collision_free=safe.tolist(),
+        solved=ok.nonzero().flatten()
+        safe=torch.zeros_like(ok)
+        # An IK rejection cannot be accepted regardless of collision geometry.
+        # Failed retries are often tiny batches; avoid their entire FK/SAT/LP path.
+        if len(solved):
+            solved_rows=rows[solved]
+            boxes=env._stabilize_robot_geometry.boxes(candidate[solved],base_local[solved_rows],base_local_quat[solved_rows])
+            safe[solved]=env._stabilize_robot_geometry.valid(boxes,tuple(v[solved_rows] for v in target),tuple(v[solved_rows] for v in shelf))
+            if accepted_boxes is None:
+                accepted_boxes=tuple(value.new_empty((len(ids),*value.shape[1:])) for value in boxes)
+            chosen=solved_rows[safe[solved]]
+            for destination,source in zip(accepted_boxes,boxes):
+                destination[chosen]=source[safe[solved]]
+        ik_valid=ok.tolist()
+        collision_free=[value if checked else None for value,checked in zip(safe.tolist(),ik_valid)]
+        diagnostics.append(dict(env_ids=ids[rows].tolist(), ik_valid=ik_valid, collision_free=collision_free,
                                 hand_bottom_clearance=.005, wrist_elevation_degrees=elevation,
                                 desired_position_shelf=p.tolist(), errors=torch.stack((pe,re),-1).tolist()))
         accepted=ok&safe
         chosen=rows[accepted];joints[chosen]=candidate[accepted];valid[chosen]=True
         desired_world[rows]=pw;desired_quat[rows]=qw;errors[rows]=torch.stack((pe,re),-1)
-    boxes=env._stabilize_robot_geometry.boxes(joints,base_local,base_local_quat)
-    return InitialPose(joints,boxes,desired_world,desired_quat,errors,attempts),valid,diagnostics
+    remaining=(~valid).nonzero().flatten()
+    if len(remaining):
+        # Preserve the original return values for rejected rows as well; their
+        # joints still hold the default posture until layout recovery replaces it.
+        fallback=env._stabilize_robot_geometry.boxes(joints[remaining],base_local[remaining],base_local_quat[remaining])
+        if accepted_boxes is None:
+            accepted_boxes=fallback
+        else:
+            for destination,source in zip(accepted_boxes,fallback):
+                destination[remaining]=source
+    return InitialPose(joints,accepted_boxes,desired_world,desired_quat,errors,attempts),valid,diagnostics
 
 
 def plan_initial_layout(env, ids, local, shelf_state, root_state, command_params, max_layout_resamples=8):
@@ -166,6 +189,22 @@ def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, p
     env._goal_reset_errors[ids]=pose.errors
 
 
+def _commit_surface_snapshot(env, ids, observed):
+    """Store selected rows' fixed points and report the shared observation timings."""
+    targets,obstacles,valid,timings=observed
+    env._surface_target_w[ids]=targets
+    env._surface_obstacles_w[ids]=obstacles
+    env._surface_valid[ids]=valid
+    return {
+        'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
+        **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
+           for key in ('upload_ms','readback_ms','ray_ms','components_ms')},
+        'Reset/observation_fallbacks':sum(t['fallback'] for t in timings)/len(ids),
+        'Reset/target_missing_fallbacks':sum(t['target_missing'] for t in timings)/len(ids),
+        'Reset/slot_overflow_fallbacks':sum(t['slot_overflow'] for t in timings)/len(ids),
+    }
+
+
 def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
                 min_goal_distance=.06,max_goal_distance=.12,excluded_x_half_angle=math.pi/6,max_layout_resamples=8):
     start=perf_counter()
@@ -192,15 +231,13 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     place_obstacles(env._fast_layout,ids,local,yaw,active,delta,pose.boxes,selected,requested,env._revision_layout_rng,
                     batch_size=32)
     skipped=requested-active[:,1:].sum(-1)
-    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
+    observed=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
     # Planning and visibility retain their original coordinates. Only retired
     # bodies change physical parking, including target-only fallback rows.
     local=torch.where(active[...,None],local,parking)
     commit_scene(env,ids,local,yaw,active,delta,shelf_state,root_state,pose)
     cache_static_local_com(env)
-    env._surface_target_w[ids]=targets
-    env._surface_obstacles_w[ids]=obstacles
-    env._surface_valid[ids]=valid
+    observation_metrics=_commit_surface_snapshot(env,ids,observed)
     env._sweep_phase[ids]=False
     actual=active[:,1:].sum(-1)
     env._reset_diagnostics={
@@ -211,12 +248,7 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
         'Reset/ik_attempts':pose.attempts.float().mean(),
         'Reset/layout_resamples':resamples.float().mean(),
         'Reset/ik_recovery_fraction':(resamples>0).float().mean(),
-        'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
-        **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
-           for key in ('upload_ms','readback_ms','ray_ms','components_ms')},
-        'Reset/observation_fallbacks':sum(t['fallback'] for t in timings)/len(ids),
-        'Reset/target_missing_fallbacks':sum(t['target_missing'] for t in timings)/len(ids),
-        'Reset/slot_overflow_fallbacks':sum(t['slot_overflow'] for t in timings)/len(ids),
+        **observation_metrics,
         'Reset/batch_ms':1000*(perf_counter()-start),
     }
 
@@ -438,7 +470,7 @@ def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clea
     yaw=torch.atan2(2*(w*z+x*y),1-2*(y.square()+z.square()))
     active=env._active_object_mask[ids].clone()
     requested=active[:,1:].sum(-1)
-    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
+    observed=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
     # The target-only fallback retires obstacles before its existing commit.
     # Keep those bodies on the same nearby grid, with no far-parking teleport.
     local = torch.where(active[..., None], local, parking)
@@ -455,9 +487,7 @@ def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clea
         env._active_object_mask[ids]=active
         apply_fixed_pool_gravity_mask(env,ids[changed])
         env._revision_spawn_positions[ids]=world
-    env._surface_target_w[ids]=targets
-    env._surface_obstacles_w[ids]=obstacles
-    env._surface_valid[ids]=valid
+    observation_metrics=_commit_surface_snapshot(env,ids,observed)
     actual=active[:,1:].sum(-1)
     env._final_actual_population[ids]=actual
     env._reset_diagnostics={
@@ -469,11 +499,6 @@ def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clea
         'Reset/layout_resamples':0.,
         'Reset/ik_recovery_fraction':0.,
         'Reset/finger_placement_ms':placement_ms,
-        'Reset/observation_ms':sum(t['total_ms'] for t in timings)/len(ids),
-        **{f'Reset/observation_{key}':sum(t.get(key,0.) for t in timings)/len(ids)
-           for key in ('upload_ms','readback_ms','ray_ms','components_ms')},
-        'Reset/observation_fallbacks':sum(t['fallback'] for t in timings)/len(ids),
-        'Reset/target_missing_fallbacks':sum(t['target_missing'] for t in timings)/len(ids),
-        'Reset/slot_overflow_fallbacks':sum(t['slot_overflow'] for t in timings)/len(ids),
+        **observation_metrics,
         'Reset/batch_ms':1000*(perf_counter()-start),
     }

@@ -7,7 +7,7 @@ from ...assets.robot import ARM_JOINT_NAMES
 from ...assets.hand_kinematics import HAND_DRIVE_JOINT_NAMES
 from ..observation_functions.sweep_simple import hand_drive_positions
 from ..observation_functions.contact_sweep_clutter import PureWristWrench
-from ..observation_functions.final import hand_configuration, wrist_wrench_observation_noise
+from ..observation_functions.final import wrist_wrench_observation_noise
 from ..observation_functions.revision import arm_joint_positions, arm_joint_velocities
 from ..observation_functions.sweep import eef_pose_in_root
 from ..observation_functions.wrench_refactor import RelativeRightHandTactile, goal_position_in_eef, paired_tactile_observation_noise
@@ -44,3 +44,13 @@ class StabilizeSweepObservationsCfg:
     obstacles: ObstaclesCfg = ObstaclesCfg()
     critic = None
     critic_obstacles = None
+
+
+@configclass
+class SweepOnlyObservationsCfg(StabilizeSweepObservationsCfg):
+    @configclass
+    class PolicyCfg(StabilizeSweepObservationsCfg.PolicyCfg):
+        # Sweep phase is internal state, never an actor or critic input.
+        phase = None
+
+    policy: PolicyCfg = PolicyCfg()

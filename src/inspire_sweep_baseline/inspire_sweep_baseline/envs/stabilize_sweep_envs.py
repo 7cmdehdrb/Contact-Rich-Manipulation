@@ -3,7 +3,7 @@ from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
 from ..assets.scenes.stabilize_sweep import StabilizeSweepSceneCfg
 from ..mdp.actions.stabilize_sweep import StabilizeSweepActionsCfg
-from ..mdp.observations.stabilize_sweep import StabilizeSweepObservationsCfg
+from ..mdp.observations.stabilize_sweep import StabilizeSweepObservationsCfg, SweepOnlyObservationsCfg
 from ..mdp.commands.stabilize_sweep import StabilizeSweepCommandsCfg
 from ..mdp.rewards.stabilize_sweep import StabilizeSweepRewardsCfg, SweepOnlyRewardsCfg
 from ..mdp.rewards.stabilize_sweep import StabilizeSweepTestRewardsCfg, SweepOnlyTestRewardsCfg
@@ -15,6 +15,7 @@ from ..mdp.actions.stabilize_sweep import StabilizeSweepOSCActionCfg
 
 @configclass
 class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
+    """Shared contract; children select stabilization, reset style and Reach."""
     scene: StabilizeSweepSceneCfg = StabilizeSweepSceneCfg(num_envs=2048, env_spacing=2.5)
     observations: StabilizeSweepObservationsCfg = StabilizeSweepObservationsCfg()
     actions: StabilizeSweepActionsCfg = StabilizeSweepActionsCfg()
@@ -30,13 +31,13 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
     target_bounding_box: bool = False
     goal_success_radius: float = 0.03
     goal_hold_outer_radius: float | None = None
-    goal_reward_height_limit: float = 0.14
+    # The actual Sweep contact gate is relative to the shelf surface.
+    sweep_contact_height_limit: float = 0.12
     debug_initial_ik_bounds: bool = False
     debug_surface_points: bool = False
     wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
     red_margin: float = 0.023
     rear_offset: float = 0.02
-    contact_height_limit: float = 0.14
     gray_padding: float = 0.065
     viewer: ViewerCfg = ViewerCfg(eye=(3.5, 3.5, 3.5), lookat=(0.0, 0.0, 0.3))
 
@@ -63,7 +64,6 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
         for obj in self.scene.object_collection.rigid_objects.values():
             obj.spawn.friction_defaults = defaults.copy()
         self.scene.configure_population_capacity(self.max_gray_obstacles, self.max_white_obstacles, self.obstacle_observation_slots)
-        self.contact_height_limit = self.goal_reward_height_limit
         self.commands.target_goal_pos.goal_radius = self.goal_success_radius
         eef = self.scene.ee_frame.target_frames[0]
         self.actions.arm_action.body_name = eef.prim_path.rsplit('/', 1)[-1]
@@ -83,6 +83,7 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
 
 @configclass
 class SweepOnlyEnvCfg(StabilizeSweepEnvCfg):
+    observations: SweepOnlyObservationsCfg = SweepOnlyObservationsCfg()
     rewards: SweepOnlyRewardsCfg = SweepOnlyRewardsCfg()
 
 

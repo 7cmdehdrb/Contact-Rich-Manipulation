@@ -36,12 +36,12 @@ class _RecentEpisodeOutcomes:
 class StabilizeSweepEnv(ManagerBasedRLEnv):
     """Independent Stabilize/Sweep lifecycle and bounded timeout metrics."""
 
+    _state_type = StabilizeState
     _mean_metrics = ('target_goal_distance_xy_m', 'eef_linear_speed_m_s',
                      'target_linear_speed_m_s', 'target_within_goal_radius_fraction')
 
     def __init__(self, cfg, render_mode=None, **kwargs):
         self._timeout_outcomes = _RecentEpisodeOutcomes(cfg.timeout_metric_window, cfg.sim.device)
-        cfg.contact_height_limit = cfg.goal_reward_height_limit
         count, device = cfg.scene.num_envs, cfg.sim.device
         fast = getattr(cfg, 'reset_ik_backend', None) == 'warp'
         if fast and (cfg.max_obstacles != 6 or cfg.obstacle_observation_slots != 16):
@@ -49,7 +49,7 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
         self._surface_target_w = torch.zeros((count,3),device=device)
         self._surface_obstacles_w = torch.zeros((count,16,3),device=device)
         self._surface_valid = torch.zeros((count,16),device=device,dtype=torch.bool)
-        self._stabilize_state=StabilizeState(count,device)
+        self._stabilize_state=self._state_type(count,device)
         self._sweep_phase=self._stabilize_state.achieved
         self.learning_iteration = 0
         self.target_id = torch.zeros((count, 1), device=device, dtype=torch.long)
@@ -97,7 +97,6 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
             self._goal_reset_seed = seed + 1707
             if hasattr(self, '_goal_reset_rng'):
                 self._goal_reset_rng.manual_seed(self._goal_reset_seed)
-        if seed is not None:
             self._revision_layout_rng.manual_seed(seed)
         result = super().reset(seed=seed, env_ids=env_ids, options=options)
         return result
@@ -122,7 +121,8 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
                 self._stabilize_state.finish(center,self.command_manager.get_command('target_goal_pos'),
                     contacts.force_sum/contacts.samples,contacts.contact,contacts.all_valid,
                     self.scene['ee_frame'].data.target_pos_w[:,0,2],
-                    self._revision_initial_shelf_pos[:,2]+1.05)
+                    self._revision_initial_shelf_pos[:,2]+1.05,
+                    height_limit=self.cfg.sweep_contact_height_limit)
         self.scene.update=capture
         try:
             return super().step(action)
@@ -247,7 +247,4 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
 class SweepOnlyEnv(StabilizeSweepEnv):
     """Parent scene/lifecycle with Sweep enabled from the initial observation."""
 
-    def __init__(self,cfg,render_mode=None,**kwargs):
-        super().__init__(cfg=cfg,render_mode=render_mode,**kwargs)
-        self._stabilize_state=SweepOnlyState(self.num_envs,self.device)
-        self._sweep_phase=self._stabilize_state.achieved
+    _state_type = SweepOnlyState

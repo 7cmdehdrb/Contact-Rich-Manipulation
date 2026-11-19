@@ -17,6 +17,7 @@ class StabilizeSweepModelCfg(RslRlMLPModelCfg):
 @configclass
 class StabilizeSweepPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = 'CurriculumOnPolicyRunner'
+    # Execution-wrapper bound. The Gaussian actor and PPO storage remain unbounded.
     clip_actions = 1.5707963267948966
     num_steps_per_env = 36
     max_iterations = 90000
@@ -31,8 +32,15 @@ class StabilizeSweepPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
+class SweepOnlyModelCfg(StabilizeSweepModelCfg):
+    class_name = 'inspire_sweep_baseline.agent.stabilize_sweep_models:SweepOnlyModel'
+
+
+@configclass
 class SweepOnlyPPORunnerCfg(StabilizeSweepPPORunnerCfg):
     experiment_name = 'inspire_sweep_only_v0'
+    actor = SweepOnlyModelCfg(distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0))
+    critic = SweepOnlyModelCfg()
 
 
 @configclass

@@ -28,7 +28,7 @@ def validate():
     import gymnasium as gym
     import inspire_sweep_baseline  # noqa: F401
     from isaaclab_tasks.utils import load_cfg_from_registry
-    from isaaclab.utils.math import quat_apply,quat_apply_inverse,convert_quat
+    from isaaclab.utils.math import quat_apply,quat_apply_inverse,quat_conjugate,quat_mul,matrix_from_quat,convert_quat
     from inspire_sweep_baseline.mdp.common.stabilize_sweep_contact import centroid
     cfg=load_cfg_from_registry(args.task,'env_cfg_entry_point')
     sweep_only=args.task.startswith('Inspire-Sweep-Only-v0')
@@ -59,14 +59,21 @@ def validate():
         from inspire_sweep_baseline.runtime.stabilize_sweep import StabilizeSweepEnv,SweepOnlyEnv
         assert issubclass(SweepOnlyEnvCfg,StabilizeSweepEnvCfg) and issubclass(SweepOnlyEnv,StabilizeSweepEnv)
         parent=StabilizeSweepEnvCfg().to_dict();child=cfg.to_dict()
-        for name in ('stage','initial_movement','initial_rotation'):
+        for name in ('stage','initial_movement','initial_rotation','squeeze'):
             assert child['rewards'][name] is None and parent['rewards'][name] is not None
             child['rewards'][name]=parent['rewards'][name]
+        assert child['observations']['policy']['phase'] is None
+        child['observations']['policy']['phase']=parent['observations']['policy']['phase']
+        assert child['rewards']['sweep_retreat']['weight']==-20.0
+        child['rewards']['sweep_retreat']['weight']=parent['rewards']['sweep_retreat']['weight']
         assert child==parent, 'Unexpected environment configuration difference'
         base_runner=load_cfg_from_registry('Inspire-Stabilize-Sweep-v0','rsl_rl_cfg_entry_point').to_dict()
         runner=load_cfg_from_registry(args.task,'rsl_rl_cfg_entry_point').to_dict()
         assert runner['experiment_name']=='inspire_sweep_only_v0'
         runner['experiment_name']=base_runner['experiment_name']
+        for role in ('actor','critic'):
+            assert runner[role]['class_name']=='inspire_sweep_baseline.agent.stabilize_sweep_models:SweepOnlyModel'
+            runner[role]['class_name']=base_runner[role]['class_name']
         assert runner==base_runner, 'Unexpected PPO configuration difference'
     n=args.num_envs
     if n<2:raise ValueError('Integration checks need at least two environments')
@@ -89,10 +96,12 @@ def validate():
         assert 'reaching' in env.reward_manager.active_terms
         result['test_contract_reset_and_reach_only']=True
     if sweep_only:
-        assert not {'stage','initial_movement','initial_rotation'} & set(env.reward_manager.active_terms)
+        assert not {'stage','initial_movement','initial_rotation','squeeze'} & set(env.reward_manager.active_terms)
+        assert 'phase' not in env.observation_manager.active_terms['policy']
+        result['sweep_only_phase_observation_and_squeeze_absent']=True
+    else:
         assert 'squeeze' in env.reward_manager.active_terms
-        result['parent_contract_only_three_reward_terms_removed']=True
-        result['ppo_only_experiment_name_changed']=True
+        assert 'phase' in env.observation_manager.active_terms['policy']
     from inspire_sweep_baseline.mdp.event_functions import stabilize_sweep as events
     sample_commands=events.sample_commands
     snapshot=events.snapshot
@@ -249,11 +258,73 @@ def validate():
             env.render_mode=original_mode
             env._update_surface_point_markers()
 
+    def check_initial_spawn_geometry(ids=None):
+        """Audit committed bodies, independently of candidate poses and GPU samplers."""
+        if finger_test:
+            return
+        from inspire_sweep_baseline.mdp.common.stabilize_sweep_geometry import corners,overlap
+        from inspire_sweep_baseline.mdp.common.wrench_refactor_layout import CircleResetLayout
+        if ids is None:ids=torch.arange(n,device=env.device)
+        robot=env.scene['robot'];objects=env.scene['object_collection'].data
+        shelf=env.scene['shelf'].data
+        origin=shelf.root_pos_w[ids];rotation=shelf.root_quat_w[ids]
+        geometry=env._stabilize_robot_geometry
+        # Use actual rigid-body transforms after the native reset write. This
+        # does not trust the planner's FK result or its accepted-candidate flag.
+        owners=[robot.body_names.index(path.rsplit('/',1)[-1]) for path in geometry.owners]
+        body_quat=robot.data.body_link_quat_w[ids][:,owners]
+        body_center=robot.data.body_link_pos_w[ids][:,owners]+quat_apply(
+            body_quat,geometry.centers.expand(len(ids),-1,-1))
+        inverse=quat_conjugate(rotation)[:,None]
+        robot_boxes=(quat_apply(inverse.expand_as(body_quat),body_center-origin[:,None]),
+                     geometry.half.expand(len(ids),-1,-1),
+                     matrix_from_quat(quat_mul(inverse.expand_as(body_quat),body_quat)))
+        bounds=env._revision_bounds_t[ids]
+        object_quat=objects.object_link_quat_w[ids]
+        object_center=objects.object_link_pos_w[ids]+quat_apply(object_quat,bounds.mean(-2))
+        object_boxes=(quat_apply(inverse.expand_as(object_quat),object_center-origin[:,None]),
+                      (bounds[:,:,1]-bounds[:,:,0])/2,
+                      matrix_from_quat(quat_mul(inverse.expand_as(object_quat),object_quat)))
+        active=env._active_object_mask[ids]
+        intersections=overlap(robot_boxes,object_boxes)&active[:,None,:]
+        assert not intersections.any(), f'Committed robot/object overlap: {intersections.nonzero().tolist()}'
+        # The original contract reserves an XY envelope around each robot OBB,
+        # expanded by 1cm, only where the candidate object's height intersects it.
+        cloud=corners(robot_boxes);low=cloud.amin(-2)-.01;high=cloud.amax(-2)+.01
+        robot_center=(low+high)/2;robot_half=(high-low)/2
+        gap=(object_boxes[0][:,:,None,:2]-robot_center[:,None,:,:2]).abs()-robot_half[:,None,:,:2]
+        distance=gap.clamp_min(0.).norm(dim=-1)
+        object_cloud=corners(object_boxes)
+        bottom,top=object_cloud[...,2].amin(-1),object_cloud[...,2].amax(-1)
+        height_overlap=(top[:,:,None]>low[:,None,:,2])&(bottom[:,:,None]<high[:,None,:,2])
+        clearance=torch.where(height_overlap,distance,float('inf')).amin(-1)-env._fast_layout.radius[ids]
+        obstacles=active.clone();obstacles[:,0]=False
+        assert (clearance[obstacles]>=-2e-5).all(), 'Obstacle entered the robot spawn exclusion envelope'
+        # Use the original eager-Torch RED polygon reference on final jittered
+        # centres, rather than reusing the optimized cell-distance result.
+        center=object_boxes[0][:,:,:2]
+        delta=quat_apply_inverse(rotation,env.sweep_dir[ids])[:,:2]
+        red_clearances=[]
+        for row in range(len(ids)):
+            red=CircleResetLayout.red_distance(center[row],center[row:row+1,0],
+                                               center[row:row+1,0]+delta[row:row+1])[0]
+            margin=red-env._fast_layout.expanded[ids[row],0]-env._fast_layout.expanded[ids[row]]
+            red_clearances.append(margin[obstacles[row]])
+        red_clearance=torch.cat(red_clearances)
+        assert (red_clearance>=-2e-5).all(), 'Obstacle entered the minimum push space (RED zone)'
+        if red_clearance.numel():
+            result['minimum_obstacle_red_clearance_m']=min(
+                result.get('minimum_obstacle_red_clearance_m',float('inf')),float(red_clearance.min()))
+            result['minimum_obstacle_robot_envelope_clearance_m']=min(
+                result.get('minimum_obstacle_robot_envelope_clearance_m',float('inf')),float(clearance[obstacles].min()))
+        result['committed_robot_object_obb_nonoverlap']=True
+        result['committed_obstacles_outside_red_and_robot_envelope']=True
+
     def check_commands():
         if sweep_only:
             state=env._stabilize_state
             assert state.achieved.all() and state.reward_phase.all() and not state.consecutive.any()
-            assert (env.observation_manager.compute()['policy'][:,-1]==1.).all()
+            assert env.observation_manager.compute()['policy'].shape==(n,66)
         shelf=env.scene['shelf'].data
         target=env.scene['object_collection'].data.object_link_pos_w[:,0]
         goal=env.command_manager.get_command('target_goal_pos')[:,:3]
@@ -311,6 +382,13 @@ def validate():
         surface=quat_apply_inverse(shelf.root_quat_w[:,None].expand(-1,vertices.shape[1],-1),
                                    surface-shelf.root_pos_w[:,None])
         center_shelf=quat_apply_inverse(shelf.root_quat_w,centroid(env)-shelf.root_pos_w)
+        # Check position as well as orientation: every actual hand vertex must
+        # be behind the target's near surface along the commanded push vector.
+        target_radius=((env._revision_bounds_t[:,0,1,:2]-env._revision_bounds_t[:,0,0,:2])/2).amax(-1)
+        hand_gap=((center_shelf[:,None]-surface)*direction_shelf[:,None]).sum(-1).amin(-1)-target_radius
+        assert (hand_gap>0).all(), f'Hand is not behind the target: {hand_gap.tolist()}'
+        result['minimum_actual_hand_to_target_push_axis_gap_m']=min(
+            result.get('minimum_actual_hand_to_target_push_axis_gap_m',float('inf')),float(hand_gap.min()))
         half_height=(env._revision_bounds_t[:,0,1,2]-env._revision_bounds_t[:,0,0,2])/2
         bottom=surface[...,2].amin(-1)
         clearance=bottom-(center_shelf[:,2]-half_height)
@@ -320,6 +398,7 @@ def validate():
                                  ('maximum_hand_bottom_clearance_m',float(clearance.max()),max)]:
             result[key]=reduce(result.get(key,value),value)
         result['palm_always_left']=True
+        check_initial_spawn_geometry()
     events.sample_commands=capture_commands
     events.snapshot=capture_snapshot
     events.plan_initial_layout=capture_plan
@@ -418,7 +497,9 @@ def validate():
             result['reset_native_equality']='numerical exact: atol=rtol=0, +0/-0 equivalent'
         # Separate selected-row resets use an explicit reproducible fixture seed.
         for row in range(n):obs,_=env.reset(seed=42,env_ids=torch.tensor([row],device=env.device))
-        assert obs['policy'].shape==(n,67) and obs['obstacles'].shape==(n,64)
+        direct_dim=66 if sweep_only else 67
+        assert obs['policy'].shape==(n,direct_dim) and obs['obstacles'].shape==(n,64)
+        result['policy_observation_dim']=direct_dim
         target=env._surface_target_w.clone();points=env._surface_obstacles_w.clone()
         center=centroid(env);data=env.scene['object_collection'].data
         offset=env._revision_bounds_t[:,0].mean(1)
@@ -428,8 +509,11 @@ def validate():
             'com_minus_root':(data.object_com_pos_w[:,0]-data.object_link_pos_w[:,0]).tolist()}
         held=env.scene['object_collection'].data.object_link_state_w[1].clone()
         joints=env.scene['robot'].data.joint_pos[1].clone();clock=env._sim_step_counter
+        held_native=native_reset_state();held_roster=sensor_roster()
+        held_goal=env.command_manager.get_command('target_goal_pos').clone()
+        held_surface_valid=env._surface_valid.clone()
+        held_active=env._active_object_mask.clone()
         if finger_test:
-            held_native=native_reset_state();held_roster=sensor_roster()
             held_legacy=env._initial_obstacle_observation.clone()
             env._initial_obstacle_observation[0]=torch.nan
         if finger_test:
@@ -446,19 +530,26 @@ def validate():
         torch.testing.assert_close(held,env.scene['object_collection'].data.object_link_state_w[1],atol=0,rtol=0)
         torch.testing.assert_close(joints,env.scene['robot'].data.joint_pos[1],atol=0,rtol=0)
         torch.testing.assert_close(target[1],env._surface_target_w[1],atol=0,rtol=0)
+        # Inspect every untouched native row for both reset implementations,
+        # including pooled bodies and physical flags independently of caches.
+        untouched_objects=(torch.arange(17)[:,None]*n+torch.arange(1,n)[None]).flatten()
+        for key,value in native_reset_state().items():
+            rows=untouched_objects if key.startswith('object_') else torch.arange(1,n)
+            rows=rows.to(value.device)
+            torch.testing.assert_close(value[rows],held_native[key][rows],atol=0,rtol=0,msg=key)
+        assert sensor_roster()==held_roster
+        torch.testing.assert_close(env.command_manager.get_command('target_goal_pos')[1:],held_goal[1:],atol=0,rtol=0)
+        torch.testing.assert_close(env._surface_target_w[1:],target[1:],atol=0,rtol=0)
+        torch.testing.assert_close(env._surface_obstacles_w[1:],points[1:],atol=0,rtol=0)
+        torch.testing.assert_close(env._surface_valid[1:],held_surface_valid[1:],atol=0,rtol=0)
+        torch.testing.assert_close(env._active_object_mask[1:],held_active[1:],atol=0,rtol=0)
+        result['partial_reset_native_state_flags_and_roster_isolation']=True
+        result['partial_reset_all_untouched_commands_observations_and_active_masks']=True
+        check_initial_spawn_geometry(torch.tensor([0],device=env.device))
         if finger_test:
-            # Inspect every untouched native row, including remote pooled
-            # bodies and physical flags, independently of lazy data caches.
-            untouched_objects=(torch.arange(17)[:,None]*n+torch.arange(1,n)[None]).flatten()
-            for key,value in native_reset_state().items():
-                rows=untouched_objects if key.startswith('object_') else torch.arange(1,n)
-                rows=rows.to(value.device)
-                torch.testing.assert_close(value[rows],held_native[key][rows],atol=0,rtol=0,msg=key)
-            assert sensor_roster()==held_roster
             assert not env._initial_obstacle_observation[0].any()
             torch.testing.assert_close(env._initial_obstacle_observation[1:],held_legacy[1:],atol=0,rtol=0)
             result['partial_reset_clears_only_selected_legacy_rows']=True
-            result['partial_reset_native_state_flags_and_roster_isolation']=True
             torch.testing.assert_close(reach._initial_distance[1],held_reach,atol=0,rtol=0)
             expected_initial=((env.scene['ee_frame'].data.target_pos_w[0,0]
                                -env.scene['object_collection'].data.object_pos_w[0,env.target_id[0,0].long()]).norm()-.1).clamp_min(0.)
@@ -470,7 +561,7 @@ def validate():
             obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
             assert torch.isfinite(reward).all() and torch.isfinite(obs['policy']).all()
             assert not (terminated|truncated).any()
-            if sweep_only:assert (obs['policy'][:,-1]==1.).all() and env._stabilize_state.reward_phase.all()
+            if sweep_only:assert obs['policy'].shape==(n,66) and env._stabilize_state.reward_phase.all()
             if finger_test:
                 distance=(env.scene['ee_frame'].data.target_pos_w[:,0]-centroid(env)).norm(dim=-1)
                 expected_reach=reach._initial_distance/env.cfg.episode_length_s*.1/(.1+(distance-.1).clamp_min(0.))
@@ -506,7 +597,10 @@ def validate():
             for step in range(15):
                 obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
                 assert not (terminated|truncated).any()
-                assert bool((obs['policy'][:,-1]==(1. if sweep_only or step==14 else 0.)).all())
+                if sweep_only:
+                    assert obs['policy'].shape==(n,66) and state.achieved.all()
+                else:
+                    assert bool((obs['policy'][:,-1]==(1. if step==14 else 0.)).all())
             if sweep_only:
                 assert state.reward_phase.all() and state.achieved.all() and not state.consecutive.any()
                 assert not state.setup_sum.any() and not state.move_cost.any() and not state.rotate_cost.any()
@@ -525,7 +619,10 @@ def validate():
             obs,reward,terminated,truncated,_=env.step(torch.zeros((n,12),device=env.device))
             assert truncated.tolist()==[True]+[False]*(n-1) and not terminated.any()
             assert int(env._timeout_outcomes.totals[0])==before+1
-            assert obs['policy'][:,-1].tolist()==([1.]*n if sweep_only else [0.]+[1.]*(n-1))
+            if sweep_only:
+                assert obs['policy'].shape==(n,66) and state.achieved.all()
+            else:
+                assert obs['policy'][:,-1].tolist()==[0.]+[1.]*(n-1)
             result['same_step_gate_timeout_and_partial_reset']=True
             check_static_local_com('timeout_partial_reset')
             if args.inject_reset_failures:

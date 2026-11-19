@@ -2,7 +2,6 @@ from ..reward_functions.stabilize_sweep import squeeze,stage,initial_movement,in
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
-from ..reward_functions.contact_sweep_clutter import shelf_failure
 from ..reward_functions.contact_sweep_clutter_fusion import WrenchMagnitudeChangePenalty
 from ..reward_functions.contact_sweep_clutter_fusion import obstacle_contact_force_cost
 from ..reward_functions.goal_rewards import joint_vel_l2
@@ -10,7 +9,7 @@ from ..reward_functions.sweep import ShelfCollisionPenalty
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
-import math as math
+import math
 from ..reward_functions.wrench_refactor_relative_ik_test import holding_shelf_failure
 from ..reward_functions.sweep_simple import finger_action_rate_l2
 from .sweep_simple import SweepSimpleFingerRewardsCfg
@@ -50,6 +49,8 @@ class SweepOnlyRewardsCfg(StabilizeSweepRewardsCfg):
     stage = None
     initial_movement = None
     initial_rotation = None
+    squeeze = None
+    sweep_retreat = StabilizeSweepRewardsCfg().sweep_retreat.replace(weight=-20.0)
 
 
 @configclass

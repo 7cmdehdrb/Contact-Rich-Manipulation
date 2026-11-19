@@ -1,5 +1,6 @@
 """Stabilize/Sweep public registration and sensor-to-task contracts."""
 from types import SimpleNamespace as NS
+import pytest
 from conftest import MODULE_ROOT
 from test_omni_configuration import _execute_definitions
 
@@ -111,23 +112,24 @@ def test_surface_snapshot_keeps_disconnected_obstacles_and_real_hits(load_mdp):
     assert len(rear)==2 and rear[:,1].min()<-.01 and rear[:,1].max()>.01
 
 
-def test_actor_critic_67d_gradients_and_export(load_mdp):
+@pytest.mark.parametrize('model_name,direct_dim', [('StabilizeSweepModel',67),('SweepOnlyModel',66)])
+def test_actor_critic_gradients_and_export(load_mdp,model_name,direct_dim):
     import importlib, torch
     from tensordict import TensorDict
-    cls=importlib.import_module('_baseline_cpu_pkg.agent.stabilize_sweep_models').StabilizeSweepModel
-    obs=TensorDict({'policy':torch.randn(8,67),'obstacles':torch.randn(8,64)},batch_size=[8])
+    cls=getattr(importlib.import_module('_baseline_cpu_pkg.agent.stabilize_sweep_models'),model_name)
+    obs=TensorDict({'policy':torch.randn(8,direct_dim),'obstacles':torch.randn(8,64)},batch_size=[8])
     obs['obstacles'][:,::4]=1
     groups={'actor':['policy','obstacles'],'critic':['policy','obstacles']}
     actor=cls(obs,groups,'actor',12,distribution_cfg={'class_name':'GaussianDistribution','init_std':1.})
     critic=cls(obs,groups,'critic',1)
     for model,width in ((actor,12),(critic,1)):
         result=model(obs)
-        assert result.shape==(8,width) and model.get_latent(obs).shape==(8,83)
+        assert result.shape==(8,width) and model.get_latent(obs).shape==(8,direct_dim+16)
         result.square().mean().backward()
         assert model.obstacle_encoder.mlp[0].weight.grad.abs().sum()>0
     export=torch.jit.script(actor.as_jit())
     torch.testing.assert_close(export(torch.cat((obs['policy'],obs['obstacles']),-1)),actor(obs))
-    assert actor.as_onnx().get_dummy_inputs()[0].shape==(1,131)
+    assert actor.as_onnx().get_dummy_inputs()[0].shape==(1,direct_dim+64)
 
 
 def test_contact_points_keep_couple_and_squeeze_when_net_force_cancels(load_mdp):
@@ -309,7 +311,6 @@ def test_target_surface_width_exposure_and_largest_fragment(load_mdp):
     assert all(timing[key]>=0 for key in ('upload_ms','readback_ms','ray_ms','components_ms'))
 
 
-import pytest
 
 
 @pytest.mark.parametrize('violation',[
@@ -1130,3 +1131,405 @@ def test_ik_obstacle_batch_preserves_robot_clearance_layout_and_rng(load_mdp):
         for actual,expected in zip(result,results[0]):
             torch.testing.assert_close(actual,expected,atol=0,rtol=0)
     assert results[0][2][:,1:].any()
+
+
+def test_cooperative_robot_layout_matches_reference_partial_rows_failures_and_rng(load_mdp):
+    import importlib,torch
+    cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    n=13
+    rng=torch.Generator().manual_seed(611)
+    half=.012+.035*torch.rand(n,17,3,generator=rng)
+    bounds=torch.stack((-half,half),-2)
+    offsets=(torch.rand(n,17,3,generator=rng)-.5)*.015;offsets[...,2]=0.
+    bounds+=offsets[:,:,None]
+    # A blocked large candidate must not disable later smaller candidates.
+    bounds[7,1,0,:2]=-.3;bounds[7,1,1,:2]=.3
+    layout=cls(bounds,1.05+half[...,2],cell_size=.02)
+    ids=torch.tensor([7,3,11,0,8,2,12])
+    selected=torch.rand(len(ids),16,generator=rng).argsort(-1)[:,:6]+1
+    selected[0]=torch.arange(1,7)
+    requested=torch.tensor([6,0,1,2,3,4,5])
+    delta=torch.zeros(len(ids),2);delta[:,1]=torch.where(torch.arange(len(ids))%2==0,.08,-.09)
+    centers=torch.rand(len(ids),5,3,generator=rng)*.2-.1
+    centers[:,:,2]=torch.tensor([1.08,1.15,1.9,1.04,1.12])
+    robot=(centers,torch.full_like(centers,.025),torch.eye(3).expand(len(ids),5,3,3))
+    initial=torch.zeros(len(ids),17,3);initial[...,2]=50.;initial[:,0,2]=layout.spawn_z[ids,0]
+    results=[]
+    for accelerated in (False,True):
+        local=initial.clone();yaw=torch.zeros(len(ids),17)
+        active=torch.zeros(len(ids),17,dtype=torch.bool);active[:,0]=True
+        generator=torch.Generator().manual_seed(912)
+        if accelerated:
+            radii=layout.expanded[ids[:,None],selected]
+            eligible=torch.arange(6)[None]<requested[:,None]
+            order=torch.where(eligible,radii,-1.).argsort(dim=-1,descending=True,stable=True)
+            sorted_ids=selected.gather(1,order);radii=radii.gather(1,order)
+            draws=torch.rand((len(ids),6,4),generator=generator)
+            cloud=module.corners(robot)
+            module._place_robot_cells(layout,ids,local,yaw,active,delta,sorted_ids,radii,requested,draws,
+                                      cloud.amin(-2)-.01,cloud.amax(-2)+.01,3)
+        else:
+            module.place_obstacles(layout,ids,local,yaw,active,delta,robot,selected,requested,generator,batch_size=3)
+        results.append((local,yaw,active,generator.get_state()))
+    for actual,expected in zip(results[1],results[0]):
+        torch.testing.assert_close(actual,expected,atol=0,rtol=0)
+    assert not results[1][2][0,1] and results[1][2][0,2:].any()
+    assert results[1][2][1].sum()==1
+
+
+def test_fused_robot_clearance_matches_xy_and_height_boundaries(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    rng=torch.Generator().manual_seed(122)
+    points=torch.rand(700,2,generator=rng)-.5
+    centers=torch.rand(4,9,3,generator=rng)-.5
+    half=torch.rand(4,9,3,generator=rng)*.08+.01
+    overlap=torch.rand(4,6,9,generator=rng)>.35
+    limits=torch.rand(4,6,generator=rng)*.1+.03
+    # Include exact contact and the adjacent float32 points on both sides.
+    centers[0,0,:2]=0.;half[0,0,:2]=.125;limits[0,0]=.125
+    overlap[0,0]=False;overlap[0,0,0]=True
+    points[0]=torch.tensor([.25,0.]);points[1]=points[0];points[2]=points[0]
+    points[1,0]=torch.nextafter(points[0,0],torch.tensor(0.))
+    points[2,0]=torch.nextafter(points[0,0],torch.tensor(1.))
+    gap=(points[None,:,None]-centers[:,None,:,:2]).abs()-half[:,None,:,:2]
+    distances=gap.clamp_min(0.).norm(dim=-1)
+    expected=torch.where(overlap[:,:,None,:],distances[:,None],float('inf')).amin(-1)>=limits[:,:,None]
+    actual=module._robot_clear_cells(points,centers,half,overlap,limits)
+    assert torch.equal(actual,expected)
+    assert actual[0,0,:3].tolist()==[True,False,True]
+
+
+def test_convex_face_separation_requires_a_positive_gap(load_mdp):
+    import importlib,itertools,numpy as np
+    from scipy.spatial import ConvexHull
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_geometry')
+    vertices=np.array(list(itertools.product((-.1,.1),repeat=3)))
+    planes=ConvexHull(vertices).equations
+    # Overlap, the LP's 1um interior boundary, exact touch, an uncertain tiny
+    # positive gap, and clear separation must all retain their original result.
+    shifts=np.array([.1,.2-2e-6,.2,.2+2e-9,.2+1e-6])
+    moved=vertices[None]+np.column_stack((shifts,np.zeros((len(shifts),2))))[:,None]
+    proven=module.convex_face_separated(np.broadcast_to(planes,(len(shifts),*planes.shape)),moved)
+    assert proven.tolist()==[False,False,False,False,True]
+    for index in np.flatnonzero(proven):
+        assert not module.convex_overlap(planes,ConvexHull(moved[index]).equations)
+
+
+def test_convex_broad_phase_preserves_exact_lp_results(load_mdp):
+    import importlib,numpy as np,torch
+    from scipy.spatial import ConvexHull
+    from isaaclab.utils.math import matrix_from_quat
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_geometry')
+    random=np.random.default_rng(1403)
+    # Non-box polyhedra cover OBB false positives, actual collisions and nearly
+    # touching poses. The two shells have different shapes and local offsets.
+    clouds=[random.uniform(-.15,.15,(18,3)),random.uniform(-.12,.12,(22,3))]
+    hulls=[ConvexHull(v) for v in clouds]
+    geometry=object.__new__(module.RobotResetGeometry)
+    geometry.hulls=[h.equations for h in hulls]
+    geometry.vertex_clouds=[v[h.vertices] for v,h in zip(clouds,hulls)]
+    geometry.face_subsets=geometry.hulls
+    geometry.centers=torch.tensor([[.01,-.02,.005],[-.02,.01,-.005]])
+    geometry.self_pairs=torch.tensor([[False,True],[False,False]])
+    count=128
+    centers=torch.tensor(random.uniform(-.20,.20,(count,2,3)),dtype=torch.float32)
+    quats=torch.tensor(random.normal(size=(count,2,4)),dtype=torch.float32)
+    quats/=quats.norm(dim=-1,keepdim=True)
+    rotations=matrix_from_quat(quats)
+    rotations[:,0,0,1]+=3e-8  # float32 matrices need not be exactly orthogonal.
+    half=torch.full_like(centers,.25)
+    boxes=(centers,half,rotations)
+    far=(torch.full((count,1,3),10.),torch.full((count,1,3),.1),torch.eye(3).expand(count,1,3,3))
+    expected=[];expected_proof=[]
+    for row in range(count):
+        transformed=[];world_vertices=[]
+        for index in range(2):
+            hull=geometry.hulls[index]
+            normal=hull[:,:3]@rotations[row,index].numpy().T
+            constant=hull[:,3]+hull[:,:3]@geometry.centers[index].numpy()-normal@centers[row,index].numpy()
+            transformed.append(np.column_stack((normal,constant)))
+            local=geometry.vertex_clouds[index]-geometry.centers[index].numpy()
+            world_vertices.append(local@np.linalg.inv(rotations[row,index].numpy().astype(np.float64))+centers[row,index].numpy())
+        expected.append(not module.convex_overlap(*transformed))
+        expected_proof.append(bool(module.convex_face_separated(transformed[0][None],world_vertices[1][None])[0]
+                                   or module.convex_face_separated(transformed[1][None],world_vertices[0][None])[0]))
+    actual=geometry.valid(boxes,far,far)
+    assert actual.tolist()==expected
+    assert any(expected) and not all(expected)
+    candidates=torch.stack((torch.arange(count),torch.zeros(count,dtype=torch.long),torch.ones(count,dtype=torch.long)),dim=1)
+    assert geometry.convex_separated_kernel(boxes,candidates).tolist()==expected_proof
+    # Existing hand exceptions remain authoritative, including overlapping
+    # convex interiors: the accelerator must not introduce new self pairs.
+    geometry.self_pairs.zero_()
+    assert geometry.valid(boxes,far,far).all()
+
+
+def test_fused_collision_fk_matches_tree_and_partial_rows(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_geometry')
+    random=torch.Generator().manual_seed(43)
+    def quaternion():
+        value=torch.randn(4,generator=random)
+        return value/value.norm()
+    geometry=object.__new__(module.RobotResetGeometry)
+    geometry.base='base';geometry.steps=[]
+    nodes=['base']
+    for index in range(37):
+        # Serial arm plus branching fingers, with both revolute and fixed joints.
+        parent=nodes[max(0,index-1 if index<8 else 7+(index-8)//5*5)]
+        child=f'node{index}';nodes.append(child)
+        geometry.steps.append((child,(parent,torch.randn(3,generator=random)*.05,quaternion(),
+            torch.randn(3,generator=random)*.05,quaternion(),index%3,index if index<18 else None)))
+    geometry.owners=[*nodes,nodes[-1]]  # Two collision shapes may share a body.
+    geometry.centers=torch.randn(len(geometry.owners),3,generator=random)*.02
+    geometry.half=torch.full((len(geometry.owners),3),.03)
+    joints=torch.randn(64,18,generator=random)*1.7
+    position=torch.randn(64,3,generator=random)
+    rotation=torch.randn(64,4,generator=random);rotation/=rotation.norm(dim=-1,keepdim=True)
+    for ids in (torch.arange(64),torch.tensor([63,0,19,7])):
+        actual=geometry.boxes_kernel(joints[ids],position[ids],rotation[ids])
+        expected=geometry.boxes_reference(joints[ids],position[ids],rotation[ids])
+        for observed,reference in zip(actual,expected):
+            torch.testing.assert_close(observed,reference,atol=3e-6,rtol=0)
+        assert torch.equal(actual[1],expected[1])
+
+
+@pytest.mark.parametrize('case', ['mixed', 'partial_failure', 'all_failure'])
+def test_initial_pose_checks_only_solved_ik_and_preserves_row_results(load_mdp, case):
+    import torch
+    from isaaclab.utils import math as math_utils
+    scope=_reset_layout_planner()
+    for name in ('quat_apply','quat_apply_inverse','quat_mul','subtract_frame_transforms','matrix_from_quat'):
+        scope[name]=getattr(math_utils,name)
+    scope['_prepare_fast_ik']=lambda env:None
+    scope['_geometry']=lambda env:None
+    scope['hand_pose']=lambda center,direction,radius,position,quaternion,*args,**kwargs:(center,quaternion)
+    schedules={
+        'mixed':[[True,False,True],[True,False],[False],[True]],
+        'partial_failure':[[True,False,True],[False,False],[False,False],[False,False]],
+        'all_failure':[[False,False,False]]*4,
+    }
+    draws=[];fk_inputs=[];collision_inputs=[]
+    def solve(position,quaternion,initial,limits):
+        ok=torch.tensor(schedules[case][len(draws)],dtype=torch.bool)
+        assert len(ok)==len(position)
+        draws.append(len(position))
+        return position[:,:1]+1.,ok,torch.zeros(len(ok)),torch.zeros(len(ok))
+    def boxes(joints,position,quaternion):
+        fk_inputs.append(joints.clone())
+        centers=joints[:,:1,None].expand(-1,1,3).clone()
+        return centers,torch.ones_like(centers),torch.eye(3).expand(len(joints),1,3,3).clone()
+    def valid(geometry,target,shelf):
+        collision_inputs.append(geometry[0].clone())
+        accepted=torch.ones(len(geometry[0]),dtype=torch.bool)
+        if len(collision_inputs)==1:accepted[-1]=False
+        return accepted
+    ids=torch.tensor([2,0,3]);identity=torch.zeros(4,4);identity[:,0]=1.
+    default=torch.zeros(4,2);default[:,0]=100.+torch.arange(4)
+    bounds=torch.empty(4,17,2,3);bounds[:,:,0]=-.02;bounds[:,:,1]=.02
+    env=NS(device='cpu',scene={'robot':NS(data=NS(default_joint_pos=default))},
+        cfg=NS(scene=NS(ee_frame=NS(target_frames=[NS(offset=NS(rot=(1.,0.,0.,0.),pos=(0.,0.,0.)))]))),
+        _fast_base_offset=(torch.zeros(4,3),identity),_fast_default_eef=(torch.zeros(4,3),identity),
+        _revision_bounds_t=bounds,_stabilize_shelf_boxes=(torch.zeros(1,3),torch.ones(1,3)),
+        _stabilize_hand_ids=[1],_goal_reset_arm_ids=[0],_stabilize_hand_vertices=torch.zeros(1,3),
+        _goal_reset_rng=torch.Generator().manual_seed(391),_fast_initial=torch.zeros(4,1),
+        _fast_limits=torch.zeros(4,1,2),_fast_ik=NS(solve=solve),
+        _stabilize_robot_geometry=NS(boxes=boxes,valid=valid))
+    local=torch.zeros(3,17,3);local[:,0,0]=ids.float()
+    state=torch.zeros(3,13);state[:,3]=1.
+    pose,accepted,diagnostics=scope['choose_initial_pose'](env,ids,local,torch.ones(3,2),state,state)
+    if case=='mixed':
+        expected=torch.tensor([3.,1.,4.]);assert accepted.tolist()==[True,True,True]
+        assert pose.attempts.tolist()==[1,2,4]
+        assert [len(value) for value in fk_inputs]==[2,1,1]
+    elif case=='partial_failure':
+        expected=torch.tensor([3.,100.,103.]);assert accepted.tolist()==[True,False,False]
+        assert pose.attempts.tolist()==[1,4,4]
+        assert [len(value) for value in fk_inputs]==[2,2]
+    else:
+        expected=default[ids,0];assert not accepted.any()
+        assert pose.attempts.tolist()==[4,4,4]
+        assert len(fk_inputs)==1 and not collision_inputs
+    torch.testing.assert_close(pose.joints[:,0],expected,atol=0,rtol=0)
+    torch.testing.assert_close(pose.boxes[0][:,0,0],expected,atol=0,rtol=0)
+    assert len(collision_inputs)==(3 if case=='mixed' else 1 if case=='partial_failure' else 0)
+    for diagnostic in diagnostics:
+        for ik_ok,collision_free in zip(diagnostic['ik_valid'],diagnostic['collision_free']):
+            assert (collision_free is None)==(not ik_ok)
+    reference_rng=torch.Generator().manual_seed(391)
+    for n in draws:torch.rand((n,3),generator=reference_rng)
+    assert torch.equal(env._goal_reset_rng.get_state(),reference_rng.get_state())
+
+
+@pytest.mark.parametrize('case', ['random', 'touching', 'near_parallel'])
+def test_fused_collision_broadphase_preserves_reference_boundaries(load_mdp, case):
+    import importlib
+    import torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_geometry')
+    from isaaclab.utils.math import matrix_from_quat
+    random=torch.Generator().manual_seed(678)
+    n=256
+    def quaternion():
+        q=torch.randn(n,3,4,generator=random)
+        return q/q.norm(dim=-1,keepdim=True)
+    center=torch.randn(n,3,3,generator=random)*.2
+    half=torch.rand(n,3,3,generator=random)*.1+.01
+    rotation=matrix_from_quat(quaternion())
+    target_half=torch.rand(n,1,3,generator=random)*.1+.01
+    target_center=torch.randn(n,1,3,generator=random)*.2
+    target_rotation=matrix_from_quat(quaternion()[:,:1])
+    if case!='random':
+        if case=='near_parallel':
+            rotation=torch.eye(3).expand(n,3,3,3).clone()
+            q=torch.zeros(n,1,4)
+            angles=torch.linspace(0.,4e-6,n)[:,None]
+            q[:,:,0]=torch.cos(angles/2);q[:,:,3]=torch.sin(angles/2)
+            target_rotation=matrix_from_quat(q)
+        else:
+            target_rotation=rotation[:,:1].clone()
+        offset=torch.linspace(-2e-6,2e-6,n)[:,None]
+        distance=half[:,:1,0]+target_half[:,:,0]-1e-6+offset
+        target_center=center[:,:1]+rotation[:,:1,:,0]*distance.unsqueeze(-1)
+    boxes=(center,half,rotation)
+    target=(target_center,target_half,target_rotation)
+    shelf=(center[:,:1]+4.,half[:,:1],rotation[:,:1])
+    geometry=object.__new__(module.RobotResetGeometry)
+    geometry.self_pairs=torch.triu(torch.ones(3,3,dtype=torch.bool),diagonal=1)
+    for ids in (torch.arange(n),torch.tensor([255,0,18,7])):
+        values=[tuple(v[ids] for v in group) for group in (boxes,target,shelf)]
+        expected=geometry.broadphase_reference(*values)
+        actual=geometry.broadphase_kernel(*values)
+        assert all(torch.equal(a,b) for a,b in zip(actual,expected))
+    # Existing exclusions can change before reset; invalidate the cached pair table.
+    geometry.self_pairs[0,1]=False
+    expected=geometry.broadphase_reference(boxes,target,shelf)
+    actual=geometry.broadphase_kernel(boxes,target,shelf)
+    assert all(torch.equal(a,b) for a,b in zip(actual,expected))
+    with torch.inference_mode():
+        geometry.self_pairs=geometry.self_pairs.clone()
+    actual=geometry.broadphase_kernel(boxes,target,shelf)
+    assert all(torch.equal(a,b) for a,b in zip(actual,expected))
+
+
+def _stabilize_runtime_without_sim(state_module):
+    """Run the real family constructors/step around a minimal manager boundary."""
+    import torch
+    constructed=[]
+
+    def observed_state(base):
+        class ObservedState(base):
+            def __init__(self, count, device):
+                super().__init__(count,device)
+                constructed.append(self)
+
+            def finish(self, *args, **kwargs):
+                self.received_height_limit=kwargs['height_limit']
+                return super().finish(*args,**kwargs)
+        return ObservedState
+
+    class Scene(dict):
+        def update(self, dt):
+            self.updates.append(dt)
+
+    class Base:
+        def __init__(self, cfg, render_mode=None, **kwargs):
+            self.cfg,self.device,self.num_envs=cfg,cfg.sim.device,cfg.scene.num_envs
+            self.physics_dt=.01
+            # Real managers can retain the task state. It must already be the
+            # selected family state and must survive the rest of construction.
+            self.state_seen_by_managers=self._stabilize_state
+            self.phase_seen_by_managers=self._sweep_phase.clone()
+            self._stabilize_state.initial_center[0,0]=17.
+            vector=torch.zeros(self.num_envs,17,3)
+            quaternion=torch.zeros(self.num_envs,17,4);quaternion[...,0]=1.
+            self.scene=Scene(object_collection=NS(data=NS(
+                object_com_ang_vel_w=vector.clone(),object_com_lin_vel_w=vector.clone(),
+                object_com_pos_w=vector.clone(),object_link_quat_w=quaternion)),
+                ee_frame=NS(data=NS(target_pos_w=torch.zeros(self.num_envs,1,3))))
+            self.scene.updates=[]
+            self._revision_initial_shelf_pos=torch.zeros(self.num_envs,3)
+            goal=torch.zeros(self.num_envs,3);goal[:,0]=1.
+            self.command_manager=NS(get_command=lambda name:goal)
+
+        def step(self, action):
+            for _ in range(self.cfg.decimation):
+                self.scene.update(self.physics_dt)
+            return action
+
+    class Contacts:
+        def __init__(self, env):
+            self.state_seen_at_creation=env._stabilize_state
+            self.force=torch.zeros(env.num_envs,3);self.force[:,0]=2.
+            self.moment=torch.zeros_like(self.force)
+            self.load=torch.ones(env.num_envs)
+            self.valid=torch.ones(env.num_envs,dtype=torch.bool)
+            self.contact=self.valid.clone();self.all_valid=self.valid.clone()
+            self.begin()
+
+        def begin(self):
+            self.samples=0;self.force_sum=torch.zeros_like(self.force)
+
+        def capture(self, env):
+            self.samples+=1;self.force_sum+=self.force
+
+    scope=_execute_definitions(MODULE_ROOT/'runtime/stabilize_sweep.py',dict(
+        torch=torch,ManagerBasedRLEnv=Base,ContactSamples=Contacts,
+        StabilizeState=observed_state(state_module.StabilizeState),
+        SweepOnlyState=observed_state(state_module.SweepOnlyState),
+        centroid=lambda env:torch.zeros(env.num_envs,3)))
+    return scope,constructed
+
+
+@pytest.mark.parametrize('runtime_name,sweep_only',[
+    ('StabilizeSweepEnv',False),('SweepOnlyEnv',True)])
+@pytest.mark.parametrize('height_limit',[.12,.075])
+def test_family_runtime_constructs_selected_state_once_and_passes_height(
+        load_mdp,runtime_name,sweep_only,height_limit):
+    import importlib,torch
+    states=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state')
+    runtime,constructed=_stabilize_runtime_without_sim(states)
+    cfg=NS(scene=NS(num_envs=2),sim=NS(device='cpu'),seed=42,
+        timeout_metric_window=3,reset_ik_backend='warp',max_obstacles=6,
+        obstacle_observation_slots=16,decimation=2,sweep_contact_height_limit=height_limit)
+    env=getattr(runtime,runtime_name)(cfg)
+    expected_type=states.SweepOnlyState if sweep_only else states.StabilizeState
+    assert len(constructed)==1 and isinstance(constructed[0],expected_type)
+    assert env._stabilize_state is env.state_seen_by_managers is constructed[0]
+    assert env._stabilize_contacts.state_seen_at_creation is constructed[0]
+    assert env._sweep_phase is env._stabilize_state.achieved
+    assert env.phase_seen_by_managers.tolist()==[sweep_only,sweep_only]
+    assert env._stabilize_state.initial_center[0,0]==17.
+    original_update=env.scene.update
+    action=torch.zeros(2,12)
+    assert env.step(action) is action
+    assert env._stabilize_state.received_height_limit==height_limit
+    assert env.scene.updates==[.01,.01] and env.scene.update==original_update
+
+
+@pytest.mark.parametrize('state_name',['StabilizeState','SweepOnlyState'])
+@pytest.mark.parametrize('height_limit',[None,.075])
+def test_sweep_height_setting_preserves_strict_boundary_and_retreat(
+        load_mdp,state_name,height_limit):
+    import importlib,torch
+    states=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_state')
+    state=getattr(states,state_name)(3,'cpu')
+    actual_limit=.12 if height_limit is None else height_limit
+    center=torch.zeros(3,3);quat=torch.tensor([[1.,0.,0.,0.]]).expand(3,-1)
+    goal=torch.tensor([[1.,0.,0.]]).expand(3,-1)
+    state.reset(torch.arange(3),center,quat,goal)
+    state.achieved[:]=True;state.begin()
+    state.contact_history[:]=True;state.contact_count[:]=20
+    height=torch.tensor([actual_limit-1e-4,actual_limit,actual_limit+1e-4])
+    kwargs={} if height_limit is None else {'height_limit':height_limit}
+    contact=torch.ones(3,dtype=torch.bool)
+    force=torch.tensor([[2.,0.,0.]]).expand(3,-1)
+    state.finish(center+torch.tensor([.02,0.,0.]),goal,force,contact,contact,
+                 height,torch.zeros(3),**kwargs)
+    torch.testing.assert_close(state.positive,torch.tensor([.02,0.,0.]),atol=1e-7,rtol=0)
+    assert state.contact_count.tolist()==[20,18,18]
+    # Retreat remains charged even when the EEF is at/above the contact ceiling.
+    state.finish(center,goal,force,contact,contact,height,torch.zeros(3),**kwargs)
+    torch.testing.assert_close(state.retreat,torch.full((3,),.02),atol=1e-7,rtol=0)
+    assert not state.positive.any()
