@@ -122,7 +122,8 @@ class StabilizeSweepEnv(ManagerBasedRLEnv):
                     contacts.force_sum/contacts.samples,contacts.contact,contacts.all_valid,
                     self.scene['ee_frame'].data.target_pos_w[:,0,2],
                     self._revision_initial_shelf_pos[:,2]+1.05,
-                    height_limit=self.cfg.sweep_contact_height_limit)
+                    height_limit=self.cfg.sweep_contact_height_limit,
+                    normalize_contact_count=getattr(self.cfg,'sweep_normalize_contact_count',True))
         self.scene.update=capture
         try:
             return super().step(action)

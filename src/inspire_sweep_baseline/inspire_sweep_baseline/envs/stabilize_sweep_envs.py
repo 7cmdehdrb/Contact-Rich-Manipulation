@@ -33,6 +33,7 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
     goal_hold_outer_radius: float | None = None
     # The actual Sweep contact gate is relative to the shelf surface.
     sweep_contact_height_limit: float = 0.12
+    sweep_normalize_contact_count: bool = True
     debug_initial_ik_bounds: bool = False
     debug_surface_points: bool = False
     wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
@@ -110,7 +111,24 @@ class SweepOnlyV1TestEnvCfg(SweepOnlyTestEnvCfg):
 
 
 @configclass
+class SweepOnlyV1_2TestEnvCfg(SweepOnlyV1TestEnvCfg):
+    sweep_normalize_contact_count: bool = False
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress.weight = 100.0
+        self.rewards.sweep_retreat.weight = -25.0
+
+
+@configclass
 class SweepOnlyV2TestEnvCfg(SweepOnlyV1TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
+
+
+@configclass
+class SweepOnlyV2_2TestEnvCfg(SweepOnlyV1_2TestEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
