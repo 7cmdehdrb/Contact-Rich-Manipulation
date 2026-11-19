@@ -1,6 +1,12 @@
 # Inspire Sweep Baseline
 
+2026-11-19 후속: 일반 `Inspire-Stabilize-Sweep-v0`와 `Inspire-Sweep-Only-v0`에도 공통 성능 개선을 적용했다. 기존4후보 IK·충돌 검사·실패 행 복구는 유지하며, Test의 단일 IK나 Reach로 교체하지 않는다. [적용 범위·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-19_stabilize_parent_performance.md).
+
+2026-11-19: 두 `-Test`의 실제2048환경·headless 학습32회가 모두10초 미만으로 완료됐다(RTX3090·seed42). Stabilize Test 중앙값8.81초/최대9.44초, Sweep Only Test8.69초/9.18초. 대표점·배치·reset 계산을 개선했으며 관측 규칙·보상·horizon36·PPO8×4를 유지한다. 최초 시뮬레이터 생성은 iteration 시간에서 제외한다. [변경·실행·검증·한계](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-18_stabilize_sweep_performance.md).
+
 2026-11-18: `Inspire-Stabilize-Sweep-v0-Test`와 `Inspire-Sweep-Only-v0-Test`는 각각 원본을 상속하고 초기 배치·IK만 기존 Finger 방식으로 교체한다. 대표 표면점 관측을 유지하고, 후속 요청으로 Test에만 Finger Reach(weight30)를 추가했다. 나머지 부모 보상/Gate는 유지한다. [차이와 실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/STABILIZE_SWEEP.md#finger-초기화-test-환경).
+
+두 Test는 대표 표면점 계산, 배치 처리, 고정 local COM 읽기 캐시와 중복 reset 기록을 최적화한다. 비활성 물체와 고정 로봇 베이스는 실제 PhysX 위치·자세·속도가 요청값과 수치적으로 정확히 같은 경우에만 중복 기록을 생략한다. 비활성 물체의 주차 위치는 높이52–82m에서 환경 기준 +X3m부터 시작하는 간격45cm의 4×4 격자(각 slot의 활성 초기 배치와 같은 선반 좌표계 Z 유지)로 옮겨, 활성·비활성 전환 시 GPU 충돌 후보 정렬 비용을 줄인다. 표면점 fallback도 같은 주차 공간을 사용한다. 이 공간은 로봇의 보수적 도달 반경과 정상 작업 영역에서 떨어져 있으며 기존 환경 간 충돌 필터를 유지한다. 비정상적인 고속 발사 물체와의 접촉까지 불가능하다는 보장은 아니다. 활성 물체의 초기화 분포·난수 진행·IK·관측·보상·물리 설정·PPO 구성은 유지하며, 원본 Finger의 기본 경로는 보존한다. 후속 요청으로 일반 Stabilize/Sweep-Only에도 공통 관측·COM cache·주차·중복 기록 생략을 적용했다. 일반 배치는 로봇 점유 공간 검사를 유지하며32행씩 fused RED 계산을 사용한다.
 
 2026-11-18: `Inspire-Sweep-Only-v0`는 `Inspire-Stabilize-Sweep-v0`를 상속해 안정화 보상·전용 초기 이동/회전 비용과 Gate를 제거한다. 초기화 직후부터 Sweep을 적용하며 압착 비용과 나머지 구성은 유지한다. [환경 차이·실행 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/STABILIZE_SWEEP.md#sweep-only-파생-환경).
 

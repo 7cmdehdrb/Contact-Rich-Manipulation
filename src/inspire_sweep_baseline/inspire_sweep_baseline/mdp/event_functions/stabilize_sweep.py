@@ -137,12 +137,21 @@ def commit_scene(env, ids, local, yaw, active, delta, shelf_state, root_state, p
     q=local.new_zeros(len(ids),17,4);q[...,0]=(yaw/2).cos();q[...,3]=(yaw/2).sin()
     states=torch.cat((world,quat_mul(shelf_quat[:,None].expand(-1,17,-1),q),local.new_zeros(len(ids),17,6)),-1)
     shelf.write_root_state_to_sim(shelf_state,env_ids=ids)
-    robot.write_root_state_to_sim(root_state,env_ids=ids)
+    write_test_reset_root_state(env,ids,root_state)
     robot.write_joint_state_to_sim(pose.joints,torch.zeros_like(pose.joints),env_ids=ids)
     robot.set_joint_position_target(pose.joints,env_ids=ids)
     robot.set_joint_velocity_target(torch.zeros_like(pose.joints),env_ids=ids)
-    objects.write_object_link_state_to_sim(states,env_ids=ids)
-    env._active_object_mask[ids]=active;apply_fixed_pool_gravity_mask(env,ids)
+    written=write_test_reset_object_state(env,ids,states,active)
+    env._active_object_mask[ids]=active
+    # Same fixed-pool gravity/wake contract as the optimized Finger adapter.
+    rows=(torch.arange(17)[:,None]*env.num_envs+ids.cpu()[None]).flatten()
+    flags=(~active).T.reshape(-1,1).to(device='cpu',dtype=torch.uint8)
+    changed=(env._wrench_gravity_flags[rows]!=flags).flatten()
+    env._wrench_gravity_flags[rows]=flags
+    if bool(changed.any()):
+        objects.root_physx_view.set_disable_gravities(env._wrench_gravity_flags,rows[changed])
+    wake_rows=rows[written.T.flatten().cpu()]
+    if len(wake_rows):objects.root_physx_view.wake_up(wake_rows)
     env.target_id[ids,0]=0
     env.target_width[ids,0]=env._fast_visibility_radii[ids,0]
     env.sweep_dir[ids]=quat_apply(shelf_quat,torch.cat((delta,delta.new_zeros(len(ids),1)),-1))
@@ -162,6 +171,10 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     start=perf_counter()
     ids=torch.arange(env.num_envs,device=env.device) if env_ids is None else torch.as_tensor(env_ids,device=env.device,dtype=torch.long)
     if not len(ids):return
+    from ..common.stabilize_sweep_contact import cache_static_local_com
+    from ..common.stabilize_sweep_layout import test_inactive_positions, fused_test_red_distance
+    parking=test_inactive_positions(env)[ids]
+    env._fast_layout.red_distance=fused_test_red_distance
     local=torch.zeros((len(ids),17,3),device=env.device)
     local[...,2]=50.+2.*torch.arange(17,device=env.device)
     local[:,0,2]=env._refactor_spawn_z[ids,0]
@@ -176,10 +189,15 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     from ..common.stabilize_sweep_layout import place_obstacles
     requested=torch.randint(0,7,(len(ids),),device=env.device,generator=env._revision_layout_rng)
     selected=torch.rand((len(ids),16),device=env.device,generator=env._revision_layout_rng).argsort(-1)[:,:6]+1
-    place_obstacles(env._fast_layout,ids,local,yaw,active,delta,pose.boxes,selected,requested,env._revision_layout_rng)
+    place_obstacles(env._fast_layout,ids,local,yaw,active,delta,pose.boxes,selected,requested,env._revision_layout_rng,
+                    batch_size=32)
     skipped=requested-active[:,1:].sum(-1)
-    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state)
+    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
+    # Planning and visibility retain their original coordinates. Only retired
+    # bodies change physical parking, including target-only fallback rows.
+    local=torch.where(active[...,None],local,parking)
     commit_scene(env,ids,local,yaw,active,delta,shelf_state,root_state,pose)
+    cache_static_local_com(env)
     env._surface_target_w[ids]=targets
     env._surface_obstacles_w[ids]=obstacles
     env._surface_valid[ids]=valid
@@ -203,7 +221,9 @@ def reset_scene(env, env_ids, spawn_radius=.02, edge_clearance=.02,
     }
 
 
-def snapshot(env,ids,local,yaw,active,shelf_state):
+def snapshot(env,ids,local,yaw,active,shelf_state,*,batched=False):
+    if batched:
+        return _snapshot_batched(env,ids,local,yaw,active,shelf_state)
     from isaaclab.sim.utils import get_current_stage
     from ..common.stabilize_sweep_surface import SurfaceGeometry
     if not hasattr(env,'_surface_geometry'):
@@ -234,25 +254,179 @@ def snapshot(env,ids,local,yaw,active,shelf_state):
             shelf_state[:,None,:3]+quat_apply(q[:,None].expand(-1,16,-1),obstacles),valid,timings)
 
 
+def _snapshot_batched(env,ids,local,yaw,active,shelf_state):
+    """Shared IK/Test observer: bulk transfers with the same snapshot contract."""
+    import numpy as np
+    from ..common.stabilize_sweep_surface import BatchedSurfaceGeometry
+    if not hasattr(env,'_surface_batch_geometry'):
+        env._surface_batch_geometry=BatchedSurfaceGeometry(
+            env,chunk_size=256,components_backend='gpu',ray_backend='raster',bounds_backend='cpu_kernel')
+    geometry=env._surface_batch_geometry
+    ids_cpu=ids.detach().cpu().numpy()
+    local_cpu,yaw_cpu,active_cpu=(v.detach().cpu().numpy().copy() for v in (local,yaw,active))
+    results=geometry.observe_batch(ids_cpu,local_cpu,yaw_cpu,active_cpu)
+    failed=[]
+    timings=[]
+    for row,(point,others,timing) in enumerate(results):
+        timing.update(fallback=int(point is None or len(others)>16),
+                      target_missing=int(point is None),slot_overflow=int(len(others)>16))
+        timings.append(timing)
+        if timing['fallback']:failed.append(row)
+    if failed:
+        active_cpu[failed,1:]=False
+        local_cpu[failed,1:]=0.
+        local_cpu[np.asarray(failed)[:,None],np.arange(1,17),2]=50.+2.*np.arange(1,17)
+        yaw_cpu[failed,1:]=0.
+        retry=geometry.observe_batch(ids_cpu[failed],local_cpu[failed],yaw_cpu[failed],active_cpu[failed])
+        for row,(point,others,second) in zip(failed,retry):
+            for key in ('total_ms','build_ms','upload_ms','readback_ms','ray_ms','components_ms','rays'):
+                timings[row][key]=timings[row].get(key,0.)+second.get(key,0.)
+            if point is None:
+                raise RuntimeError(f'Target-only visible snapshot missing after bounded fallback: env={ids_cpu[row]}')
+            results[row]=(point,others,timings[row])
+        # Preserve the original fallback's physical state changes in selected rows.
+        rows=torch.as_tensor(failed,device=env.device)
+        active[rows]=torch.as_tensor(active_cpu[failed],device=env.device)
+        local[rows]=torch.as_tensor(local_cpu[failed],device=env.device)
+        yaw[rows]=torch.as_tensor(yaw_cpu[failed],device=env.device)
+    target_cpu=np.empty((len(ids),3),dtype=np.float32)
+    obstacles_cpu=np.zeros((len(ids),16,3),dtype=np.float32)
+    valid_cpu=np.zeros((len(ids),16),dtype=bool)
+    for row,(point,others,_) in enumerate(results):
+        target_cpu[row]=point
+        obstacles_cpu[row,:len(others)]=others
+        valid_cpu[row,:len(others)]=True
+    targets=torch.as_tensor(target_cpu,device=env.device)
+    obstacles=torch.as_tensor(obstacles_cpu,device=env.device)
+    valid=torch.as_tensor(valid_cpu,device=env.device)
+    q=shelf_state[:,3:7]
+    return (shelf_state[:,:3]+quat_apply(q,targets),
+            shelf_state[:,None,:3]+quat_apply(q[:,None].expand(-1,16,-1),obstacles),valid,timings)
+
+
+def write_test_reset_root_state(env, ids, state):
+    """Skip identical fixed-base native root writes; preserve Isaac reset caches.
+
+    Native getters, rather than same-timestamp data caches, decide equality.
+    Joint writes still run normally afterwards and invalidate link pose caches.
+    Shared by the fixed-physics Stabilize/Sweep Only IK and Test lifecycles.
+    """
+    robot = env.scene['robot']
+    if not robot.is_fixed_base:
+        robot.write_root_state_to_sim(state, env_ids=ids)
+        return
+    from isaaclab.utils.math import convert_quat
+    pose = robot.root_physx_view.get_root_transforms()[ids].clone()
+    pose[:, 3:] = convert_quat(pose[:, 3:], to='wxyz')
+    velocity = robot.root_physx_view.get_root_velocities()[ids]
+    changed = (~env._revision_layout_complete[ids] | (pose != state[:, :7]).any(-1)
+               | (velocity != state[:, 7:]).any(-1))
+    data = robot.data
+    data.root_link_pose_w[ids] = state[:, :7].clone()
+    for name in ('_root_link_state_w', '_root_state_w'):
+        if getattr(data, name).data is not None:
+            getattr(data, name[1:])[ids, :7] = data.root_link_pose_w[ids]
+    poses_xyzw = data.root_link_pose_w.clone()
+    poses_xyzw[:, 3:] = convert_quat(poses_xyzw[:, 3:], to='xyzw')
+    for name in ('_body_link_pose_w', '_body_com_pose_w', '_body_state_w',
+                 '_body_link_state_w', '_body_com_state_w'):
+        getattr(data, name).timestamp = -1.
+    if bool(changed.any()):
+        robot.root_physx_view.set_root_transforms(poses_xyzw, indices=ids[changed])
+    data.root_com_vel_w[ids] = state[:, 7:].clone()
+    for name in ('_root_com_state_w', '_root_state_w'):
+        if getattr(data, name).data is not None:
+            getattr(data, name[1:])[ids, 7:] = data.root_com_vel_w[ids]
+    # The original root velocity writer clears every selected body's cached
+    # acceleration even when its native root velocity was already zero.
+    data.body_acc_w[ids] = 0.
+    if bool(changed.any()):
+        robot.root_physx_view.set_root_velocities(data.root_com_vel_w, indices=ids[changed])
+
+
+def write_test_reset_object_state(env, ids, state, active):
+    """Write only changed native rows; preserve the installed Isaac cache contract.
+
+    The PhysX tensor view uses object-major indices and full-sized setter inputs.
+    Only previously parked, still inactive bodies with exactly equal native pose and
+    zero velocity can skip writes and wake-up. First reset, active bodies, and
+    both activity transitions always use the native setters. No gravity,
+    collision, simulation-enable, or sleep flags are changed here.
+
+    Cache updates mirror RigidObjectCollection's link-state writer in the
+    installed Isaac Lab version, including its same-timestamp world-COM behavior.
+    Revalidate this helper if that upstream writer or Test physics changes.
+    """
+    from isaaclab.utils.math import combine_frame_transforms, convert_quat
+    objects = env.scene['object_collection']
+    data = objects.data
+    native_pose = objects.root_physx_view.get_transforms().clone()
+    native_velocity = objects.root_physx_view.get_velocities()
+    pose = objects.reshape_view_to_data(native_pose)[ids].clone()
+    pose[..., 3:] = convert_quat(pose[..., 3:], to='wxyz')
+    velocity = objects.reshape_view_to_data(native_velocity)[ids]
+    written = (active | env._active_object_mask[ids]
+               | ~env._revision_layout_complete[ids, None]
+               | (pose != state[..., :7]).any(-1) | (velocity != state[..., 7:]).any(-1))
+    # This reset only requests zero link velocity, which is also zero COM
+    # velocity. Reject future nonzero callers instead of silently skipping the
+    # link-to-COM velocity transform performed by Isaac's general writer.
+    torch._assert_async((state[..., 7:] == 0.).all(), 'Test reset requires zero object velocity')
+    object_ids = objects._ALL_OBJ_INDICES
+    selected = (ids[:, None], object_ids)
+    data.object_link_pose_w[selected] = state[..., :7].clone()
+    if data._object_link_state_w.data is not None:
+        data.object_link_state_w[ids[:, None], object_ids, :7] = state[..., :7].clone()
+    if data._object_state_w.data is not None:
+        data.object_state_w[ids[:, None], object_ids, :7] = state[..., :7].clone()
+    if data._object_com_state_w.data is not None:
+        pos, quat = combine_frame_transforms(state[..., :3], state[..., 3:7],
+                                             data.object_com_pos_b[selected], data.object_com_quat_b[selected])
+        data.object_com_state_w[ids[:, None], object_ids, :3] = pos
+        data.object_com_state_w[ids[:, None], object_ids, 3:7] = quat
+    poses_xyzw = data.object_link_pose_w.clone()
+    poses_xyzw[..., 3:] = convert_quat(poses_xyzw[..., 3:], to='xyzw')
+    rows = (object_ids[:, None] * env.num_envs + ids[None]).flatten()[written.T.flatten()]
+    if len(rows):
+        objects.root_physx_view.set_transforms(objects.reshape_data_to_view(poses_xyzw), indices=rows)
+    data.object_link_vel_w[selected] = state[..., 7:].clone()
+    if data._object_link_state_w.data is not None:
+        data.object_link_state_w[ids[:, None], object_ids, 7:] = state[..., 7:].clone()
+    data.object_com_vel_w[selected] = state[..., 7:].clone()
+    for name in ('_object_com_state_w', '_object_state_w', '_object_link_state_w'):
+        if getattr(data, name).data is not None:
+            getattr(data, name[1:])[ids[:, None], object_ids, 7:] = state[..., 7:].clone()
+    data.object_com_acc_w[selected] = 0.
+    if len(rows):
+        objects.root_physx_view.set_velocities(objects.reshape_data_to_view(data.object_com_vel_w), indices=rows)
+    return written
+
+
 def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
                             excluded_x_half_angle=math.pi/6, min_goal_distance=.06,
                             max_goal_distance=.12, observation_noise=.01,
                             visibility_threshold=.35, visibility_flip_probability=.01,
                             observation_swap_probability=.1):
-    """Finger's unchanged circle/IK reset, followed by the parent's surface snapshot.
+    """Finger's active circle/IK reset with nearby inactive parking and surface points.
 
     The legacy centroid observation produced by fast_reset_scene is not exposed
     to this policy. No robot hull construction or Stabilize pose search is used.
     """
     from .wrench_refactor_relative_ik_test import fast_reset_scene
+    from ..common.stabilize_sweep_contact import cache_static_local_com
+    from ..common.stabilize_sweep_layout import configure_test_layout_batch, test_inactive_positions
     from isaaclab.utils.math import quat_conjugate
     start=perf_counter()
     ids=torch.arange(env.num_envs,device=env.device) if env_ids is None else torch.as_tensor(env_ids,device=env.device,dtype=torch.long)
     if not len(ids):return
+    configure_test_layout_batch(env)
+    parking = test_inactive_positions(env)[ids]
     fast_reset_scene(env,ids,ik_params=ik_params,spawn_radius=spawn_radius,edge_clearance=edge_clearance,
         excluded_x_half_angle=excluded_x_half_angle,min_goal_distance=min_goal_distance,max_goal_distance=max_goal_distance,
         observation_noise=observation_noise,visibility_threshold=visibility_threshold,
-        visibility_flip_probability=visibility_flip_probability,observation_swap_probability=observation_swap_probability)
+        visibility_flip_probability=visibility_flip_probability,observation_swap_probability=observation_swap_probability,
+        reuse_unchanged_states=True, inactive_positions=parking, populate_legacy_observation=False)
+    cache_static_local_com(env)
     placement_ms=1000*(perf_counter()-start)
     objects=env.scene['object_collection']
     shelf_state=env.scene['shelf'].data.root_state_w[ids]
@@ -264,7 +438,10 @@ def reset_scene_finger_test(env, env_ids, ik_params, spawn_radius=.02, edge_clea
     yaw=torch.atan2(2*(w*z+x*y),1-2*(y.square()+z.square()))
     active=env._active_object_mask[ids].clone()
     requested=active[:,1:].sum(-1)
-    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state)
+    targets,obstacles,valid,timings=snapshot(env,ids,local,yaw,active,shelf_state,batched=True)
+    # The target-only fallback retires obstacles before its existing commit.
+    # Keep those bodies on the same nearby grid, with no far-parking teleport.
+    local = torch.where(active[..., None], local, parking)
     changed=(active!=env._active_object_mask[ids]).any(-1)
     if bool(changed.any()):
         # Preserve the surface observer's target-only fallback, without physics

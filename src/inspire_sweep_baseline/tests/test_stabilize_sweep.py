@@ -537,37 +537,53 @@ def test_finger_test_tasks_keep_each_parent_runtime():
 
 
 def test_finger_reset_adapter_keeps_surface_snapshot_and_isolates_fallback(load_mdp,monkeypatch):
-    import sys,torch
+    import importlib,sys,torch
     from isaaclab.utils.math import quat_apply,quat_apply_inverse,quat_mul
     scope=_reset_layout_planner()
     scope.update(__package__='_baseline_cpu_pkg.mdp.event_functions',
                  quat_apply=quat_apply,quat_apply_inverse=quat_apply_inverse,quat_mul=quat_mul)
-    calls=[];writes=[];gravity=[]
+    calls=[];writes=[];gravity=[];cache_calls=[]
+    parking=torch.zeros(3,17,3);parking[:,:,0]=3.;parking[:,:,2]=1.1
+    layout_module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    monkeypatch.setattr(layout_module,'test_inactive_positions',lambda env:parking)
     def fast(env,ids,**params):
+        assert env._fast_layout.sample_batch_size==512
+        assert params['reuse_unchanged_states'] is True
+        assert params['populate_legacy_observation'] is False
+        torch.testing.assert_close(params['inactive_positions'],parking[ids])
         calls.append((ids.tolist(),params))
         # Physical state is already committed by Finger; no physics step.
         env._active_object_mask[ids,0:2]=True
     monkeypatch.setitem(sys.modules,'_baseline_cpu_pkg.mdp.event_functions.wrench_refactor_relative_ik_test',
                         NS(fast_reset_scene=fast))
+    contact=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_contact')
+    def cache(env):
+        assert len(calls)==1
+        cache_calls.append(env)
+    monkeypatch.setattr(contact,'cache_static_local_com',cache)
     scope['apply_fixed_pool_gravity_mask']=lambda env,ids:gravity.append(ids.tolist())
     states=torch.zeros(3,17,13);states[:,:,3]=1.;states[:,:,2]=1.05
     shelf=torch.zeros(3,13);shelf[:,3]=1.
     objects=NS(data=NS(object_link_state_w=states),
                write_object_link_state_to_sim=lambda value,env_ids:writes.append((env_ids.tolist(),value.clone())))
     env=NS(num_envs=3,device='cpu',scene={'object_collection':objects,'shelf':NS(data=NS(root_state_w=shelf))},
+        _fast_layout=NS(bounds=torch.empty(3,17,2,3)),
         _active_object_mask=torch.zeros(3,17,dtype=torch.bool),_revision_spawn_positions=torch.zeros(3,17,3),
         _surface_target_w=torch.full((3,3),7.),_surface_obstacles_w=torch.full((3,16,3),7.),
         _surface_valid=torch.ones(3,16,dtype=torch.bool),_final_actual_population=torch.zeros(3,dtype=torch.long))
-    def snapshot(env,ids,local,yaw,active,shelf):
+    def snapshot(env,ids,local,yaw,active,shelf,*,batched=False):
+        assert batched
+        assert cache_calls==[env]
         active[:,1:]=False;local[:,1:]=0.;local[:,1:,2]=52.
         return torch.full((1,3),9.),torch.full((1,16,3),8.),torch.zeros(1,16,dtype=torch.bool),[
             dict(total_ms=1.,fallback=1,target_missing=1,slot_overflow=0)]
     scope['snapshot']=snapshot
     scope['reset_scene_finger_test'](env,torch.tensor([2]),ik_params={'height_offset':.01})
     assert len(calls)==1 and calls[0][0]==[2] and calls[0][1]['ik_params']=={'height_offset':.01}
+    assert cache_calls==[env]
     assert gravity==[[2]]
     assert len(writes)==1 and writes[0][0]==[2]
-    assert writes[0][1][0,1,2]==52.
+    torch.testing.assert_close(writes[0][1][0,1:,:3],parking[2,1:])
     assert env._surface_target_w[2].tolist()==[9.,9.,9.]
     assert env._surface_obstacles_w[2,0].tolist()==[8.,8.,8.]
     assert (env._surface_target_w[:2]==7.).all() and (env._surface_obstacles_w[:2]==7.).all()
@@ -576,3 +592,541 @@ def test_finger_reset_adapter_keeps_surface_snapshot_and_isolates_fallback(load_
     assert env._reset_diagnostics['Reset/actual_obstacles']==0
     assert env._reset_diagnostics['Reset/observation_fallbacks']==1
     assert env._reset_diagnostics['Reset/ik_attempts']==1
+
+
+def test_test_parking_geometry_cache_and_shelf_frame(load_mdp):
+    import importlib,math,torch
+    from isaaclab.utils.math import quat_apply
+    parking=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout').test_inactive_positions
+    bounds=torch.tensor([[-.11,-.09,-.10],[.11,.09,.10]]).expand(3,17,2,3).clone()
+    shelf=torch.zeros(3,13);shelf[:,0]=-.7;shelf[:,3]=1.
+    shelf[1,3]=shelf[1,6]=math.sqrt(.5)
+    root=torch.zeros(3,13);root[:,3]=1.
+    spawn_z=1.05+torch.arange(51).reshape(3,17)*.001
+    env=NS(_revision_bounds_t=bounds,_refactor_spawn_z=spawn_z,cfg=NS(scene=NS(filter_collisions=True)),
+        scene={'shelf':NS(data=NS(default_root_state=shelf)),
+               'robot':NS(data=NS(default_root_state=root))})
+    before=torch.random.get_rng_state().clone()
+    local=parking(env)
+    assert local.shape==(3,17,3) and parking(env) is local
+    assert torch.equal(torch.random.get_rng_state(),before)
+    world=shelf[:,None,:3]+quat_apply(shelf[:,None,3:7].expand(-1,17,-1),local)
+    slot=torch.arange(16)
+    expected_xy=torch.stack((3.+.45*(slot//4),.45*(slot%4-1.5)),-1)
+    torch.testing.assert_close(world[:,1:,:2],expected_xy[None].expand(3,-1,-1),atol=1e-6,rtol=0.)
+    torch.testing.assert_close(local[...,2],spawn_z,atol=0,rtol=0.)
+    torch.testing.assert_close(world[:,1:,2],spawn_z[:,1:],atol=1e-6,rtol=0.)
+    distance=torch.cdist(world[0,1:],world[0,1:])
+    distance.fill_diagonal_(float('inf'))
+    radius=bounds.abs().amax(-2).norm(dim=-1).max()
+    assert distance.min()>2*radius+.002
+    assert world[:,1:,0].min()-radius>1.479+.1
+    del env._test_inactive_positions
+    env.cfg.scene.filter_collisions=False
+    with pytest.raises(ValueError,match='collision filtering'): parking(env)
+    env.cfg.scene.filter_collisions=True
+    env._revision_bounds_t=bounds*2
+    with pytest.raises(ValueError,match='radius'): parking(env)
+
+
+def test_test_layout_batch_preserves_sampler_outputs_rng_and_partial_rows(load_mdp):
+    import importlib,torch
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    configure=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout').configure_test_layout_batch
+    geometry_rng=torch.Generator().manual_seed(301)
+    half=.012+torch.rand((280,17,3),generator=geometry_rng)*.013
+    offset=(torch.rand((280,17,3),generator=geometry_rng)-.5)*.004
+    bounds=torch.stack((offset-half,offset+half),-2)
+    spawn=1.05-bounds[:,:,0,2]
+    reference=layout_cls(bounds,spawn,cell_size=.02)
+    optimized=layout_cls(bounds,spawn,cell_size=.02)
+    assert reference.sample_batch_size==optimized.sample_batch_size==64
+    ids=torch.randperm(280,generator=geometry_rng)[:270]
+    for seed in (3,29):
+        expected_rng=torch.Generator().manual_seed(seed)
+        expected=reference.sample(ids,expected_rng)
+        assert (expected[-1]==0).any() and (expected[-1]==6).any()
+        for size in (256,512,64):
+            configure(NS(_fast_layout=optimized),batch_size=size)
+            actual_rng=torch.Generator().manual_seed(seed)
+            actual=optimized.sample(ids,actual_rng)
+            for value,baseline in zip(actual,expected):
+                torch.testing.assert_close(value,baseline,atol=0,rtol=0)
+            torch.testing.assert_close(actual_rng.get_state(),expected_rng.get_state(),atol=0,rtol=0)
+            assert len(optimized._scratch[0])==size
+    # A sparse partial reset after a larger scratch allocation follows the
+    # exact same stream; other rows never participate in the output batch.
+    partial=torch.tensor([13,1,200,3])
+    configure(NS(_fast_layout=optimized))
+    left=torch.Generator().manual_seed(51);right=torch.Generator().manual_seed(51)
+    for value,baseline in zip(optimized.sample(partial,left),reference.sample(partial,right)):
+        torch.testing.assert_close(value,baseline,atol=0,rtol=0)
+    torch.testing.assert_close(left.get_state(),right.get_state(),atol=0,rtol=0)
+    assert reference.sample_batch_size==64
+
+
+def _batched_snapshot_scope(monkeypatch):
+    """Run the production adapter with only the geometry query substituted."""
+    import sys
+    from isaaclab.utils.math import quat_apply
+    scope=_reset_layout_planner()
+    scope.update(__package__='_baseline_cpu_pkg.mdp.event_functions',quat_apply=quat_apply)
+    # No USD stage or simulator is needed when the environment owns its cache.
+    def unexpected_constructor(env):
+        raise AssertionError('The cached observer must be reused')
+    monkeypatch.setitem(sys.modules,'_baseline_cpu_pkg.mdp.common.stabilize_sweep_surface',
+                        NS(BatchedSurfaceGeometry=unexpected_constructor))
+    return scope
+
+
+def test_batched_snapshot_retries_missing_and_overflow_rows_together(load_mdp,monkeypatch):
+    import numpy as np
+    import torch
+    scope=_batched_snapshot_scope(monkeypatch)
+    ids=torch.tensor([8,2,11,5])
+    local=torch.arange(4*17*3,dtype=torch.float32).reshape(4,17,3)/100
+    yaw=torch.arange(4*17,dtype=torch.float32).reshape(4,17)/10
+    active=torch.ones(4,17,dtype=torch.bool)
+    before_local,before_yaw,before_active=local.clone(),yaw.clone(),active.clone()
+    calls=[]
+    targets=np.array([[.1,.2,.3],[.4,.5,.6],[.7,.8,.9],[1.,1.1,1.2]],dtype=np.float32)
+    healthy_others=[np.array([[.3,-.2,.1]],dtype=np.float32),
+                    np.arange(48,dtype=np.float32).reshape(16,3)/100]
+    timing_keys=('total_ms','build_ms','upload_ms','readback_ms','ray_ms','components_ms','rays')
+    def observe_batch(indices,positions,angles,mask):
+        assert all(isinstance(value,np.ndarray) for value in (indices,positions,angles,mask))
+        calls.append(tuple(value.copy() for value in (indices,positions,angles,mask)))
+        if len(calls)==1:
+            assert indices.tolist()==[8,2,11,5]
+            rows=[(targets[0],healthy_others[0]),(None,np.empty((0,3))),
+                  (targets[2],healthy_others[1]),(targets[3],np.ones((17,3)))]
+            return [(point,others,dict.fromkeys(timing_keys,1.)) for point,others in rows]
+        assert len(calls)==2
+        assert indices.tolist()==[2,5]
+        assert mask[:,0].all() and not mask[:,1:].any()
+        np.testing.assert_array_equal(positions[:,0],before_local[[1,3],0].numpy())
+        np.testing.assert_array_equal(angles[:,0],before_yaw[[1,3],0].numpy())
+        np.testing.assert_array_equal(positions[:,1:,:2],np.zeros((2,16,2)))
+        np.testing.assert_array_equal(positions[:,1:,2],np.broadcast_to(np.arange(52.,84.,2.),(2,16)))
+        np.testing.assert_array_equal(angles[:,1:],np.zeros((2,16)))
+        return [(targets[row],np.empty((0,3),dtype=np.float32),dict.fromkeys(timing_keys,2.))
+                for row in (1,3)]
+    env=NS(device='cpu',_surface_batch_geometry=NS(observe_batch=observe_batch))
+    shelf=torch.zeros(4,13)
+    shelf[:,:3]=torch.tensor([[10.,20.,30.],[40.,50.,60.],[70.,80.,90.],[100.,110.,120.]])
+    shelf[:,3]=shelf[:,6]=2**-.5  # Rotate local X to world Y by 90 degrees.
+    target_w,obstacle_w,valid,timings=scope['_snapshot_batched'](env,ids,local,yaw,active,shelf)
+    assert len(calls)==2
+    torch.testing.assert_close(local[[0,2]],before_local[[0,2]])
+    torch.testing.assert_close(yaw[[0,2]],before_yaw[[0,2]])
+    torch.testing.assert_close(active[[0,2]],before_active[[0,2]])
+    for actual,expected in zip((local[[1,3]],yaw[[1,3]],active[[1,3]]),calls[1][1:]):
+        torch.testing.assert_close(actual,torch.as_tensor(expected))
+    target_local=torch.from_numpy(targets)
+    expected_target=torch.stack((-target_local[:,1],target_local[:,0],target_local[:,2]),-1)+shelf[:,:3]
+    torch.testing.assert_close(target_w,expected_target)
+    assert valid.sum(-1).tolist()==[1,0,16,0]
+    for row,points in ((0,healthy_others[0]),(2,healthy_others[1])):
+        points=torch.from_numpy(points)
+        expected=torch.stack((-points[:,1],points[:,0],points[:,2]),-1)+shelf[row,:3]
+        torch.testing.assert_close(obstacle_w[row,:len(points)],expected)
+    torch.testing.assert_close(obstacle_w[[1,3]],shelf[[1,3],None,:3].expand(-1,16,-1))
+    assert [item['fallback'] for item in timings]==[0,1,0,1]
+    assert [item['target_missing'] for item in timings]==[0,1,0,0]
+    assert [item['slot_overflow'] for item in timings]==[0,0,0,1]
+    for row,timing in enumerate(timings):
+        assert all(timing[key]==(3. if row in (1,3) else 1.) for key in timing_keys)
+
+
+def test_batched_snapshot_success_uses_one_query_and_keeps_physical_state(load_mdp,monkeypatch):
+    import numpy as np
+    import torch
+    scope=_batched_snapshot_scope(monkeypatch)
+    ids=torch.tensor([9,3])
+    local=torch.randn(2,17,3);yaw=torch.randn(2,17)
+    active=torch.ones(2,17,dtype=torch.bool)
+    before=[value.clone() for value in (local,yaw,active)]
+    calls=[]
+    def observe_batch(indices,positions,angles,mask):
+        calls.append(indices.tolist())
+        return [(np.array([1.,2.,3.]),np.zeros((16,3)),{'total_ms':2.}),
+                (np.array([4.,5.,6.]),np.empty((0,3)),{'total_ms':3.})]
+    env=NS(device='cpu',_surface_batch_geometry=NS(observe_batch=observe_batch))
+    shelf=torch.zeros(2,13);shelf[:,3]=1.
+    targets,_,valid,timings=scope['_snapshot_batched'](env,ids,local,yaw,active,shelf)
+    assert calls==[[9,3]]
+    torch.testing.assert_close(targets,torch.tensor([[1.,2.,3.],[4.,5.,6.]]))
+    assert valid.sum(-1).tolist()==[16,0]
+    assert not any(item['fallback'] for item in timings)
+    for actual,expected in zip((local,yaw,active),before):
+        torch.testing.assert_close(actual,expected)
+
+
+@pytest.mark.parametrize('initial_overflow',[False,True])
+def test_batched_snapshot_target_only_failure_is_bounded(load_mdp,monkeypatch,initial_overflow):
+    import numpy as np
+    import torch
+    scope=_batched_snapshot_scope(monkeypatch)
+    calls=[]
+    def observe_batch(indices,positions,angles,mask):
+        calls.append(indices.tolist())
+        if len(calls)==1 and initial_overflow:
+            return [(np.zeros(3),np.zeros((17,3)),{'total_ms':1.})]
+        return [(None,np.empty((0,3)),{'total_ms':1.})]
+    env=NS(device='cpu',_surface_batch_geometry=NS(observe_batch=observe_batch))
+    shelf=torch.zeros(1,13);shelf[:,3]=1.
+    with pytest.raises(RuntimeError,match='Target-only visible snapshot missing after bounded fallback: env=42'):
+        scope['_snapshot_batched'](env,torch.tensor([42]),torch.zeros(1,17,3),
+            torch.zeros(1,17),torch.ones(1,17,dtype=torch.bool),shelf)
+    assert calls==[[42],[42]]
+
+
+def test_fused_red_distance_matches_torch_cells_boundaries_and_degenerate_polygons(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    half=torch.full((40,17,3),.02)
+    bounds=torch.stack((-half,half),-2)
+    layout=layout_cls(bounds,1.05-bounds[:,:,0,2])
+    rng=torch.Generator().manual_seed(63)
+    start,goal=layout.sample_commands(torch.arange(32),rng)
+    # Include zero-area points/segments, zero extension, a very small area and
+    # negative zero. Boundary points exercise projection clamps at both ends.
+    start=torch.cat((start,torch.tensor([[0.,0.],[0.,0.],[0.,0.],[.2,0.],[.3,.1],[0.,0.],[-0.,-0.]])))
+    goal=torch.cat((goal,torch.tensor([[0.,0.],[.1,0.],[0.,.1],[.3,.1],[.4,.2],[.1,1e-12],[-0.,-0.]])))
+    points=torch.cat((layout.cells,start,goal))
+    # Interop must respect Torch strides instead of assuming contiguous inputs.
+    strided=torch.empty((len(start),4));strided[:,::2]=start
+    start=strided[:,::2]
+    expected=layout_cls.red_distance(points,start,goal)
+    actual=module._launch_red_distance(points,start,goal)
+    assert torch.equal(actual.view(torch.uint8),expected.view(torch.uint8))
+    threshold=layout.expanded[:len(start),0,None]+layout.expanded[:len(start),1,None]+layout.cell_margin
+    assert torch.equal(actual>=threshold,expected>=threshold)
+    assert module._launch_red_distance(points,start[:0],goal[:0]).shape==(0,len(points))
+    assert module._launch_red_distance(points[:0],start,goal).shape==(len(start),0)
+
+
+def test_fused_red_distance_cpu_fallback_leaves_parent_and_instance_unchanged(load_mdp,monkeypatch):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    original=layout_cls.red_distance
+    half=torch.full((2,17,3),.02)
+    bounds=torch.stack((-half,half),-2)
+    layout=layout_cls(bounds,1.05-bounds[:,:,0,2])
+    module.configure_test_layout_batch(NS(_fast_layout=layout))
+    assert 'red_distance' not in layout.__dict__
+    assert layout_cls.red_distance is original
+    def forbidden(*args):
+        raise AssertionError('CPU inputs must retain the original Torch path')
+    monkeypatch.setattr(module,'_launch_red_distance',forbidden)
+    for dtype in (torch.float32,torch.float64):
+        points=torch.tensor([[.1,0.],[-.1,0.],[.1,.1]],dtype=dtype)
+        start=torch.zeros(2,2,dtype=dtype)
+        goal=torch.tensor([[.1,0.],[0.,.1]],dtype=dtype)
+        actual=module.fused_test_red_distance(points,start,goal)
+        expected=original(points,start,goal)
+        assert torch.equal(actual.view(torch.uint8),expected.view(torch.uint8))
+
+
+def test_fused_red_distance_preserves_complete_sample_and_rng(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    geometry_rng=torch.Generator().manual_seed(88)
+    half=.012+torch.rand((48,17,3),generator=geometry_rng)*.013
+    offset=(torch.rand((48,17,3),generator=geometry_rng)-.5)*.004
+    bounds=torch.stack((offset-half,offset+half),-2)
+    spawn=1.05-bounds[:,:,0,2]
+    reference=layout_cls(bounds,spawn,cell_size=.01)
+    optimized=layout_cls(bounds,spawn,cell_size=.01)
+    # Execute the production kernel on CPU while production CPU configuration
+    # itself continues to use Torch. No simulator or CUDA is needed here.
+    optimized.red_distance=module._launch_red_distance
+    optimized.sample_batch_size=16
+    for ids in (torch.randperm(48,generator=geometry_rng),torch.tensor([35,0,16,3])):
+        for seed in (3,29):
+            left=torch.Generator().manual_seed(seed);right=torch.Generator().manual_seed(seed)
+            expected=reference.sample(ids,left)
+            actual=optimized.sample(ids,right)
+            for value,baseline in zip(actual,expected):
+                assert torch.equal(value.contiguous().view(torch.uint8),baseline.contiguous().view(torch.uint8))
+            assert torch.equal(left.get_state(),right.get_state())
+    assert 'red_distance' not in reference.__dict__
+
+
+def _legacy_observation_reset_env(configs):
+    import importlib, torch
+    from test_wrench_refactor import pool_bounds
+    from types import SimpleNamespace as NS
+    events = configs('event_functions', 'wrench_refactor_relative_ik_test')
+    m = importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout')
+    n = 8
+    bounds = pool_bounds(n)
+    origin = torch.zeros(n, 3); origin[:, 1] = torch.arange(n) * 2.5
+    root = torch.zeros(n, 13); root[:, 3] = 1.
+    shelf_root = root.clone(); shelf_root[:, 0] = -.7
+    class Robot:
+        def __init__(self):
+            self.data = NS(default_root_state=root, default_joint_pos=torch.ones(n, 18)*.2,
+                default_joint_vel=torch.zeros(n, 18), body_link_pos_w=torch.zeros(n, 1, 3))
+            self.joints = torch.ones(n, 18)*9
+            self.roots = torch.ones(n, 13)*9
+            self.writes = 0
+        def write_root_state_to_sim(self, value, env_ids): self.roots[env_ids] = value
+        def write_joint_state_to_sim(self, q, v, env_ids):
+            self.writes += 1
+            self.joints[env_ids] = q
+            assert not v.any()
+        def set_joint_position_target(self, *args, **kwargs): pass
+        def set_joint_velocity_target(self, *args, **kwargs): pass
+    class Shelf:
+        data = NS(default_root_state=shelf_root)
+        def write_root_state_to_sim(self, values, env_ids): self.values = values.clone()
+    class Objects:
+        def __init__(self):
+            self.state = torch.ones(n, 17, 13)*9
+            self.root_physx_view = NS(set_disable_gravities=lambda *args:None, wake_up=lambda *args:None)
+        def write_object_link_state_to_sim(self, value, env_ids): self.state[env_ids] = value
+    class Scene(dict): pass
+    scene = Scene(robot=Robot(), shelf=Shelf(), object_collection=Objects(), ee_frame=NS(reset=lambda ids:None))
+    scene.env_origins = origin
+    angles = torch.arange(6).float()[None]
+    solver = NS(solve=lambda p,q,initial,limits:(angles.expand(len(p),-1),torch.ones(len(p),dtype=torch.bool),torch.zeros(len(p)),torch.zeros(len(p))))
+    cfg = NS(placement_clearance=.01, layout_cell_size=.005, layout_geometry_epsilon=1e-6, debug_initial_ik_bounds=False)
+    env = NS(cfg=cfg, device='cpu', num_envs=n, scene=scene, _revision_bounds_t=bounds,
+        _fast_layout=m.CircleResetLayout(bounds, 1.05-bounds[...,0,2]),
+        _fast_visibility_radii=bounds[...,:2].abs().amax(-2).norm(dim=-1),
+        _fast_geometry_key=(.01,.005,1e-6,bounds._version),
+        _fast_ik=solver, _fast_base_offset=(torch.zeros(n,3),root[:,3:7]),
+        _fast_initial=torch.zeros(n,6), _fast_limits=torch.tensor([-6.,6.]).expand(n,6,2),
+        _fast_default_eef=(torch.tensor([[-.4,0.,1.2]]).expand(n,-1),root[:,3:7]),
+        _goal_reset_arm_ids=list(range(6)), _goal_reset_rng=torch.Generator().manual_seed(1749),
+        _revision_layout_rng=torch.Generator().manual_seed(42),
+        _wrench_gravity_flags=torch.ones(n*17,1,dtype=torch.uint8),
+        _active_object_mask=torch.zeros(n,17,dtype=torch.bool),target_id=torch.ones(n,1,dtype=torch.long),
+        target_width=torch.zeros(n,1),sweep_dir=torch.zeros(n,3),_final_actual_population=torch.zeros(n,dtype=torch.long),
+        _revision_layout_complete=torch.zeros(n,dtype=torch.bool),_revision_spawn_positions=torch.zeros(n,17,3),
+        sensor_data_fresh=torch.ones(n,dtype=torch.bool),_initial_obstacle_observation=torch.zeros(n,64),
+        _goal_reset_desired_pos_w=torch.zeros(n,3),_goal_reset_desired_quat_w=torch.zeros(n,4),_goal_reset_errors=torch.zeros(n,2))
+    env._initial_obstacle_observation.fill_(7.)
+    return env, events
+
+def _legacy_observation_reset_snapshot(env):
+    import torch
+    values={k:v.clone() for k,v in vars(env).items() if isinstance(v,torch.Tensor)}
+    values.update(robot_root=env.scene['robot'].roots.clone(),
+                  robot_joint=env.scene['robot'].joints.clone(),
+                  object_state=env.scene['object_collection'].state.clone(),
+                  layout_rng=env._revision_layout_rng.get_state(),
+                  ik_rng=env._goal_reset_rng.get_state(),global_rng=torch.get_rng_state())
+    if hasattr(env.scene['shelf'],'values'):
+        values['shelf_values']=env.scene['shelf'].values.clone()
+    return values
+
+
+@pytest.mark.parametrize('ids',[[1,4,7],[7,0],[0],[]])
+@pytest.mark.parametrize('swap',[0.,.1,1.])
+def test_legacy_observation_skip_preserves_full_reset_state_and_rng(configs,ids,swap):
+    import torch
+    kwargs=dict(ik_params=dict(height_offset=.01,front_clearance=(.08,.10),lateral_offset=(.10,.18),height_jitter=.02),observation_swap_probability=swap)
+    reference,events=_legacy_observation_reset_env(configs)
+    selected=torch.tensor(ids,dtype=torch.long)
+    torch.manual_seed(517)
+    events.fast_reset_scene(reference,selected,**kwargs)
+    expected=_legacy_observation_reset_snapshot(reference)
+    for populate in (True,False):
+        actual,events=_legacy_observation_reset_env(configs)
+        torch.manual_seed(517)
+        events.fast_reset_scene(actual,selected,**kwargs,populate_legacy_observation=populate)
+        got=_legacy_observation_reset_snapshot(actual)
+        assert expected.keys()==got.keys()
+        for key,value in expected.items():
+            if key=='_initial_obstacle_observation' and not populate:
+                assert not got[key][selected].any()
+                keep=torch.ones(actual.num_envs,dtype=torch.bool);keep[selected]=False
+                assert (got[key][keep]==7.).all()
+            else:
+                torch.testing.assert_close(got[key],value,atol=0,rtol=0,msg=key)
+
+
+@pytest.mark.parametrize('bad',[{'visibility_threshold':0.},{'visibility_threshold':float('nan')},
+                              {'observation_swap_probability':-1.},{'observation_swap_probability':float('nan')}])
+def test_legacy_observation_skip_preserves_invalid_parameter_errors_and_rng(configs,bad):
+    import torch
+    kwargs=dict(ik_params=dict(height_offset=.01,front_clearance=(.08,.10),lateral_offset=(.10,.18),height_jitter=.02),**bad)
+    values=[]
+    for prototype in (False,True):
+        env,events=_legacy_observation_reset_env(configs)
+        torch.manual_seed(517)
+        function=events.fast_reset_scene
+        extra={'populate_legacy_observation':False} if prototype else {}
+        with pytest.raises(ValueError) as error:
+            function(env,torch.tensor([7,0]),**kwargs,**extra)
+        values.append((str(error.value),_legacy_observation_reset_snapshot(env)))
+    assert values[0][0]==values[1][0]
+    for key,value in values[0][1].items():
+        torch.testing.assert_close(values[1][1][key],value,atol=0,rtol=0,msg=key)
+
+
+def test_test_observations_do_not_read_legacy_centroid_buffer(load_mdp):
+    import ast, importlib, torch
+    functions=importlib.import_module('_baseline_cpu_pkg.mdp.observation_functions.stabilize_sweep')
+    target=functions.target_surface_in_eef
+    obstacles=functions.obstacle_surfaces_in_eef
+    config=ast.parse((MODULE_ROOT/'mdp/observations/stabilize_sweep.py').read_text())
+    configured={node.targets[0].id:node.value for node in ast.walk(config)
+                if isinstance(node,ast.Assign) and isinstance(node.targets[0],ast.Name)}
+    for name,function in (('target_obs_state',target),('initial_positions',obstacles)):
+        actual=next(arg.value for arg in configured[name].keywords if arg.arg=='func')
+        assert isinstance(actual,ast.Name) and actual.id==function.__name__
+    frame=NS(target_pos_w=torch.zeros(2,1,3),
+             target_quat_w=torch.tensor([1.,0.,0.,0.]).expand(2,1,4))
+    env=NS(scene={'ee_frame':NS(data=frame)},
+           _surface_target_w=torch.arange(6,dtype=torch.float32).reshape(2,3),
+           _surface_obstacles_w=torch.arange(96,dtype=torch.float32).reshape(2,16,3),
+           _surface_valid=torch.ones(2,16,dtype=torch.bool),
+           _initial_obstacle_observation=torch.full((2,64),float('nan')))
+    expected=(target(env),obstacles(env))
+    env._initial_obstacle_observation.zero_()
+    for actual,reference in zip((target(env),obstacles(env)),expected):
+        torch.testing.assert_close(actual,reference,atol=0,rtol=0)
+
+
+def _reference_circle_cell_selection(points, boundary, red, target_radius, radii, requested, draws, cell_margin, cell_size):
+    """Independent original eager-Torch selection, including partial failures."""
+    import torch
+    n = len(radii)
+    complete = torch.ones(n,dtype=torch.bool,device=points.device)
+    failed = torch.full((n,),-1,dtype=torch.long,device=points.device)
+    indices,enableds,distances = [],[],[]
+    for slot in range(6):
+        radius = radii[:,slot]
+        needed = requested > slot
+        valid = boundary[None] >= radius[:,None]+cell_margin
+        valid &= red >= target_radius[:,None]+radius[:,None]+cell_margin
+        for previous,distance in enumerate(distances):
+            valid &= distance >= (radius+radii[:,previous]+cell_margin)[:,None].square()
+        prefix = valid.cumsum(-1,dtype=torch.int32)
+        totals = prefix[:,-1]
+        ok = (totals>0) | ~needed
+        failed = torch.where(complete & ~ok,slot,failed)
+        complete &= ok
+        rank = (draws[:,slot,0]*totals).long()
+        index = torch.searchsorted(prefix,rank.to(torch.int32)[:,None],right=True).squeeze(-1).clamp_max(len(points)-1)
+        centers = points[index]+(draws[:,slot,1:3]-.5)*cell_size
+        enabled = needed & complete
+        distance = torch.sum((points[None]-centers[:,None]).square(),dim=-1)
+        distances.append(distance.masked_fill(~enabled[:,None],float('inf')))
+        indices.append(index);enableds.append(enabled)
+    return NS(indices=torch.stack(indices,-1),enabled=torch.stack(enableds,-1),
+                           complete=complete,failed_slot=failed)
+
+
+def test_cooperative_circle_selection_matches_raw_indices_and_failure_boundaries(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    half=torch.full((14,17,3),.02)
+    bounds=torch.stack((-half,half),-2)
+    layout=layout_cls(bounds,1.05-bounds[:,:,0,2])
+    for seed in (7,31):
+        rng=torch.Generator().manual_seed(seed)
+        start,goal=layout.sample_commands(torch.arange(14),rng)
+        red=layout.red_distance(layout.cells,start,goal)
+        radii=.022+torch.rand((14,6),generator=rng)*.025
+        radii[0,0]=.7;radii[1,2]=.7
+        requested=torch.arange(14)%7;requested[0]=6;requested[1]=6
+        draws=torch.rand((14,6,4),generator=rng)
+        draws[2,:,0]=0.
+        draws[3,:,0]=torch.nextafter(torch.tensor(1.),torch.tensor(0.))
+        inputs=(layout.cells,layout.boundary,red,layout.expanded[:,0],radii,requested,draws,layout.cell_margin,layout.cell_size)
+        expected=_reference_circle_cell_selection(*inputs)
+        actual=module._select_test_cells(*inputs)
+        for name in ('indices','enabled','complete','failed_slot'):
+            assert torch.equal(getattr(actual,name),getattr(expected,name))
+        assert actual.failed_slot[0]==0 and actual.failed_slot[1]==2
+
+
+def test_cooperative_circle_sampler_preserves_outputs_rng_and_failure_payload(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    layout_cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    rng=torch.Generator().manual_seed(88)
+    half=.012+torch.rand((48,17,3),generator=rng)*.013
+    offset=(torch.rand((48,17,3),generator=rng)-.5)*.004
+    bounds=torch.stack((offset-half,offset+half),-2)
+    spawn=1.05-bounds[:,:,0,2]
+    reference=layout_cls(bounds,spawn,cell_size=.01)
+    optimized=layout_cls(bounds,spawn,cell_size=.01)
+    optimized.cell_selector=module._select_test_cells
+    optimized.sample_batch_size=16
+    for ids in (torch.randperm(48,generator=rng),torch.tensor([35,0,16,3])):
+        for seed in (3,29):
+            left=torch.Generator().manual_seed(seed);right=torch.Generator().manual_seed(seed)
+            expected=reference.sample(ids,left)
+            actual=optimized.sample(ids,right)
+            for value,baseline in zip(actual,expected):
+                assert torch.equal(value.contiguous().view(torch.uint8),baseline.contiguous().view(torch.uint8))
+            assert torch.equal(left.get_state(),right.get_state())
+    assert optimized._scratch is None
+    assert reference._scratch is not None and 'cell_selector' not in reference.__dict__
+    impossible=bounds[:4].clone();impossible[:,1:,0,:2]=-.3;impossible[:,1:,1,:2]=.3
+    failures=[]
+    for use_selector in (False,True):
+        layout=layout_cls(impossible,spawn[:4])
+        if use_selector:layout.cell_selector=module._select_test_cells
+        try:
+            layout.sample(torch.arange(4),torch.Generator().manual_seed(42))
+        except RuntimeError as error:
+            failures.append(str(error))
+    assert len(failures)==2 and failures[0]==failures[1]
+
+
+def test_cooperative_circle_configuration_is_cuda_float32_test_only(load_mdp):
+    import importlib,torch
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    for cuda,dtype,count,enabled in ((False,torch.float32,16000,False),
+                                     (True,torch.float64,16000,False),
+                                     (True,torch.float32,16001,False),
+                                     (True,torch.float32,0,False),
+                                     (True,torch.float32,16000,True)):
+        layout=NS(bounds=NS(is_cuda=cuda,dtype=dtype),cells=range(count))
+        module.configure_test_layout_batch(NS(_fast_layout=layout))
+        assert hasattr(layout,'cell_selector') is enabled
+        if enabled:assert layout.cell_selector is module._select_test_cells
+    # Kernel shared-memory bounds are checked even for direct internal use.
+    import pytest
+    with pytest.raises(ValueError,match='16000'):
+        module._select_test_cells(torch.empty(16001,2),None,None,None,None,None,None,.01,.005)
+
+
+def test_ik_obstacle_batch_preserves_robot_clearance_layout_and_rng(load_mdp):
+    import importlib,torch
+    cls=importlib.import_module('_baseline_cpu_pkg.mdp.common.wrench_refactor_layout').CircleResetLayout
+    module=importlib.import_module('_baseline_cpu_pkg.mdp.common.stabilize_sweep_layout')
+    n=35
+    rng=torch.Generator().manual_seed(113)
+    half=.015+.025*torch.rand(n,17,3,generator=rng)
+    bounds=torch.stack((-half,half),-2)
+    layout=cls(bounds,1.05+half[...,2],cell_size=.02)
+    ids=torch.randperm(n,generator=rng)
+    selected=torch.rand(n,16,generator=rng).argsort(-1)[:,:6]+1
+    requested=torch.arange(n)%7
+    delta=torch.zeros(n,2);delta[:,1]=torch.where(torch.arange(n)%2==0,.08,-.09)
+    centers=torch.zeros(n,2,3);centers[:,0]=torch.tensor([.08,.08,1.08]);centers[:,1]=torch.tensor([-.06,-.06,1.08])
+    # Alternating high/low robot parts exercise height-overlap filtering.
+    centers[::2,1,2]=2.
+    robot=(centers,torch.full_like(centers,.025),torch.eye(3).expand(n,2,3,3))
+    results=[]
+    for size in (8,1,32,64):
+        local=torch.zeros(n,17,3);local[...,2]=50.;local[:,0,2]=layout.spawn_z[ids,0]
+        yaw=torch.zeros(n,17);active=torch.zeros(n,17,dtype=torch.bool);active[:,0]=True
+        generator=torch.Generator().manual_seed(912)
+        module.place_obstacles(layout,ids,local,yaw,active,delta,robot,selected,requested,generator,batch_size=size)
+        results.append((local,yaw,active,generator.get_state()))
+    for result in results[1:]:
+        for actual,expected in zip(result,results[0]):
+            torch.testing.assert_close(actual,expected,atol=0,rtol=0)
+    assert results[0][2][:,1:].any()

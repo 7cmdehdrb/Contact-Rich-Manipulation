@@ -128,6 +128,8 @@ class CircleResetLayout:
     No rejection sampling, count reduction or goal redraw. Geometry is immutable
     for this instance; recreate it after any scale/shape configuration change.
     """
+    sample_batch_size = 64
+
     def __init__(self, bounds, spawn_z, clearance=.01, cell_size=.005, epsilon=1e-6):
         if bounds.ndim != 4 or bounds.shape[1:] != (17, 2, 3):
             raise ValueError('Expected fixed pool bounds [N,17,2,3]')
@@ -202,15 +204,40 @@ class CircleResetLayout:
         off = self.offset[ids, 0]
         off = torch.stack((off[:, 1], -off[:, 0]), -1)
         working = (requested > 0).nonzero().flatten()
-        if len(working) and self._scratch is None:
+        batch_size = self.sample_batch_size
+        # Only explicitly configured Test instances provide a device selector.
+        # The default None path below retains the original Torch sampler.
+        selector = getattr(self, 'cell_selector', None)
+        if selector is None and len(working) and (self._scratch is None or len(self._scratch[0]) != batch_size):
             # Ordinary tensors also permit explicit reset outside InferenceMode.
             with torch.inference_mode(False):
-                self._scratch = (torch.empty((64, len(self.cells)), dtype=torch.bool, device=device),
-                                 torch.empty((64, len(self.cells)), dtype=torch.int32, device=device),
-                                 torch.empty((6, 64, len(self.cells)), device=device, dtype=bounds.dtype))
-        for begin in range(0, len(working), 64):
-            rows = working[begin:begin + 64]
+                self._scratch = (torch.empty((batch_size, len(self.cells)), dtype=torch.bool, device=device),
+                                 torch.empty((batch_size, len(self.cells)), dtype=torch.int32, device=device),
+                                 torch.empty((6, batch_size, len(self.cells)), device=device, dtype=bounds.dtype))
+        for begin in range(0, len(working), batch_size):
+            rows = working[begin:begin + batch_size]
             red = self.red_distance(self.cells, target[rows] + off[rows], goal[rows] + off[rows])
+            if selector is not None:
+                choice = selector(self.cells, self.boundary, red, self.expanded[ids[rows], 0],
+                                  radii[rows], requested[rows], draws[rows], self.cell_margin, self.cell_size)
+                complete[rows] = choice.complete
+                failed_slot[rows] = choice.failed_slot
+                # Each selected object ID is distinct, so scatter all six slots
+                # together while retaining the original elementwise arithmetic.
+                draw = draws[rows]
+                object_ids = selected[rows]
+                row_ids = rows[:, None]
+                env_ids = ids[rows, None]
+                centers = self.cells[choice.indices] + (draw[..., 1:3] - .5) * self.cell_size
+                angle = draw[..., 3] * (2 * math.pi) - math.pi
+                offset = self.offset[env_ids, object_ids]
+                rotated = torch.stack((angle.cos() * offset[..., 0] - angle.sin() * offset[..., 1],
+                                       angle.sin() * offset[..., 0] + angle.cos() * offset[..., 1]), -1)
+                pose = torch.cat((centers - rotated, self.spawn_z[env_ids, object_ids, None]), -1)
+                local[row_ids, object_ids] = torch.where(choice.enabled[..., None], pose, local[row_ids, object_ids])
+                yaw[row_ids, object_ids] = torch.where(choice.enabled, angle, 0.)
+                active[row_ids, object_ids] = choice.enabled
+                continue
             valid_buffer, prefix_buffer, distance_buffer = self._scratch
             valid, prefix = valid_buffer[:len(rows)], prefix_buffer[:len(rows)]
             distances = []

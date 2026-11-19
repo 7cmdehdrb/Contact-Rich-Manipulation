@@ -28,7 +28,7 @@ def validate():
     import gymnasium as gym
     import inspire_sweep_baseline  # noqa: F401
     from isaaclab_tasks.utils import load_cfg_from_registry
-    from isaaclab.utils.math import quat_apply,quat_apply_inverse
+    from isaaclab.utils.math import quat_apply,quat_apply_inverse,convert_quat
     from inspire_sweep_baseline.mdp.common.stabilize_sweep_contact import centroid
     cfg=load_cfg_from_registry(args.task,'env_cfg_entry_point')
     sweep_only=args.task.startswith('Inspire-Sweep-Only-v0')
@@ -73,6 +73,17 @@ def validate():
     env=gym.make(args.task,cfg=cfg).unwrapped
     result={'task':args.task,'seed':42,'num_envs':n,'reset_audit':[]}
     if finger_test:
+        from pxr import Usd,UsdPhysics
+        shelf_root=env.scene.stage.GetPrimAtPath(env.scene.env_prim_paths[0]+'/Shelf')
+        bodies=[p for p in Usd.PrimRange(shelf_root) if p.HasAPI(UsdPhysics.RigidBodyAPI)]
+        result['shelf_support_physics']={
+            'disable_gravity':bool(env.scene['shelf'].root_physx_view.get_disable_gravities()[0,0]),
+            'bodies':[{ 'path':str(p.GetPath()),
+                        'kinematic_enabled':bool(UsdPhysics.RigidBodyAPI(p).GetKinematicEnabledAttr().Get())}
+                      for p in bodies],
+            'fixed_joints':[str(p.GetPath()) for p in Usd.PrimRange(shelf_root) if p.IsA(UsdPhysics.FixedJoint)],
+        }
+        print('SHELF_SUPPORT_PHYSICS',json.dumps(result['shelf_support_physics']),flush=True)
         assert 'reaching' in env.reward_manager.active_terms
         result['test_contract_reset_and_reach_only']=True
     if sweep_only:
@@ -82,6 +93,14 @@ def validate():
         result['ppo_only_experiment_name_changed']=True
     from inspire_sweep_baseline.mdp.event_functions import stabilize_sweep as events
     sample_commands=events.sample_commands
+    snapshot=events.snapshot
+    snapshots=[]
+    def capture_snapshot(env,ids,local,yaw,active,shelf_state,*,batched=False):
+        before=tuple(value.clone() for value in (ids,local,yaw,active,shelf_state)) if batched else None
+        observed=snapshot(env,ids,local,yaw,active,shelf_state,batched=batched)
+        if batched:
+            snapshots[:]=[(before,active.clone(),observed)]
+        return observed
     sampled=[];plans=[]
     plan_layout=events.plan_initial_layout
     prepare_ik,prepare_geometry=events._prepare_fast_ik,events._geometry
@@ -115,6 +134,93 @@ def validate():
         commands=sample_commands(*values,**kwargs)
         sampled.append(tuple(v.clone() for v in commands))
         return commands
+    def check_static_local_com(checkpoint):
+        robot=env.scene['robot'];objects=env.scene['object_collection']
+        # PhysX returns reusable CPU buffers in XYZW order. Clone before any
+        # conversion and compare against fresh physical values, not the cache.
+        raw_robot=robot.root_physx_view.get_coms().to(env.device).clone()
+        raw_objects=objects.root_physx_view.get_coms().to(env.device).clone()
+        raw_robot[...,3:7]=convert_quat(raw_robot[...,3:7],to='wxyz')
+        raw_objects[...,3:7]=convert_quat(raw_objects[...,3:7],to='wxyz')
+        raw_objects=objects.data._reshape_view_to_data(raw_objects)
+        torch.testing.assert_close(robot.data.body_com_pose_b,raw_robot,atol=0,rtol=0)
+        torch.testing.assert_close(objects.data.object_com_pose_b,raw_objects,atol=0,rtol=0)
+        assert robot.data._body_com_pose_b.timestamp==float('inf')
+        assert objects.data._object_com_pose_b.timestamp==float('inf')
+        # Isaac's object-pose writer does not invalidate object_com_pose_w at
+        # the same physics timestamp. That existing reset-time behavior also
+        # occurs without this optimization. Check world COM only after actual
+        # physics, where control/contact consumers read the refreshed buffers.
+        if checkpoint in ('physics_step','physical_contact'):
+            expected_robot=robot.data.body_link_pos_w+quat_apply(robot.data.body_link_quat_w,raw_robot[...,:3])
+            expected_objects=objects.data.object_link_pos_w+quat_apply(objects.data.object_link_quat_w,raw_objects[...,:3])
+            torch.testing.assert_close(robot.data.body_com_pos_w,expected_robot,atol=1e-6,rtol=0)
+            torch.testing.assert_close(objects.data.object_com_pos_w,expected_objects,atol=1e-6,rtol=0)
+        checks=result.setdefault('static_local_com_cache_checks',{})
+        checks[checkpoint]=checks.get(checkpoint,0)+1
+    def native_reset_state():
+        objects=env.scene['object_collection'].root_physx_view
+        robot=env.scene['robot'].root_physx_view
+        return {
+            'object_pose':objects.get_transforms().clone(),
+            'object_velocity':objects.get_velocities().clone(),
+            'object_gravity':objects.get_disable_gravities().clone(),
+            'object_simulation':objects.get_disable_simulations().clone(),
+            'root_pose':robot.get_root_transforms().clone(),
+            'root_velocity':robot.get_root_velocities().clone(),
+            'joint_position':robot.get_dof_positions().clone(),
+            'joint_velocity':robot.get_dof_velocities().clone(),
+        }
+    def reset_rng_state():
+        return {'layout':env._revision_layout_rng.get_state().clone(),
+                'goal':env._goal_reset_rng.get_state().clone(),
+                'cpu':torch.random.get_rng_state().clone(),
+                'cuda':torch.cuda.get_rng_state(env.device).clone()}
+    def restore_reset_rng(state):
+        env._revision_layout_rng.set_state(state['layout'])
+        env._goal_reset_rng.set_state(state['goal'])
+        torch.random.set_rng_state(state['cpu'])
+        torch.cuda.set_rng_state(state['cuda'],env.device)
+    def sensor_roster():
+        return tuple((name,id(sensor),id(getattr(sensor,'_contact_physx_view',None)))
+                     for name,sensor in env.scene.sensors.items())
+    def collision_filter_state():
+        stage=env.scene.stage
+        physics=stage.GetPrimAtPath(env.scene.physics_scene_path)
+        assert physics.GetAttribute('physxScene:invertCollisionGroupFilter').Get() is True
+        groups=[]
+        for row,path in enumerate(env.scene.env_prim_paths):
+            group_path=f'/World/collisions/group{row}'
+            group=stage.GetPrimAtPath(group_path)
+            includes=tuple(map(str,group.GetRelationship('collection:colliders:includes').GetTargets()))
+            filtered=tuple(map(str,group.GetRelationship('physics:filteredGroups').GetTargets()))
+            assert includes==(path,) and filtered==(group_path,)
+            groups.append((includes,filtered))
+        return tuple(groups)
+    filter_before=collision_filter_state()
+    def check_test_parking(*, contacts=False):
+        from inspire_sweep_baseline.mdp.common.stabilize_sweep_layout import test_inactive_positions
+        objects=env.scene['object_collection']
+        shelf=env.scene['shelf'].data.default_root_state
+        # Parking is fixed at reset, independent of subsequent dynamic shelf motion.
+        expected=(shelf[:,:3]+env.scene.env_origins)[:,None]+quat_apply(
+            shelf[:,None,3:7].expand(-1,17,-1),test_inactive_positions(env))
+        actual=objects.root_physx_view.get_transforms().reshape(17,n,7).transpose(0,1)
+        inactive=~env._active_object_mask
+        assert not inactive[:,0].any()
+        torch.testing.assert_close(actual[...,:3][inactive],expected[inactive],atol=1e-6,rtol=0)
+        rows=inactive.T.flatten()
+        assert not objects.root_physx_view.get_velocities()[rows].any()
+        assert objects.root_physx_view.get_disable_gravities()[rows.cpu()].all()
+        assert not objects.root_physx_view.get_disable_simulations().any()
+        assert collision_filter_state()==filter_before
+        result['test_inactive_parking_grid_and_unchanged_collision_groups']=True
+        if contacts:
+            from inspire_sweep_baseline.mdp.common.contact_sweep_clutter_fusion_contacts import object_hand_sensor_name
+            for source in range(1,17):
+                forces=env.scene[object_hand_sensor_name(objects.object_names[source])].data.net_forces_w
+                assert not forces[inactive[:,source]].any(), f'Parked body contacted another body: {source}'
+            result['test_inactive_bodies_stationary_and_contact_free_after_physics']=True
     def check_commands():
         if sweep_only:
             state=env._stabilize_state
@@ -123,6 +229,22 @@ def validate():
         shelf=env.scene['shelf'].data
         target=env.scene['object_collection'].data.object_link_pos_w[:,0]
         goal=env.command_manager.get_command('target_goal_pos')[:,:3]
+        check_static_local_com('reset')
+        check_test_parking()
+        # Replay the same *pre-fallback* scene through the reference so an
+        # unnecessary target-only fallback cannot hide an observer mismatch.
+        before,actual_active,observed=snapshots[-1]
+        ids,local,yaw,active,shelf_state=(value.clone() for value in before)
+        reference_target,reference_obstacles,reference_valid,reference_timings=snapshot(
+            env,ids,local,yaw,active,shelf_state)
+        torch.testing.assert_close(active,actual_active)
+        torch.testing.assert_close(reference_valid,observed[2])
+        torch.testing.assert_close(reference_target,observed[0],atol=2e-5,rtol=0)
+        torch.testing.assert_close(reference_obstacles,observed[1],atol=2e-5,rtol=0)
+        for expected,actual in zip(reference_timings,observed[3]):
+            for key in ('fallback','target_missing','slot_overflow'):
+                assert expected[key]==actual[key]
+        result['batched_surface_matches_original_mesh_observer']=True
         if finger_test:
             assert not hasattr(env,'_stabilize_robot_geometry')
             assert (env._goal_reset_errors[:,0]<=.0005).all() and (env._goal_reset_errors[:,1]<=.003).all()
@@ -170,6 +292,7 @@ def validate():
             result[key]=reduce(result.get(key,value),value)
         result['palm_always_left']=True
     events.sample_commands=capture_commands
+    events.snapshot=capture_snapshot
     events.plan_initial_layout=capture_plan
     if args.inject_reset_failures:
         events._prepare_fast_ik=prepare_with_injection
@@ -187,7 +310,8 @@ def validate():
             assert not env.episode_length_buf.any() and not env.termination_manager.dones.any()
             assert not env._timeout_outcomes.totals.any()
             result['injected_initial_ik_failure_recovered']=True
-        elif not finger_test:assert len(sampled)==1
+        elif not finger_test:
+            assert sum(len(v[0]) for v in sampled)==n+int(plans[-1][3].sum())
         check_commands()
         result['training_wrapper_initial_reset']=True
         # Audit ordinary resets separately from injected failures.
@@ -195,10 +319,11 @@ def validate():
             start=perf_counter();before=len(sampled)
             try:
                 obs,_=env.reset(seed=seed)
+                torch.cuda.synchronize()
+                reset_ms=1000*(perf_counter()-start)
                 if not finger_test:assert sum(len(v[0]) for v in sampled[before:])==n+int(plans[-1][3].sum())
                 check_commands()
-                torch.cuda.synchronize()
-                result['reset_audit'].append(dict(seed=seed,ok=True,ms=1000*(perf_counter()-start),
+                result['reset_audit'].append(dict(seed=seed,ok=True,ms=reset_ms,
                     max_position_error_m=float(env._goal_reset_errors[:,0].max()),
                     max_rotation_error_rad=float(env._goal_reset_errors[:,1].max()),
                     metrics={k:float(v) for k,v in env.extras['log'].items() if k.startswith('Reset/')}))
@@ -216,7 +341,21 @@ def validate():
             expected_active=env._active_object_mask.clone()
             expected_goal=env.command_manager.get_command('target_goal_pos')[:,:3].clone()
             env._revision_layout_rng.manual_seed(123);env._goal_reset_rng.manual_seed(123+1707)
-            fast_reset_scene(env,torch.arange(n,device=env.device),**cfg.events.object_spawn.params)
+            before_rng=reset_rng_state();before_roster=sensor_roster()
+            layout=env._fast_layout
+            original_batch_size=layout.sample_batch_size
+            # Remove Test instance accelerators as well as restoring batch64:
+            # the reference must execute Finger's original Torch sampler.
+            overrides={name:layout.__dict__.pop(name) for name in ('red_distance','cell_selector')
+                       if name in layout.__dict__}
+            layout.sample_batch_size=64
+            try:
+                fast_reset_scene(env,torch.arange(n,device=env.device),**cfg.events.object_spawn.params)
+                reference_native=native_reset_state();reference_rng=reset_rng_state()
+            finally:
+                layout.sample_batch_size=original_batch_size
+                layout.__dict__.update(overrides)
+            result['reference_finger_sampler_without_test_overrides']=True
             torch.testing.assert_close(env.scene['robot'].data.joint_pos,expected_joints,atol=1e-6,rtol=0)
             torch.testing.assert_close(env.scene['object_collection'].data.object_link_state_w[expected_active],
                                        expected_objects[expected_active],atol=1e-5,rtol=0)
@@ -224,6 +363,30 @@ def validate():
             target_root=env.scene['object_collection'].data.object_link_pos_w[:,0]
             torch.testing.assert_close(target_root+env.sweep_dir,expected_goal,atol=1e-5,rtol=0)
             result['same_seed_matches_original_finger_initialization']=True
+            restore_reset_rng(before_rng)
+            from inspire_sweep_baseline.mdp.common.stabilize_sweep_layout import (
+                configure_test_layout_batch,test_inactive_positions)
+            configure_test_layout_batch(env)
+            fast_reset_scene(env,torch.arange(n,device=env.device),**cfg.events.object_spawn.params,
+                             reuse_unchanged_states=True,inactive_positions=test_inactive_positions(env),
+                             populate_legacy_observation=False)
+            assert not env._initial_obstacle_observation.any()
+            result['test_legacy_centroid_buffer_unused_and_zero']=True
+            for key,value in native_reset_state().items():
+                expected=reference_native[key]
+                if key=='object_pose':
+                    # Only inactive XYZ deliberately changes; even parked
+                    # orientations, velocities and native flags stay exact.
+                    torch.testing.assert_close(value[:,3:],expected[:,3:],atol=0,rtol=0,msg=key+' quaternion')
+                    active_rows=env._active_object_mask.T.flatten()
+                    value,expected=value[active_rows],expected[active_rows]
+                torch.testing.assert_close(value,expected,atol=0,rtol=0,msg=key)
+            for key,value in reset_rng_state().items():
+                torch.testing.assert_close(value,reference_rng[key],atol=0,rtol=0,msg=key)
+            assert sensor_roster()==before_roster
+            check_test_parking()
+            result['test_reset_matches_finger_except_inactive_xyz_and_all_rng']=True
+            result['reset_native_equality']='numerical exact: atol=rtol=0, +0/-0 equivalent'
         # Separate selected-row resets use an explicit reproducible fixture seed.
         for row in range(n):obs,_=env.reset(seed=42,env_ids=torch.tensor([row],device=env.device))
         assert obs['policy'].shape==(n,67) and obs['obstacles'].shape==(n,64)
@@ -236,6 +399,10 @@ def validate():
             'com_minus_root':(data.object_com_pos_w[:,0]-data.object_link_pos_w[:,0]).tolist()}
         held=env.scene['object_collection'].data.object_link_state_w[1].clone()
         joints=env.scene['robot'].data.joint_pos[1].clone();clock=env._sim_step_counter
+        if finger_test:
+            held_native=native_reset_state();held_roster=sensor_roster()
+            held_legacy=env._initial_obstacle_observation.clone()
+            env._initial_obstacle_observation[0]=torch.nan
         if finger_test:
             reach_cfg=env.reward_manager.get_term_cfg('reaching')
             reach=reach_cfg.func
@@ -251,10 +418,23 @@ def validate():
         torch.testing.assert_close(joints,env.scene['robot'].data.joint_pos[1],atol=0,rtol=0)
         torch.testing.assert_close(target[1],env._surface_target_w[1],atol=0,rtol=0)
         if finger_test:
+            # Inspect every untouched native row, including remote pooled
+            # bodies and physical flags, independently of lazy data caches.
+            untouched_objects=(torch.arange(17)[:,None]*n+torch.arange(1,n)[None]).flatten()
+            for key,value in native_reset_state().items():
+                rows=untouched_objects if key.startswith('object_') else torch.arange(1,n)
+                rows=rows.to(value.device)
+                torch.testing.assert_close(value[rows],held_native[key][rows],atol=0,rtol=0,msg=key)
+            assert sensor_roster()==held_roster
+            assert not env._initial_obstacle_observation[0].any()
+            torch.testing.assert_close(env._initial_obstacle_observation[1:],held_legacy[1:],atol=0,rtol=0)
+            result['partial_reset_clears_only_selected_legacy_rows']=True
+            result['partial_reset_native_state_flags_and_roster_isolation']=True
             torch.testing.assert_close(reach._initial_distance[1],held_reach,atol=0,rtol=0)
             expected_initial=((env.scene['ee_frame'].data.target_pos_w[0,0]
                                -env.scene['object_collection'].data.object_pos_w[0,env.target_id[0,0].long()]).norm()-.1).clamp_min(0.)
             torch.testing.assert_close(reach._initial_distance[0],expected_initial)
+            check_static_local_com('partial_reset')
         result['partial_reset_isolation']=True
         start=perf_counter()
         for _ in range(4):
@@ -271,6 +451,8 @@ def validate():
                 assert (expected_reach>0).all()
                 result['reach_matches_finger_formula_and_partial_reset']=True
         torch.cuda.synchronize();result['real_step_ms']=1000*(perf_counter()-start)/4
+        check_static_local_com('physics_step')
+        check_test_parking(contacts=True)
         assert env._stabilize_contacts.samples==2
         torch.testing.assert_close(env._surface_target_w,target)
         torch.testing.assert_close(env._surface_obstacles_w,points)
@@ -316,6 +498,7 @@ def validate():
             assert int(env._timeout_outcomes.totals[0])==before+1
             assert obs['policy'][:,-1].tolist()==([1.]*n if sweep_only else [0.]+[1.]*(n-1))
             result['same_step_gate_timeout_and_partial_reset']=True
+            check_static_local_com('timeout_partial_reset')
             if args.inject_reset_failures:
                 assert injection['remaining']==0 and plans[-1][3][0]>=1
                 assert torch.isfinite(reward).all() and torch.isfinite(obs['policy']).all()
@@ -360,11 +543,14 @@ def validate():
             torch.testing.assert_close(contacts.moment.cpu(),torque,atol=1e-4,rtol=1e-4)
             torch.testing.assert_close(contacts.load.cpu(),load,atol=1e-4,rtol=1e-4)
             result['actual_contact_probe']={'load_N':load.tolist(),'force_N':total.tolist(),'moment_Nm':torque.tolist()}
+            check_static_local_com('physical_contact')
+            check_test_parking(contacts=True)
             measured=True;break
         assert measured,'No physical hand/target contact found in the controlled probe'
         result['final_reset_metrics']={k:float(v) for k,v in env.extras['log'].items() if k.startswith('Reset/')}
     finally:
         events.sample_commands=sample_commands
+        events.snapshot=snapshot
         events.plan_initial_layout=plan_layout
         events._prepare_fast_ik=prepare_ik;events._geometry=prepare_geometry
         if 'solve' in original:env._fast_ik.solve=original['solve']

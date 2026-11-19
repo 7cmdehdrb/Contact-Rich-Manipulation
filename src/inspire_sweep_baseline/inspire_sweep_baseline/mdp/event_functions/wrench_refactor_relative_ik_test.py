@@ -233,8 +233,17 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
                      excluded_x_half_angle=math.pi / 6, min_goal_distance=.06,
                      max_goal_distance=.12, observation_noise=.01,
                      visibility_threshold=.35, visibility_flip_probability=.01,
-                     observation_swap_probability=.1):
-    """Compute fresh circles/IK before committing final selected rows once."""
+                     observation_swap_probability=.1, reuse_unchanged_states=False,
+                     inactive_positions: torch.Tensor | None = None,
+                     populate_legacy_observation: bool = True):
+    """Compute fresh circles/IK before committing final selected rows once.
+
+    Optional inactive_positions is [len(env_ids),17,3] in the shelf frame,
+    ordered exactly like env_ids. Only inactive body origins are replaced;
+    None retains the original Finger parking and random-number consumption.
+    populate_legacy_observation=False is for surface-only Test policies; it
+    skips unused centroid visibility/packing but preserves all random draws.
+    """
     from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_mul, subtract_frame_transforms
     from ..common.wrench_refactor_ik import sample_initial_eef
     from .contact_sweep_clutter_fusion import classify_visibility_torch, pack_obstacle_observations
@@ -251,6 +260,10 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
         ids, env._revision_layout_rng, spawn_radius=spawn_radius, edge_clearance=edge_clearance,
         excluded_x_half_angle=excluded_x_half_angle, min_goal_distance=min_goal_distance,
         max_goal_distance=max_goal_distance)
+    if inactive_positions is not None:
+        if inactive_positions.shape != local.shape or inactive_positions.device != local.device:
+            raise ValueError('Inactive parking must match selected shelf-frame positions [B,17,3]')
+        local = torch.where(active[..., None], local, inactive_positions)
     robot, shelf, objects = env.scene['robot'], env.scene['shelf'], env.scene['object_collection']
     shelf_state = shelf.data.default_root_state[ids].clone()
     root_state = robot.data.default_root_state[ids].clone()
@@ -282,11 +295,18 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
     joints[:, env._goal_reset_arm_ids] = angles
     velocity[:, env._goal_reset_arm_ids] = 0.
     shelf.write_root_state_to_sim(shelf_state, env_ids=ids)
-    robot.write_root_state_to_sim(root_state, env_ids=ids)
+    if reuse_unchanged_states:
+        from .stabilize_sweep import write_test_reset_root_state, write_test_reset_object_state
+        write_test_reset_root_state(env, ids, root_state)
+    else:
+        robot.write_root_state_to_sim(root_state, env_ids=ids)
     robot.write_joint_state_to_sim(joints, velocity, env_ids=ids)
     robot.set_joint_position_target(angles, joint_ids=env._goal_reset_arm_ids, env_ids=ids)
     robot.set_joint_velocity_target(torch.zeros_like(angles), joint_ids=env._goal_reset_arm_ids, env_ids=ids)
-    objects.write_object_link_state_to_sim(states, env_ids=ids)
+    if reuse_unchanged_states:
+        written_objects = write_test_reset_object_state(env, ids, states, active)
+    else:
+        objects.write_object_link_state_to_sim(states, env_ids=ids)
     env._active_object_mask[ids] = active
     # Native gravity API is CPU-backed. Preserve wake semantics, avoid unchanged setters.
     host_ids = ids.cpu()
@@ -296,7 +316,9 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
     env._wrench_gravity_flags[rows] = flags
     if bool(changed.any()):
         objects.root_physx_view.set_disable_gravities(env._wrench_gravity_flags, rows[changed])
-    objects.root_physx_view.wake_up(rows)
+    wake_rows = rows[written_objects.T.flatten().cpu()] if reuse_unchanged_states else rows
+    if len(wake_rows):
+        objects.root_physx_view.wake_up(wake_rows)
     env.target_id[ids, 0] = 0
     env.target_width[ids, 0] = env._fast_visibility_radii[ids, 0]
     env.sweep_dir[ids] = quat_apply(shelf_quat, sweep_local)
@@ -304,17 +326,31 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
     env._revision_layout_complete[ids] = True
     env._revision_spawn_positions[ids] = world
     env.sensor_data_fresh[ids] = False
-    positions, _ = subtract_frame_transforms(root_state[:, None, :3].expand(-1, 16, -1),
-        root_state[:, None, 3:7].expand(-1, 16, -1), world[:, 1:])
-    positions += (2 * torch.rand(positions.shape, device=env.device, generator=env._revision_layout_rng) - 1) * observation_noise
-    slots = torch.cat((active[:, 1:, None].float(), torch.where(active[:, 1:, None], positions, 0.)), -1)
-    centers = torch.stack((local[..., 1], -local[..., 0]), -1)
-    visible = classify_visibility_torch(centers, radii=env._fast_visibility_radii[ids], active=active,
-                                       threshold=visibility_threshold, check_inputs=False).visible[:, 1:]
-    flips = torch.rand(visible.shape, device=env.device) < visibility_flip_probability
-    visible = torch.logical_xor(visible, flips) & active[:, 1:]
-    slots = torch.where(visible[..., None], slots, 0.)
-    env._initial_obstacle_observation[ids] = pack_obstacle_observations(slots, observation_swap_probability).flatten(1)
+    if populate_legacy_observation:
+        positions, _ = subtract_frame_transforms(root_state[:, None, :3].expand(-1, 16, -1),
+            root_state[:, None, 3:7].expand(-1, 16, -1), world[:, 1:])
+        positions += (2 * torch.rand(positions.shape, device=env.device, generator=env._revision_layout_rng) - 1) * observation_noise
+        slots = torch.cat((active[:, 1:, None].float(), torch.where(active[:, 1:, None], positions, 0.)), -1)
+        centers = torch.stack((local[..., 1], -local[..., 0]), -1)
+        visible = classify_visibility_torch(centers, radii=env._fast_visibility_radii[ids], active=active,
+                                           threshold=visibility_threshold, check_inputs=False).visible[:, 1:]
+        flips = torch.rand(visible.shape, device=env.device) < visibility_flip_probability
+        visible = torch.logical_xor(visible, flips) & active[:, 1:]
+        slots = torch.where(visible[..., None], slots, 0.)
+        env._initial_obstacle_observation[ids] = pack_obstacle_observations(slots, observation_swap_probability).flatten(1)
+    else:
+        # Test policies read the surface buffers, not this legacy centroid
+        # buffer. Preserve every legacy draw, including order and shape, so
+        # layout/IK and subsequent observation/action randomness stay exact.
+        torch.rand((len(ids), 16, 3), device=env.device, generator=env._revision_layout_rng)
+        if not math.isfinite(visibility_threshold) or not 0 < visibility_threshold <= 1:
+            raise ValueError('threshold must be in (0, 1]')
+        torch.rand((len(ids), 16), device=env.device)
+        if not math.isfinite(observation_swap_probability) or not 0 <= observation_swap_probability <= 1:
+            raise ValueError('adjacent_swap_probability must be in [0, 1]')
+        if observation_swap_probability != 0:
+            torch.rand((len(ids), 15), device=env.device)
+        env._initial_obstacle_observation[ids] = 0.
     _ = robot.data.body_link_pos_w
     env.scene['ee_frame'].reset(ids)
     env._goal_reset_desired_pos_w[ids] = desired_world
