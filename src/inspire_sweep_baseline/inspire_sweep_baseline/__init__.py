@@ -1591,6 +1591,7 @@ for _test_id, _test_prefix, _parent_runtime in (
 
 # Preserve all original Sweep Only tasks; opt-in raw-command penalties.
 for _penalty_suffix, _penalty_prefix in (
+    ('v1', 'SweepOnlyV1'),
     ('v0', 'SweepOnly'),
     ('v0-Test', 'SweepOnlyTest'),
     ('v1-Test', 'SweepOnlyV1Test'),

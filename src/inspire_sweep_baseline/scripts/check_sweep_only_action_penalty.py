@@ -1,4 +1,4 @@
-"""Check all six derived configurations and one task's real wrapper/reset/step path.
+"""Check derived configurations and one task's real wrapper/reset/step path.
 
 Writes no training logs. Run with the Isaac Lab Python interpreter --headless.
 """
@@ -31,14 +31,20 @@ def validate():
     from inspire_sweep_baseline.mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
 
     result = {'configuration_pairs': [], 'task': args.task}
-    for suffix in ('v0', 'v0-Test', 'v1-Test', 'v1_2-Test', 'v2-Test', 'v2_2-Test'):
-        parent_id = f'Inspire-Sweep-Only-{suffix}'
-        child_id = parent_id + '-ActionPenalty'
+    for suffix in ('v0', 'v0-Test', 'v1-Test', 'v1_2-Test', 'v2-Test', 'v2_2-Test', 'v1'):
+        parent_id = f'Inspire-Sweep-Only-{"v0" if suffix == "v1" else suffix}'
+        child_id = f'Inspire-Sweep-Only-{suffix}-ActionPenalty'
         parent = load_cfg_from_registry(parent_id, 'env_cfg_entry_point')
         before = parent.to_dict()
         child = load_cfg_from_registry(child_id, 'env_cfg_entry_point')
         assert type(child).__bases__ == (type(parent),)
         after = child.to_dict()
+        if suffix == 'v1':
+            for name, weight in (('sweep_progress', 50.), ('sweep_retreat', -10.)):
+                assert after['rewards'][name]['weight'] == weight
+                after['rewards'][name]['weight'] = before['rewards'][name]['weight']
+            assert child.rewards.reaching is None
+            assert child.sweep_normalize_contact_count
         # Exhaustive comparison: only these four leaves may differ.
         after['actions']['arm_action']['class_type'] = before['actions']['arm_action']['class_type']
         after['observations']['policy']['actions']['func'] = before['observations']['policy']['actions']['func']
@@ -54,10 +60,21 @@ def validate():
         assert type(runner).__bases__ == (type(parent_runner),)
         rp, rc = parent_runner.to_dict(), runner.to_dict()
         assert rc.pop('clip_actions') is None and rp.pop('clip_actions') == math.pi / 2
-        assert rc.pop('experiment_name') == rp.pop('experiment_name') + '_action_penalty'
+        parent_experiment = rp.pop('experiment_name')
+        expected_experiment = ('inspire_sweep_only_v1_action_penalty' if suffix == 'v1'
+                               else parent_experiment + '_action_penalty')
+        assert rc.pop('experiment_name') == expected_experiment
         assert rc == rp
         assert gym.spec(parent_id).entry_point == gym.spec(child_id).entry_point
         result['configuration_pairs'].append(child_id)
+
+    adjacent = load_cfg_from_registry('Inspire-Sweep-Only-v1-ActionPenalty', 'env_cfg_entry_point').to_dict()
+    finger = load_cfg_from_registry('Inspire-Sweep-Only-v1-Test-ActionPenalty', 'env_cfg_entry_point').to_dict()
+    # Initialization, associated Reach and GUI markers are the only differences.
+    adjacent['events'] = finger['events']
+    adjacent['rewards']['reaching'] = finger['rewards']['reaching']
+    adjacent['debug_surface_points'] = finger['debug_surface_points']
+    assert adjacent == finger
 
     cfg = load_cfg_from_registry(args.task, 'env_cfg_entry_point')
     runner = load_cfg_from_registry(args.task, 'rsl_rl_cfg_entry_point')

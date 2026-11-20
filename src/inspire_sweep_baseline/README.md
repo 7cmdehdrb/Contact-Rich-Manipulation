@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-20 후속: `Inspire-Sweep-Only-v1-ActionPenalty`는 v0의 물체 옆 IK에 v1 Sweep 보상과 ActionPenalty를 적용한다. Reach 없음. [계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#물체-옆-ik와-v1-보상-v1-actionpenalty).
+
 2026-11-20: Sweep Only 6종의 원본을 보존한 `-ActionPenalty` 파생 ID를 추가했다. 팔/손 실행 제한과 클리핑 전 액션 비용을 분리한다. [Task ID·계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#actionpenalty-파생-환경).
 
 2026-11-19: `Inspire-Sweep-Only-v2_2-Test`는 v1_2-Test 직접 자식으로 Deadzone만 **0° 고정**이다. 보상 100/−25·원시 접촉 카운트와 나머지 조건 유지, 로그 `inspire_sweep_only_v2_2_test`. GPU·Isaac Sim 없이 표준 라이브러리 기반 코드 검사를 통과했다.

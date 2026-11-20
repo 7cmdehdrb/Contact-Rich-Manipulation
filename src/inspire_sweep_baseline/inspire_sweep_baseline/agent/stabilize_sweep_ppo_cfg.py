@@ -113,3 +113,9 @@ class SweepOnlyV2_2TestActionPenaltyPPORunnerCfg(SweepOnlyV2_2TestPPORunnerCfg):
     # Bounds live in action terms so rewards can inspect the original command.
     clip_actions = None
     experiment_name = 'inspire_sweep_only_v2_2_test_action_penalty'
+
+
+@configclass
+class SweepOnlyV1ActionPenaltyPPORunnerCfg(SweepOnlyPPORunnerCfg):
+    clip_actions = None
+    experiment_name = 'inspire_sweep_only_v1_action_penalty'

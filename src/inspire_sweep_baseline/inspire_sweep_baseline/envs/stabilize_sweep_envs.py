@@ -186,3 +186,14 @@ class SweepOnlyV2_2TestActionPenaltyEnvCfg(SweepOnlyV2_2TestEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1ActionPenaltyEnvCfg(SweepOnlyEnvCfg):
+    """Adjacent-object IK from v0, v1 Sweep weights and raw-action penalties."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress.weight = 50.0
+        self.rewards.sweep_retreat.weight = -10.0
+        _configure_action_penalty(self)
