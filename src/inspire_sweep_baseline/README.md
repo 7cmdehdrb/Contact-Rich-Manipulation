@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-20: **`Inspire-Sweep-v0` / `inspire_sweep_v0`**는 별도 EnvCfg·PPO·runtime 진입점의 새 계통이다. v2-Test-ActionPenalty-LinearReach를 기능 기준으로 접촉면별 Sweep 계수(1.5/0.7), 고정 장애물·F/T 비용, 관측 전용 F/T 정규화를 적용했다. Deadzone0°·Pull/Push60°·좌우120°. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md).
+
 2026-11-20 후속: `Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach`는 v2-Test-ActionPenalty의 직접 자식이며 Reach만 weight0.8·10cm plateau·45cm에서0인 선형 근접식으로 교체한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#linearreach-파생-환경).
 
 2026-11-20 후속: `Inspire-Sweep-Only-v1-ActionPenalty`는 v0의 물체 옆 IK에 v1 Sweep 보상과 ActionPenalty를 적용한다. Reach 없음. [계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#물체-옆-ik와-v1-보상-v1-actionpenalty).

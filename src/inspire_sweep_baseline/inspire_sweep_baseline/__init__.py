@@ -1619,3 +1619,14 @@ gym.register(
         'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:SweepOnlyV2TestActionPenaltyLinearReachPPORunnerCfg',
     },
 )
+
+
+gym.register(
+    id='Inspire-Sweep-v0',
+    entry_point='inspire_sweep_baseline.runtime.sweep_v0:SweepEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.sweep_v0_envs:SweepEnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.sweep_v0_ppo_cfg:SweepPPORunnerCfg',
+    },
+)
