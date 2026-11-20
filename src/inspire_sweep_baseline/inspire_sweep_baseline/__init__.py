@@ -1587,3 +1587,23 @@ for _test_id, _test_prefix, _parent_runtime in (
             'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_test_prefix}PPORunnerCfg',
         },
     )
+
+
+# Preserve all original Sweep Only tasks; opt-in raw-command penalties.
+for _penalty_suffix, _penalty_prefix in (
+    ('v0', 'SweepOnly'),
+    ('v0-Test', 'SweepOnlyTest'),
+    ('v1-Test', 'SweepOnlyV1Test'),
+    ('v1_2-Test', 'SweepOnlyV1_2Test'),
+    ('v2-Test', 'SweepOnlyV2Test'),
+    ('v2_2-Test', 'SweepOnlyV2_2Test'),
+):
+    gym.register(
+        id=f'Inspire-Sweep-Only-{_penalty_suffix}-ActionPenalty',
+        entry_point='inspire_sweep_baseline.runtime.stabilize_sweep:SweepOnlyEnv',
+        disable_env_checker=True,
+        kwargs={
+            'env_cfg_entry_point': f'inspire_sweep_baseline.envs.stabilize_sweep_envs:{_penalty_prefix}ActionPenaltyEnvCfg',
+            'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_penalty_prefix}ActionPenaltyPPORunnerCfg',
+        },
+    )

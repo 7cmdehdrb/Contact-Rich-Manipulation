@@ -61,3 +61,12 @@ class StabilizeSweepTestRewardsCfg(StabilizeSweepRewardsCfg):
 @configclass
 class SweepOnlyTestRewardsCfg(SweepOnlyRewardsCfg):
     reaching = SweepSimpleFingerRewardsCfg().reaching.copy()
+
+
+def add_action_limit_penalties(rewards):
+    from ..reward_functions.stabilize_sweep import action_limit_excess
+    # Initial experiment weights, not a claim of tuned training stability.
+    rewards.arm_action_limit = RewTerm(
+        func=action_limit_excess, weight=-0.03, params={'action_group': 'arm'})
+    rewards.hand_action_limit = RewTerm(
+        func=action_limit_excess, weight=-0.03, params={'action_group': 'hand'})

@@ -132,3 +132,57 @@ class SweepOnlyV2_2TestEnvCfg(SweepOnlyV1_2TestEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
+
+
+def _configure_action_penalty(cfg):
+    """Only children opt in; the runner must pass unclipped commands to the manager."""
+    from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
+    from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
+    from ..mdp.rewards.stabilize_sweep import add_action_limit_penalties
+    cfg.actions.arm_action.class_type = SweepOnlyClippedOSCAction
+    # FingerJointPositionAction already limits targets to [0, URDF upper].
+    # Rate penalties still read manager action/prev_action, now BEFORE clipping.
+    cfg.observations.policy.actions.func = legacy_clipped_previous_action
+    add_action_limit_penalties(cfg.rewards)
+
+
+@configclass
+class SweepOnlyActionPenaltyEnvCfg(SweepOnlyEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyTestActionPenaltyEnvCfg(SweepOnlyTestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1TestActionPenaltyEnvCfg(SweepOnlyV1TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1_2TestActionPenaltyEnvCfg(SweepOnlyV1_2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2TestActionPenaltyEnvCfg(SweepOnlyV2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2_2TestActionPenaltyEnvCfg(SweepOnlyV2_2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
