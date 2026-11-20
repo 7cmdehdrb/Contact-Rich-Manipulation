@@ -1,5 +1,92 @@
 # Inspire Sweep Baseline
 
+## 선반·물체 8개 정면 이미지
+
+`scripts/photograph_shelf_front.py`는 현재 Sweep Only의 선반과
+`RevisionObjectSpawnerCfg`를 재사용하는 비학습 촬영 실행기다. 로봇·정책·Extension 없이
+8종을 하나씩 생성하고, 크기0.9–1.1배·yaw·좌우 순서·간격·선반 깊이 위치를 바꾼다.
+8개가 정면에서 서로 가리지 않도록 좌우 투영 간격을 확보하는 촬영용 배치다.
+기존 학습 reset 분포 자체를 재현하는 실행기는 아니다.
+
+```powershell
+conda activate env_isaaclab
+python src/inspire_sweep_baseline/scripts/photograph_shelf_front.py --headless --count 24
+```
+
+기본 출력은 `outputs/shelf_front_24/front_001.png`부터 `front_024.png`까지의
+1920×800 PNG다. 수평 직교 카메라로 촬영하며 카메라의 아래보기·좌우 사선·roll은0도다.
+선반 상판과 물체 윗면을 내려다보지 않는다. 사진용 회색 배경과 고정 조명을 사용한다.
+`contact_sheet.jpg`는 전체 미리보기, `metadata.json`은 seed·자산·자세·scale·카메라와
+이미지 해시, `front_scene_001.usdc`는 첫 장면의 정적 USD다.
+`--seed`, `--output-dir`, `--width`, `--height`로 재생성 조건을 지정할 수 있다.
+동일 폴더에서는 같은 번호의 사진을 덮어쓰므로 다른 세트는 별도 폴더를 지정한다.
+
+부분 가림이 있는 사진은 `--occlusion`으로 생성한다. 기본 출력 폴더가
+`outputs/shelf_front_occluded_24`로 바뀌므로 기존 무가림 사진을 보존한다.
+8종 각1개를 유지하며2–4쌍을 앞뒤로 배치한다. 각 장면의 실제 segmentation mask를
+가리는 물체를 숨긴 비교 렌더와 대조해 부분 가림을 검사하며, 물체 간 bounds의
+관통도 검사한다. 카메라·배경·해상도는 동일하다.
+
+```powershell
+python src/inspire_sweep_baseline/scripts/photograph_shelf_front.py --headless --occlusion --count 24 --seed 20261219
+```
+
+거의 보이지 않는 강한 가림은 `--heavy-occlusion`으로 생성한다. 원래 실루엣의10% 이하만
+보이는 뒤 물체가 각 이미지에 포함되도록 실제 mask로 검사하고 위치를 미세 조정한다.
+기본 출력은 `outputs/shelf_front_heavy_24`이며 기존 두 세트는 유지된다.
+
+```powershell
+python src/inspire_sweep_baseline/scripts/photograph_shelf_front.py --headless --heavy-occlusion --count 24 --seed 20261319
+```
+
+[구현·산출물 검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-19_shelf_front_photography.md).
+
+## 로봇 연결부 촬영 — 학습 없음
+
+`scripts/photograph_robot.py`는 Sweep Only/Finger와 같은 오른손 RH56E2 자산과
+Axia80 조립 함수를 사용한다. 선반·물체·정책·보상 없이 UR5e–Axia80–RH56E2만
+배치하고, 고정 자세에서 카메라를 움직여 촬영한다. 기존 Gym 환경은 변경하지 않는다.
+
+Workspace 루트에서 실행한다.
+
+```powershell
+conda activate env_isaaclab
+python src/inspire_sweep_baseline/scripts/photograph_robot.py
+```
+
+GUI의 **Robot Photography** 패널에서 구도를 고르고 뷰포트를 마우스로 조정한 뒤
+**Save current viewport PNG**를 누른다. 마우스 조작은 Isaac Sim 기본 뷰포트의
+Alt+왼쪽 드래그(회전), 가운데 드래그(이동), 휠(확대/축소)을 사용한다.
+수동 사진은 `manual_<날짜_시간>.png`로 저장하며 UI 패널은 사진에 포함되지 않는다.
+
+실행할 때 `outputs/robot_photography`에 다음 기본 파일을 생성한다. 같은 출력 폴더의
+기본 파일은 다시 생성하므로 별도 촬영 세트에는 `--output-dir`을 지정한다.
+
+| 파일 | 구도·내용 |
+| --- | --- |
+| `assembly_closeup.png` | UR5e 손목–Axia80–오른손 연결부와 손 전체 |
+| `assembly_reverse.png` | 반대편에서 본 손바닥·연결부 |
+| `assembly_isolated.png` | 근위부 팔 링크를 숨긴 손목·센서·손 |
+| `mount_detail.png` | 실린더 양쪽 체결부 확대; 손가락 끝은 프레임 밖 |
+| `robot_overview.png` | 전체 UR5e와 센서·손 |
+| `robot_photo_scene.usdc` | 실제 관절 자세를 저장하고 물리를 비활성화한 촬영 장면 |
+| `metadata.json` | 원본 자산, 관절 자세, 센서 치수, 카메라 위치·해상도 |
+
+PNG 기본 해상도는 1920×1440이다. USD는 Isaac Sim에서 직접 열고 뷰포트 카메라를
+`PhotoCamera`로 선택해서 사용할 수도 있다. 전체 팔 메시도 장면에 포함되어 있으며,
+클로즈업에서 숨겨진 근위부 링크는 Stage에서 다시 표시할 수 있다.
+
+GUI 없이 파일만 생성하려면 다음 명령을 사용한다.
+
+```powershell
+python src/inspire_sweep_baseline/scripts/photograph_robot.py --headless --capture-only
+```
+
+초기 관절 계산을 위해 중력 없는 물리 1스텝만 수행한 뒤 렌더만 갱신한다.
+촬영용 USD에는 rigid body와 joint를 비활성화한 자세가 저장된다. 로봇의 치수·메시·
+연결 방식을 수정하지 않으며 Axia80은 원본과 같은 지름82mm·높이25.4mm 실린더다.
+[구현·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-19_robot_photography.md).
+
 2026-11-19: `Inspire-Sweep-Only-v1-Test`를 `Inspire-Sweep-Only-v0-Test` 직접 자식으로 추가했다. `sweep_progress=50`, `sweep_retreat=−10`만 변경하며 로그 이름은 `inspire_sweep_only_v1_test`다. 부모의 30/−20과 나머지 환경은 유지한다.
 
 2026-11-19 후속: Sweep Only 일반·Test의 `sweep_retreat` weight를 −38.91에서 **−20**으로 변경했다. 정방향 weight 30과 거리 식은 유지하고 Stabilize 두 환경은 기존 −38.91을 유지한다.
