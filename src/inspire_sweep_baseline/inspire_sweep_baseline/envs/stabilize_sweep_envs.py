@@ -33,6 +33,7 @@ class StabilizeSweepEnvCfg(ManagerBasedRLEnvCfg):
     goal_hold_outer_radius: float | None = None
     # The actual Sweep contact gate is relative to the shelf surface.
     sweep_contact_height_limit: float = 0.12
+    sweep_normalize_contact_count: bool = True
     debug_initial_ik_bounds: bool = False
     debug_surface_points: bool = False
     wrist_wrench_observation_limits: tuple = (150.0, 150.0, 150.0, 8.0, 8.0, 8.0)
@@ -107,3 +108,105 @@ class SweepOnlyV1TestEnvCfg(SweepOnlyTestEnvCfg):
         super().__post_init__()
         self.rewards.sweep_progress.weight = 50.0
         self.rewards.sweep_retreat.weight = -10.0
+
+
+@configclass
+class SweepOnlyV1_2TestEnvCfg(SweepOnlyV1TestEnvCfg):
+    sweep_normalize_contact_count: bool = False
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress.weight = 100.0
+        self.rewards.sweep_retreat.weight = -25.0
+
+
+@configclass
+class SweepOnlyV2TestEnvCfg(SweepOnlyV1TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
+
+
+@configclass
+class SweepOnlyV2_2TestEnvCfg(SweepOnlyV1_2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
+
+
+def _configure_action_penalty(cfg):
+    """Only children opt in; the runner must pass unclipped commands to the manager."""
+    from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
+    from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
+    from ..mdp.rewards.stabilize_sweep import add_action_limit_penalties
+    cfg.actions.arm_action.class_type = SweepOnlyClippedOSCAction
+    # FingerJointPositionAction already limits targets to [0, URDF upper].
+    # Rate penalties still read manager action/prev_action, now BEFORE clipping.
+    cfg.observations.policy.actions.func = legacy_clipped_previous_action
+    add_action_limit_penalties(cfg.rewards)
+
+
+@configclass
+class SweepOnlyActionPenaltyEnvCfg(SweepOnlyEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyTestActionPenaltyEnvCfg(SweepOnlyTestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1TestActionPenaltyEnvCfg(SweepOnlyV1TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1_2TestActionPenaltyEnvCfg(SweepOnlyV1_2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2TestActionPenaltyEnvCfg(SweepOnlyV2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2_2TestActionPenaltyEnvCfg(SweepOnlyV2_2TestEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV1ActionPenaltyEnvCfg(SweepOnlyEnvCfg):
+    """Adjacent-object IK from v0, v1 Sweep weights and raw-action penalties."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress.weight = 50.0
+        self.rewards.sweep_retreat.weight = -10.0
+        _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2TestActionPenaltyLinearReachEnvCfg(SweepOnlyV2TestActionPenaltyEnvCfg):
+    """Preserve v2-Test-ActionPenalty; replace only its continuous Reach."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.stabilize_sweep import linear_reach
+        self.rewards.reaching = self.rewards.reaching.replace(
+            func=linear_reach, weight=0.8,
+            params={'near_radius': 0.10, 'decay_distance': 0.35, 'frame_name': 'ee_frame'},
+        )

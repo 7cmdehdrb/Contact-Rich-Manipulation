@@ -3,6 +3,7 @@
 from .contact_sweep_clutter_fusion_holding_osc import UR10OperationalSpaceControllerAction
 from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_conjugate, quat_mul, skew_symmetric_matrix
 import torch
+import math
 
 
 class WrenchRefactorOSCAction(UR10OperationalSpaceControllerAction):
@@ -43,3 +44,10 @@ class WrenchRefactorOSCAction(UR10OperationalSpaceControllerAction):
         relative = velocity - data.root_link_vel_w
         self._ee_vel_b[:, :3] = quat_apply_inverse(data.root_quat_w, relative[:, :3])
         self._ee_vel_b[:, 3:] = quat_apply_inverse(data.root_quat_w, relative[:, 3:])
+
+
+class SweepOnlyClippedOSCAction(WrenchRefactorOSCAction):
+    """Preserve the former wrapper bound before OSC scaling, without mutating manager history."""
+
+    def process_actions(self, actions):
+        super().process_actions(actions.clamp(-math.pi / 2, math.pi / 2))

@@ -1,5 +1,17 @@
 # Inspire Sweep Baseline
 
+2026-11-20 후속: `Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach`는 v2-Test-ActionPenalty의 직접 자식이며 Reach만 weight0.8·10cm plateau·45cm에서0인 선형 근접식으로 교체한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#linearreach-파생-환경).
+
+2026-11-20 후속: `Inspire-Sweep-Only-v1-ActionPenalty`는 v0의 물체 옆 IK에 v1 Sweep 보상과 ActionPenalty를 적용한다. Reach 없음. [계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#물체-옆-ik와-v1-보상-v1-actionpenalty).
+
+2026-11-20: Sweep Only 6종의 원본을 보존한 `-ActionPenalty` 파생 ID를 추가했다. 팔/손 실행 제한과 클리핑 전 액션 비용을 분리한다. [Task ID·계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#actionpenalty-파생-환경).
+
+2026-11-19: `Inspire-Sweep-Only-v2_2-Test`는 v1_2-Test 직접 자식으로 Deadzone만 **0° 고정**이다. 보상 100/−25·원시 접촉 카운트와 나머지 조건 유지, 로그 `inspire_sweep_only_v2_2_test`. GPU·Isaac Sim 없이 표준 라이브러리 기반 코드 검사를 통과했다.
+
+2026-11-19: `Inspire-Sweep-Only-v1_2-Test`는 v1-Test 직접 자식이다. 접촉 카운트 정규화를 끄고 정방향 100·역방향 −25로 설정하여 동일 상태에서 v1 대비 정방향 40배·역방향 2.5배다. Deadzone 30°와 나머지 조건은 유지하며 로그 이름은 `inspire_sweep_only_v1_2_test`다. CPU 코드 검사만 수행했고 GPU·Isaac Sim·학습은 실행하지 않았다.
+
+2026-11-19: `Inspire-Sweep-Only-v2-Test`는 v1-Test 직접 자식으로 목표 방향 Deadzone만 **0° 고정**이다. 보상 50/−10 및 나머지 구성 유지, 로그 `inspire_sweep_only_v2_test`. 학습 중인 GPU 보호 요청에 따라 GPU·Isaac Sim 실행 없이 CPU 정적 검사만 수행했다.
+
 ## 선반·물체 8개 정면 이미지
 
 `scripts/photograph_shelf_front.py`는 현재 Sweep Only의 선반과

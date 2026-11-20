@@ -59,7 +59,8 @@ class StabilizeState:
     def stage_score(self):
         return torch.where(self.reward_phase,1.,self.setup_sum/max(self.samples,1))
 
-    def finish(self,center,goal,mean_force,contact,valid,eef_z,shelf_z,*,height_limit=.12):
+    def finish(self,center,goal,mean_force,contact,valid,eef_z,shelf_z,*,height_limit=.12,
+               normalize_contact_count=True):
         delta=goal[:,:2]-center[:,:2];distance=delta.norm(dim=-1)
         progress=self.previous_distance-distance
         self.contact_history[:,1:]=self.contact_history[:,:-1].clone()
@@ -67,7 +68,8 @@ class StabilizeState:
         recognized=(self.contact_history.sum(-1)>=2)&self.reward_phase&(eef_z<shelf_z+height_limit)&torch.isfinite(eef_z)&torch.isfinite(shelf_z)
         self.contact_count.copy_(torch.where(self.reward_phase,
             (self.contact_count+torch.where(recognized,1,-2)).clamp(0,20),0))
-        h=torch.where(recognized,self.contact_count/20.,0.)
+        contact_factor=self.contact_count/20. if normalize_contact_count else self.contact_count.float()
+        h=torch.where(recognized,contact_factor,0.)
         direction=delta/distance[:,None].clamp_min(1e-12)
         magnitude=mean_force.norm(dim=-1)
         alignment=((mean_force[:,:2]*direction).sum(-1)/magnitude.clamp_min(1e-12)).clamp(0.,1.)

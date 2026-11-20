@@ -18,3 +18,9 @@ def obstacle_surfaces_in_eef(env):
 
 def phase(env):
     return env._sweep_phase[:,None].float()
+
+
+def legacy_clipped_previous_action(env):
+    """Keep the parent's Last Action observation while rewards see unclipped commands."""
+    import math
+    return env.action_manager.action.clamp(-math.pi / 2, math.pi / 2)

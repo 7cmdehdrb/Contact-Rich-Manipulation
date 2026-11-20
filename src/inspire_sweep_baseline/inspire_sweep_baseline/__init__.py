@@ -1574,6 +1574,9 @@ for _test_id, _test_prefix, _parent_runtime in (
     ('Inspire-Stabilize-Sweep-v0-Test', 'StabilizeSweepTest', 'StabilizeSweepEnv'),
     ('Inspire-Sweep-Only-v0-Test', 'SweepOnlyTest', 'SweepOnlyEnv'),
     ('Inspire-Sweep-Only-v1-Test', 'SweepOnlyV1Test', 'SweepOnlyEnv'),
+    ('Inspire-Sweep-Only-v1_2-Test', 'SweepOnlyV1_2Test', 'SweepOnlyEnv'),
+    ('Inspire-Sweep-Only-v2-Test', 'SweepOnlyV2Test', 'SweepOnlyEnv'),
+    ('Inspire-Sweep-Only-v2_2-Test', 'SweepOnlyV2_2Test', 'SweepOnlyEnv'),
 ):
     gym.register(
         id=_test_id,
@@ -1584,3 +1587,35 @@ for _test_id, _test_prefix, _parent_runtime in (
             'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_test_prefix}PPORunnerCfg',
         },
     )
+
+
+# Preserve all original Sweep Only tasks; opt-in raw-command penalties.
+for _penalty_suffix, _penalty_prefix in (
+    ('v1', 'SweepOnlyV1'),
+    ('v0', 'SweepOnly'),
+    ('v0-Test', 'SweepOnlyTest'),
+    ('v1-Test', 'SweepOnlyV1Test'),
+    ('v1_2-Test', 'SweepOnlyV1_2Test'),
+    ('v2-Test', 'SweepOnlyV2Test'),
+    ('v2_2-Test', 'SweepOnlyV2_2Test'),
+):
+    gym.register(
+        id=f'Inspire-Sweep-Only-{_penalty_suffix}-ActionPenalty',
+        entry_point='inspire_sweep_baseline.runtime.stabilize_sweep:SweepOnlyEnv',
+        disable_env_checker=True,
+        kwargs={
+            'env_cfg_entry_point': f'inspire_sweep_baseline.envs.stabilize_sweep_envs:{_penalty_prefix}ActionPenaltyEnvCfg',
+            'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_penalty_prefix}ActionPenaltyPPORunnerCfg',
+        },
+    )
+
+
+gym.register(
+    id='Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach',
+    entry_point='inspire_sweep_baseline.runtime.stabilize_sweep:SweepOnlyEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.stabilize_sweep_envs:SweepOnlyV2TestActionPenaltyLinearReachEnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:SweepOnlyV2TestActionPenaltyLinearReachPPORunnerCfg',
+    },
+)
