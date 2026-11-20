@@ -15,7 +15,7 @@ class StabilizeState:
         self.move_cost=torch.zeros_like(self.setup_sum);self.rotate_cost=torch.zeros_like(self.setup_sum)
         self.previous_distance=torch.zeros_like(self.setup_sum)
         self.contact_history=torch.zeros((count,3),device=device,dtype=torch.bool)
-        self.contact_count=torch.zeros(count,device=device,dtype=torch.long)
+        self._init_contact_factor(count,device)
         self.positive=torch.zeros_like(self.setup_sum);self.retreat=torch.zeros_like(self.setup_sum)
         self.samples=0
 
@@ -24,7 +24,7 @@ class StabilizeState:
         self.initial_center[ids]=center;self.initial_quat[ids]=quat
         self.setup_sum[ids]=0.;self.move_cost[ids]=0.;self.rotate_cost[ids]=0.
         self.previous_distance[ids]=(goal[:,:2]-center[:,:2]).norm(dim=-1)
-        self.contact_history[ids]=False;self.contact_count[ids]=0
+        self.contact_history[ids]=False;self._reset_contact_factor(ids)
         self.positive[ids]=0.;self.retreat[ids]=0.
 
     def begin(self):
@@ -66,10 +66,7 @@ class StabilizeState:
         self.contact_history[:,1:]=self.contact_history[:,:-1].clone()
         self.contact_history[:,0]=contact&valid&self.reward_phase
         recognized=(self.contact_history.sum(-1)>=2)&self.reward_phase&(eef_z<shelf_z+height_limit)&torch.isfinite(eef_z)&torch.isfinite(shelf_z)
-        self.contact_count.copy_(torch.where(self.reward_phase,
-            (self.contact_count+torch.where(recognized,1,-2)).clamp(0,20),0))
-        contact_factor=self.contact_count/20. if normalize_contact_count else self.contact_count.float()
-        h=torch.where(recognized,contact_factor,0.)
+        h=self._contact_factor(recognized,normalize_contact_count)
         direction=delta/distance[:,None].clamp_min(1e-12)
         magnitude=mean_force.norm(dim=-1)
         alignment=((mean_force[:,:2]*direction).sum(-1)/magnitude.clamp_min(1e-12)).clamp(0.,1.)
@@ -78,6 +75,18 @@ class StabilizeState:
         self.positive.copy_(torch.where(self.reward_phase,progress.clamp_min(0.)*h*alignment,0.))
         self.retreat.copy_(torch.where(self.reward_phase,(-progress).clamp_min(0.),0.))
         self.previous_distance.copy_(distance)
+
+    def _init_contact_factor(self,count,device):
+        self.contact_count=torch.zeros(count,device=device,dtype=torch.long)
+
+    def _reset_contact_factor(self,ids):
+        self.contact_count[ids]=0
+
+    def _contact_factor(self,recognized,normalize_contact_count):
+        self.contact_count.copy_(torch.where(self.reward_phase,
+            (self.contact_count+torch.where(recognized,1,-2)).clamp(0,20),0))
+        contact_factor=self.contact_count/20. if normalize_contact_count else self.contact_count.float()
+        return torch.where(recognized,contact_factor,0.)
 
 
 class SweepOnlyState(StabilizeState):

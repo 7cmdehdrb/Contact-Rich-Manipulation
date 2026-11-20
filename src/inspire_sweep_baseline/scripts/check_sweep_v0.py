@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--single-contact', action='store_true', help='Validate the binary-contact child instead of Sweep v0')
 parser.add_argument('--output', type=Path, default=Path('outputs/sweep_v0/smoke.json'))
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
@@ -28,11 +29,18 @@ def validate():
     from inspire_sweep_baseline.mdp.reward_functions.stabilize_sweep import sweep_progress
 
     parent_id = 'Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach'
-    task = 'Inspire-Sweep-v0'
+    task = 'Inspire-Sweep-Single-Contact-v0' if args.single_contact else 'Inspire-Sweep-v0'
+    if args.single_contact and args.output == Path('outputs/sweep_v0/smoke.json'):
+        args.output = Path('outputs/sweep_single_contact/smoke.json')
     parent = load_cfg_from_registry(parent_id, 'env_cfg_entry_point')
     before = parent.to_dict()
     cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
-    assert type(cfg).__bases__ == (ManagerBasedRLEnvCfg,)
+    if args.single_contact:
+        sweep_cfg = load_cfg_from_registry('Inspire-Sweep-v0', 'env_cfg_entry_point')
+        assert type(cfg).__bases__ == (type(sweep_cfg),)
+        assert cfg.to_dict() == sweep_cfg.to_dict()
+    else:
+        assert type(cfg).__bases__ == (ManagerBasedRLEnvCfg,)
     after = cfg.to_dict()
     assert cfg.rewards.sweep_progress.func is ContactSideSweepProgress
     assert cfg.rewards.sweep_progress.params == {'preferred_multiplier': 1.5, 'other_multiplier': .7}
@@ -61,11 +69,16 @@ def validate():
     parent_runner = load_cfg_from_registry(parent_id, 'rsl_rl_cfg_entry_point')
     runner = load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point')
     rp, rc = parent_runner.to_dict(), runner.to_dict()
-    assert rc.pop('experiment_name') == 'inspire_sweep_v0'
+    assert rc.pop('experiment_name') == ('inspire_sweep_single_contact_v0' if args.single_contact else 'inspire_sweep_v0')
     rp.pop('experiment_name')
     assert rc == rp
-    assert type(runner).__bases__ == (RslRlOnPolicyRunnerCfg,)
-    assert gym.spec(task).entry_point == 'inspire_sweep_baseline.runtime.sweep_v0:SweepEnv'
+    if args.single_contact:
+        sweep_runner = load_cfg_from_registry('Inspire-Sweep-v0', 'rsl_rl_cfg_entry_point')
+        assert type(runner).__bases__ == (type(sweep_runner),)
+    else:
+        assert type(runner).__bases__ == (RslRlOnPolicyRunnerCfg,)
+    runtime_name = 'SweepSingleContactEnv' if args.single_contact else 'SweepEnv'
+    assert gym.spec(task).entry_point == f'inspire_sweep_baseline.runtime.sweep_v0:{runtime_name}'
     cfg.scene.num_envs = 4
     cfg.seed = 42
     cfg.debug_surface_points = cfg.scene.ee_frame.debug_vis = cfg.commands.target_goal_pos.debug_vis = False
@@ -75,6 +88,24 @@ def validate():
               'ppo': 'experiment name only', 'num_envs': 4, 'seed': 42}
     try:
         wrapped.reset()
+        if args.single_contact:
+            from inspire_sweep_baseline.mdp.common.sweep_v0_state import SingleContactSweepState
+            assert type(base._stabilize_state) is SingleContactSweepState
+            probe = SingleContactSweepState(4, base.device)
+            probe.contact_history[:, :2] = torch.tensor([[False, False], [True, False],
+                                                        [True, True], [True, True]], device=base.device)
+            probe.previous_distance.fill_(1.)
+            probe.finish(torch.tensor([[.01, 0., 0.]], device=base.device).expand(4, -1),
+                         torch.tensor([[1., 0., 0.]], device=base.device).expand(4, -1),
+                         torch.tensor([[2., 0., 0.]], device=base.device).expand(4, -1),
+                         torch.tensor([True, True, True, False], device=base.device),
+                         torch.ones(4, device=base.device, dtype=torch.bool),
+                         torch.full((4,), 1.1, device=base.device), torch.ones(4, device=base.device))
+            assert not hasattr(probe, 'contact_count')
+            assert probe.contact_recognized.dtype == torch.bool
+            assert probe.contact_recognized.tolist() == [False, True, True, True]
+            torch.testing.assert_close(probe.positive, torch.tensor([0., .01, .01, 0.], device=base.device))
+            result['binary_contact_gpu_probe'] = 'boolean recognition, no contact_count; 0/1 factor; current-force gate preserved'
         assert str(base.device).startswith('cuda')
         assert not base.curriculum_manager.active_terms
         side_cfg = base.reward_manager.get_term_cfg('sweep_progress')
@@ -122,6 +153,9 @@ def validate():
             assert obs['policy'].shape == (4, 66) and obs['obstacles'].shape == (4, 64)
             assert torch.isfinite(obs['policy']).all() and torch.isfinite(reward).all()
             assert obs['policy'][:, -6:].abs().max() <= 1.
+            if args.single_contact:
+                assert not hasattr(base._stabilize_state, 'contact_count')
+                assert base._stabilize_state.contact_recognized.dtype == torch.bool
             torch.testing.assert_close(base.reward_manager._step_reward[:, index], 50 * side(base, **side_cfg.params))
             torch.testing.assert_close(reward, base.reward_manager._step_reward.sum(-1) * base.step_dt)
         # Use the live reward instance and real physics side evidence; classified

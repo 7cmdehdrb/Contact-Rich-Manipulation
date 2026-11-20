@@ -106,3 +106,8 @@ class SweepEnvCfg(ManagerBasedRLEnvCfg):
         self.observations.policy.wrist_wrench.scale = tuple(
             1.0 / bound for bound in self.wrist_wrench_observation_limits
         )
+
+
+@configclass
+class SweepSingleContactEnvCfg(SweepEnvCfg):
+    """Same configuration; the registered runtime selects binary contact credit."""
