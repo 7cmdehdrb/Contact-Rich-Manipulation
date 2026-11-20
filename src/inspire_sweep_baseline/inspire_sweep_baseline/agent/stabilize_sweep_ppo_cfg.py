@@ -119,3 +119,8 @@ class SweepOnlyV2_2TestActionPenaltyPPORunnerCfg(SweepOnlyV2_2TestPPORunnerCfg):
 class SweepOnlyV1ActionPenaltyPPORunnerCfg(SweepOnlyPPORunnerCfg):
     clip_actions = None
     experiment_name = 'inspire_sweep_only_v1_action_penalty'
+
+
+@configclass
+class SweepOnlyV2TestActionPenaltyLinearReachPPORunnerCfg(SweepOnlyV2TestActionPenaltyPPORunnerCfg):
+    experiment_name = 'inspire_sweep_only_v2_test_action_penalty_linear_reach'

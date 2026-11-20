@@ -72,3 +72,41 @@ def test_hand_limits_and_mimic_preserve_raw_input(load_mdp):
     torch.testing.assert_close(term.processed_actions[0], torch.zeros(6))
     torch.testing.assert_close(term.processed_actions[1], term._upper_limits)
     torch.testing.assert_close(term._joint_targets, term.processed_actions[:, term._drive_indices] * term._multipliers)
+
+
+def test_linear_reach_live_rotated_center_boundaries_and_no_reset_scaling(load_mdp):
+    module = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep')
+    # Rotate a nonzero bounds-center offset: measuring the link origin or an
+    # episode-fixed surface point would produce different rewards here.
+    distances = torch.tensor([0., .05, .10, .100001, .15, .20, .30, .35, .449999, .45, .60],
+                             dtype=torch.float64)
+    n = len(distances)
+    root = torch.tensor([.2, -.1, 1.05], dtype=torch.float64).expand(n, 1, 3).clone()
+    rotation = torch.tensor([math.sqrt(.5), 0., 0., math.sqrt(.5)], dtype=torch.float64).expand(n, 1, 4)
+    bounds = torch.tensor([[.01, -.01, 0.], [.03, .01, .10]], dtype=torch.float64).expand(n, 1, 2, 3)
+    center = root[:, 0] + torch.tensor([0., .02, .05], dtype=torch.float64)
+    eef = center.clone(); eef[:, 0] += distances
+    objects = NS(data=NS(object_link_pos_w=root, object_link_quat_w=rotation))
+    env = NS(scene={'object_collection': objects, 'ee_frame': NS(data=NS(target_pos_w=eef[:, None]))},
+             _revision_bounds_t=bounds)
+    expected = torch.tensor([1., 1., 1., 1.-.000001/.35, 6./7., 5./7., 3./7., 2./7.,
+                             .000001/.35, 0., 0.], dtype=torch.float64)
+    actual = module.linear_reach(env)
+    torch.testing.assert_close(actual, expected)
+    # The stateless reward needs neither a reset snapshot nor episode duration.
+    env.cfg = NS(episode_length_s=500.)
+    env._initial_distance = torch.full((n,), 100.)
+    torch.testing.assert_close(module.linear_reach(env), actual)
+    root[:, :, 0] += .1
+    assert not torch.allclose(module.linear_reach(env), actual)
+
+
+@pytest.mark.parametrize('params', [
+    {'near_radius': -.1}, {'near_radius': float('nan')}, {'near_radius': float('inf')},
+    {'decay_distance': 0.}, {'decay_distance': -.1},
+    {'decay_distance': float('nan')}, {'decay_distance': float('inf')},
+])
+def test_linear_reach_rejects_invalid_distance_parameters(load_mdp, params):
+    module = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep')
+    with pytest.raises(ValueError):
+        module.linear_reach(NS(), **params)

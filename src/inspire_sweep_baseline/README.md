@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-20 후속: `Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach`는 v2-Test-ActionPenalty의 직접 자식이며 Reach만 weight0.8·10cm plateau·45cm에서0인 선형 근접식으로 교체한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#linearreach-파생-환경).
+
 2026-11-20 후속: `Inspire-Sweep-Only-v1-ActionPenalty`는 v0의 물체 옆 IK에 v1 Sweep 보상과 ActionPenalty를 적용한다. Reach 없음. [계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#물체-옆-ik와-v1-보상-v1-actionpenalty).
 
 2026-11-20: Sweep Only 6종의 원본을 보존한 `-ActionPenalty` 파생 ID를 추가했다. 팔/손 실행 제한과 클리핑 전 액션 비용을 분리한다. [Task ID·계약·명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_ONLY_FAMILY.md#actionpenalty-파생-환경).

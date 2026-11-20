@@ -1608,3 +1608,14 @@ for _penalty_suffix, _penalty_prefix in (
             'rsl_rl_cfg_entry_point': f'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:{_penalty_prefix}ActionPenaltyPPORunnerCfg',
         },
     )
+
+
+gym.register(
+    id='Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach',
+    entry_point='inspire_sweep_baseline.runtime.stabilize_sweep:SweepOnlyEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.stabilize_sweep_envs:SweepOnlyV2TestActionPenaltyLinearReachEnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.stabilize_sweep_ppo_cfg:SweepOnlyV2TestActionPenaltyLinearReachPPORunnerCfg',
+    },
+)

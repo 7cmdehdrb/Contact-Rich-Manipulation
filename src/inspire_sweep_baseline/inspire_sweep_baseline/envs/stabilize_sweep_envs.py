@@ -197,3 +197,16 @@ class SweepOnlyV1ActionPenaltyEnvCfg(SweepOnlyEnvCfg):
         self.rewards.sweep_progress.weight = 50.0
         self.rewards.sweep_retreat.weight = -10.0
         _configure_action_penalty(self)
+
+
+@configclass
+class SweepOnlyV2TestActionPenaltyLinearReachEnvCfg(SweepOnlyV2TestActionPenaltyEnvCfg):
+    """Preserve v2-Test-ActionPenalty; replace only its continuous Reach."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        from ..mdp.reward_functions.stabilize_sweep import linear_reach
+        self.rewards.reaching = self.rewards.reaching.replace(
+            func=linear_reach, weight=0.8,
+            params={'near_radius': 0.10, 'decay_distance': 0.35, 'frame_name': 'ee_frame'},
+        )
