@@ -26,3 +26,8 @@ class SweepPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 class SweepSingleContactPPORunnerCfg(SweepPPORunnerCfg):
     experiment_name = 'inspire_sweep_single_contact_v0'
 
+
+@configclass
+class SweepSingleContactV1PPORunnerCfg(SweepSingleContactPPORunnerCfg):
+    experiment_name = 'inspire_sweep_single_contact_v1'
+

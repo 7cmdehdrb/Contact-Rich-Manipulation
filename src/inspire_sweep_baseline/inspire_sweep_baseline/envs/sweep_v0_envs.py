@@ -1,5 +1,6 @@
 """Independent Sweep v0 configuration; no inheritance from older task EnvCfgs."""
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
 from ..assets.scenes.stabilize_sweep import StabilizeSweepSceneCfg
@@ -12,7 +13,8 @@ from ..mdp.events.stabilize_sweep import StabilizeSweepTestEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
 from ..mdp.reward_functions.stabilize_sweep import linear_reach
-from ..mdp.reward_functions.sweep_contact_preference import ContactSideSweepProgress
+from ..mdp.reward_functions.stabilize_sweep import incremental_approach_reach, arm_joint_failure
+from ..mdp.reward_functions.sweep_contact_preference import ContactSideSweepProgress, SignedContactSideSweepProgress
 
 
 @configclass
@@ -111,3 +113,16 @@ class SweepEnvCfg(ManagerBasedRLEnvCfg):
 @configclass
 class SweepSingleContactEnvCfg(SweepEnvCfg):
     """Same configuration; the registered runtime selects binary contact credit."""
+
+
+@configclass
+class SweepSingleContactV1EnvCfg(SweepSingleContactEnvCfg):
+    """Moving approach progress, signed force alignment and one joint-failure cost."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.sweep_progress = self.rewards.sweep_progress.replace(func=SignedContactSideSweepProgress)
+        self.rewards.reaching = self.rewards.reaching.replace(
+            func=incremental_approach_reach, weight=4.9, params={},
+        )
+        self.rewards.arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)

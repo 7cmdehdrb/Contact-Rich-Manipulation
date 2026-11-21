@@ -97,3 +97,29 @@ class ContactSideSweepProgress(RightHandTactile):
         palm, dorsal = self._surface_loads(env)
         factor = contact_side_multiplier(regions, palm, dorsal, preferred_multiplier, other_multiplier)
         return sweep_progress(env) * factor
+
+
+class SignedContactSideSweepProgress(ContactSideSweepProgress):
+    """Keep surface evidence and positive preference; bad angles use unit cost."""
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self._step = -1
+        self._value = torch.zeros(env.num_envs, device=env.device)
+
+    def reset(self, env_ids=None):
+        super().reset(env_ids)
+        self._value[env_ids if env_ids is not None else slice(None)] = 0.
+
+    def __call__(self, env, preferred_multiplier=1.5, other_multiplier=0.7):
+        if self._step != env.common_step_counter:
+            state = env._stabilize_state
+            palm, dorsal = self._surface_loads(env)
+            factor = contact_side_multiplier(state.reach_region, palm, dorsal,
+                                             preferred_multiplier, other_multiplier)
+            state.sweep_side_multiplier.copy_(factor)
+            state.sweep_positive.copy_(state.signed_progress.clamp_min(0.) * factor)
+            state.sweep_direction_negative.copy_(state.signed_progress.clamp_max(0.))
+            self._value.copy_((state.sweep_positive + state.sweep_direction_negative) / env.step_dt)
+            self._step = env.common_step_counter
+        return self._value
