@@ -22,6 +22,10 @@ def main():
     parser.add_argument('--num_envs', type=int, default=32)
     parser.add_argument('--steps', type=int, default=2500)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--surface-diagnostics', action='store_true',
+                        help='Record reward-side palm/dorsal loads and physical failure diagnostics.')
+    parser.add_argument('--reward-timeline', action='store_true',
+                        help='Record exact raw/weighted/dt-applied reward terms and their state inputs.')
     parser.add_argument('--initial-direction-center', type=float,
                         help='Rejection-sample only initial scenes in this top-view sector (degrees clockwise from up).')
     parser.add_argument('--initial-direction-half-width', type=float, default=15.)
@@ -29,6 +33,8 @@ def main():
     from isaaclab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
+    if args.reward_timeline:
+        args.surface_diagnostics = True
     if args.num_envs < 1 or args.steps < 1:
         parser.error('Positive environments and steps required')
     checkpoint = args.checkpoint.resolve(strict=True)
@@ -54,7 +60,7 @@ def main():
         from rsl_rl.runners import OnPolicyRunner
         from inspire_sweep_baseline.agent.curriculum_runner import CurriculumOnPolicyRunner
         from inspire_sweep_baseline.mdp.common.stabilize_sweep_contact import centroid
-        from inspire_sweep_baseline.assets.robot import HAND_CONTACT_BODY_NAMES, HAND_LINK_BODY_NAMES
+        from inspire_sweep_baseline.assets.robot import ARM_JOINT_NAMES, HAND_CONTACT_BODY_NAMES, HAND_LINK_BODY_NAMES
         from inspire_sweep_baseline.assets.hand_kinematics import HAND_DRIVE_JOINT_NAMES
 
         cfg = parse_env_cfg(args.task, device=args.device or 'cuda:0', num_envs=args.num_envs)
@@ -112,6 +118,7 @@ def main():
         slots = torch.arange(64, device=raw.device)[None, None, :]
         hand_ids = [raw.scene['robot'].joint_names.index(name) for name in HAND_DRIVE_JOINT_NAMES]
         body_ids = [raw.scene['robot'].body_names.index(name) for name in HAND_LINK_BODY_NAMES]
+        arm_ids = [raw.scene['robot'].joint_names.index(name) for name in ARM_JOINT_NAMES]
 
         def capture(source):
             nonlocal max_count, force_error
@@ -135,6 +142,24 @@ def main():
             substeps.append((normal.clone(), friction.clone(), weighted.clone(), load.clone(), pair_load.clone()))
 
         contact.capture = capture
+        if args.surface_diagnostics:
+            from inspire_sweep_baseline.mdp.reward_functions.sweep_contact_preference import sweep_region
+            from inspire_sweep_baseline.mdp.common.revision_goal import object_geometry_in_shelf
+            from inspire_sweep_baseline.mdp.common.contact_sweep_clutter import all_object_tilt_angles
+            surface_term = raw.reward_manager.get_term_cfg('sweep_progress').func
+            original_surface_loads = surface_term._surface_loads
+
+            def surface_loads(source):
+                palm_load, dorsal_load = original_surface_loads(source)
+                for name, value in (('palm_load', palm_load), ('dorsal_load', dorsal_load)):
+                    all_rows.setdefault(name, []).append(value.detach().cpu().numpy().copy())
+                return palm_load, dorsal_load
+
+            surface_term._surface_loads = surface_loads
+        timeline_probe = None
+        if args.reward_timeline:
+            from reward_timeline_probe import RewardTimelineProbe
+            timeline_probe = RewardTimelineProbe(raw, all_rows, args.output_dir, report)
         original_compute = raw.termination_manager.compute
 
         def compute():
@@ -160,7 +185,6 @@ def main():
                         contact_point=point(weighted / load[:, None].clamp_min(1e-12)),
                         load=load, pair_load=pair_load, valid=contact.all_valid,
                         contact=contact.contact, recognized=recognized,
-                        contact_count=raw._stabilize_state.contact_count,
                         positive=raw._stabilize_state.positive, retreat=raw._stabilize_state.retreat,
                         distance=distance, delta_distance=previous_distance - distance,
                         joint_pos=raw.scene['robot'].data.joint_pos[:, hand_ids],
@@ -169,8 +193,25 @@ def main():
                         velocity=vector(raw.scene['object_collection'].data.object_com_lin_vel_w[:, 0]),
                         action=raw.action_manager.action, done=done,
                         success=raw.termination_manager.get_term('success'))
+            if hasattr(raw._stabilize_state, 'contact_count'):
+                rows['contact_count'] = raw._stabilize_state.contact_count
+            else:
+                rows['contact_recognized'] = raw._stabilize_state.contact_recognized
+            if args.surface_diagnostics:
+                shelf = raw.scene['shelf'].data
+                _, bottom = object_geometry_in_shelf(raw)
+                rows.update(region=sweep_region(quat_apply_inverse(shelf.root_quat_w, raw.sweep_dir)),
+                            sweep_direction=vector(raw.sweep_dir), object_bottom=bottom,
+                            object_tilt=all_object_tilt_angles(raw), active_objects=raw._active_object_mask,
+                            object_positions=raw.scene['object_collection'].data.object_pos_w - origins[:, None],
+                            shelf_velocity=shelf.root_vel_w.norm(dim=-1),
+                            shelf_displacement=(shelf.root_pos_w - origins).norm(dim=-1),
+                            wrist_clearance=raw.scene['wrist_frame'].data.target_pos_w[:, 0, 2] - shelf.root_pos_w[:, 2] - 1.05,
+                            arm_peak_velocity=raw.scene['robot'].data.joint_vel[:, arm_ids].abs().amax(-1))
             for name in ('object_fall_or_tilt', 'shelf_failure', 'arm_joint_velocity', 'timeout'):
                 rows[name] = raw.termination_manager.get_term(name)
+            if timeline_probe is not None:
+                rows.update(timeline_probe.state_inputs())
             for name, value in rows.items():
                 all_rows.setdefault(name, []).append(value.detach().cpu().numpy().copy())
             previous_distance = distance.clone()
@@ -179,6 +220,8 @@ def main():
 
         raw.termination_manager.compute = compute
         obs = env.get_observations()
+        if timeline_probe is not None:
+            timeline_probe.save_initial(obs)
         start = time.perf_counter()
         for step in range(args.steps):
             with torch.inference_mode():
@@ -194,6 +237,8 @@ def main():
                 completed = sum(int(x.sum()) for x in all_rows['done'])
                 successes = sum(int(x.sum()) for x in all_rows['success'])
                 print(f'[Analysis] {step+1}/{args.steps}; complete={completed}; success={successes}; elapsed={time.perf_counter()-start:.1f}s', flush=True)
+        if any(len(v) != args.steps for v in all_rows.values()):
+            raise RuntimeError('Analysis columns have inconsistent policy-step counts')
         np.savez_compressed(args.output_dir / 'trace.npz', **{k: np.stack(v) for k, v in all_rows.items()})
         report.update(status='complete', dt=raw.step_dt, steps=args.steps,
                       checkpoint_iteration=runner.current_learning_iteration,

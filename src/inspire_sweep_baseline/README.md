@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-21: **`Inspire-Sweep-Single-Contact-v1`**는 Single Contact v0 직접 자식이다. 이동 접근점의5cm 초과 오차 증분 Reach(weight4.9), 구역3의12시 기준 시계방향+15° 단일점, signed 수평 힘 방향(30°/p4), 팔 속도 종료 일회−3을 적용한다. 관측·제어·초기화·성공/종료·기존 면 선호·PPO는 보존하며 로그 이름만 `inspire_sweep_single_contact_v1`이다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#single-contact-v1) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-21_single_contact_v1_implementation.md).
+
 2026-11-20: **`Inspire-Sweep-Single-Contact-v0`**는 Sweep v0 직접 자식으로, 최근3 제어 스텝 중2회 접촉 인정 여부를 boolean으로 판정하고 보상에1/0을 사용한다. Contact Count 필드는 없다. 다른 보상·F/T 정규화·설정은 유지한다. 로그 `inspire_sweep_single_contact_v0`. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#single-contact-파생-환경).
 
 2026-11-20: **`Inspire-Sweep-v0` / `inspire_sweep_v0`**는 별도 EnvCfg·PPO·runtime 진입점의 새 계통이다. v2-Test-ActionPenalty-LinearReach를 기능 기준으로 접촉면별 Sweep 계수(1.5/0.7), 고정 장애물·F/T 비용, 관측 전용 F/T 정규화를 적용했다. Deadzone0°·Pull/Push60°·좌우120°. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md).

@@ -25,6 +25,20 @@ def sweep_retreat(env):
     return env._stabilize_state.retreat/env.step_dt
 
 
+def incremental_approach_reach(env):
+    """Signed 5cm-excess change; the manager applies weight and dt once."""
+    from ..common.stabilize_sweep_contact import centroid
+
+    state = env._stabilize_state
+    return state.update_reach(centroid(env), env.scene['ee_frame'].data.target_pos_w[:, 0],
+                              env.common_step_counter) / env.step_dt
+
+
+def arm_joint_failure(env):
+    """Read the already computed termination event, without a second velocity test."""
+    return env.termination_manager.get_term('arm_joint_velocity').float() / env.step_dt
+
+
 def action_limit_excess(env, action_group):
     """Mean squared raw-command excess, normalized by each channel's full allowed width."""
     import math

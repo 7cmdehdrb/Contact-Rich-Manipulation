@@ -1641,3 +1641,14 @@ gym.register(
         'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.sweep_v0_ppo_cfg:SweepSingleContactPPORunnerCfg',
     },
 )
+
+
+gym.register(
+    id='Inspire-Sweep-Single-Contact-v1',
+    entry_point='inspire_sweep_baseline.runtime.sweep_v0:SweepSingleContactV1Env',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.sweep_v0_envs:SweepSingleContactV1EnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.sweep_v0_ppo_cfg:SweepSingleContactV1PPORunnerCfg',
+    },
+)
