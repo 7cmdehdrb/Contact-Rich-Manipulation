@@ -11,6 +11,7 @@ from ..mdp.rewards.stabilize_sweep import SweepOnlyTestRewardsCfg, add_action_li
 from ..mdp.terminations.stabilize_sweep import StabilizeSweepTerminationsCfg
 from ..mdp.events.stabilize_sweep import StabilizeSweepTestEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
+from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
 from ..mdp.reward_functions.stabilize_sweep import linear_reach
 from ..mdp.reward_functions.stabilize_sweep import incremental_approach_reach, arm_joint_failure
@@ -87,8 +88,19 @@ class SweepEnvCfg(ManagerBasedRLEnvCfg):
 
         self.events.object_spawn.params['excluded_x_half_angle'] = 0.0
         self.actions.arm_action.class_type = SweepOnlyClippedOSCAction
+        self.actions.gripper_action.class_type = NormalizedFingerJointPositionAction
         self.observations.policy.actions.func = legacy_clipped_previous_action
         add_action_limit_penalties(self.rewards)
+        self.rewards.hand_joint_velocity.weight = -0.03
+        # At dt=.02, each rate term is at worst -.06 and each limit term -.6.
+        # Limit costs are 100x stronger near the boundary, without an unbounded tail.
+        for name in ('arm_action_rate', 'hand_action_rate'):
+            getattr(self.rewards, name).params['max_cost'] = 100.0
+        for name in ('arm_action_limit', 'hand_action_limit'):
+            term = getattr(self.rewards, name)
+            term.weight = -3.0
+            term.params['max_cost'] = 10.0
+        self.rewards.hand_action_limit.params['hand_normalized'] = True
         self.rewards.sweep_progress = self.rewards.sweep_progress.replace(
             func=ContactSideSweepProgress, weight=50.0,
             params={'preferred_multiplier': 1.5, 'other_multiplier': 0.7},

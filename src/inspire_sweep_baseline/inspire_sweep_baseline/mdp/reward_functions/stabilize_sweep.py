@@ -39,11 +39,17 @@ def arm_joint_failure(env):
     return env.termination_manager.get_term('arm_joint_velocity').float() / env.step_dt
 
 
-def action_limit_excess(env, action_group):
-    """Mean squared raw-command excess, normalized by each channel's full allowed width."""
+def action_limit_excess(env, action_group, hand_normalized=False, max_cost=None):
+    """Mean squared excess in raw policy units, divided by the allowed width.
+
+    Defaults preserve radian-hand siblings. The Sweep family opts into a unit
+    hand range and an aggregate ceiling before RewardManager applies weight/dt.
+    """
     import math
     from ...assets.hand_kinematics import HAND_DRIVE_UPPER_LIMITS
 
+    if max_cost is not None and (not math.isfinite(max_cost) or max_cost <= 0.0):
+        raise ValueError('max_cost must be finite and positive')
     actions = env.action_manager.action
     if actions.shape[-1] != 12:
         raise ValueError('Sweep Only requires six arm and six hand actions')
@@ -53,11 +59,12 @@ def action_limit_excess(env, action_group):
         width = math.pi
     elif action_group == 'hand':
         raw = actions[:, 6:]
-        width = raw.new_tensor(HAND_DRIVE_UPPER_LIMITS)
+        width = raw.new_tensor(1.0 if hand_normalized else HAND_DRIVE_UPPER_LIMITS)
         bounded = raw.clamp_min(0).minimum(width)
     else:
         raise ValueError("action_group must be 'arm' or 'hand'")
-    return ((raw - bounded) / width).square().mean(dim=-1)
+    cost = ((raw - bounded) / width).square().mean(dim=-1)
+    return cost if max_cost is None else cost.clamp_max(max_cost)
 
 
 def linear_reach(env, near_radius=0.10, decay_distance=0.35, frame_name='ee_frame'):

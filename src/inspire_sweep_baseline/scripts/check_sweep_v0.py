@@ -27,6 +27,7 @@ def validate():
     from inspire_sweep_baseline.assets.hand_kinematics import HAND_DRIVE_UPPER_LIMITS
     from inspire_sweep_baseline.mdp.reward_functions.sweep_contact_preference import ContactSideSweepProgress
     from inspire_sweep_baseline.mdp.reward_functions.stabilize_sweep import sweep_progress
+    from inspire_sweep_baseline.mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 
     parent_id = 'Inspire-Sweep-Only-v2-Test-ActionPenalty-LinearReach'
     task = 'Inspire-Sweep-Single-Contact-v0' if args.single_contact else 'Inspire-Sweep-v0'
@@ -51,6 +52,18 @@ def validate():
     assert cfg.rewards.wrench_change.params['free_force_change'] == 30.
     assert cfg.rewards.wrench_change.params['free_moment_change'] == 3.
     assert cfg.rewards.wrench_change.weight == -.1
+    assert cfg.actions.gripper_action.class_type is NormalizedFingerJointPositionAction
+    assert cfg.rewards.hand_joint_velocity.weight == -.03
+    for name in ('arm_action_rate', 'hand_action_rate'):
+        assert getattr(cfg.rewards, name).params['max_cost'] == 100.
+        after['rewards'][name] = before['rewards'][name]
+    for name in ('arm_action_limit', 'hand_action_limit'):
+        assert getattr(cfg.rewards, name).weight == -3.
+        assert getattr(cfg.rewards, name).params['max_cost'] == 10.
+        after['rewards'][name] = before['rewards'][name]
+    assert cfg.rewards.hand_action_limit.params['hand_normalized'] is True
+    after['rewards']['hand_joint_velocity'] = before['rewards']['hand_joint_velocity']
+    after['actions']['gripper_action'] = before['actions']['gripper_action']
     expected_scale = (1 / 150.,) * 3 + (1 / 8.,) * 3
     assert cfg.observations.policy.wrist_wrench.scale == expected_scale
     # Restore exactly the requested differences in the comparison copy only.
@@ -108,6 +121,28 @@ def validate():
             result['binary_contact_gpu_probe'] = 'boolean recognition, no contact_count; 0/1 factor; current-force gate preserved'
         assert str(base.device).startswith('cuda')
         assert not base.curriculum_manager.active_terms
+        # Exercise the real ActionManager and terms before physics; no extreme
+        # command needs to be stepped to prove raw preservation and cost bounds.
+        raw = torch.zeros(4, 12, device=base.device)
+        raw[0].fill_(1000.)
+        raw[1].fill_(-1000.)
+        raw[2, :6] = torch.pi / 2
+        raw[2, 6:] = 1.
+        raw[3, 6:] = .5
+        base.action_manager.process_action(raw)
+        hand = base.action_manager.get_term('gripper_action')
+        assert isinstance(hand, NormalizedFingerJointPositionAction)
+        torch.testing.assert_close(base.action_manager.action, raw)
+        torch.testing.assert_close(hand.raw_actions, raw[:, 6:])
+        torch.testing.assert_close(hand.processed_actions,
+                                   raw[:, 6:].clamp(0, 1) * raw.new_tensor(HAND_DRIVE_UPPER_LIMITS))
+        for name in ('arm_action_rate', 'hand_action_rate', 'arm_action_limit', 'hand_action_limit'):
+            cost_cfg = base.reward_manager.get_term_cfg(name)
+            cost = cost_cfg.func(base, **cost_cfg.params)
+            assert torch.isfinite(cost).all() and cost.le(cost_cfg.params['max_cost']).all()
+            torch.testing.assert_close(cost[:2], torch.full_like(cost[:2], cost_cfg.params['max_cost']))
+        result['normalized_hand_and_cost_caps'] = 'raw command preserved, physical drive mapping, extreme costs bounded'
+        wrapped.reset()
         side_cfg = base.reward_manager.get_term_cfg('sweep_progress')
         side = side_cfg.func
         assert isinstance(side, ContactSideSweepProgress)
@@ -145,7 +180,7 @@ def validate():
             wrench.reset()
             wrench._cached_key = old_key
         action = torch.zeros(4, 12, device=base.device)
-        action[:, 6:] = action.new_tensor(HAND_DRIVE_UPPER_LIMITS) * .1
+        action[:, 6:] = .1
         index = base.reward_manager.active_terms.index('sweep_progress')
         for _ in range(8):
             obs, reward, done, _ = wrapped.step(action)

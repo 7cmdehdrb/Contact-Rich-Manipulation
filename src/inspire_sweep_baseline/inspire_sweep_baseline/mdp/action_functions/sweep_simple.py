@@ -57,3 +57,16 @@ class BoundedFingerJointPositionAction(FingerJointPositionAction):
     def process_actions(self, actions):
         # Bound the term's raw history too, before the existing follower mapping.
         super().process_actions(torch.minimum(torch.nan_to_num(actions).clamp_min(0.), self._upper_limits))
+
+
+class NormalizedFingerJointPositionAction(FingerJointPositionAction):
+    """Six normalized commands: 0 is open, 1 is each drive's URDF upper limit.
+
+    Keep raw commands in policy units for diagnostics and penalties. Processed
+    commands and follower targets retain the parent's physical-radian units.
+    """
+
+    def process_actions(self, actions):
+        self._raw_actions[:] = actions
+        self._processed_actions[:] = actions.clamp(0.0, 1.0) * self._upper_limits
+        self._joint_targets[:] = self._processed_actions[:, self._drive_indices] * self._multipliers
