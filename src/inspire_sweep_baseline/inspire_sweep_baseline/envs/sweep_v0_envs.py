@@ -16,6 +16,7 @@ from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_
 from ..mdp.reward_functions.stabilize_sweep import linear_reach
 from ..mdp.reward_functions.stabilize_sweep import incremental_approach_reach, arm_joint_failure
 from ..mdp.reward_functions.sweep_contact_preference import ContactSideSweepProgress, SignedContactSideSweepProgress
+from ..mdp.common.sweep_v0_layout import SingleContactZone3ResetLayout
 
 
 @configclass
@@ -125,6 +126,19 @@ class SweepEnvCfg(ManagerBasedRLEnvCfg):
 @configclass
 class SweepSingleContactEnvCfg(SweepEnvCfg):
     """Same configuration; the registered runtime selects binary contact credit."""
+
+
+@configclass
+class SweepSingleContactZone3EnvCfg(SweepSingleContactEnvCfg):
+    """Single Contact v0 with pull-only goals and doubled Sweep/retreat weights."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.events.object_geometry = self.events.object_geometry.replace(
+            params={**self.events.object_geometry.params, 'layout_class': SingleContactZone3ResetLayout},
+        )
+        self.rewards.sweep_progress.weight = 100.0
+        self.rewards.sweep_retreat.weight = -20.0
 
 
 @configclass

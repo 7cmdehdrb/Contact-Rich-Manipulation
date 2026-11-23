@@ -28,6 +28,11 @@ class SweepSingleContactPPORunnerCfg(SweepPPORunnerCfg):
 
 
 @configclass
+class SweepSingleContactZone3PPORunnerCfg(SweepSingleContactPPORunnerCfg):
+    experiment_name = 'inspire_sweep_single_contact_zone3_v0'
+
+
+@configclass
 class SweepSingleContactV1PPORunnerCfg(SweepSingleContactPPORunnerCfg):
     experiment_name = 'inspire_sweep_single_contact_v1'
 

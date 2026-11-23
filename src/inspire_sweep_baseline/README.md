@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-23: **`Inspire-Sweep-Single-Contact-Zone3-v0`**는 Single Contact v0 직접 자식으로 목표 방향을 Zone3(선반 +X/6시 ±30°)로 제한하고 Sweep 진행/후퇴 weight를100/−20으로 두 배 적용한다. 부모의 중심 거리 Reach·접촉 인정·물체 배치·관측·제어·종료·PPO를 보존하며 로그는 `inspire_sweep_single_contact_zone3_v0`다. CPU 검사66개 통과, 사용자 요청으로 GPU·Isaac Sim·학습은 실행하지 않았다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#single-contact-zone3-v0) · [개발·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-23_single_contact_zone3_v0.md).
+
 2026-11-22: **Sweep v0·Single Contact v0/v1** 공통 손6D를 0~1 비율(0펼침·1굽힘)로 정규화했다. 손 속도 weight −0.03, action-rate raw cap100, action-limit weight −3.0·raw cap10. 기존 rad 출력 checkpoint는 손 의미가 달라 새 학습을 기준으로 사용한다. [계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#행동과-제어) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-22_sweep_action_stability.md).
 
 2026-11-21: **`Inspire-Sweep-Single-Contact-v1`**는 Single Contact v0 직접 자식이다. 이동 접근점의5cm 초과 오차 증분 Reach(weight4.9), 구역3의12시 기준 시계방향+15° 단일점, signed 수평 힘 방향(30°/p4), 팔 속도 종료 일회−3을 적용한다. 관측·제어·초기화·성공/종료·기존 면 선호·PPO는 보존하며 로그 이름만 `inspire_sweep_single_contact_v1`이다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#single-contact-v1) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-21_single_contact_v1_implementation.md).

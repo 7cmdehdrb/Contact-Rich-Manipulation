@@ -42,3 +42,6 @@ ssh min@192.168.0.10
 외부 인터넷에서 접속하려면 공유기에서 **TCP 22번 포트 포워딩**도 설정해야 합니다. 보안을 위해 외부 공개 시에는 키 인증과 포트 변경을 권장합니다.
 
 [일반 지식 안내](README.md)로 돌아간다.
+
+
+python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host <YOUR-HOST> --remote-dir '<YOUR-FILE-DIRECTORY>'
