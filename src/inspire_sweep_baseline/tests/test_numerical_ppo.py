@@ -166,3 +166,20 @@ def test_real_curriculum_runner_trains_loads_and_exports(safety, tmp_path):
     restored.export_policy_to_jit(str(tmp_path))
     scripted = torch.jit.load(str(tmp_path / "policy.pt"))
     torch.testing.assert_close(scripted(obs["policy"]), restored.alg.actor(obs))
+
+
+@pytest.mark.parametrize('features', [8, 11])
+def test_obb_feature_mask_does_not_hide_valid_dimensions(safety, features):
+    alg, obs = make_algorithm(safety.NumericalPPO)
+    alg.actor.obstacle_feature_dim = features
+    slots = torch.zeros(4, 16, features)
+    slots[:, 0, 0] = 1.
+    # Width is not a second mask. Even width=0 must not hide huge valid orientation.
+    slots[:, 0, -1] = 1e30
+    obs['obstacles'] = slots.flatten(1)
+    with pytest.raises(safety.NumericalTrainingError, match='observation/obstacles'):
+        alg._check_observations(obs)
+    # All non-mask values of a missing row are ignored, matching the real encoder.
+    slots[:, 0, 0] = 0.
+    slots[:, 0, 1:] = float('nan')
+    alg._check_observations(obs)

@@ -1663,3 +1663,26 @@ gym.register(
         'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.sweep_v0_ppo_cfg:SweepSingleContactV1PPORunnerCfg',
     },
 )
+
+
+# Independent initial-observed-OBB sweep family.
+gym.register(
+    id='Inspire-Sweep-Prof-Revision-v0',
+    entry_point='inspire_sweep_baseline.runtime.prof_revision:ProfRevisionEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.prof_revision_envs:ProfRevisionEnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.prof_revision_ppo_cfg:ProfRevisionPPORunnerCfg',
+    },
+)
+
+
+gym.register(
+    id='Inspire-Sweep-Prof-Revision-Reach5cm-v0',
+    entry_point='inspire_sweep_baseline.runtime.prof_revision:ProfRevisionEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.prof_revision_envs:ProfRevisionReach5cmEnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.prof_revision_ppo_cfg:ProfRevisionReach5cmPPORunnerCfg',
+    },
+)

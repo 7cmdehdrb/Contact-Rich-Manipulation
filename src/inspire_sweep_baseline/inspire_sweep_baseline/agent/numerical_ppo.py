@@ -102,8 +102,9 @@ class NumericalPPO(PPO):
         for name, value in obs.items():
             # Dummy obstacle coordinates are intentionally ignored by the real
             # encoder. Apply the same mask for validation, leaving obs intact.
-            if name == "obstacles" and value.shape[-1] % 4 == 0:
-                rows = value.unflatten(-1, (value.shape[-1] // 4, 4))
+            obstacle_width = getattr(self.actor, "obstacle_feature_dim", 4)
+            if name == "obstacles" and value.shape[-1] % obstacle_width == 0:
+                rows = value.unflatten(-1, (value.shape[-1] // obstacle_width, obstacle_width))
                 self._check("observation/obstacles/present", rows[..., 0], self.max_abs_observation)
                 value = torch.where(rows[..., :1] > .5, rows, torch.zeros_like(rows))
             self._check(f"observation/{name}", value, self.max_abs_observation)

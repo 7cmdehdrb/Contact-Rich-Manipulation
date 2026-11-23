@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-24: **`Inspire-Sweep-Prof-Revision-Reach5cm-v0`**는 Prof Revision v0 직접 자식이며 Reaching 허용 반경만10→5cm로 변경한다. 나머지 환경 동작과 PPO 수치는 상속하고 로그 이름만 분리한다. GPU·Sim·학습 없이 정적 검사만 수행했다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#reach5cm-v0).
+
+2026-11-23: **`Inspire-Sweep-Prof-Revision-v0`** 독립 환경을 추가했다. 초기 가시 OBB·손끝 Pose·증분 Reach·Contact Formation·Sweep100/−20을 사용하며 EEF 높이 접촉 gate를 제거한다. 2026-11-24 정정으로 EEF→손 관절6D→손끝35D 순서를 적용하고 타겟·장애물 OBB 방향을 xyzw quaternion으로 변경했다. 직접108D·장애물176D·encoder176→128→64→32→16·action12D, 기존 계통 checkpoint는 새 입력과 호환되지 않는다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md) · [검증 결과](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-23_prof_revision_v0_implementation.md).
+
 2026-11-23: **`Inspire-Sweep-Single-Contact-Zone3-v0`**는 Single Contact v0 직접 자식으로 목표 방향을 Zone3(선반 +X/6시 ±30°)로 제한하고 Sweep 진행/후퇴 weight를100/−20으로 두 배 적용한다. 부모의 중심 거리 Reach·접촉 인정·물체 배치·관측·제어·종료·PPO를 보존하며 로그는 `inspire_sweep_single_contact_zone3_v0`다. CPU 검사66개 통과, 사용자 요청으로 GPU·Isaac Sim·학습은 실행하지 않았다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#single-contact-zone3-v0) · [개발·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-23_single_contact_zone3_v0.md).
 
 2026-11-22: **Sweep v0·Single Contact v0/v1** 공통 손6D를 0~1 비율(0펼침·1굽힘)로 정규화했다. 손 속도 weight −0.03, action-rate raw cap100, action-limit weight −3.0·raw cap10. 기존 rad 출력 checkpoint는 손 의미가 달라 새 학습을 기준으로 사용한다. [계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/SWEEP_V0.md#행동과-제어) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-22_sweep_action_stability.md).
