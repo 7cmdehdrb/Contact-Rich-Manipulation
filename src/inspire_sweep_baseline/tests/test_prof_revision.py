@@ -350,3 +350,69 @@ def test_success_uses_visible_center_and_inclusive_boundary(distance,timeout,fai
         cfg=SimpleNamespace(goal_success_radius=.03),episode_length_buf=torch.tensor([500 if timeout else 499]),
         max_episode_length=500,termination_manager=SimpleNamespace(get_term=lambda _:torch.tensor([failed])))
     assert module.success_at_timeout(env).item() is expected
+
+
+@pytest.mark.parametrize('sign', [-1., 1.])
+def test_v0_2_speed_margin_boundaries_selection_and_dt(load_mdp, sign):
+    import importlib
+    fn = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.prof_revision').arm_joint_velocity_margin
+    speeds = torch.tensor([0., .799999, .8, .800001, .85, .9, .95, .999999, 1., 1.000001, 100.], dtype=torch.float64)
+    velocity = torch.zeros(len(speeds), 8, dtype=torch.float64)
+    velocity[:,2] = sign*speeds
+    velocity[:,7] = 1000.  # Excluded hand joint must not contribute.
+    env = SimpleNamespace(scene={'robot':SimpleNamespace(data=SimpleNamespace(joint_vel=velocity))})
+    asset = SimpleNamespace(name='robot', joint_ids=[0,1,2,3,4,5])
+    raw = fn(env, asset)
+    expected = torch.tensor([0.,0.,0.,2.5e-11,.0625,.25,.5625,.999990000025,1.,1.,1.], dtype=torch.float64)
+    torch.testing.assert_close(raw,expected)
+    assert torch.all(raw[1:] >= raw[:-1])
+    velocity[:,:6] = sign*speeds[:,None]
+    torch.testing.assert_close(fn(env,asset),raw)  # Max, not sum.
+    for dt in [.01,.02,.04]:
+        assert float((-3.*raw[5]*dt)*(1./dt)) == pytest.approx(-.75)
+    for free,limit in [(.8,.8),(-.1,1.),(.8,float('inf')),(float('nan'),1.)]:
+        with pytest.raises(ValueError):
+            fn(env,asset,free,limit)
+
+
+def test_v0_2_sweep_ignores_contact_side_and_region(load_mdp):
+    import importlib
+    fn = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep').sweep_progress
+    env = SimpleNamespace(_stabilize_state=SimpleNamespace(positive=torch.full((8,),.001)),step_dt=.02)
+    # No side sensor, region or surface load is needed by this callable.
+    torch.testing.assert_close(100.*fn(env)*env.step_dt,torch.full((8,),.1))
+
+
+def test_v0_3_tcp_speed_and_simultaneous_success(load_mdp):
+    import importlib
+    mod = importlib.import_module('_baseline_cpu_pkg.mdp.termination_functions.prof_revision')
+    velocities = torch.zeros(7,3,3,dtype=torch.float64)
+    velocities[:,1] = torch.tensor([[0,0,0],[3.999999,0,0],[4,0,0],[-4,0,0],
+                                   [0,0,4.000001],[3,3,0],[2,2,2]],dtype=torch.float64)
+    velocities[:,2] = 100.  # EEF speed is unrelated to the selected TCP link.
+    asset = SimpleNamespace(name='robot',body_ids=[1])
+    cfg = SimpleNamespace(func=mod.tcp_linear_velocity,params={'asset_cfg':asset,'threshold':4.})
+    flags = {'object_fall_or_tilt':torch.zeros(7,dtype=torch.bool),
+             'shelf_failure':torch.zeros(7,dtype=torch.bool)}
+    env = SimpleNamespace(scene={'robot':SimpleNamespace(data=SimpleNamespace(
+        body_link_lin_vel_w=velocities,joint_vel=torch.full((7,6),20.)))},
+        cfg=SimpleNamespace(goal_success_radius=.03),
+        _obb_live_pos_w=torch.zeros(7,3),
+        command_manager=SimpleNamespace(get_command=lambda name:torch.zeros(7,3)),
+        episode_length_buf=torch.full((7,),500),max_episode_length=500,
+        termination_manager=SimpleNamespace(get_term=lambda name:flags[name],get_term_cfg=lambda name:cfg))
+    expected=torch.tensor([False,False,True,True,True,True,False])
+    torch.testing.assert_close(mod.tcp_linear_velocity(env,asset),expected)
+    torch.testing.assert_close(mod.success_at_timeout_tcp(env),~expected)
+    flags['shelf_failure'][0]=True
+    flags['object_fall_or_tilt'][1]=True
+    env.episode_length_buf[6]=499
+    assert not mod.success_at_timeout_tcp(env).any()
+    flags['shelf_failure'][0]=False
+    env._obb_live_pos_w[0,0]=.03
+    assert mod.success_at_timeout_tcp(env)[0]
+    env._obb_live_pos_w[0,0]=.03001
+    assert not mod.success_at_timeout_tcp(env)[0]
+    for threshold in [0.,-1.,float('nan'),float('inf')]:
+        with pytest.raises(ValueError):
+            mod.tcp_linear_velocity(env,asset,threshold)

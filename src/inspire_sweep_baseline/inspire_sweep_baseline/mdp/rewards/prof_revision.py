@@ -1,6 +1,6 @@
-from ..reward_functions.stabilize_sweep import sweep_retreat, action_limit_excess, arm_joint_failure
+from ..reward_functions.stabilize_sweep import sweep_progress, sweep_retreat, action_limit_excess, arm_joint_failure
 from ..reward_functions.sweep_contact_preference import ContactSideSweepProgress
-from ..reward_functions.prof_revision import reaching, contact_formation
+from ..reward_functions.prof_revision import reaching, contact_formation, arm_joint_velocity_margin
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
@@ -44,3 +44,18 @@ class ProfRevisionV1RewardsCfg(ProfRevisionRewardsCfg):
 @configclass
 class ProfRevisionV0_1RewardsCfg(ProfRevisionRewardsCfg):
     arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)
+
+
+@configclass
+class ProfRevisionV0_2RewardsCfg(ProfRevisionRewardsCfg):
+    sweep_progress = RewTerm(func=sweep_progress, weight=100.0)
+    arm_joint_velocity_margin = RewTerm(
+        func=arm_joint_velocity_margin, weight=-3.0,
+        params={'asset_cfg': arm_entity(), 'free_speed': 0.8, 'limit_speed': 1.0},
+    )
+    arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)
+
+
+@configclass
+class ProfRevisionV0_3RewardsCfg(ProfRevisionRewardsCfg):
+    sweep_progress = RewTerm(func=sweep_progress, weight=100.0)

@@ -1,5 +1,9 @@
 # Inspire Sweep Baseline
 
+2026-11-24 후속: **Prof Revision v0_3** 추가. v0 직접 자식, 면 계수1 통일·팔 관절 속도 종료 제거·UR5e 마지막 링크 `wrist_3_link` 원점의 선속도 >=4m/s 실패 종료. EEF offset 속도와 구분하며 새로운 비용은 추가하지 않는다. 나머지 부모 구성 보존. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_3_implementation.md).
+
+2026-11-24: **`Inspire-Sweep-Prof-Revision-v0_2`**는 v0 직접 자식이다. Sweep 면 계수를1로 통일하고, 최대 팔 속도0.8–1.0 rad/s 구간의 제곱 비용(weight−3.0)과 팔 속도 종료 사건 비용−3을 추가한다. Formation·관측·제어·종료·PPO 수치를 상속한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_2) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_2_implementation.md).
+
 2026-11-24: **`Inspire-Sweep-Prof-Revision-v0_1`**은 Prof Revision v0 직접 자식으로 `arm_joint_failure` 일회−3.0만 추가한다. Formation 식·weight0.245·Reach10cm·관측·제어·종료·PPO 수치는 부모와 동일하고 로그 이름은 `inspire_sweep_prof_revision_v0_1`이다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_1) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_1_implementation.md).
 
 2026-11-24: **`Inspire-Sweep-Prof-Revision-v1`**은 Prof Revision v0 직접 자식이다. 팔 속도 종료 일회−3.0을 추가하고 Formation을 손가락별 거리 점수×코사인 제곱의 합으로 변경했다(weight0.3675). Reach10cm·면 선호·관측·제어·종료·PPO 수치를 상속한다. CPU58개·GPU4환경 smoke·16환경 PPO1회 업데이트 통과, 장기 행동 개선은 미검증이다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v1) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v1_implementation.md).

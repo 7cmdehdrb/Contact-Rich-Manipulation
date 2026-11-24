@@ -1708,3 +1708,25 @@ gym.register(
         'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.prof_revision_ppo_cfg:ProfRevisionV0_1PPORunnerCfg',
     },
 )
+
+
+gym.register(
+    id='Inspire-Sweep-Prof-Revision-v0_2',
+    entry_point='inspire_sweep_baseline.runtime.prof_revision:ProfRevisionEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.prof_revision_envs:ProfRevisionV0_2EnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.prof_revision_ppo_cfg:ProfRevisionV0_2PPORunnerCfg',
+    },
+)
+
+
+gym.register(
+    id='Inspire-Sweep-Prof-Revision-v0_3',
+    entry_point='inspire_sweep_baseline.runtime.prof_revision:ProfRevisionEnv',
+    disable_env_checker=True,
+    kwargs={
+        'env_cfg_entry_point': 'inspire_sweep_baseline.envs.prof_revision_envs:ProfRevisionV0_3EnvCfg',
+        'rsl_rl_cfg_entry_point': 'inspire_sweep_baseline.agent.prof_revision_ppo_cfg:ProfRevisionV0_3PPORunnerCfg',
+    },
+)

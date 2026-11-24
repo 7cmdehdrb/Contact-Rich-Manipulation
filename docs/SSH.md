@@ -48,5 +48,9 @@ python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host <YOU
 
 
 
-python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host irol@192.168.0.250 --remote-dir '~/Contact-Rich-Manipulation/logs/rsl_rl/inspire_sweep_prof_revision_reach5cm_v0'
+python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host irol@192.168.0.250 --remote-dir '~/Contact-Rich-Manipulation/logs/rsl_rl/inspire_sweep_prof_revision_v0_1'
+
 python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host min@192.168.0.30 --remote-dir '~/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_prof_revision_v0'
+
+
+python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host ssu@192.168.0.180 --remote-dir '~/Desktop/Contact-Rich-Manipulation/logs/rsl_rl/inspire_sweep_prof_revision_v1'

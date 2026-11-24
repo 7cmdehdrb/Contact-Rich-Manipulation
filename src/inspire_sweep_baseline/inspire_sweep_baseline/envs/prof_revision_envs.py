@@ -6,8 +6,8 @@ from ..assets.scenes.prof_revision import ProfRevisionSceneCfg
 from ..mdp.actions.prof_revision import ProfRevisionActionsCfg, ProfRevisionOSCActionCfg
 from ..mdp.observations.prof_revision import ProfRevisionObservationsCfg
 from ..mdp.commands.prof_revision import ProfRevisionCommandsCfg
-from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg, ProfRevisionV0_1RewardsCfg
-from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg
+from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg, ProfRevisionV0_1RewardsCfg, ProfRevisionV0_2RewardsCfg, ProfRevisionV0_3RewardsCfg
+from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg, ProfRevisionV0_3TerminationsCfg
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
@@ -128,3 +128,24 @@ class ProfRevisionV0_1EnvCfg(ProfRevisionEnvCfg):
     """Parent v0 with only the one-off arm speed termination cost added."""
 
     rewards: ProfRevisionV0_1RewardsCfg = ProfRevisionV0_1RewardsCfg()
+
+
+@configclass
+class ProfRevisionV0_2EnvCfg(ProfRevisionEnvCfg):
+    """Neutral contact sides with a gradual arm speed warning and failure cost."""
+
+    rewards: ProfRevisionV0_2RewardsCfg = ProfRevisionV0_2RewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        if (self.rewards.arm_joint_velocity_margin.params['limit_speed']
+                != self.terminations.arm_joint_velocity.params['threshold']):
+            raise ValueError('Arm speed margin limit must match the termination threshold')
+
+
+@configclass
+class ProfRevisionV0_3EnvCfg(ProfRevisionEnvCfg):
+    """Neutral contact sides and a last-arm-link linear-speed cutoff."""
+
+    rewards: ProfRevisionV0_3RewardsCfg = ProfRevisionV0_3RewardsCfg()
+    terminations: ProfRevisionV0_3TerminationsCfg = ProfRevisionV0_3TerminationsCfg()
