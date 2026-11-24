@@ -6,9 +6,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--task', choices=('Inspire-Sweep-Prof-Revision-v0', 'Inspire-Sweep-Prof-Revision-v1'),
+parser.add_argument('--task', choices=('Inspire-Sweep-Prof-Revision-v0', 'Inspire-Sweep-Prof-Revision-v1',
+                                      'Inspire-Sweep-Prof-Revision-v0_1'),
                     default='Inspire-Sweep-Prof-Revision-v0')
-parser.add_argument('--checkpoint', type=Path, help='Optional fixed policy for v1 natural arm-cutoff validation.')
+parser.add_argument('--checkpoint', type=Path, help='Optional fixed policy for child-task natural arm-cutoff validation.')
 parser.add_argument('--output', type=Path, default=Path('outputs/prof_revision_validation/smoke.json'))
 parser.add_argument('--num-envs', type=int, default=4)
 AppLauncher.add_app_launcher_args(parser)
@@ -27,20 +28,26 @@ def validate():
     from inspire_sweep_baseline.mdp.observation_functions.prof_revision import target_obb_in_eef
     task = args.task
     v1 = task.endswith('-v1')
+    failure_only = task.endswith('-v0_1')
+    child = v1 or failure_only
     cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
     cfg.log_dir = str(args.output.parent.resolve())
     cfg.scene.num_envs, cfg.seed = args.num_envs, 42
-    if v1:
+    if child:
         from inspire_sweep_baseline.envs.prof_revision_envs import ProfRevisionEnvCfg
         assert type(cfg).__bases__ == (ProfRevisionEnvCfg,)
         baseline = ProfRevisionEnvCfg()
         baseline.scene.num_envs, baseline.seed, baseline.log_dir = args.num_envs, 42, cfg.log_dir
         a, b = baseline.to_dict(), cfg.to_dict()
-        assert b.pop('formation_mode') == 'distance_angle_sum'
+        if v1:
+            assert b.pop('formation_mode') == 'distance_angle_sum'
+            assert b['rewards']['contact_formation']['weight'] == .3675
+            b['rewards']['contact_formation']['weight'] = a['rewards']['contact_formation']['weight']
+        else:
+            assert not hasattr(cfg, 'formation_mode')
+            assert b['rewards']['contact_formation'] == a['rewards']['contact_formation']
         assert b['rewards'].pop('arm_joint_failure')['weight'] == -3.
-        assert b['rewards']['contact_formation']['weight'] == .3675
-        b['rewards']['contact_formation']['weight'] = a['rewards']['contact_formation']['weight']
-        assert b == a, 'unexpected v1 environment contract change'
+        assert b == a, 'unexpected child environment contract change'
         reach = load_cfg_from_registry('Inspire-Sweep-Prof-Revision-Reach5cm-v0', 'env_cfg_entry_point')
         reach.scene.num_envs, reach.seed, reach.log_dir = args.num_envs, 42, cfg.log_dir
         r = reach.to_dict()
@@ -53,20 +60,20 @@ def validate():
     from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_cfg
     from importlib.metadata import version
     runner_cfg = handle_deprecated_rsl_rl_cfg(runner_cfg, version('rsl-rl-lib'))
-    if v1:
+    if child:
         baseline_runner = load_cfg_from_registry('Inspire-Sweep-Prof-Revision-v0', 'rsl_rl_cfg_entry_point')
         baseline_runner = handle_deprecated_rsl_rl_cfg(baseline_runner, version('rsl-rl-lib'))
         a, b = baseline_runner.to_dict(), runner_cfg.to_dict()
-        assert b['experiment_name'] == 'inspire_sweep_prof_revision_v1'
+        assert b['experiment_name'] == ('inspire_sweep_prof_revision_v1' if v1 else 'inspire_sweep_prof_revision_v0_1')
         b['experiment_name'] = a['experiment_name']
-        assert b == a, 'unexpected v1 PPO change'
+        assert b == a, 'unexpected child PPO change'
     parent = load_cfg_from_registry('Inspire-Sweep-Single-Contact-v0', 'env_cfg_entry_point')
     a, b = parent.to_dict(), cfg.to_dict()
     # Compare function/params/weights, not just final numeric rewards.
     for name in ('sweep_progress', 'sweep_retreat', 'reaching'):
         b['rewards'][name] = a['rewards'][name]
     del b['rewards']['contact_formation']
-    if v1:
+    if child:
         del b['rewards']['arm_joint_failure']
     assert b['rewards'] == {k:v for k,v in a['rewards'].items() if v is not None}, 'reward contract drift'
     assert b['actions'] == a['actions']
@@ -107,8 +114,8 @@ def validate():
         for boxes in (obs['policy'][:,60:70], obs['obstacles'].reshape(args.num_envs,16,11)[env._obb_valid][:,1:]):
             torch.testing.assert_close(boxes[:,6:].norm(dim=-1), torch.ones_like(boxes[:,0]))
         assert runner_cfg.actor.encoder_hidden_dims == [128,64,32]
-        assert len(env.reward_manager.active_terms) == (17 if v1 else 16)
-        if v1:
+        assert len(env.reward_manager.active_terms) == (17 if child else 16)
+        if child:
             assert env.reward_manager.active_terms[-1] == 'arm_joint_failure'
         assert not env.curriculum_manager.active_terms
         assert env._obb_target_size.gt(0).all()
@@ -130,6 +137,11 @@ def validate():
             torch.testing.assert_close(env._stabilize_state.reach_delta, old-env._stabilize_state.reach_excess)
             torch.testing.assert_close(env._obb_target_pos_w, snapshot)
             assert env._formation.ge(0).all() and env._formation.le(5 if v1 else 1).all()
+            if failure_only:
+                expected = .05 / (.05 + env._finger_gaps.sum(-1))
+                torch.testing.assert_close(env._formation, expected)
+                idx = env.reward_manager.active_terms.index('contact_formation')
+                torch.testing.assert_close(env.reward_manager._step_reward[:,idx], .245*expected)
             if v1:
                 # Independently reconstruct normals and direction in world coordinates.
                 normals_w = quat_apply(robot.body_link_quat_w[:,env._finger_body_ids],
@@ -188,7 +200,7 @@ def validate():
             torch.testing.assert_close(scripted(raw), eager)
             assert raw.shape[-1] == 284
         natural_cutoffs = 0
-        if v1 and args.checkpoint:
+        if child and args.checkpoint:
             from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_checkpoint
             checkpoint = handle_deprecated_rsl_rl_checkpoint(str(args.checkpoint), version('rsl-rl-lib'))
             runner.load(checkpoint, load_cfg={'actor':True,'critic':True,'optimizer':False,'iteration':False})
@@ -232,6 +244,12 @@ def validate():
                           full_parent_cfg_equal_except_requested=True, reach5cm_preserved=True,
                           formation_weight=.3675, formation_distance=proximity.cpu().tolist(),
                           formation_angle=alignment.cpu().tolist(), formation_contribution=contribution.cpu().tolist(),
+                          natural_arm_cutoffs=natural_cutoffs,
+                          cutoff_checkpoint=str(args.checkpoint) if args.checkpoint else None)
+        if failure_only:
+            result.update(reward_terms=env.reward_manager.active_terms,
+                          full_parent_cfg_equal_except_arm_joint_failure=True,
+                          formation_mode='parent_distance_sum', formation_weight=.245,
                           natural_arm_cutoffs=natural_cutoffs,
                           cutoff_checkpoint=str(args.checkpoint) if args.checkpoint else None)
         args.output.parent.mkdir(parents=True, exist_ok=True)

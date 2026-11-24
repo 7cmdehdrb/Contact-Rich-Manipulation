@@ -41,3 +41,8 @@ class ProfRevisionReach5cmPPORunnerCfg(ProfRevisionPPORunnerCfg):
 @configclass
 class ProfRevisionV1PPORunnerCfg(ProfRevisionPPORunnerCfg):
     experiment_name = 'inspire_sweep_prof_revision_v1'
+
+
+@configclass
+class ProfRevisionV0_1PPORunnerCfg(ProfRevisionPPORunnerCfg):
+    experiment_name = 'inspire_sweep_prof_revision_v0_1'

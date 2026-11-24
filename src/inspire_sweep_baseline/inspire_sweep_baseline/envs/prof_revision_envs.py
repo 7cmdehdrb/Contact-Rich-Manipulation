@@ -6,7 +6,7 @@ from ..assets.scenes.prof_revision import ProfRevisionSceneCfg
 from ..mdp.actions.prof_revision import ProfRevisionActionsCfg, ProfRevisionOSCActionCfg
 from ..mdp.observations.prof_revision import ProfRevisionObservationsCfg
 from ..mdp.commands.prof_revision import ProfRevisionCommandsCfg
-from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg
+from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg, ProfRevisionV0_1RewardsCfg
 from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
@@ -121,3 +121,10 @@ class ProfRevisionV1EnvCfg(ProfRevisionEnvCfg):
 
     rewards: ProfRevisionV1RewardsCfg = ProfRevisionV1RewardsCfg()
     formation_mode: str = 'distance_angle_sum'
+
+
+@configclass
+class ProfRevisionV0_1EnvCfg(ProfRevisionEnvCfg):
+    """Parent v0 with only the one-off arm speed termination cost added."""
+
+    rewards: ProfRevisionV0_1RewardsCfg = ProfRevisionV0_1RewardsCfg()

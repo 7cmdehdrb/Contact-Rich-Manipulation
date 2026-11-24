@@ -39,3 +39,8 @@ class ProfRevisionRewardsCfg:
 class ProfRevisionV1RewardsCfg(ProfRevisionRewardsCfg):
     contact_formation = RewTerm(func=contact_formation, weight=0.3675)
     arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)
+
+
+@configclass
+class ProfRevisionV0_1RewardsCfg(ProfRevisionRewardsCfg):
+    arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)
