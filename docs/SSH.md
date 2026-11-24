@@ -45,3 +45,8 @@ ssh min@192.168.0.10
 
 
 python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host <YOUR-HOST> --remote-dir '<YOUR-FILE-DIRECTORY>'
+
+
+
+python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host irol@192.168.0.250 --remote-dir '~/Contact-Rich-Manipulation/logs/rsl_rl/inspire_sweep_prof_revision_reach5cm_v0'
+python3 src/inspire_sweep_baseline/scripts/download_training_logs.py --host min@192.168.0.30 --remote-dir '~/7cmdehdrb/grad/logs/rsl_rl/inspire_sweep_prof_revision_v0'

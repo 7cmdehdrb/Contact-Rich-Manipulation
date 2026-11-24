@@ -6,7 +6,7 @@ from ..assets.scenes.prof_revision import ProfRevisionSceneCfg
 from ..mdp.actions.prof_revision import ProfRevisionActionsCfg, ProfRevisionOSCActionCfg
 from ..mdp.observations.prof_revision import ProfRevisionObservationsCfg
 from ..mdp.commands.prof_revision import ProfRevisionCommandsCfg
-from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg
+from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg
 from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
@@ -113,3 +113,11 @@ class ProfRevisionReach5cmEnvCfg(ProfRevisionEnvCfg):
     """Parent behavior with a five-centimeter Reaching tolerance."""
 
     reach_near_radius: float = 0.05
+
+
+@configclass
+class ProfRevisionV1EnvCfg(ProfRevisionEnvCfg):
+    """Two-sided finger formation and a one-off arm speed termination cost."""
+
+    rewards: ProfRevisionV1RewardsCfg = ProfRevisionV1RewardsCfg()
+    formation_mode: str = 'distance_angle_sum'

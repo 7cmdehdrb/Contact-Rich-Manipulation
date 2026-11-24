@@ -34,6 +34,23 @@ def initialize_fingers(env):
     env._finger_offsets = torch.tensor(offsets, device=env.device)
 
 
+def distance_angle_formation(gaps, normals_e, toward_center_e, distance_scale):
+    """Per-pad distance times cos² alignment; both sides of a pad are valid.
+
+    Return the components as well as their sum for inspectable diagnostics.
+    Degenerate normals/directions have zero alignment, with safe denominators.
+    """
+    normal_norm = normals_e.norm(dim=-1)
+    direction_norm = toward_center_e.norm(dim=-1)
+    cosine = ((normals_e / normal_norm.clamp_min(1e-8)[..., None]) *
+              (toward_center_e / direction_norm.clamp_min(1e-8)[..., None])).sum(-1)
+    valid = (normal_norm > 1e-8) & (direction_norm > 1e-8)
+    alignment = torch.where(valid, cosine.clamp(-1., 1.).square(), 0.)
+    proximity = distance_scale / (distance_scale + gaps)
+    contribution = proximity * alignment
+    return contribution.sum(-1), proximity, alignment, contribution
+
+
 def update_geometry(env, ids=None):
     # One common path for all fingers; reset only selected rows.
     rows = slice(None) if ids is None else ids
@@ -57,7 +74,16 @@ def update_geometry(env, ids=None):
     local = quat_apply_inverse(rotation[:, None].expand(-1, 5, -1), finger-center[:, None])
     gaps = (local.abs()-env._obb_target_size[rows, None]*.5).clamp_min(0.).norm(dim=-1)
     env._finger_gaps[rows] = gaps
-    env._formation[rows] = env.cfg.formation_distance_scale / (env.cfg.formation_distance_scale+gaps.sum(-1))
+    if getattr(env.cfg, 'formation_mode', None) == 'distance_angle_sum':
+        # relative_quat remains wxyz; the stored observation uses xyzw.
+        pad_z = torch.zeros_like(relative_pos)
+        pad_z[..., 2] = 1.
+        normals_e = quat_apply(relative_quat, pad_z)
+        toward_center_e = quat_apply(inverse, center[:, None]-finger)
+        env._formation[rows] = distance_angle_formation(
+            gaps, normals_e, toward_center_e, env.cfg.formation_distance_scale)[0]
+    else:
+        env._formation[rows] = env.cfg.formation_distance_scale / (env.cfg.formation_distance_scale+gaps.sum(-1))
 
 
 def obb_in_eef(env, positions, rotations, sizes):

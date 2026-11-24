@@ -1,4 +1,4 @@
-from ..reward_functions.stabilize_sweep import sweep_retreat, action_limit_excess
+from ..reward_functions.stabilize_sweep import sweep_retreat, action_limit_excess, arm_joint_failure
 from ..reward_functions.sweep_contact_preference import ContactSideSweepProgress
 from ..reward_functions.prof_revision import reaching, contact_formation
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
@@ -33,3 +33,9 @@ class ProfRevisionRewardsCfg:
     arm_action_limit = RewTerm(func=action_limit_excess, weight=-3., params={'action_group': 'arm', 'max_cost': 10.})
     hand_action_limit = RewTerm(func=action_limit_excess, weight=-3., params={'action_group': 'hand', 'hand_normalized': True, 'max_cost': 10.})
     contact_formation = RewTerm(func=contact_formation, weight=0.245)
+
+
+@configclass
+class ProfRevisionV1RewardsCfg(ProfRevisionRewardsCfg):
+    contact_formation = RewTerm(func=contact_formation, weight=0.3675)
+    arm_joint_failure = RewTerm(func=arm_joint_failure, weight=-3.0)

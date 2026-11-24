@@ -36,3 +36,8 @@ class ProfRevisionPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class ProfRevisionReach5cmPPORunnerCfg(ProfRevisionPPORunnerCfg):
     experiment_name = 'inspire_sweep_prof_revision_reach5cm_v0'
+
+
+@configclass
+class ProfRevisionV1PPORunnerCfg(ProfRevisionPPORunnerCfg):
+    experiment_name = 'inspire_sweep_prof_revision_v1'

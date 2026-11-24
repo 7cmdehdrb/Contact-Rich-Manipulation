@@ -6,6 +6,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--task', choices=('Inspire-Sweep-Prof-Revision-v0', 'Inspire-Sweep-Prof-Revision-v1'),
+                    default='Inspire-Sweep-Prof-Revision-v0')
+parser.add_argument('--checkpoint', type=Path, help='Optional fixed policy for v1 natural arm-cutoff validation.')
 parser.add_argument('--output', type=Path, default=Path('outputs/prof_revision_validation/smoke.json'))
 parser.add_argument('--num-envs', type=int, default=4)
 AppLauncher.add_app_launcher_args(parser)
@@ -20,22 +23,51 @@ def validate():
     from isaaclab_tasks.utils import load_cfg_from_registry
     from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
     from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
-    from inspire_sweep_baseline.mdp.common.prof_revision_geometry import update_geometry
+    from inspire_sweep_baseline.mdp.common.prof_revision_geometry import update_geometry, distance_angle_formation
     from inspire_sweep_baseline.mdp.observation_functions.prof_revision import target_obb_in_eef
-    task = 'Inspire-Sweep-Prof-Revision-v0'
+    task = args.task
+    v1 = task.endswith('-v1')
     cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
+    cfg.log_dir = str(args.output.parent.resolve())
     cfg.scene.num_envs, cfg.seed = args.num_envs, 42
-    assert type(cfg).__bases__ == (ManagerBasedRLEnvCfg,)
+    if v1:
+        from inspire_sweep_baseline.envs.prof_revision_envs import ProfRevisionEnvCfg
+        assert type(cfg).__bases__ == (ProfRevisionEnvCfg,)
+        baseline = ProfRevisionEnvCfg()
+        baseline.scene.num_envs, baseline.seed, baseline.log_dir = args.num_envs, 42, cfg.log_dir
+        a, b = baseline.to_dict(), cfg.to_dict()
+        assert b.pop('formation_mode') == 'distance_angle_sum'
+        assert b['rewards'].pop('arm_joint_failure')['weight'] == -3.
+        assert b['rewards']['contact_formation']['weight'] == .3675
+        b['rewards']['contact_formation']['weight'] = a['rewards']['contact_formation']['weight']
+        assert b == a, 'unexpected v1 environment contract change'
+        reach = load_cfg_from_registry('Inspire-Sweep-Prof-Revision-Reach5cm-v0', 'env_cfg_entry_point')
+        reach.scene.num_envs, reach.seed, reach.log_dir = args.num_envs, 42, cfg.log_dir
+        r = reach.to_dict()
+        assert r['reach_near_radius'] == .05
+        r['reach_near_radius'] = a['reach_near_radius']
+        assert r == a, 'Reach5cm parent behavior drift'
+    else:
+        assert type(cfg).__bases__ == (ManagerBasedRLEnvCfg,)
     runner_cfg = load_cfg_from_registry(task, 'rsl_rl_cfg_entry_point')
     from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_cfg
     from importlib.metadata import version
     runner_cfg = handle_deprecated_rsl_rl_cfg(runner_cfg, version('rsl-rl-lib'))
+    if v1:
+        baseline_runner = load_cfg_from_registry('Inspire-Sweep-Prof-Revision-v0', 'rsl_rl_cfg_entry_point')
+        baseline_runner = handle_deprecated_rsl_rl_cfg(baseline_runner, version('rsl-rl-lib'))
+        a, b = baseline_runner.to_dict(), runner_cfg.to_dict()
+        assert b['experiment_name'] == 'inspire_sweep_prof_revision_v1'
+        b['experiment_name'] = a['experiment_name']
+        assert b == a, 'unexpected v1 PPO change'
     parent = load_cfg_from_registry('Inspire-Sweep-Single-Contact-v0', 'env_cfg_entry_point')
     a, b = parent.to_dict(), cfg.to_dict()
     # Compare function/params/weights, not just final numeric rewards.
     for name in ('sweep_progress', 'sweep_retreat', 'reaching'):
         b['rewards'][name] = a['rewards'][name]
     del b['rewards']['contact_formation']
+    if v1:
+        del b['rewards']['arm_joint_failure']
     assert b['rewards'] == {k:v for k,v in a['rewards'].items() if v is not None}, 'reward contract drift'
     assert b['actions'] == a['actions']
     assert b['commands'] == a['commands']
@@ -75,7 +107,9 @@ def validate():
         for boxes in (obs['policy'][:,60:70], obs['obstacles'].reshape(args.num_envs,16,11)[env._obb_valid][:,1:]):
             torch.testing.assert_close(boxes[:,6:].norm(dim=-1), torch.ones_like(boxes[:,0]))
         assert runner_cfg.actor.encoder_hidden_dims == [128,64,32]
-        assert len(env.reward_manager.active_terms) == 16
+        assert len(env.reward_manager.active_terms) == (17 if v1 else 16)
+        if v1:
+            assert env.reward_manager.active_terms[-1] == 'arm_joint_failure'
         assert not env.curriculum_manager.active_terms
         assert env._obb_target_size.gt(0).all()
         snapshot = env._obb_target_pos_w.clone()
@@ -95,7 +129,19 @@ def validate():
             torch.testing.assert_close(env._finger_pos_w, expected_fingers)
             torch.testing.assert_close(env._stabilize_state.reach_delta, old-env._stabilize_state.reach_excess)
             torch.testing.assert_close(env._obb_target_pos_w, snapshot)
-            assert env._formation.ge(0).all() and env._formation.le(1).all()
+            assert env._formation.ge(0).all() and env._formation.le(5 if v1 else 1).all()
+            if v1:
+                # Independently reconstruct normals and direction in world coordinates.
+                normals_w = quat_apply(robot.body_link_quat_w[:,env._finger_body_ids],
+                                       robot.body_link_pos_w.new_tensor([0.,0.,1.]).expand(args.num_envs,5,3))
+                direction_w = env._obb_live_pos_w[:,None]-env._finger_pos_w
+                raw, proximity, alignment, contribution = distance_angle_formation(
+                    env._finger_gaps,normals_w,direction_w,env.cfg.formation_distance_scale)
+                torch.testing.assert_close(raw,env._formation)
+                formation_index = env.reward_manager.active_terms.index('contact_formation')
+                torch.testing.assert_close(env.reward_manager._step_reward[:,formation_index],.3675*raw)
+                failure_index = env.reward_manager.active_terms.index('arm_joint_failure')
+                assert env.reward_manager._step_reward[:,failure_index].eq(0.).all()
             torch.testing.assert_close(reward, env.reward_manager._step_reward.sum(-1)*env.step_dt)
             rewards.append(float(reward.mean()))
         # Moving only the object must not alter the Actor OBB snapshot.
@@ -141,10 +187,53 @@ def validate():
             scripted = torch.jit.script(export)
             torch.testing.assert_close(scripted(raw), eager)
             assert raw.shape[-1] == 284
+        natural_cutoffs = 0
+        if v1 and args.checkpoint:
+            from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_checkpoint
+            checkpoint = handle_deprecated_rsl_rl_checkpoint(str(args.checkpoint), version('rsl-rl-lib'))
+            runner.load(checkpoint, load_cfg={'actor':True,'critic':True,'optimizer':False,'iteration':False})
+            policy = runner.get_inference_policy(device=env.device)
+            failure_index = env.reward_manager.active_terms.index('arm_joint_failure')
+            # Read rewards/flags BEFORE auto-reset. Fixed v0 policy tests wiring, not v1 performance.
+            original_compute = env.reward_manager.compute
+            terminal_samples = []
+            def capture_reward(dt):
+                reward = original_compute(dt)
+                flags = env.termination_manager.get_term('arm_joint_velocity').clone()
+                cost = env.reward_manager._step_reward[:,failure_index]*dt
+                torch.testing.assert_close(cost,-3.*flags.float())
+                robot = env.scene['robot']
+                ids = env.termination_manager.get_term_cfg('arm_joint_velocity').params['asset_cfg'].joint_ids
+                max_speed = robot.data.joint_vel[:,ids].abs().amax(-1)
+                assert torch.equal(flags,max_speed>1.)
+                torch.testing.assert_close(reward,env.reward_manager._step_reward.sum(-1)*dt)
+                terminal_samples.append((flags.clone(),cost.clone(),max_speed.clone()))
+                return reward
+            env.reward_manager.compute = capture_reward
+            try:
+                with torch.inference_mode():
+                    observations,_ = wrapped.reset()
+                    for _ in range(220):
+                        observations,reward,done,info = wrapped.step(policy(observations))
+                        assert all(torch.isfinite(v).all() for v in observations.values())
+                        assert torch.isfinite(reward).all()
+                        natural_cutoffs += int(terminal_samples[-1][0].sum())
+                        if natural_cutoffs >= args.num_envs:
+                            break
+                assert natural_cutoffs >= args.num_envs, 'no natural arm cutoffs observed'
+            finally:
+                env.reward_manager.compute = original_compute
         result = dict(task=task, num_envs=args.num_envs, steps=12, reward_mean=rewards,
                       policy_dim=108, obstacle_dim=176, latent_dim=124,
                       partial_reset=True, automatic_timeout=True, frozen_actor=True,
                       tracked_obb=True, jit_export=True, finger_frames_eef=finger_frame_snapshot)
+        if v1:
+            result.update(reward_terms=env.reward_manager.active_terms,
+                          full_parent_cfg_equal_except_requested=True, reach5cm_preserved=True,
+                          formation_weight=.3675, formation_distance=proximity.cpu().tolist(),
+                          formation_angle=alignment.cpu().tolist(), formation_contribution=contribution.cpu().tolist(),
+                          natural_arm_cutoffs=natural_cutoffs,
+                          cutoff_checkpoint=str(args.checkpoint) if args.checkpoint else None)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2)+'\n')
         print('PROF_REVISION_SMOKE_PASSED '+str(args.output), flush=True)

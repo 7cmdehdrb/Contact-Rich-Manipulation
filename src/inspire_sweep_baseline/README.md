@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-24: **`Inspire-Sweep-Prof-Revision-v1`**은 Prof Revision v0 직접 자식이다. 팔 속도 종료 일회−3.0을 추가하고 Formation을 손가락별 거리 점수×코사인 제곱의 합으로 변경했다(weight0.3675). Reach10cm·면 선호·관측·제어·종료·PPO 수치를 상속한다. CPU58개·GPU4환경 smoke·16환경 PPO1회 업데이트 통과, 장기 행동 개선은 미검증이다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v1) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v1_implementation.md).
+
 2026-11-24: **`Inspire-Sweep-Prof-Revision-Reach5cm-v0`**는 Prof Revision v0 직접 자식이며 Reaching 허용 반경만10→5cm로 변경한다. 나머지 환경 동작과 PPO 수치는 상속하고 로그 이름만 분리한다. GPU·Sim·학습 없이 정적 검사만 수행했다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#reach5cm-v0).
 
 2026-11-23: **`Inspire-Sweep-Prof-Revision-v0`** 독립 환경을 추가했다. 초기 가시 OBB·손끝 Pose·증분 Reach·Contact Formation·Sweep100/−20을 사용하며 EEF 높이 접촉 gate를 제거한다. 2026-11-24 정정으로 EEF→손 관절6D→손끝35D 순서를 적용하고 타겟·장애물 OBB 방향을 xyzw quaternion으로 변경했다. 직접108D·장애물176D·encoder176→128→64→32→16·action12D, 기존 계통 checkpoint는 새 입력과 호환되지 않는다. [환경 계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md) · [검증 결과](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-23_prof_revision_v0_implementation.md).

@@ -11,6 +11,106 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]/'inspire_sweep_baseline'
 
 
+@pytest.fixture
+def geometry(load_mdp):
+    import importlib
+    return importlib.import_module('_baseline_cpu_pkg.mdp.common.prof_revision_geometry')
+
+
+@pytest.mark.parametrize('angle,expected', [(0,1.),(45,.5),(90,0.),(-90,0.),(135,.5),(180,1.)])
+def test_v1_pad_angle_curve_and_sum(geometry, angle, expected):
+    radians = math.radians(angle)
+    normal = torch.tensor([[[0.,0.,1.]]]).expand(2,5,-1)
+    toward = torch.tensor([[[math.sin(radians),0.,math.cos(radians)]]]).expand(2,5,-1)
+    gaps = torch.tensor([[0.,.05,.1,.15,.2]]).expand(2,-1)
+    total, proximity, alignment, contribution = geometry.distance_angle_formation(gaps,normal,toward,.05)
+    torch.testing.assert_close(proximity,torch.tensor([[1.,.5,1/3,.25,.2]]).expand(2,-1))
+    torch.testing.assert_close(alignment,torch.full((2,5),expected),atol=1e-6,rtol=1e-6)
+    torch.testing.assert_close(total,contribution.sum(-1))
+    torch.testing.assert_close(total,proximity.sum(-1)*expected,atol=1e-6,rtol=1e-6)
+    flipped = geometry.distance_angle_formation(gaps,-normal*3.,toward*7.,.05)[0]
+    torch.testing.assert_close(flipped,total,atol=1e-6,rtol=1e-6)
+
+
+def test_v1_per_finger_pairing_degenerate_vectors_and_maximum(geometry):
+    normal = torch.tensor([[[0.,0.,1.]]]).expand(1,5,-1).clone()
+    toward = normal.clone()
+    # Only the distant second finger aligns; close fingers cannot lend it their distance score.
+    toward[:,[0,2,3,4]] = torch.tensor([1.,0.,0.])
+    total,*_ = geometry.distance_angle_formation(torch.tensor([[0.,.05,0.,0.,0.]]),normal,toward,.05)
+    assert total.item() == pytest.approx(.5)
+    toward = normal.clone()
+    toward[:,0] = 0.
+    toward[:,1] *= 1e-8
+    normal[:,2] = 0.
+    normal[:,3] *= 1e-9
+    total,_,alignment,_ = geometry.distance_angle_formation(torch.zeros(1,5),normal,toward,.05)
+    torch.testing.assert_close(alignment,torch.tensor([[0.,0.,0.,0.,1.]]))
+    assert total.item() == 1. and torch.isfinite(total).all()
+    normal = torch.tensor([[[0.,0.,1.]]]).expand(1,5,-1)
+    total,*_ = geometry.distance_angle_formation(torch.zeros(1,5),normal,normal,.05)
+    assert total.item() == 5.
+    assert (.3675*.02*total).item() == pytest.approx(.03675)
+
+
+def test_v1_geometry_uses_live_center_pad_origin_full3d_and_partial_reset(geometry):
+    identity = torch.tensor([1.,0.,0.,0.])
+    finger = torch.tensor([[[0.,0.,-.5],[0.,0.,.5],[.5,0.,0.],[.6,0.,-.8],[0.,0.,0.]]]).expand(2,-1,-1).clone()
+    data = SimpleNamespace(body_link_pos_w=finger.clone(),body_link_quat_w=identity.expand(2,5,4).clone())
+    env = SimpleNamespace(cfg=SimpleNamespace(formation_distance_scale=.05,formation_mode='distance_angle_sum'),scene={
+        'robot':SimpleNamespace(data=data),
+        'ee_frame':SimpleNamespace(data=SimpleNamespace(target_pos_w=torch.zeros(2,1,3),target_quat_w=identity.expand(2,1,4).clone())),
+        'object_collection':SimpleNamespace(data=SimpleNamespace(object_link_pos_w=torch.zeros(2,1,3),object_link_quat_w=identity.expand(2,1,4).clone()))},
+        _finger_body_ids=torch.arange(5),_finger_offsets=torch.zeros(5,3),
+        _finger_pos_w=torch.zeros(2,5,3),_finger_pose_e=torch.zeros(2,5,7),
+        _obb_target_local_pos=torch.zeros(2,3),_obb_target_local_quat=identity.expand(2,4).clone(),
+        _obb_target_pos_w=torch.full((2,3),100.),  # frozen Actor snapshot must be ignored
+        _obb_target_size=torch.ones(2,3),_obb_live_pos_w=torch.zeros(2,3),_obb_live_quat_w=identity.expand(2,4).clone(),
+        _finger_gaps=torch.zeros(2,5),_formation=torch.zeros(2))
+    geometry.update_geometry(env)
+    # First two lie on +/-Z faces; third is perpendicular; fourth cos²=.64; center is undefined.
+    expected = 2.+.05/(.05+math.sqrt(.1**2+.3**2))*.64
+    torch.testing.assert_close(env._formation,torch.full((2,),expected))
+    original = env._formation.clone()
+    # Changing the EEF frame only must not change the score.
+    frame = env.scene['ee_frame'].data
+    frame.target_quat_w[:] = torch.tensor([math.cos(.4),0.,math.sin(.4),0.])
+    frame.target_pos_w[:] = torch.tensor([1.,2.,3.])
+    geometry.update_geometry(env)
+    torch.testing.assert_close(env._formation,original)
+    # Rotate/translate the entire physical geometry in 3D, independently of EEF.
+    q = torch.tensor([math.cos(.3),math.sin(.3),0.,0.])
+    shift = torch.tensor([.3,-.4,.2])
+    data.body_link_pos_w[:] = geometry.quat_apply(q.expand(2,5,4),finger)+shift
+    data.body_link_quat_w[:] = q
+    obj = env.scene['object_collection'].data
+    obj.object_link_pos_w[:] = shift
+    obj.object_link_quat_w[:] = q
+    geometry.update_geometry(env)
+    torch.testing.assert_close(env._formation,original)
+    # Select one row; all other cached geometry and reward values remain unchanged.
+    before = {k:v[1:].clone() for k,v in vars(env).items() if k.startswith(('_finger_','_formation','_obb_live')) and isinstance(v,torch.Tensor)}
+    obj.object_link_pos_w[0,0,2] += .3
+    geometry.update_geometry(env,torch.tensor([0]))
+    for k,v in before.items():
+        torch.testing.assert_close(getattr(env,k)[1:],v)
+    assert not torch.isclose(env._formation[0],original[0])
+
+
+@pytest.mark.parametrize('dt',[.01,.02,.05])
+def test_v1_failure_event_cost_reads_existing_flag_and_cancels_dt(load_mdp, dt):
+    import importlib
+    reward = importlib.import_module('_baseline_cpu_pkg.mdp.reward_functions.stabilize_sweep')
+    flags = torch.tensor([False,True,True,False])
+    calls = []
+    def get_term(name):
+        calls.append(name)
+        return flags
+    env = SimpleNamespace(termination_manager=SimpleNamespace(get_term=get_term),step_dt=dt)
+    torch.testing.assert_close(-3.*dt*reward.arm_joint_failure(env),torch.tensor([0.,-3.,-3.,0.]))
+    assert calls == ['arm_joint_velocity']
+
+
 def load_file(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
