@@ -88,6 +88,34 @@ def test_dense_packing_counts_clearance_and_reproducibility(layout_module):
             assert gaps.max()>=.01-1e-6
 
 
+def test_sparse_layouts_use_free_area_instead_of_packing_into_corners(layout_module):
+    if not torch.cuda.is_available():
+        pytest.skip('CUDA unavailable')
+    # A single obstacle has ample legal interior area. Across independent
+    # scenes it must explore that area, rather than always touching two walls.
+    bounds=torch.tensor([[-.02,-.02,0.],[.02,.02,.10]],device='cuda').expand(2048,17,2,3).clone()
+    layout=layout_module.ProfRevisionHardLayout(bounds,torch.ones(2048,17,device='cuda'),cell_size=.01)
+    local,_,active,_,requested=layout.sample(torch.arange(2048,device='cuda'),
+        torch.Generator(device='cuda').manual_seed(71))
+    singles=requested==1
+    centers=local[singles,1:,:2][active[singles,1:]]
+    assert len(centers)>100
+    wall_gap=(centers.new_tensor([.2,.5])-centers.abs()-.02).amin(-1)
+    interior_fraction=float((wall_gap>.04).float().mean())
+    assert interior_fraction>.40, f'Only {interior_fraction:.1%} of sparse scenes use the free interior'
+    # With several objects, nearest neighbors should not predominantly share
+    # the same shelf X/Y line. Ignore the target and inactive parking bodies.
+    group=requested>=5
+    obstacles=active[group].clone();obstacles[:,0]=False
+    difference=(local[group,:,None,:2]-local[group,None,:,:2]).abs()
+    distance=difference.norm(dim=-1)
+    pairs=obstacles[:,:,None]&obstacles[:,None,:]&~torch.eye(17,device='cuda',dtype=torch.bool)[None]
+    distance.masked_fill_(~pairs,float('inf'))
+    near=difference.gather(2,distance.argmin(-1)[...,None,None].expand(-1,-1,1,2)).squeeze(2)
+    aligned_fraction=float((near.amin(-1)[obstacles]<.01).float().mean())
+    assert aligned_fraction<.25, f'{aligned_fraction:.1%} of neighbors still form axis-aligned rows'
+
+
 @pytest.mark.parametrize('device',['cuda'])
 def test_eleven_source_observer_matches_independent_polygon_reference(device):
     if device=='cuda' and not torch.cuda.is_available():

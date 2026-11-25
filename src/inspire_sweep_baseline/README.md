@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-25 후속: **`Inspire-Sweep-Prof-Revision-Hard-v0_3` 장애물 분산 배치 수정**. 코너·일렬 채움을 객체별 무작위 셀 우선순위로 바꾸고 기존 접근·밀기 공간·상호/벽1cm 여유·0–10개를 유지했다.37개 검사·64환경 reset/step·수정 전후 각각206,848배치 검증 통과,2048행 중앙값2.72→2.74ms. [계약·배치 비교](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3) · [수정·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-25_prof_revision_hard_v0_3_implementation.md#후속-장애물-분산-배치-수정).
+
 2026-11-24 후속: **Prof Revision v0_3** 추가. v0 직접 자식, 면 계수1 통일·팔 관절 속도 종료 제거·UR5e 마지막 링크 `wrist_3_link` 원점의 선속도 >=4m/s 실패 종료. EEF offset 속도와 구분하며 새로운 비용은 추가하지 않는다. 나머지 부모 구성 보존. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_3_implementation.md).
 
 2026-11-24: **`Inspire-Sweep-Prof-Revision-v0_2`**는 v0 직접 자식이다. Sweep 면 계수를1로 통일하고, 최대 팔 속도0.8–1.0 rad/s 구간의 제곱 비용(weight−3.0)과 팔 속도 종료 사건 비용−3을 추가한다. Formation·관측·제어·종료·PPO 수치를 상속한다. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_2) · [검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_2_implementation.md).

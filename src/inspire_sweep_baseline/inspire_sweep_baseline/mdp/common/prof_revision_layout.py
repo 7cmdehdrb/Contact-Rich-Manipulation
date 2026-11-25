@@ -1,4 +1,4 @@
-"""Hard Revision: uncapped, shape-safe goals and dense box packing."""
+"""Hard Revision: uncapped, shape-safe goals and randomized box placement."""
 import math
 import torch
 from .wrench_refactor_layout import CircleResetLayout
@@ -9,8 +9,9 @@ from types import SimpleNamespace
 class ProfRevisionHardLayout(CircleResetLayout):
     """Ten-slot box exclusion on a cached 4,000-cell shelf grid.
 
-    Largest-first insertion and bounded rank restarts reuse the same goal/count,
-    physical geometry and exclusion distances. No scene traversal or recooking.
+    Independent cell priorities scatter boxes throughout the legal free area.
+    Largest-first insertion and bounded retries retain goal/count, physical
+    geometry and exclusion distances. No scene traversal or recooking.
     """
     obstacle_capacity = 10
     sample_batch_size = 512
@@ -132,9 +133,6 @@ int choices[128], chosen;
 bool complete;
 #endif
 const int count=wp::index(requested,row);
-// A random corner packs the free region densely; rank restarts rotate it.
-const float angle=6.28318530718f*wp::index(draws,row,0,0);
-const float ux=cosf(angle), uy=sinf(angle);
 if(lane==0){complete=true;
     for(int k=0;k<10;++k){wp::index(indices,row,k)=0;wp::index(output_enabled,row,k)=false;}
     wp::index(output_failed,row)=-1;}
@@ -143,6 +141,7 @@ __syncthreads();
 #endif
 for(int slot=0;slot<count;++slot){
     const float hx=wp::index(half,row,slot,0), hy=wp::index(half,row,slot,1);
+    const unsigned int seed=(unsigned int)(wp::index(draws,row,slot,0)*16777216.0f);
     float best=1.0e30f;int best_cell=-1;
     for(int cell=lane;cell<points.shape[0];cell+=lanes){
         const float x=wp::index(points,cell,0),y=wp::index(points,cell,1);
@@ -163,7 +162,13 @@ for(int slot=0;slot<count;++slot){
             ok=ok&&(dx>=hx+wp::index(half,row,previous,0)+clearance+cell_margin
                  ||dy>=hy+wp::index(half,row,previous,1)+clearance+cell_margin);
         }
-        const float score=ux*x+uy*y;
+        // Hash ranks are independent of XY direction and change per box.
+        // The minimum over legal cells samples the area, not an extreme corner.
+        unsigned int rank=(unsigned int)cell+0x9e3779b9u*(seed+1u);
+        rank=(rank^(rank>>16))*0x7feb352du;
+        rank=(rank^(rank>>15))*0x846ca68bu;
+        rank=rank^(rank>>16);
+        const float score=(float)rank;
         if(ok&&(score<best||(score==best&&cell<best_cell))){best=score;best_cell=cell;}
     }
     scores[lane]=best;choices[lane]=best_cell;
