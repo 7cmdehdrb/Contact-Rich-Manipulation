@@ -8,7 +8,7 @@ import torch
 import warp as wp
 
 
-@wp.func_native(r'''
+_OBSERVER_CODE = r'''
 const int row = task;
 double polygon[7][4][2], box[7][7];
 int source[7], n = 0;
@@ -120,7 +120,10 @@ for(int a=0;a<n;++a) {
 }
 if(best_width<0.0)wp::index(status, row)=1;
 else if(obstacle_count>16)wp::index(status, row)=2;
-''')
+'''
+
+
+@wp.func_native(_OBSERVER_CODE)
 def _observe_scene(task: int, boxes: wp.array3d(dtype=float), active: wp.array2d(dtype=bool),
                    min_width: float, min_ratio: float, target: wp.array2d(dtype=float),
                    obstacles: wp.array3d(dtype=float), valid: wp.array2d(dtype=bool),
@@ -157,4 +160,60 @@ def observe_batch(boxes, active, minimum_width=.02, minimum_ratio=.20):
             wp.from_torch(target), wp.from_torch(obstacles), wp.from_torch(valid), wp.from_torch(sources), wp.from_torch(status)]
     stream = wp.stream_from_torch(torch.cuda.current_stream(device)) if boxes.is_cuda else None
     wp.launch(_observe, dim=n, inputs=args, device=str(device), stream=stream)
+    return target, obstacles, valid, sources, status
+
+
+# Eleven sources need 44 edge cuts plus C(44,2) crossings (990).
+# Keep the widest 16 obstacle fragments on overflow; physical bodies stay active.
+_HARD_OBSERVER_CODE = (_OBSERVER_CODE
+    .replace('[7][4][2]', '[11][4][2]').replace('box[7][7]', 'box[11][7]')
+    .replace('source[7]', 'source[11]').replace('n >= 7', 'n >= 11')
+    .replace('[406]', '[990]').replace('[405]', '[989]')
+    .replace('int obstacle_count=0;', 'double widths[16]; int obstacle_count=0;')
+    .replace(r'''if(obstacle_count<16){for(int k=0;k<7;++k)wp::index(obstacles, row,obstacle_count,k)=(float)result[k];
+                wp::index(valid, row,obstacle_count)=true;wp::index(sources, row,obstacle_count)=source[a];}''', r'''int index=obstacle_count;
+            if(index>=16){index=0;for(int k=1;k<16;++k)if(widths[k]<widths[index])index=k;
+                if(width<=widths[index]){++obstacle_count;continue;}}
+            widths[index]=width;
+            for(int k=0;k<7;++k)wp::index(obstacles, row,index,k)=(float)result[k];
+            wp::index(valid, row,index)=true;wp::index(sources, row,index)=source[a];'''))
+
+
+@wp.func_native(_HARD_OBSERVER_CODE)
+def _observe_hard_scene(task: int, boxes: wp.array3d(dtype=float), active: wp.array2d(dtype=bool),
+                   min_width: float, min_ratio: float, target: wp.array2d(dtype=float),
+                   obstacles: wp.array3d(dtype=float), valid: wp.array2d(dtype=bool),
+                   sources: wp.array2d(dtype=wp.int64), status: wp.array(dtype=int)):
+    ...
+
+
+@wp.kernel(enable_backward=False)
+def _observe_hard(boxes: wp.array3d(dtype=float), active: wp.array2d(dtype=bool),
+             min_width: float, min_ratio: float, target: wp.array2d(dtype=float),
+             obstacles: wp.array3d(dtype=float), valid: wp.array2d(dtype=bool),
+             sources: wp.array2d(dtype=wp.int64), status: wp.array(dtype=int)):
+    _observe_hard_scene(wp.tid(), boxes, active, min_width, min_ratio, target, obstacles, valid, sources, status)
+
+
+_observe_hard.module.options['fuse_fp'] = False
+
+
+def observe_hard_batch(boxes, active, minimum_width=.02, minimum_ratio=.20):
+    """[B,17,7] shelf-local bounds -> target, obstacles, validity, source, status.
+
+    Status: 0=valid, 1=missing target, 2=slot overflow, 3=roster violation.
+    """
+    if boxes.shape[1:] != (17, 7) or active.shape != boxes.shape[:2]:
+        raise ValueError('Expected boxes[B,17,7] and active[B,17]')
+    wp.init()
+    n, device = len(boxes), boxes.device
+    target = boxes.new_zeros(n, 7)
+    obstacles = boxes.new_zeros(n, 16, 7)
+    valid = torch.zeros((n, 16), device=device, dtype=torch.bool)
+    sources = torch.full((n, 16), -1, device=device, dtype=torch.long)
+    status = torch.zeros(n, device=device, dtype=torch.int32)
+    args = [wp.from_torch(boxes.contiguous()), wp.from_torch(active.contiguous()), minimum_width, minimum_ratio,
+            wp.from_torch(target), wp.from_torch(obstacles), wp.from_torch(valid), wp.from_torch(sources), wp.from_torch(status)]
+    stream = wp.stream_from_torch(torch.cuda.current_stream(device)) if boxes.is_cuda else None
+    wp.launch(_observe_hard, dim=n, inputs=args, device=str(device), stream=stream)
     return target, obstacles, valid, sources, status

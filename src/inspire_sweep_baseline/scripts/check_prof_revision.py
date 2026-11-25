@@ -7,11 +7,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--task', choices=('Inspire-Sweep-Prof-Revision-v0', 'Inspire-Sweep-Prof-Revision-v1',
-                                      'Inspire-Sweep-Prof-Revision-v0_1', 'Inspire-Sweep-Prof-Revision-v0_2', 'Inspire-Sweep-Prof-Revision-v0_3'),
+                                      'Inspire-Sweep-Prof-Revision-v0_1', 'Inspire-Sweep-Prof-Revision-v0_2', 'Inspire-Sweep-Prof-Revision-v0_3',
+                                      'Inspire-Sweep-Prof-Revision-v0_3_1'),
                     default='Inspire-Sweep-Prof-Revision-v0')
 parser.add_argument('--checkpoint', type=Path, help='Optional fixed policy for child-task natural arm-cutoff validation.')
 parser.add_argument('--output', type=Path, default=Path('outputs/prof_revision_validation/smoke.json'))
 parser.add_argument('--num-envs', type=int, default=4)
+parser.add_argument('--parent-source', type=Path, help='Optional pre-change EnvCfg source for v0_3_1 parent preservation audit.')
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -30,23 +32,45 @@ def validate():
     v1 = task.endswith('-v1')
     failure_only = task.endswith('-v0_1')
     margin_task = task.endswith('-v0_2')
-    tcp_task = task.endswith('-v0_3')
+    angle_task = task.endswith('-v0_3_1')
+    tcp_task = task.endswith('-v0_3') or angle_task
     child = v1 or failure_only or margin_task or tcp_task
     cfg = load_cfg_from_registry(task, 'env_cfg_entry_point')
     cfg.log_dir = str(args.output.parent.resolve())
     cfg.scene.num_envs, cfg.seed = args.num_envs, 42
     if child:
         from inspire_sweep_baseline.envs.prof_revision_envs import ProfRevisionEnvCfg
-        assert type(cfg).__bases__ == (ProfRevisionEnvCfg,)
+        if angle_task:
+            from inspire_sweep_baseline.envs.prof_revision_envs import ProfRevisionV0_3EnvCfg
+            assert type(cfg).__bases__ == (ProfRevisionV0_3EnvCfg,)
+            if args.parent_source:
+                import types
+                original = types.ModuleType('inspire_sweep_baseline.envs._pre_v0_3_1')
+                original.__package__ = 'inspire_sweep_baseline.envs'
+                sys.modules[original.__name__] = original
+                exec(compile(args.parent_source.read_text(encoding='utf-8'), str(args.parent_source), 'exec'), original.__dict__)
+                assert original.ProfRevisionV0_3EnvCfg().to_dict() == ProfRevisionV0_3EnvCfg().to_dict()
+            direct_parent_cfg = ProfRevisionV0_3EnvCfg()
+            direct_parent_cfg.log_dir = cfg.log_dir
+            direct_parent_cfg.scene.num_envs, direct_parent_cfg.seed = args.num_envs, 42
+            direct_parent = direct_parent_cfg.to_dict()
+            only_angle = cfg.to_dict()
+            assert only_angle.pop('formation_mode') == 'distance_angle_sum'
+            assert only_angle == direct_parent, 'v0_3_1 must change only the finger formation mode'
+        else:
+            assert type(cfg).__bases__ == (ProfRevisionEnvCfg,)
         baseline = ProfRevisionEnvCfg()
         baseline.scene.num_envs, baseline.seed, baseline.log_dir = args.num_envs, 42, cfg.log_dir
         a, b = baseline.to_dict(), cfg.to_dict()
+        if angle_task:
+            assert b.pop('formation_mode') == 'distance_angle_sum'
         if v1:
             assert b.pop('formation_mode') == 'distance_angle_sum'
             assert b['rewards']['contact_formation']['weight'] == .3675
             b['rewards']['contact_formation']['weight'] = a['rewards']['contact_formation']['weight']
         else:
-            assert not hasattr(cfg, 'formation_mode')
+            if not angle_task:
+                assert not hasattr(cfg, 'formation_mode')
             assert b['rewards']['contact_formation'] == a['rewards']['contact_formation']
         if not tcp_task:
             assert b['rewards'].pop('arm_joint_failure')['weight'] == -3.
@@ -86,7 +110,7 @@ def validate():
         baseline_runner = load_cfg_from_registry('Inspire-Sweep-Prof-Revision-v0', 'rsl_rl_cfg_entry_point')
         baseline_runner = handle_deprecated_rsl_rl_cfg(baseline_runner, version('rsl-rl-lib'))
         a, b = baseline_runner.to_dict(), runner_cfg.to_dict()
-        assert b['experiment_name'] == 'inspire_sweep_prof_revision_' + ('v1' if v1 else 'v0_2' if margin_task else 'v0_3' if tcp_task else 'v0_1')
+        assert b['experiment_name'] == 'inspire_sweep_prof_revision_' + ('v0_3_1' if angle_task else 'v1' if v1 else 'v0_2' if margin_task else 'v0_3' if tcp_task else 'v0_1')
         b['experiment_name'] = a['experiment_name']
         assert b == a, 'unexpected child PPO change'
     parent = load_cfg_from_registry('Inspire-Sweep-Single-Contact-v0', 'env_cfg_entry_point')
@@ -161,13 +185,13 @@ def validate():
             torch.testing.assert_close(env._finger_pos_w, expected_fingers)
             torch.testing.assert_close(env._stabilize_state.reach_delta, old-env._stabilize_state.reach_excess)
             torch.testing.assert_close(env._obb_target_pos_w, snapshot)
-            assert env._formation.ge(0).all() and env._formation.le(5 if v1 else 1).all()
-            if failure_only or margin_task or tcp_task:
+            assert env._formation.ge(0).all() and env._formation.le(5 if v1 or angle_task else 1).all()
+            if (failure_only or margin_task or tcp_task) and not angle_task:
                 expected = .05 / (.05 + env._finger_gaps.sum(-1))
                 torch.testing.assert_close(env._formation, expected)
                 idx = env.reward_manager.active_terms.index('contact_formation')
                 torch.testing.assert_close(env.reward_manager._step_reward[:,idx], .245*expected)
-            if v1:
+            if v1 or angle_task:
                 # Independently reconstruct normals and direction in world coordinates.
                 normals_w = quat_apply(robot.body_link_quat_w[:,env._finger_body_ids],
                                        robot.body_link_pos_w.new_tensor([0.,0.,1.]).expand(args.num_envs,5,3))
@@ -176,9 +200,13 @@ def validate():
                     env._finger_gaps,normals_w,direction_w,env.cfg.formation_distance_scale)
                 torch.testing.assert_close(raw,env._formation)
                 formation_index = env.reward_manager.active_terms.index('contact_formation')
-                torch.testing.assert_close(env.reward_manager._step_reward[:,formation_index],.3675*raw)
-                failure_index = env.reward_manager.active_terms.index('arm_joint_failure')
-                assert env.reward_manager._step_reward[:,failure_index].eq(0.).all()
+                torch.testing.assert_close(env.reward_manager._step_reward[:,formation_index],(.245 if angle_task else .3675)*raw)
+                if v1:
+                    failure_index = env.reward_manager.active_terms.index('arm_joint_failure')
+                    assert env.reward_manager._step_reward[:,failure_index].eq(0.).all()
+                else:
+                    assert 'arm_joint_failure' not in env.reward_manager.active_terms
+                    assert 'arm_joint_velocity_margin' not in env.reward_manager.active_terms
             if margin_task:
                 ids = env.termination_manager.get_term_cfg('arm_joint_velocity').params['asset_cfg'].joint_ids
                 speed = robot.joint_vel[:,ids].abs().amax(-1)
@@ -344,6 +372,11 @@ def validate():
         if tcp_task:
             result.update(tcp_body='wrist_3_link', tcp_threshold=4., tcp_boundary_checks=tcp_checks,
                           termination_terms=env.termination_manager.active_terms)
+        if angle_task:
+            result.update(formation_mode='distance_angle_sum', formation_weight=.245,
+                          formation_distance=proximity.cpu().tolist(), formation_angle=alignment.cpu().tolist(),
+                          formation_contribution=contribution.cpu().tolist(), no_added_joint_event_cost=True,
+                          parent_matches_prechange=True if args.parent_source else None)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2)+'\n')
         print('PROF_REVISION_SMOKE_PASSED '+str(args.output), flush=True)

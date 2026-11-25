@@ -2,13 +2,13 @@
 from isaaclab.envs import ManagerBasedRLEnvCfg, ViewerCfg
 from isaaclab.utils import configclass
 from ..assets.robot import ARM_JOINT_NAMES
-from ..assets.scenes.prof_revision import ProfRevisionSceneCfg
+from ..assets.scenes.prof_revision import ProfRevisionSceneCfg, ProfRevisionHardSceneCfg
 from ..mdp.actions.prof_revision import ProfRevisionActionsCfg, ProfRevisionOSCActionCfg
 from ..mdp.observations.prof_revision import ProfRevisionObservationsCfg
 from ..mdp.commands.prof_revision import ProfRevisionCommandsCfg
 from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg, ProfRevisionV0_1RewardsCfg, ProfRevisionV0_2RewardsCfg, ProfRevisionV0_3RewardsCfg
 from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg, ProfRevisionV0_3TerminationsCfg
-from ..mdp.events.prof_revision import ProfRevisionEventsCfg
+from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
@@ -87,8 +87,8 @@ class ProfRevisionEnvCfg(ManagerBasedRLEnvCfg):
         self.scene.robot.actuators['hand'].velocity_limit_sim = 1.0
         self.scene.robot.actuators['arm'].velocity_limit_sim = dict.fromkeys(ARM_JOINT_NAMES, 3.14)
         self.scene.robot.actuators['arm'].effort_limit_sim = dict(zip(ARM_JOINT_NAMES, (150.0, 150.0, 150.0, 28.0, 28.0, 28.0)))
-        if self.max_obstacles != 6 or self.reset_ik_backend != 'warp':
-            raise ValueError('Fast reset requires max_obstacles=6 and Warp IK')
+        if self.max_obstacles != self._layout_capacity() or self.reset_ik_backend != 'warp':
+            raise ValueError(f'Fast reset requires max_obstacles={self._layout_capacity()} and Warp IK')
         self.max_gray_obstacles = self.max_white_obstacles = None
         self.gray_padding = self.red_margin = self.rear_offset = None
 
@@ -106,6 +106,9 @@ class ProfRevisionEnvCfg(ManagerBasedRLEnvCfg):
         self.observations.policy.wrist_wrench.scale = tuple(
             1.0 / bound for bound in self.wrist_wrench_observation_limits
         )
+
+    def _layout_capacity(self):
+        return 6
 
 
 @configclass
@@ -149,3 +152,23 @@ class ProfRevisionV0_3EnvCfg(ProfRevisionEnvCfg):
 
     rewards: ProfRevisionV0_3RewardsCfg = ProfRevisionV0_3RewardsCfg()
     terminations: ProfRevisionV0_3TerminationsCfg = ProfRevisionV0_3TerminationsCfg()
+
+
+@configclass
+class ProfRevisionHardV0_3EnvCfg(ProfRevisionV0_3EnvCfg):
+    """Shelf-limited goals, ten obstacles and all eight cooked target shapes."""
+
+    scene: ProfRevisionHardSceneCfg = ProfRevisionHardSceneCfg(num_envs=2048, env_spacing=2.5)
+    events: ProfRevisionHardEventsCfg = ProfRevisionHardEventsCfg()
+    max_obstacles: int = 10
+    layout_cell_size: float = .01
+
+    def _layout_capacity(self):
+        return 10
+
+
+@configclass
+class ProfRevisionV0_3_1EnvCfg(ProfRevisionV0_3EnvCfg):
+    """v0_3 with v1's finger distance/angle sum and the parent's reward weight."""
+
+    formation_mode: str = 'distance_angle_sum'

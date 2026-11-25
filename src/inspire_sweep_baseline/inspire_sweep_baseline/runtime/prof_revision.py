@@ -18,8 +18,8 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
         self._timeout_outcomes = _RecentEpisodeOutcomes(cfg.timeout_metric_window, cfg.sim.device)
         count, device = cfg.scene.num_envs, cfg.sim.device
         fast = getattr(cfg, 'reset_ik_backend', None) == 'warp'
-        if fast and (cfg.max_obstacles != 6 or cfg.obstacle_observation_slots != 16):
-            raise ValueError('Fast reset requires six obstacles and sixteen observation slots')
+        if fast and (cfg.max_obstacles != cfg._layout_capacity() or cfg.obstacle_observation_slots != 16):
+            raise ValueError('Fast reset requires the configured layout capacity and sixteen observation slots')
         self._obb_target_pos_w = torch.zeros((count, 3), device=device)
         self._obb_target_quat_w = torch.zeros((count, 4), device=device)
         self._obb_target_quat_w[:, 0] = 1.

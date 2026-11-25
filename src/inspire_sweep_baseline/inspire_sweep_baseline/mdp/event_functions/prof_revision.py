@@ -6,21 +6,24 @@ from .wrench_refactor_relative_ik_test import fast_reset_scene
 from .wrench_refactor import apply_fixed_pool_gravity_mask
 from ..common.stabilize_sweep_layout import configure_test_layout_batch, test_inactive_positions
 from ..common.stabilize_sweep_contact import cache_static_local_com
-from ..common.prof_revision_obb_gpu import observe_batch
+from ..common.prof_revision_obb_gpu import observe_batch, observe_hard_batch
 
 
-def _snapshot(env, ids, local, yaw, active, shelf_state):
+def _snapshot(env, ids, local, yaw, active, shelf_state, *, hard=False):
     bounds = env._revision_bounds_t[ids]
     rotations = torch.zeros((*yaw.shape, 4), device=env.device)
     rotations[..., 0], rotations[..., 3] = (yaw/2).cos(), (yaw/2).sin()
     centers = local+quat_apply(rotations, bounds.mean(-2))
     boxes = torch.cat((centers, bounds[..., 1, :]-bounds[..., 0, :], yaw[..., None]), -1)
-    target, obstacles, valid, source_slots, status = observe_batch(
+    observer = observe_hard_batch if hard else observe_batch
+    target, obstacles, valid, source_slots, status = observer(
         boxes, active, env.cfg.obb_minimum_width, env.cfg.obb_minimum_ratio)
     target_missing, overflow = status == 1, status == 2
-    failed = target_missing | overflow
+    failed = target_missing if hard else target_missing | overflow
     if bool((status == 3).any()):
-        raise RuntimeError('Prof Revision observer supports at most seven active sources')
+        raise RuntimeError('Prof Revision observer active-source capacity exceeded')
+    if hard and bool(target_missing.any()):
+        raise RuntimeError(f'Hard layout occluded its target: envs={ids[target_missing].tolist()}')
     if bool(failed.any()):
         active[failed, 1:] = False
         fallback = observe_batch(boxes[failed], active[failed], env.cfg.obb_minimum_width, env.cfg.obb_minimum_ratio)
@@ -59,7 +62,9 @@ def reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
     if not len(ids):
         return
     start = perf_counter()
-    configure_test_layout_batch(env)
+    hard = env.cfg.max_obstacles == 10
+    if not hard:
+        configure_test_layout_batch(env)
     parking = test_inactive_positions(env)[ids]
     fast_reset_scene(env, ids, ik_params=ik_params, spawn_radius=spawn_radius, edge_clearance=edge_clearance,
         excluded_x_half_angle=excluded_x_half_angle, min_goal_distance=min_goal_distance,
@@ -79,7 +84,7 @@ def reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
     yaw = torch.atan2(2*(w*z+x*y), 1-2*(y*y+z*z))
     active = env._active_object_mask[ids].clone()
     requested = active[:, 1:].sum(-1)
-    diagnostics = _snapshot(env, ids, local, yaw, active, shelf)
+    diagnostics = _snapshot(env, ids, local, yaw, active, shelf, hard=hard)
     changed = (active != env._active_object_mask[ids]).any(-1)
     if bool(changed.any()):
         local = torch.where(active[..., None], local, parking)
@@ -99,9 +104,23 @@ def reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
         'Reset/ik_attempts': 1., 'Reset/layout_resamples': 0.,
         'Reset/observation_fallbacks': diagnostics['fallbacks'],
         'Reset/target_missing_fallbacks': diagnostics['target_missing'],
-        'Reset/slot_overflow_fallbacks': diagnostics['overflow'],
+        'Reset/slot_overflow_fallbacks': 0. if hard else diagnostics['overflow'],
         'Reset/obb_slots': diagnostics['slots'],
         'Reset/placement_ms': 1000*(placed-start),
         'Reset/observation_ms': 1000*(perf_counter()-placed),
         'Reset/batch_ms': 1000*(perf_counter()-start),
     }
+    if hard:
+        env._reset_diagnostics['Reset/slot_overflow_truncations'] = diagnostics['overflow']
+        env._reset_diagnostics['Reset/layout_rank_retries'] = float(env._fast_layout.last_retries)
+
+
+def reset_hard_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
+                     excluded_x_half_angle=0., min_goal_distance=.05, max_goal_distance=None,
+                     observation_noise=.01, visibility_threshold=.35,
+                     visibility_flip_probability=.01, observation_swap_probability=.1):
+    """Reuse the parent's physical/IK lifecycle with the ten-slot Hard layout."""
+    return reset_scene(env, env_ids, ik_params, spawn_radius, edge_clearance,
+                       excluded_x_half_angle, min_goal_distance, max_goal_distance,
+                       observation_noise, visibility_threshold, visibility_flip_probability,
+                       observation_swap_probability)

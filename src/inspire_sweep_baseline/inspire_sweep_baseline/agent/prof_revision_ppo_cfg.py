@@ -56,3 +56,13 @@ class ProfRevisionV0_2PPORunnerCfg(ProfRevisionPPORunnerCfg):
 @configclass
 class ProfRevisionV0_3PPORunnerCfg(ProfRevisionPPORunnerCfg):
     experiment_name = 'inspire_sweep_prof_revision_v0_3'
+
+
+@configclass
+class ProfRevisionHardV0_3PPORunnerCfg(ProfRevisionV0_3PPORunnerCfg):
+    experiment_name = 'inspire_sweep_prof_revision_hard_v0_3'
+
+
+@configclass
+class ProfRevisionV0_3_1PPORunnerCfg(ProfRevisionV0_3PPORunnerCfg):
+    experiment_name = 'inspire_sweep_prof_revision_v0_3_1'
