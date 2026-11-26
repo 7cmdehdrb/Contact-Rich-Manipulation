@@ -1,5 +1,11 @@
 # Inspire Sweep Baseline
 
+2026-11-26: **Prof Revision Hard v0_3_3 추가**. v0_3_3 직접 상속, 보상 전체(역방향−120)·관측·제어·종료·PPO 수치 보존. 기존 Hard v0_3의 타겟8종·목표최소5cm/선반 내부까지·장애물0–10개·배치/reset 조건만 재사용. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3_3) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_hard_v0_3_3_implementation.md).
+
+2026-11-26: **Prof Revision v0_3_3 추가**. v0_3_2 직접 상속, 역방향 `sweep_retreat` weight만 −40→−120. 진행+100·나머지 전체 구성·runtime·PPO 수치 보존, 실험명 `inspire_sweep_prof_revision_v0_3_3`. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_3) · [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_v0_3_3_implementation.md).
+
+2026-11-26: **Contact Formation 캡처 전용 정적 환경** 추가. `python src/inspire_sweep_baseline/scripts/photograph_contact_formation.py`로 감싸쥐기 직전 자세를 연다. 카메라 orbit·OBB/지문면 방향 표시를 지원하며 학습·물리 step은 없다. [실행·계약·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_contact_formation_photography.md). 후속: 위·옆 접근 × 가까움·6cm 추가 이격의4개 자세를 버튼으로 선택한다(`--pose`, `--retreat-cm`).
+
 2026-11-26: **`Inspire-Sweep-Prof-Revision-v0_3_2` 추가**. v0_3_1 직접 상속, 목표3–6cm에서 힘 방향 영향을 완화하고 중심에 가까울수록 거리 증분 민감도를 최대2배로 높인다. Sweep+100/이탈−40, Reach9.8·Formation0.1715·장애물변위−300(cap0.04 유지). 성공3cm·TCP 종료·관측·행동·과업·PPO 보존. [계약·학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_2) · [구현·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_v0_3_2_implementation.md).
 
 2026-11-25 후속: **`Inspire-Sweep-Prof-Revision-Hard-v0_3` 장애물 분산 배치 수정**. 코너·일렬 채움을 객체별 무작위 셀 우선순위로 바꾸고 기존 접근·밀기 공간·상호/벽1cm 여유·0–10개를 유지했다.37개 검사·64환경 reset/step·수정 전후 각각206,848배치 검증 통과,2048행 중앙값2.72→2.74ms. [계약·배치 비교](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3) · [수정·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-25_prof_revision_hard_v0_3_implementation.md#후속-장애물-분산-배치-수정).

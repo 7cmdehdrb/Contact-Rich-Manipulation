@@ -12,7 +12,7 @@ from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEv
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
-from ..mdp.rewards.prof_revision import ProfRevisionV0_3_2RewardsCfg
+from ..mdp.rewards.prof_revision import ProfRevisionV0_3_2RewardsCfg, ProfRevisionV0_3_3RewardsCfg
 from ..mdp.common.prof_revision_state import validate_precision_parameters
 
 
@@ -190,3 +190,23 @@ class ProfRevisionV0_3_2EnvCfg(ProfRevisionV0_3_1EnvCfg):
         super().__post_init__()
         validate_precision_parameters(self.sweep_force_fade_inner_m, self.sweep_force_fade_outer_m,
                                       self.sweep_precision_radius_m, self.sweep_precision_max_multiplier)
+
+
+@configclass
+class ProfRevisionV0_3_3EnvCfg(ProfRevisionV0_3_2EnvCfg):
+    """Parent precision environment with a stronger reverse-motion penalty."""
+
+    rewards: ProfRevisionV0_3_3RewardsCfg = ProfRevisionV0_3_3RewardsCfg()
+
+
+@configclass
+class ProfRevisionHardV0_3_3EnvCfg(ProfRevisionV0_3_3EnvCfg):
+    """v0_3_3 rewards and control with the existing Hard scene distribution."""
+
+    scene: ProfRevisionHardSceneCfg = ProfRevisionHardSceneCfg(num_envs=2048, env_spacing=2.5)
+    events: ProfRevisionHardEventsCfg = ProfRevisionHardEventsCfg()
+    max_obstacles: int = 10
+    layout_cell_size: float = .01
+
+    def _layout_capacity(self):
+        return 10

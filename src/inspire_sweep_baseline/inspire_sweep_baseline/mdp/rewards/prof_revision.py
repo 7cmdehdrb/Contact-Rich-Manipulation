@@ -69,3 +69,8 @@ class ProfRevisionV0_3_2RewardsCfg(ProfRevisionV0_3RewardsCfg):
     contact_formation = RewTerm(func=contact_formation, weight=0.1715)
     obstacle_displacement = RewTerm(func=active_obstacle_displacement_cost, weight=-300.,
                                   params={'displacement_max_cost': 0.04})
+
+
+@configclass
+class ProfRevisionV0_3_3RewardsCfg(ProfRevisionV0_3_2RewardsCfg):
+    sweep_retreat = RewTerm(func=precision_sweep_retreat, weight=-120.)
