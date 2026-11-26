@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-26: **Prof Revision v0_3_3-IK 추가**. 일반 v0_3_3 직접 상속, 시작 Joint State를 선반 전면 안팎의 연속 영역으로 확대했다. 기존 RED/외부 IK 위치를 포함하며 높이·손 방향은 유지한다. 실제 충돌 형상·GPU batch·Warp IK와 제한된 후보 수를 사용하며 보상·Scene 분포는 유지한다. [계약](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_3-ik) · [검증·성능](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_v0_3_3_ik_implementation.md).
+
 2026-11-26: **Prof Revision Hard v0_3_3 추가**. v0_3_3 직접 상속, 보상 전체(역방향−120)·관측·제어·종료·PPO 수치 보존. 기존 Hard v0_3의 타겟8종·목표최소5cm/선반 내부까지·장애물0–10개·배치/reset 조건만 재사용. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3_3) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_hard_v0_3_3_implementation.md).
 
 2026-11-26: **Prof Revision v0_3_3 추가**. v0_3_2 직접 상속, 역방향 `sweep_retreat` weight만 −40→−120. 진행+100·나머지 전체 구성·runtime·PPO 수치 보존, 실험명 `inspire_sweep_prof_revision_v0_3_3`. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_3) · [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_v0_3_3_implementation.md).

@@ -9,6 +9,7 @@ from ..mdp.commands.prof_revision import ProfRevisionCommandsCfg
 from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1RewardsCfg, ProfRevisionV0_1RewardsCfg, ProfRevisionV0_2RewardsCfg, ProfRevisionV0_3RewardsCfg
 from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg, ProfRevisionV0_3TerminationsCfg
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEventsCfg
+from ..mdp.events.prof_revision import ProfRevisionV0_3_3IKEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
@@ -210,3 +211,17 @@ class ProfRevisionHardV0_3_3EnvCfg(ProfRevisionV0_3_3EnvCfg):
 
     def _layout_capacity(self):
         return 10
+
+
+@configclass
+class ProfRevisionV0_3_3IKEnvCfg(ProfRevisionV0_3_3EnvCfg):
+    """Parent task with collision-checked continuous front-area joint states."""
+
+    events: ProfRevisionV0_3_3IKEventsCfg = ProfRevisionV0_3_3IKEventsCfg()
+
+    def __post_init__(self):
+        import math
+        super().__post_init__()
+        bounds = self.events.object_spawn.params['ik_params']['front_y_bounds']
+        if len(bounds) != 2 or not all(math.isfinite(v) for v in bounds) or bounds[0] >= bounds[1]:
+            raise ValueError('front_y_bounds must be a finite ordered interval')

@@ -22,3 +22,9 @@ class ProfRevisionHardEventsCfg(ProfRevisionEventsCfg):
         self.object_geometry.params['layout_class'] = ProfRevisionHardLayout
         self.object_spawn.func = reset_hard_scene
         self.object_spawn.params.update(min_goal_distance=.05, max_goal_distance=None)
+
+
+@configclass
+class ProfRevisionV0_3_3IKEventsCfg(ProfRevisionEventsCfg):
+    def __post_init__(self):
+        self.object_spawn.params['ik_params'].update(initial_pose_mode='front_area', front_y_bounds=(-.5, .5))

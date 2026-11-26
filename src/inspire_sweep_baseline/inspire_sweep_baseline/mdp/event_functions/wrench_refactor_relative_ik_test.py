@@ -280,11 +280,18 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
         ik_params['front_clearance'], ik_params['lateral_offset'], ik_params['height_jitter'])
     desired_world = shelf_pos + quat_apply(shelf_quat, desired_local)
     desired_base, _ = subtract_frame_transforms(base_pos, base_quat, desired_world)
-    angles, valid, pe, re = env._fast_ik.solve(desired_base, default_quat,
-                                             env._fast_initial[ids], env._fast_limits[ids])
-    if not bool(valid.all()):
-        raise RuntimeError(f'Fast reset IK failed: env_ids={ids[~valid].tolist()}, '
-                           f'position_error={pe[~valid].tolist()}, rotation_error={re[~valid].tolist()}')
+    if ik_params.get('initial_pose_mode') == 'front_area':
+        from ..common.prof_revision_initial_pose import select_initial_pose
+        desired_local, angles, pe, re = select_initial_pose(
+            env, ids, local, yaw, active, sweep_local, default_local, desired_local,
+            base_pos, base_quat, shelf_pos, shelf_quat, default_quat, ik_params)
+        desired_world = shelf_pos + quat_apply(shelf_quat, desired_local)
+    else:
+        angles, valid, pe, re = env._fast_ik.solve(desired_base, default_quat,
+                                                 env._fast_initial[ids], env._fast_limits[ids])
+        if not bool(valid.all()):
+            raise RuntimeError(f'Fast reset IK failed: env_ids={ids[~valid].tolist()}, '
+                               f'position_error={pe[~valid].tolist()}, rotation_error={re[~valid].tolist()}')
     world = shelf_pos[:, None] + quat_apply(shelf_quat[:, None].expand(-1, 17, -1), local)
     yaw_q = torch.zeros((len(ids), 17, 4), device=env.device)
     yaw_q[..., 0], yaw_q[..., 3] = (yaw / 2).cos(), (yaw / 2).sin()
