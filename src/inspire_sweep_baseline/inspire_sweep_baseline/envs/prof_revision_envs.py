@@ -12,6 +12,8 @@ from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEv
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
+from ..mdp.rewards.prof_revision import ProfRevisionV0_3_2RewardsCfg
+from ..mdp.common.prof_revision_state import validate_precision_parameters
 
 
 @configclass
@@ -172,3 +174,19 @@ class ProfRevisionV0_3_1EnvCfg(ProfRevisionV0_3EnvCfg):
     """v0_3 with v1's finger distance/angle sum and the parent's reward weight."""
 
     formation_mode: str = 'distance_angle_sum'
+
+
+@configclass
+class ProfRevisionV0_3_2EnvCfg(ProfRevisionV0_3_1EnvCfg):
+    """Distance-dependent force influence and precision, with revised reward weights."""
+
+    rewards: ProfRevisionV0_3_2RewardsCfg = ProfRevisionV0_3_2RewardsCfg()
+    sweep_force_fade_inner_m: float = 0.03
+    sweep_force_fade_outer_m: float = 0.06
+    sweep_precision_radius_m: float = 0.06
+    sweep_precision_max_multiplier: float = 2.0
+
+    def __post_init__(self):
+        super().__post_init__()
+        validate_precision_parameters(self.sweep_force_fade_inner_m, self.sweep_force_fade_outer_m,
+                                      self.sweep_precision_radius_m, self.sweep_precision_max_multiplier)

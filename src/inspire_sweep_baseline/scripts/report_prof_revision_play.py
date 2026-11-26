@@ -76,7 +76,13 @@ def main():
         for key in d:
             if not np.isfinite(d[key]).all(): q['finite']=False
         # Independently derive key terms and success from their physical inputs.
-        gap=d['finger_gap'];formation=.05/(.05+gap.sum(-1))
+        import yaml
+        configuration=yaml.load((folder/'environment.yaml').read_text(encoding='utf-8'),Loader=yaml.BaseLoader)
+        formation_mode=configuration.get('formation_mode','distance_sum')
+        distance_scale=float(configuration.get('formation_distance_scale',.05))
+        gap=d['finger_gap']
+        formation=((distance_scale/(distance_scale+gap))*np.clip(d['finger_normal_cosine'],-1,1)**2).sum(-1) if formation_mode=='distance_angle_sum' else distance_scale/(distance_scale+gap.sum(-1))
+        q['formation_mode']=formation_mode
         q['formation_formula_error']=float(np.abs(formation-d['formation']).max())
         q['reach_formula_error']=float(np.abs(d['reach_delta']*4.9-d['reward_terms'][...,names.index('reaching')]).max())
         distance=np.linalg.norm(d['target'][...,:2]-d['goal'][...,:2],axis=-1)
@@ -422,15 +428,15 @@ def main():
     labels=[r['finger'] for r in finger_rows]
     axes[0,0].boxplot([merged['push_gap_mm'][:,i] for i in range(5)],tick_labels=labels,showfliers=False);axes[0,0].axhline(5,color='k',ls='--');axes[0,0].set(ylabel='Pad to tracked OBB gap (mm)',title='Moving contact outside goal')
     axes[0,1].bar(labels,[r['pushing_within5mm_fraction']*100 for r in finger_rows],color='#477ca8');axes[0,1].set(ylabel='Within 5mm (%)',ylim=(0,100))
-    axes[1,0].bar(labels,[r['pushing_normal_le30deg_fraction']*100 for r in finger_rows],color='#477ca8');axes[1,0].set(ylabel='Pad normal within 30deg (%)',ylim=(0,100),title='Two-sided diagnostic; not v0_3 reward')
+    axes[1,0].bar(labels,[r['pushing_normal_le30deg_fraction']*100 for r in finger_rows],color='#477ca8');axes[1,0].set(ylabel='Pad normal within 30deg (%)',ylim=(0,100),title='Two-sided pad-normal alignment')
     for flag,label,color in [(True,'Success','#2c8b65'),(False,'Failure','#c56050')]:axes[1,1].plot(time,np.nanmean(s[successes==flag,:,3],axis=0),label=label,color=color)
-    axes[1,1].set(xlabel='Episode time (s)',ylabel='Formation raw [0,1]');axes[1,1].legend();f.tight_layout();save('05_finger_posture')
+    axes[1,1].set(xlabel='Episode time (s)',ylabel='Formation raw [0,5]' if formation_mode=='distance_angle_sum' else 'Formation raw [0,1]');axes[1,1].legend();f.tight_layout();save('05_finger_posture')
     if body_samples:
         rows=summary['target_body_contact_subset']['rows'];f,axes=plt.subplots(1,2,figsize=(12,4))
         groups=[r['group'].replace('_','\n') for r in rows]
         axes[0].bar(groups,[r['frame_contact_fraction']*100 for r in rows],color='#477ca8');axes[0].set(ylabel='Frames with target normal load >= .05 N (%)',ylim=(0,100))
         axes[1].bar(groups,[r['load_share']*100 for r in rows],color='#477ca8');axes[1].set(ylabel='Share of body-wise normal-load sum (%)',ylim=(0,100))
-        f.suptitle('Target-only physical contact | seed43 subset | moving outside goal');f.tight_layout();save('09_target_contact_body')
+        f.suptitle('Target-only physical contact | all recorded runs | moving outside goal');f.tight_layout();save('09_target_contact_body')
     f,axes=plt.subplots(2,2,figsize=(12,8))
     axes[0,0].hist(merged['wrist_speed'],bins=60,color='#477ca8');axes[0,0].axvline(4,color='#b65751',ls='--',label='v0_3 cutoff');axes[0,0].set(xlabel='wrist_3_link origin speed (m/s)',ylabel='Policy steps');axes[0,0].legend()
     axes[0,1].hist(merged['arm_peak'],bins=60,color='#477ca8');axes[0,1].axvline(1,color='#b65751',ls='--',label='Parent cutoff, removed in v0_3');axes[0,1].set(xlabel='Maximum absolute arm joint speed (rad/s)',ylabel='Policy steps');axes[0,1].legend(fontsize=8)
@@ -464,7 +470,7 @@ def main():
         finger_gap='meters to tracked visible OBB, not necessarily whole physical cylinder surface',
         reward_raw='original callable output; reward_rate=raw*weight; reward_terms=raw*weight*dt',
         hand_drive_position='six physical actuator joints in HAND_DRIVE_JOINT_NAMES order; radians',
-        target_normal_by_body='seed43 only: final physics substep, target normal force in N by metadata hand_contact_body_names',
+        target_normal_by_body='when present: final physics substep, target normal force in N by metadata hand_contact_body_names',
         tactile='17 original paired surface states, all objects/shelf: none0,palm1,dorsal-1,both2',
         wrench='physical compensated wrist support reaction, EEF axes, N and Nm; not external force on target')
     (root/'data_dictionary.json').write_text(json.dumps(dictionary,indent=2),encoding='utf-8')

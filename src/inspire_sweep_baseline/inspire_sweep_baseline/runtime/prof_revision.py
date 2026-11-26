@@ -1,7 +1,7 @@
 import torch
 from isaaclab.envs import ManagerBasedRLEnv
 from ..mdp.common.stabilize_sweep_contact import ContactSamples
-from ..mdp.common.prof_revision_state import ProfRevisionState
+from ..mdp.common.prof_revision_state import ProfRevisionState, ProfRevisionPrecisionState
 
 from .stabilize_sweep import _RecentEpisodeOutcomes
 from ..mdp.common.prof_revision_geometry import initialize_fingers, update_geometry
@@ -39,7 +39,7 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
         self._finger_pose_e[..., 6] = 1.
         self._finger_gaps = torch.zeros((count, 5), device=device)
         self._formation = torch.zeros(count, device=device)
-        self._stabilize_state=self._state_type(count,device)
+        self._stabilize_state = self._create_state(count, device, cfg)
         self._sweep_phase=self._stabilize_state.achieved
         self.learning_iteration = 0
         self.target_id = torch.zeros((count, 1), device=device, dtype=torch.long)
@@ -61,6 +61,12 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
         self._metric_min_distance = torch.full((count,), float('inf'), device=device)
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
         self._stabilize_contacts=ContactSamples(self)
+
+    def _create_state(self, count, device, cfg):
+        return self._state_type(count, device)
+
+    def _additional_step_metrics(self):
+        return {}
 
     def load_managers(self):
         shelf = self.scene['shelf'].data
@@ -117,6 +123,7 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
                     'sweep_progress_m', 'sweep_retreat_m', 'contact_recognized', 'force_alignment',
                     'thumb_gap_m', 'index_gap_m', 'middle_gap_m', 'ring_gap_m', 'little_gap_m')
                 self._prof_step_metrics = {f'ProfRevision/{name}': values[i] for i, name in enumerate(names)}
+                self._prof_step_metrics.update(self._additional_step_metrics())
         self.scene.update=capture
         try:
             result = super().step(action)
@@ -213,3 +220,30 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
             'Metrics/timeout_success_count': totals[0].clone(),
             'Metrics/timeout_episode_count': totals[1].clone(),
         })
+
+
+class ProfRevisionV0_3_2Env(ProfRevisionEnv):
+    """Precision state and telemetry only; lifecycle remains the parent's."""
+
+    def _create_state(self, count, device, cfg):
+        return ProfRevisionPrecisionState(
+            count, device, cfg.sweep_force_fade_inner_m, cfg.sweep_force_fade_outer_m,
+            cfg.sweep_precision_radius_m, cfg.sweep_precision_max_multiplier)
+
+    def _additional_step_metrics(self):
+        state = self._stabilize_state
+        values = torch.stack((state.force_influence, state.distance_sensitivity,
+                              state.effective_alignment, state.weighted_delta,
+                              state.precision_positive, state.precision_retreat,
+                              (state.distance <= self.cfg.sweep_force_fade_inner_m).float(),
+                              ((state.distance > self.cfg.sweep_force_fade_inner_m)
+                               & (state.distance < self.cfg.sweep_force_fade_outer_m)).float(),
+                              (state.distance >= self.cfg.sweep_force_fade_outer_m).float()), -1).mean(0)
+        names = ('force_influence', 'distance_sensitivity', 'effective_alignment',
+                 'weighted_distance_delta_m', 'precision_progress_m', 'precision_retreat_m',
+                 'near_fraction', 'transition_fraction', 'far_fraction')
+        metrics = {f'ProfRevisionPrecision/{name}': values[i] for i, name in enumerate(names)}
+        for name in ('sweep_force_fade_inner_m', 'sweep_force_fade_outer_m',
+                     'sweep_precision_radius_m', 'sweep_precision_max_multiplier'):
+            metrics[f'ProfRevisionPrecision/{name}'] = getattr(self.cfg, name)
+        return metrics

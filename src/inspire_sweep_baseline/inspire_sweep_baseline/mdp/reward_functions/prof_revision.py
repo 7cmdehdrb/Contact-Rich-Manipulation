@@ -9,6 +9,14 @@ def contact_formation(env):
     return env._formation
 
 
+def precision_sweep_progress(env):
+    return env._stabilize_state.precision_positive / env.step_dt
+
+
+def precision_sweep_retreat(env):
+    return env._stabilize_state.precision_retreat / env.step_dt
+
+
 def arm_joint_velocity_margin(env, asset_cfg, free_speed=0.8, limit_speed=1.0):
     """Squared maximum arm-speed excess; RewardManager applies weight and dt."""
     import math

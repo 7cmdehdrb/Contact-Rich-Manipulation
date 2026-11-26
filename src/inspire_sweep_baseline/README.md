@@ -1,5 +1,7 @@
 # Inspire Sweep Baseline
 
+2026-11-26: **`Inspire-Sweep-Prof-Revision-v0_3_2` 추가**. v0_3_1 직접 상속, 목표3–6cm에서 힘 방향 영향을 완화하고 중심에 가까울수록 거리 증분 민감도를 최대2배로 높인다. Sweep+100/이탈−40, Reach9.8·Formation0.1715·장애물변위−300(cap0.04 유지). 성공3cm·TCP 종료·관측·행동·과업·PPO 보존. [계약·학습 명령](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_2) · [구현·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-26_prof_revision_v0_3_2_implementation.md).
+
 2026-11-25 후속: **`Inspire-Sweep-Prof-Revision-Hard-v0_3` 장애물 분산 배치 수정**. 코너·일렬 채움을 객체별 무작위 셀 우선순위로 바꾸고 기존 접근·밀기 공간·상호/벽1cm 여유·0–10개를 유지했다.37개 검사·64환경 reset/step·수정 전후 각각206,848배치 검증 통과,2048행 중앙값2.72→2.74ms. [계약·배치 비교](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3) · [수정·검증 기록](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-25_prof_revision_hard_v0_3_implementation.md#후속-장애물-분산-배치-수정).
 
 2026-11-24 후속: **Prof Revision v0_3** 추가. v0 직접 자식, 면 계수1 통일·팔 관절 속도 종료 제거·UR5e 마지막 링크 `wrist_3_link` 원점의 선속도 >=4m/s 실패 종료. EEF offset 속도와 구분하며 새로운 비용은 추가하지 않는다. 나머지 부모 구성 보존. [계약·실행](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3) · [검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-24_prof_revision_v0_3_implementation.md).

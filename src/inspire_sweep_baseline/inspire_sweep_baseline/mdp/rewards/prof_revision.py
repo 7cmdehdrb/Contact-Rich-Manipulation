@@ -1,6 +1,6 @@
 from ..reward_functions.stabilize_sweep import sweep_progress, sweep_retreat, action_limit_excess, arm_joint_failure
 from ..reward_functions.sweep_contact_preference import ContactSideSweepProgress
-from ..reward_functions.prof_revision import reaching, contact_formation, arm_joint_velocity_margin
+from ..reward_functions.prof_revision import reaching, contact_formation, arm_joint_velocity_margin, precision_sweep_progress, precision_sweep_retreat
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
@@ -59,3 +59,13 @@ class ProfRevisionV0_2RewardsCfg(ProfRevisionRewardsCfg):
 @configclass
 class ProfRevisionV0_3RewardsCfg(ProfRevisionRewardsCfg):
     sweep_progress = RewTerm(func=sweep_progress, weight=100.0)
+
+
+@configclass
+class ProfRevisionV0_3_2RewardsCfg(ProfRevisionV0_3RewardsCfg):
+    sweep_progress = RewTerm(func=precision_sweep_progress, weight=100.)
+    sweep_retreat = RewTerm(func=precision_sweep_retreat, weight=-40.)
+    reaching = RewTerm(func=reaching, weight=9.8)
+    contact_formation = RewTerm(func=contact_formation, weight=0.1715)
+    obstacle_displacement = RewTerm(func=active_obstacle_displacement_cost, weight=-300.,
+                                  params={'displacement_max_cost': 0.04})
