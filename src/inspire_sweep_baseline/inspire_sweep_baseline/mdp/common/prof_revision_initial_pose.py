@@ -174,7 +174,7 @@ class RobotCollisionModel:
 def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local,
                         desired_local, base_pos, base_quat, shelf_pos, shelf_quat,
                         default_quat, ik_params):
-    """One batched Warp call, fixed candidate budget, exact original layout/RNG."""
+    """Batched Warp selection with bounded recovery; preserve layout/RNG."""
     from .wrench_refactor_ik import sample_initial_eef
     if not hasattr(env, '_initial_pose_collision'):
         env._initial_pose_collision = RobotCollisionModel(env)
@@ -232,6 +232,8 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
     valid = (valid & clear & lane_clear).view(n, k)
     valid[:, 2:] &= allowed
     missing = (~valid.any(-1)).nonzero().flatten()
+    grid_rows = grid_candidates = grid_batches = 0
+    grid_selected = torch.zeros(n, device=env.device, dtype=torch.bool) if bounded else None
     if len(missing):
         # A rare conservative-box rejection must not trigger scene resampling.
         # Check the eight corners of the ORIGINAL outside IK interval, once.
@@ -257,6 +259,52 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         fv &= model.clear_boxes(fl, fh, extra(centers-object_half), extra(centers+object_half), extra(active))
         fv &= model.lane_clear(fl, fh, extra(start), extra(goal), extra(half[:, 0, :2].norm(dim=-1)))
         fv = fv.view(-1, 8)
+        pending = (~fv.any(-1)).nonzero().flatten()
+        if bounded and len(pending):
+            # The legacy corners all lie on ONE side of the target. A narrow
+            # window can block that whole interval while the other side is free.
+            # Only exhausted rows scan both sides, across the unchanged window
+            # and height interval. Three batches of 81 cap work and memory; no
+            # scene redraw, tolerance relaxation, or physics step is involved.
+            grid_rows = len(pending)
+            grid = torch.cartesian_prod(
+                torch.linspace(upper[0], lower[0], 9, device=env.device),
+                torch.linspace(lower[1], upper[1], 9, device=env.device),
+                candidates.new_tensor([-1., 0., 1.])*ik_params['height_jitter'])
+            for chunk in grid.split(81):
+                if not len(pending):
+                    break
+                rows = missing[pending]
+                count = len(chunk)
+                grid_candidates += len(rows)*count
+                grid_batches += len(rows)
+                def expand(t):
+                    return t[rows, None].expand(-1, count, *t.shape[1:]).reshape(
+                        len(rows)*count, *t.shape[1:]).contiguous()
+                poses = chunk[None].expand(len(rows), -1, -1).clone()
+                poses[..., 2] += default_local[rows, 2, None]
+                world = expand(shelf_pos)+quat_apply(expand(shelf_quat), poses.flatten(0, 1))
+                target = quat_apply_inverse(expand(base_quat), world-expand(base_pos))
+                ga, gv, gp, gr = env._fast_ik.solve(target, expand(default_quat),
+                    expand(env._fast_initial[ids]), expand(env._fast_limits[ids]))
+                gj = expand(env.scene['robot'].data.default_joint_pos[ids]).clone()
+                gj[:, env._goal_reset_arm_ids] = ga
+                gl, gh = model.boxes(gj, expand(base_local), expand(rotation_local))
+                gv &= model.clear_boxes(gl, gh, expand(centers-object_half),
+                                         expand(centers+object_half), expand(active))
+                gv &= model.lane_clear(gl, gh, expand(start), expand(goal),
+                                        expand(half[:, 0, :2].norm(dim=-1)))
+                gv = gv.view(-1, count)
+                found = gv.any(-1)
+                first = gv.long().argmax(-1)[found]
+                solved = pending[found]
+                fallback[solved, 0] = poses[found, first]
+                fa.view(-1, 8, 6)[solved, 0] = ga.view(-1, count, 6)[found, first]
+                fp.view(-1, 8)[solved, 0] = gp.view(-1, count)[found, first]
+                fr.view(-1, 8)[solved, 0] = gr.view(-1, count)[found, first]
+                fv[solved, 0] = True
+                grid_selected[rows[found]] = True
+                pending = pending[~found]
         if not bool(fv.any(-1).all()):
             raise RuntimeError('Collision-free initial pose budget exhausted: '+str(ids[missing[~fv.any(-1)]].tolist()))
         index = fv.long().argmax(-1)
@@ -274,17 +322,20 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         raise RuntimeError('Collision-free initial pose budget exhausted: '+str(ids[~valid.any(-1)].tolist()))
     row = torch.arange(n, device=env.device)
     selected_red = inside_red_polygon(candidates[row, choice, :2], start, goal)
-    env._initial_pose_metrics = {'Reset/front_selected_fraction': (choice >= 2).float().mean(),
-                                'Reset/legacy_fallback_fraction': (choice < 2).float().mean(),
+    selected_front = (choice >= 2) if not bounded else (choice >= 2) | grid_selected
+    env._initial_pose_metrics = {'Reset/front_selected_fraction': selected_front.float().mean(),
+                                'Reset/legacy_fallback_fraction': (~selected_front).float().mean(),
                                 'Reset/red_selected_fraction': selected_red.float().mean(),
-                                'Reset/pose_candidates': float(k)+8.*len(missing)/n,
-                                'Reset/ik_attempts': 1.+float(len(missing))/n,
+                                'Reset/pose_candidates': float(k)+(8.*len(missing)+grid_candidates)/n,
+                                'Reset/ik_attempts': 1.+float(len(missing)+grid_batches)/n,
                                 'Reset/pose_recovery_fraction': float(len(missing))/n,
                                 'Reset/pose_collision_rejected_fraction': (~clear).float().mean()}
+    if bounded:
+        env._initial_pose_metrics['Reset/pose_grid_recovery_fraction'] = float(grid_rows)/n
     if not hasattr(env, '_initial_pose_red_selected'):
         env._initial_pose_red_selected = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)
         env._initial_pose_front_selected = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)
     env._initial_pose_red_selected[ids] = selected_red
-    env._initial_pose_front_selected[ids] = choice >= 2
+    env._initial_pose_front_selected[ids] = selected_front
     return (candidates[row, choice], angles.view(n, k, 6)[row, choice],
             pe.view(n, k)[row, choice], re.view(n, k)[row, choice])
