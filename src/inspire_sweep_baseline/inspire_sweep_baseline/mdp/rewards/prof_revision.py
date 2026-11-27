@@ -1,6 +1,7 @@
 from ..reward_functions.stabilize_sweep import sweep_progress, sweep_retreat, action_limit_excess, arm_joint_failure
 from ..reward_functions.sweep_contact_preference import ContactSideSweepProgress
 from ..reward_functions.prof_revision import reaching, contact_formation, arm_joint_velocity_margin, precision_sweep_progress, precision_sweep_retreat
+from ..reward_functions.prof_revision import combined_action_rate_l2, combined_joint_velocity_l2
 from ..reward_functions.contact_sweep_clutter_fusion import active_object_tilt_cost, active_obstacle_displacement_cost
 from ...assets.robot import HAND_JOINT_NAMES
 from ..common.contact_sweep_clutter_fusion import arm_entity
@@ -74,3 +75,25 @@ class ProfRevisionV0_3_2RewardsCfg(ProfRevisionV0_3RewardsCfg):
 @configclass
 class ProfRevisionV0_3_3RewardsCfg(ProfRevisionV0_3_2RewardsCfg):
     sweep_retreat = RewTerm(func=precision_sweep_retreat, weight=-120.)
+
+
+@configclass
+class ProfRevisionV0_3_4RewardsCfg(ProfRevisionV0_3_3RewardsCfg):
+    sweep_retreat = RewTerm(func=precision_sweep_retreat, weight=-100.)
+    arm_action_rate = None
+    hand_action_rate = None
+    arm_joint_velocity = None
+    hand_joint_velocity = None
+    action_rate = RewTerm(func=combined_action_rate_l2, weight=-0.03,
+                          params={'max_cost_per_group': 100.})
+    joint_velocity = RewTerm(func=combined_joint_velocity_l2, weight=-0.03, params={
+        'arm_asset_cfg': arm_entity(),
+        'hand_asset_cfg': SceneEntityCfg('robot', joint_names=list(HAND_JOINT_NAMES), preserve_order=True),
+        'max_cost_per_group': 100.,
+    })
+    obstacle_contact = RewTerm(func=obstacle_contact_force_cost, weight=-0.04,
+                               params={'free_force': 5., 'max_cost': 100.})
+    wrench_change = RewTerm(func=WrenchMagnitudeChangePenalty, weight=-0.1, params={
+        'free_force_change': 5., 'free_moment_change': 0.3,
+        'saturation_ratio': 2.5, 'sharpness': 3., 'max_positive_fraction': None,
+    })

@@ -15,6 +15,7 @@ from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
 from ..mdp.rewards.prof_revision import ProfRevisionV0_3_2RewardsCfg, ProfRevisionV0_3_3RewardsCfg
+from ..mdp.rewards.prof_revision import ProfRevisionV0_3_4RewardsCfg
 from ..mdp.common.prof_revision_state import validate_precision_parameters
 
 
@@ -199,6 +200,21 @@ class ProfRevisionV0_3_3EnvCfg(ProfRevisionV0_3_2EnvCfg):
     """Parent precision environment with a stronger reverse-motion penalty."""
 
     rewards: ProfRevisionV0_3_3RewardsCfg = ProfRevisionV0_3_3RewardsCfg()
+
+
+@configclass
+class ProfRevisionV0_3_4EnvCfg(ProfRevisionV0_3_3EnvCfg):
+    """Contact-aligned Sweep, merged Arm/Hand costs and lower force allowances."""
+
+    rewards: ProfRevisionV0_3_4RewardsCfg = ProfRevisionV0_3_4RewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        # The base environment pins these values in __post_init__; override
+        # afterwards so serialized settings and live RewardManager agree.
+        self.rewards.obstacle_contact.params['free_force'] = 5.
+        self.rewards.wrench_change.params['free_force_change'] = 5.
+        self.rewards.wrench_change.params['free_moment_change'] = 0.3
 
 
 @configclass

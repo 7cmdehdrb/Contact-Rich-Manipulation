@@ -39,6 +39,7 @@ def main():
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--reference', action='store_true', help='Save post-step audit without diagnostic hooks.')
     parser.add_argument('--wrench-diagnostics',action='store_true',help='Copy same-step raw/support wrench and all-hand normal loads.')
+    parser.add_argument('--impact-diagnostics', action='store_true', help='Record object/hand normal loads and physical wrench at each physics substep.')
     from isaaclab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
@@ -62,6 +63,7 @@ def main():
                 surface_definition='target-only palm/dorsal normal load from final physics substep; unmapped edges remain unclassified',
                 finger_normal_definition='distal pad +Z vs pad-to-live-visible-OBB-center; signed cosine, diagnostic only',
                 reference=args.reference,wrench_diagnostics=args.wrench_diagnostics,
+                impact_diagnostics=args.impact_diagnostics,
                 target_body_force_definition='target-only normal force matrix by HAND_CONTACT_BODY_NAMES; final physics substep; no friction, cancellation within each body pair possible')
     rows, audits = {}, {}
     def append(destination, name, value):
@@ -139,12 +141,25 @@ def main():
         contacts = raw._stabilize_contacts
         target_sensor = raw.scene[object_hand_sensor_name(raw.scene['object_collection'].object_names[0])]
         substeps = []
+        impact_substeps = {}
         if not args.reference:
             surface = ContactSideSweepProgress(raw.reward_manager.get_term_cfg('sweep_progress'), raw)
             original_capture = contacts.capture
             def capture(source):
                 original_capture(source)
                 substeps.append(torch.cat((contacts.force, contacts.load[:,None], contacts.valid[:,None].float()), -1).clone())
+                if args.impact_diagnostics:
+                    matrices = torch.stack([source.scene[object_hand_sensor_name(name)].data.force_matrix_w[:, 0]
+                                            for name in source.scene['object_collection'].object_names], 1)
+                    wrench_term = source.observation_manager.cfg.policy.wrist_wrench.func
+                    sample = wrench_term._read(source)
+                    values = dict(object_hand_normal_vector=matrices.sum(2),
+                                  object_hand_normal_load=matrices.norm(dim=-1).sum(2),
+                                  whole_hand_normal_load=source.scene['whole_hand_contact'].data.net_forces_w.norm(dim=-1).sum(1),
+                                  pure_wrench=sample.pure_world, raw_wrench=sample.raw_world,
+                                  support_wrench=sample.support_world)
+                    for key, value in values.items():
+                        impact_substeps.setdefault(key, []).append(value.clone())
             contacts.capture = capture
             raw_values = torch.zeros((raw.num_envs,len(names)), device=raw.device)
             for i,t in enumerate(terms):
@@ -204,6 +219,12 @@ def main():
                         hand_net_normal=raw.scene['whole_hand_contact'].data.net_forces_w.sum(1),
                         hand_normal_by_body=raw.scene['whole_hand_contact'].data.net_forces_w,
                         target_normal=target_sensor.data.force_matrix_w[:,0].sum(1))
+                if args.impact_diagnostics:
+                    for key, values in impact_substeps.items():
+                        if len(values) != cfg.decimation:
+                            raise RuntimeError('Incomplete impact substep sample')
+                        records['substep_' + key] = torch.stack(values, 1)
+                    impact_substeps.clear()
                 for key,value in records.items():
                     append(rows,key,value)
                 substeps.clear()

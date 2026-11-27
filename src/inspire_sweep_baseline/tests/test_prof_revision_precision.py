@@ -127,3 +127,36 @@ def test_telescope_finite_and_asymmetric_round_trip():
     torch.testing.assert_close(delta.sum(),h[0]-h[-1])
     assert torch.isfinite(h).all()
     assert 100.*.01-40.*.01 == pytest.approx(.6)
+
+
+@pytest.mark.parametrize('force', [.005, .01, .5, .999999, 1., 2.])
+def test_v0_3_4_contact_has_no_independent_resultant_force_floor(force):
+    """Contact load may exceed .01 N while substep averaging/cancellation lowers XY force."""
+    child = state_module.ProfRevisionContactAlignedState(1, 'cpu', .03, .06, .06, 2.)
+    parent = make_state()
+    goal, center = torch.zeros(1, 3), positions([.10])
+    contact = torch.tensor([True])
+    for state in (child, parent):
+        state.reset(torch.tensor([0]), center, goal, center, .1)
+        state.finish(center, goal, positions([-force]), contact, contact, center, .1)
+        state.finish(positions([.09]), goal, positions([-force]), contact, contact, center, .1)
+    assert child.alignment.item() == pytest.approx(1.)
+    assert child.precision_positive.item() == pytest.approx(.01, abs=1e-7)
+    assert parent.alignment.item() == pytest.approx(1. if force >= 1. else 0.)
+    for name in ('contact_history', 'contact_recognized', 'reach_delta', 'distance', 'precision_retreat'):
+        torch.testing.assert_close(getattr(child, name), getattr(parent, name))
+
+
+@pytest.mark.parametrize('force,contact,valid', [(0., True, True), (-.5, True, True),
+                                                (.5, False, True), (.5, True, False)])
+def test_v0_3_4_zero_opposing_missing_or_invalid_contact_gets_no_far_progress(force, contact, valid):
+    state = state_module.ProfRevisionContactAlignedState(1, 'cpu', .03, .06, .06, 2.)
+    goal, center = torch.zeros(1, 3), positions([.10])
+    state.reset(torch.tensor([0]), center, goal, center, .1)
+    # Establish history first: historical contact alone must not enable direction.
+    for _ in range(2):
+        state.finish(center, goal, positions([-.5]), torch.tensor([True]), torch.tensor([True]), center, .1)
+    state.finish(positions([.09]), goal, positions([-force]), torch.tensor([contact]),
+                 torch.tensor([valid]), center, .1)
+    assert state.alignment.item() == state.precision_positive.item() == 0.
+    assert torch.isfinite(state.effective_alignment).all()

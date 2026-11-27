@@ -2,6 +2,7 @@ import torch
 from isaaclab.envs import ManagerBasedRLEnv
 from ..mdp.common.stabilize_sweep_contact import ContactSamples
 from ..mdp.common.prof_revision_state import ProfRevisionState, ProfRevisionPrecisionState
+from ..mdp.common.prof_revision_state import ProfRevisionContactAlignedState
 
 from .stabilize_sweep import _RecentEpisodeOutcomes
 from ..mdp.common.prof_revision_geometry import initialize_fingers, update_geometry
@@ -247,3 +248,12 @@ class ProfRevisionV0_3_2Env(ProfRevisionEnv):
                      'sweep_precision_radius_m', 'sweep_precision_max_multiplier'):
             metrics[f'ProfRevisionPrecision/{name}'] = getattr(self.cfg, name)
         return metrics
+
+
+class ProfRevisionV0_3_4Env(ProfRevisionV0_3_2Env):
+    """Inherited physics lifecycle with contact-aligned direction recognition."""
+
+    def _create_state(self, count, device, cfg):
+        return ProfRevisionContactAlignedState(
+            count, device, cfg.sweep_force_fade_inner_m, cfg.sweep_force_fade_outer_m,
+            cfg.sweep_precision_radius_m, cfg.sweep_precision_max_multiplier)

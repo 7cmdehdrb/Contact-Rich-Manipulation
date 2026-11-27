@@ -63,7 +63,7 @@ class ProfRevisionState:
         self.contact_recognized.copy_(self.contact_history.sum(-1) >= 2)
         direction = delta / distance[:, None].clamp_min(1e-12)
         alignment = ((mean_force[:, :2]*direction).sum(-1) / mean_force.norm(dim=-1).clamp_min(1e-12)).clamp(0., 1.)
-        usable = contact & valid & (mean_force[:, :2].norm(dim=-1) >= 1.) & (distance > 1e-12)
+        usable = self._direction_usable(mean_force, contact, valid, distance)
         self.alignment.copy_(torch.where(usable, alignment, 0.))
         self.positive.copy_(progress.clamp_min(0.) * self.contact_recognized * self.alignment)
         self.retreat.copy_((-progress).clamp_min(0.))
@@ -73,6 +73,9 @@ class ProfRevisionState:
         excess = (self.reach_distance-near_radius).clamp_min(0.)
         self.reach_delta.copy_(self.reach_excess-excess)
         self.reach_excess.copy_(excess)
+
+    def _direction_usable(self, mean_force, contact, valid, distance):
+        return contact & valid & (mean_force[:, :2].norm(dim=-1) >= 1.) & (distance > 1e-12)
 
 
 class ProfRevisionPrecisionState(ProfRevisionState):
@@ -109,3 +112,13 @@ class ProfRevisionPrecisionState(ProfRevisionState):
         gate = self.contact_recognized & contact & valid
         self.precision_positive.copy_(self.weighted_delta.clamp_min(0.) * gate * self.effective_alignment)
         self.precision_retreat.copy_((-self.weighted_delta).clamp_min(0.))
+
+
+class ProfRevisionContactAlignedState(ProfRevisionPrecisionState):
+    """v0_3_4: current valid contact gates direction without a second force floor."""
+
+    def _direction_usable(self, mean_force, contact, valid, distance):
+        # ContactSamples already checks normal load >= .01 N. Its summed load
+        # cannot be compared to the mean planar resultant: contacts can cancel.
+        # A zero resultant has zero alignment via the parent's safe division.
+        return contact & valid & (distance > 1e-12)
