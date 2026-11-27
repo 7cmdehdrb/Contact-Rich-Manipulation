@@ -37,6 +37,15 @@ def front_candidates(start, goal, base_x, radius, generator, count=24, y_bounds=
     return points, segment_distance(points, start, goal) >= radius[:, None]
 
 
+def shelf_candidates(start, goal, radius, generator, x_bounds=(-.2, .3), y_bounds=(-.25, .25), count=24):
+    """Approved fixed EEF window, with 1mm reserve for the 0.5mm IK tolerance."""
+    draw = torch.rand((len(start), count, 2), device=start.device, generator=generator)
+    lower = start.new_tensor([x_bounds[0]+.001, y_bounds[0]+.001])
+    upper = start.new_tensor([x_bounds[1]-.001, y_bounds[1]-.001])
+    points = lower + draw*(upper-lower)
+    return points, segment_distance(points, start, goal) >= radius[:, None]
+
+
 def inside_red_polygon(points, start, goal):
     """Classify selected EEF points for the existing RED diagnostic buffer."""
     extension = torch.zeros_like(start)
@@ -173,6 +182,7 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
     rng = env._initial_pose_rng
     n = len(ids)
     model = env._initial_pose_collision
+    bounded = ik_params['initial_pose_mode'] == 'shelf_area_v1'
     # Separate generator leaves the parent's layout and IK draws untouched.
     legacy = sample_initial_eef(local[:, 0], sweep_local, default_local, rng,
         ik_params['front_clearance'], ik_params['lateral_offset'], ik_params['height_jitter'])
@@ -189,14 +199,22 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
     base_local = quat_apply_inverse(shelf_quat, base_pos-shelf_pos)
     # Exclude the target sweep plus the open hand's conservative 10cm radius.
     lane = half[:, 0, :2].norm(dim=-1)+.10
-    xy, allowed = front_candidates(start, goal, base_local[:, 0], lane, rng,
-                                   count=24, y_bounds=ik_params['front_y_bounds'])
+    if bounded:
+        xy, allowed = shelf_candidates(start, goal, lane, rng, ik_params['initial_x_bounds'],
+                                       ik_params['front_y_bounds'], count=24)
+    else:
+        xy, allowed = front_candidates(start, goal, base_local[:, 0], lane, rng,
+                                       count=24, y_bounds=ik_params['front_y_bounds'])
     # Rank randomly sampled safe lane candidates, solve only four of them.
     order = allowed.float().argsort(dim=-1, descending=True, stable=True)[:, :4]
     front = desired_local[:, None].expand(-1, 4, -1).clone()
     front[..., :2] = xy.gather(1, order[..., None].expand(-1, -1, 2))
     allowed = allowed.gather(1, order)
     candidates = torch.cat((desired_local[:, None], legacy[:, None], front), 1)
+    if bounded:
+        lower = candidates.new_tensor([ik_params['initial_x_bounds'][0]+.001, ik_params['front_y_bounds'][0]+.001])
+        upper = candidates.new_tensor([ik_params['initial_x_bounds'][1]-.001, ik_params['front_y_bounds'][1]-.001])
+        candidates[..., :2] = candidates[..., :2].clamp(lower, upper)
     k = candidates.shape[1]
     def repeat(t):
         return t[:, None].expand(-1, k, *t.shape[1:]).reshape(n*k, *t.shape[1:]).contiguous()
@@ -225,6 +243,8 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         fallback[..., 0] = .20+front[0]+corners[:, 0]*(front[1]-front[0])
         fallback[..., 1] = local[missing, 0, 1, None]+side[:, None]*(lateral[0]+corners[:, 1]*(lateral[1]-lateral[0]))
         fallback[..., 2] += corners[:, 2]*ik_params['height_jitter']
+        if bounded:
+            fallback[..., :2] = fallback[..., :2].clamp(lower, upper)
         def extra(t):
             return t[missing, None].expand(-1, 8, *t.shape[1:]).reshape(len(missing)*8, *t.shape[1:]).contiguous()
         target_world = extra(shelf_pos)+quat_apply(extra(shelf_quat), fallback.flatten(0, 1))

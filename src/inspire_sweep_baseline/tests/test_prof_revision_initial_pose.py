@@ -57,6 +57,22 @@ def test_continuous_front_domain_covers_old_regions_and_full_width(initial_pose)
     assert (distance[valid]>=.1-1e-7).all()
 
 
+def test_shelf_v1_window_margin_coverage_and_reproducibility(initial_pose):
+    start = torch.tensor([[0., 0.], [.01, -.01]])
+    goal = torch.tensor([[0., .12], [-.1, -.02]])
+    radius = torch.tensor([.10, .10])
+    points, valid = initial_pose.shelf_candidates(start, goal, radius, torch.Generator().manual_seed(17), count=10000)
+    assert (points[...,0]>=-.199).all() and (points[...,0]<=.299).all()
+    assert (points[...,1]>=-.249).all() and (points[...,1]<=.249).all()
+    for lo,hi in ((-.19,-.10),(.10,.19),(.21,.27),(.28,.299)):
+        for left,right in ((-.249,-.18),(.18,.249)):
+            selected=points[valid]
+            assert ((selected[:,0]>lo)&(selected[:,0]<hi)&(selected[:,1]>left)&(selected[:,1]<right)).any()
+    repeat=initial_pose.shelf_candidates(start, goal, radius, torch.Generator().manual_seed(17), count=10000)
+    assert torch.equal(points,repeat[0]) and torch.equal(valid,repeat[1])
+    assert (initial_pose.segment_distance(points,start,goal)[valid]>=.10-1e-7).all()
+
+
 def test_red_diagnostic_is_geometry_not_candidate_category(initial_pose):
     start=torch.tensor([[0.,0.]]).expand(4,-1)
     goal=torch.tensor([[0.,.1]]).expand(4,-1)

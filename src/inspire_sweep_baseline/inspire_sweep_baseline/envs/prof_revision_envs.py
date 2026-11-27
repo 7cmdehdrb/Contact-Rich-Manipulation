@@ -10,6 +10,7 @@ from ..mdp.rewards.prof_revision import ProfRevisionRewardsCfg, ProfRevisionV1Re
 from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg, ProfRevisionV0_3TerminationsCfg
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEventsCfg
 from ..mdp.events.prof_revision import ProfRevisionV0_3_3IKEventsCfg
+from ..mdp.events.prof_revision import ProfRevisionV0_3_3IKV1EventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
@@ -225,3 +226,19 @@ class ProfRevisionV0_3_3IKEnvCfg(ProfRevisionV0_3_3EnvCfg):
         bounds = self.events.object_spawn.params['ik_params']['front_y_bounds']
         if len(bounds) != 2 or not all(math.isfinite(v) for v in bounds) or bounds[0] >= bounds[1]:
             raise ValueError('front_y_bounds must be a finite ordered interval')
+
+
+@configclass
+class ProfRevisionV0_3_3IKV1EnvCfg(ProfRevisionV0_3_3EnvCfg):
+    """Unchanged v0_3_3 task with the approved shelf-interior EEF reset window."""
+
+    events: ProfRevisionV0_3_3IKV1EventsCfg = ProfRevisionV0_3_3IKV1EventsCfg()
+
+    def __post_init__(self):
+        import math
+        super().__post_init__()
+        for name in ('initial_x_bounds', 'front_y_bounds'):
+            bounds = self.events.object_spawn.params['ik_params'][name]
+            if (len(bounds) != 2 or not all(math.isfinite(v) for v in bounds)
+                    or bounds[1]-bounds[0] <= .002):
+                raise ValueError(f'{name} must be finite with width greater than 2mm')

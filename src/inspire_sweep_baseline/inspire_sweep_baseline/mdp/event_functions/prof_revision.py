@@ -113,7 +113,7 @@ def reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
     if hard:
         env._reset_diagnostics['Reset/slot_overflow_truncations'] = diagnostics['overflow']
         env._reset_diagnostics['Reset/layout_rank_retries'] = float(env._fast_layout.last_retries)
-    if ik_params.get('initial_pose_mode') == 'front_area':
+    if ik_params.get('initial_pose_mode') in ('front_area', 'shelf_area_v1'):
         env._reset_diagnostics.update(env._initial_pose_metrics)
 
 

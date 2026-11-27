@@ -280,7 +280,7 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
         ik_params['front_clearance'], ik_params['lateral_offset'], ik_params['height_jitter'])
     desired_world = shelf_pos + quat_apply(shelf_quat, desired_local)
     desired_base, _ = subtract_frame_transforms(base_pos, base_quat, desired_world)
-    if ik_params.get('initial_pose_mode') == 'front_area':
+    if ik_params.get('initial_pose_mode') in ('front_area', 'shelf_area_v1'):
         from ..common.prof_revision_initial_pose import select_initial_pose
         desired_local, angles, pe, re = select_initial_pose(
             env, ids, local, yaw, active, sweep_local, default_local, desired_local,

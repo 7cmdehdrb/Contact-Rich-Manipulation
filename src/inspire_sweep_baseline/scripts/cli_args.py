@@ -15,6 +15,27 @@ if TYPE_CHECKING:
     from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg
 
 
+def hydra_task_config(task_name: str, agent_cfg_entry_point: str):
+    """Keep Isaac Lab's decorator, registering namespace paths as Hydra groups."""
+    from isaaclab_tasks.utils.hydra import hydra_task_config as isaac_hydra_task_config
+
+    resolved = task_name.split(':')[-1]
+    if '/' in resolved:
+        from hydra.core.config_store import ConfigStore
+        from isaaclab.utils import replace_slices_with_strings
+        from isaaclab_tasks.utils.hydra import register_task_to_hydra
+
+        env_cfg, agent_cfg = register_task_to_hydra(resolved, agent_cfg_entry_point)
+        agent = agent_cfg if isinstance(agent_cfg, dict) or agent_cfg is None else agent_cfg.to_dict()
+        namespace, name = resolved.rsplit('/', 1)
+        # Isaac Lab stores a slash-containing name as a literal root key.
+        # Hydra composition instead searches the corresponding config group.
+        ConfigStore.instance().store(
+            group=namespace, name=name, package='_global_',
+            node=replace_slices_with_strings({'env': env_cfg.to_dict(), 'agent': agent}))
+    return isaac_hydra_task_config(task_name, agent_cfg_entry_point)
+
+
 def apply_renderer_compatibility(args_cli: argparse.Namespace):
     """Use D3D12 for Isaac Sim 5.1 on Windows unless a backend was requested.
 

@@ -160,7 +160,7 @@ from isaaclab_rl.rsl_rl import (
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
-from isaaclab_tasks.utils.hydra import hydra_task_config
+from cli_args import hydra_task_config
 
 # import logger
 logger = logging.getLogger(__name__)

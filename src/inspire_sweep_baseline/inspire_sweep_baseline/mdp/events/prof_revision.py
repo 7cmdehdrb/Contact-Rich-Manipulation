@@ -28,3 +28,10 @@ class ProfRevisionHardEventsCfg(ProfRevisionEventsCfg):
 class ProfRevisionV0_3_3IKEventsCfg(ProfRevisionEventsCfg):
     def __post_init__(self):
         self.object_spawn.params['ik_params'].update(initial_pose_mode='front_area', front_y_bounds=(-.5, .5))
+
+
+@configclass
+class ProfRevisionV0_3_3IKV1EventsCfg(ProfRevisionEventsCfg):
+    def __post_init__(self):
+        self.object_spawn.params['ik_params'].update(
+            initial_pose_mode='shelf_area_v1', initial_x_bounds=(-.2, .3), front_y_bounds=(-.25, .25))
