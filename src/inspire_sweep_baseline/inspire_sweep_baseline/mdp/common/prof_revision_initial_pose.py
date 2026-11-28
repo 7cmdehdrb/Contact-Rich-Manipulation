@@ -1,6 +1,126 @@
 """Bounded GPU reset candidates and conservative collision checks; no physics steps."""
+import math
 import torch
-from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_mul, quat_conjugate
+from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_mul, quat_conjugate, quat_from_matrix, matrix_from_quat
+
+
+def separated_obbs(a, qa, ha, b, qb, hb, margin=.002):
+    """15-axis OBB SAT; conservative positive gap margin, scalar-first quats."""
+    ra, rb = matrix_from_quat(qa), matrix_from_quat(qb)
+    delta = b-a
+    separated = torch.zeros(len(a), dtype=torch.bool, device=a.device)
+    for i in range(15):
+        if i < 3:
+            axis = ra[:, :, i]
+        elif i < 6:
+            axis = rb[:, :, i-3]
+        else:
+            j, k = divmod(i-6, 3)
+            axis = torch.cross(ra[:, :, j], rb[:, :, k], dim=-1)
+        norm = axis.norm(dim=-1)
+        pa = (torch.bmm(axis[:, None], ra).squeeze(1).abs()*ha).sum(-1)
+        pb = (torch.bmm(axis[:, None], rb).squeeze(1).abs()*hb).sum(-1)
+        separated |= (norm > 1e-7) & ((delta*axis).sum(-1).abs() > pa+pb+margin*norm)
+    return separated
+
+
+class InitialHandRandomizer:
+    """Cached hand axes, mimic mapping and reset-only nonadjacent OBB pairs."""
+
+    def __init__(self, env, model):
+        from ...assets.robot import HAND_JOINT_NAMES
+        from ...assets.hand_kinematics import HAND_DRIVE_UPPER_LIMITS, HAND_MIMIC_DRIVE_INDICES, HAND_MIMIC_MULTIPLIERS
+        self.env, self.model = env, model
+        robot = env.scene['robot']
+        self.hand_ids = robot.find_joints(list(HAND_JOINT_NAMES), preserve_order=True)[0]
+        self.upper = torch.tensor(HAND_DRIVE_UPPER_LIMITS, device=env.device)
+        self.mimic = torch.tensor(HAND_MIMIC_DRIVE_INDICES, device=env.device)
+        self.ratios = torch.tensor(HAND_MIMIC_MULTIPLIERS, device=env.device)
+        self.default_joints = robot.data.default_joint_pos[:1].clone()
+        origin, identity = self.upper.new_zeros(1, 3), self.upper.new_tensor([[1., 0., 0., 0.]])
+        pos, quat = model.link_poses(self.default_joints, origin, identity)
+        paths = [p.rsplit('/', 1)[-1] for p in model.paths]
+        palm = paths.index('inspire_palm_force_sensor')
+        middle = paths.index('inspire_middle_force_sensor_3')
+        wrist = paths.index('inspire_base_link')
+        normal = quat_apply(quat[:, palm], self.upper.new_tensor([[0., 0., 1.]]))
+        longitudinal = pos[:, middle]-pos[:, wrist]
+        longitudinal -= (longitudinal*normal).sum(-1, keepdim=True)*normal
+        longitudinal /= longitudinal.norm(dim=-1, keepdim=True)
+        side = torch.cross(normal, longitudinal, dim=-1)
+        hand_quat = quat_from_matrix(torch.stack((longitudinal, side, normal), -1))
+        self.hand_in_eef = quat_mul(quat_conjugate(env._fast_default_eef[1][:1]), hand_quat)[0]
+        # Fixed tactile links belong to their supporting rigid segment. Only
+        # the same segment and an immediate physical joint connection are exempt.
+        group, adjacent = [0], set()
+        for index, frame in enumerate(model.frames, 1):
+            parent, *_, axis, column = frame
+            group.append(group[parent] if axis is None else index)
+            if axis is not None:
+                adjacent.add(tuple(sorted((group[parent], index))))
+        # The thumb's two-axis base joint is split into thumb_1 (opposition)
+        # and thumb_2 (flexion). Its mounting volume is inside the palm AABB
+        # even in the authored open pose. Exempt only that base assembly;
+        # thumb_3/4 versus palm and every thumb-versus-other-finger pair remain.
+        adjacent.add(tuple(sorted((group[paths.index('inspire_base_link')],
+                                   group[paths.index('inspire_left_thumb_2')]))))
+        links = model.links.tolist()
+        pairs = []
+        for a, la in enumerate(links):
+            for b in range(a+1, len(links)):
+                lb = links[b]
+                if not (paths[la].startswith(('inspire_', 'axia80_'))
+                        and paths[lb].startswith(('inspire_', 'axia80_'))):
+                    continue
+                ga, gb = group[la], group[lb]
+                if ga != gb and tuple(sorted((ga, gb))) not in adjacent:
+                    pairs.append((a, b))
+        self.pairs = torch.tensor(pairs, device=env.device, dtype=torch.long).reshape(-1, 2)
+
+    def self_clear(self, joints, margin=.002):
+        """Broadphase then bounded SAT batches; no PhysX self-collision change."""
+        n = len(joints)
+        origin = joints.new_zeros(n, 3)
+        identity = joints.new_tensor([1., 0., 0., 0.]).expand(n, -1)
+        pos, quat = self.model.link_poses(joints, origin, identity)
+        rot = quat[:, self.model.links]
+        center = pos[:, self.model.links]+quat_apply(rot, self.model.center.expand(n, -1, -1))
+        extent = torch.matmul(matrix_from_quat(rot).abs(), self.model.half[..., None]).squeeze(-1)
+        a, b = self.pairs.unbind(-1)
+        overlap = ((center[:, a]-center[:, b]).abs() <= extent[:, a]+extent[:, b]+margin).all(-1)
+        rows, pairs = overlap.nonzero(as_tuple=True)
+        collisions = torch.zeros(n, device=joints.device, dtype=torch.long)
+        for ids in torch.arange(len(rows), device=joints.device).split(16384):
+            r = rows[ids]
+            ia, ib = a[pairs[ids]], b[pairs[ids]]
+            hit = ~separated_obbs(center[r, ia], rot[r, ia], self.model.half[ia],
+                                 center[r, ib], rot[r, ib], self.model.half[ib], margin)
+            collisions.index_add_(0, r, hit.long())
+        return collisions == 0
+
+    def sample(self, default_quat, base_quat, shelf_quat, generator, params):
+        n = len(default_quat)
+        draws = torch.rand((n, 9), device=default_quat.device, generator=generator)
+        ranges = draws.new_tensor(params['orientation_bounds_deg'])*(torch.pi/180.)
+        rpy = (2*draws[:, :3]-1)*ranges
+        roll, pitch, yaw = rpy.unbind(-1)
+        def rotation(angle, axis):
+            q = draws.new_zeros(n, 4)
+            q[:, 0], q[:, axis+1] = (angle/2).cos(), (angle/2).sin()
+            return q
+        local = quat_mul(rotation(pitch, 1), rotation(roll, 0))
+        c = self.hand_in_eef.expand(n, -1)
+        local = quat_mul(quat_mul(c, local), quat_conjugate(c))
+        shelf_yaw = quat_mul(quat_mul(shelf_quat, rotation(yaw, 2)), quat_conjugate(shelf_quat))
+        world = quat_mul(shelf_yaw, quat_mul(quat_mul(base_quat, default_quat), local))
+        target = quat_mul(quat_conjugate(base_quat), world)
+        bounds = draws.new_tensor(params['hand_drive_bounds'])
+        u = bounds[:, 0]+draws[:, 3:]*(bounds[:, 1]-bounds[:, 0])
+        joints = self.default_joints.expand(n, -1).clone()
+        joints[:, self.hand_ids] = (u*self.upper)[:, self.mimic]*self.ratios
+        tilt_valid = (roll.cos()*pitch.cos()) >= math.cos(math.radians(params['max_tilt_deg']))
+        self_valid = self.self_clear(joints, params.get('hand_self_clearance_m', .002))
+        return target, joints[:, self.hand_ids], u, rpy, tilt_valid, self_valid
 
 
 def segment_distance(points, start, goal):
@@ -182,6 +302,20 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
     rng = env._initial_pose_rng
     n = len(ids)
     model = env._initial_pose_collision
+    randomized = 'orientation_bounds_deg' in ik_params
+    rng_before = rng.get_state() if randomized else None
+    if randomized and not hasattr(env, '_initial_hand_randomizer'):
+        env._initial_hand_randomizer = InitialHandRandomizer(env, model)
+    sampler = env._initial_hand_randomizer if randomized else None
+    rejected = [0., 0., 0., 0.]
+    tested = 0
+    def posture(quat, base, shelf):
+        nonlocal tested
+        result = sampler.sample(quat, base, shelf, rng, ik_params)
+        tested += len(quat)
+        rejected[0] += (~result[-2]).sum()
+        rejected[1] += (~result[-1]).sum()
+        return result
     bounded = ik_params['initial_pose_mode'] == 'shelf_area_v1'
     # Separate generator leaves the parent's layout and IK draws untouched.
     legacy = sample_initial_eef(local[:, 0], sweep_local, default_local, rng,
@@ -220,16 +354,25 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         return t[:, None].expand(-1, k, *t.shape[1:]).reshape(n*k, *t.shape[1:]).contiguous()
     world = shelf_pos[:, None]+quat_apply(shelf_quat[:, None].expand(-1, k, -1), candidates)
     desired_base = quat_apply_inverse(repeat(base_quat), world.reshape(-1, 3)-repeat(base_pos))
-    angles, valid, pe, re = env._fast_ik.solve(desired_base, repeat(default_quat),
+    target_quat = repeat(default_quat)
+    if randomized:
+        target_quat, hand, drive, rpy, tilt_ok, self_ok = posture(target_quat, repeat(base_quat), repeat(shelf_quat))
+    angles, valid, pe, re = env._fast_ik.solve(desired_base, target_quat,
                                              repeat(env._fast_initial[ids]), repeat(env._fast_limits[ids]))
     # FK/collision checks in the shelf frame, including all arm/hand links.
     joints = repeat(env.scene['robot'].data.default_joint_pos[ids]).clone()
     joints[:, env._goal_reset_arm_ids] = angles
+    if randomized:
+        joints[:, sampler.hand_ids] = hand
+        rejected[2] += (~valid).sum()
+        valid &= tilt_ok & self_ok
     rotation_local = quat_mul(quat_conjugate(shelf_quat), base_quat)
     low, high = model.boxes(joints, repeat(base_local), repeat(rotation_local))
     clear = model.clear_boxes(low, high, repeat(centers-object_half), repeat(centers+object_half), repeat(active))
     lane_clear = model.lane_clear(low, high, repeat(start), repeat(goal), repeat(half[:, 0, :2].norm(dim=-1)))
     valid = (valid & clear & lane_clear).view(n, k)
+    if randomized:
+        rejected[3] += (~(clear & lane_clear)).sum()
     valid[:, 2:] &= allowed
     missing = (~valid.any(-1)).nonzero().flatten()
     grid_rows = grid_candidates = grid_batches = 0
@@ -251,13 +394,23 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
             return t[missing, None].expand(-1, 8, *t.shape[1:]).reshape(len(missing)*8, *t.shape[1:]).contiguous()
         target_world = extra(shelf_pos)+quat_apply(extra(shelf_quat), fallback.flatten(0, 1))
         target_base = quat_apply_inverse(extra(base_quat), target_world-extra(base_pos))
-        fa, fv, fp, fr = env._fast_ik.solve(target_base, extra(default_quat),
+        fq = extra(default_quat)
+        if randomized:
+            fq, fhand, fdrive, frpy, ftilt, fself = posture(fq, extra(base_quat), extra(shelf_quat))
+        fa, fv, fp, fr = env._fast_ik.solve(target_base, fq,
                                            extra(env._fast_initial[ids]), extra(env._fast_limits[ids]))
         fj = extra(env.scene['robot'].data.default_joint_pos[ids]).clone()
         fj[:, env._goal_reset_arm_ids] = fa
+        if randomized:
+            fj[:, sampler.hand_ids] = fhand
+            rejected[2] += (~fv).sum()
+            fv &= ftilt & fself
         fl, fh = model.boxes(fj, extra(base_local), extra(rotation_local))
-        fv &= model.clear_boxes(fl, fh, extra(centers-object_half), extra(centers+object_half), extra(active))
-        fv &= model.lane_clear(fl, fh, extra(start), extra(goal), extra(half[:, 0, :2].norm(dim=-1)))
+        fclear = model.clear_boxes(fl, fh, extra(centers-object_half), extra(centers+object_half), extra(active))
+        fclear &= model.lane_clear(fl, fh, extra(start), extra(goal), extra(half[:, 0, :2].norm(dim=-1)))
+        fv &= fclear
+        if randomized:
+            rejected[3] += (~fclear).sum()
         fv = fv.view(-1, 8)
         pending = (~fv.any(-1)).nonzero().flatten()
         if bounded and len(pending):
@@ -285,15 +438,25 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
                 poses[..., 2] += default_local[rows, 2, None]
                 world = expand(shelf_pos)+quat_apply(expand(shelf_quat), poses.flatten(0, 1))
                 target = quat_apply_inverse(expand(base_quat), world-expand(base_pos))
-                ga, gv, gp, gr = env._fast_ik.solve(target, expand(default_quat),
+                gq = expand(default_quat)
+                if randomized:
+                    gq, ghand, gdrive, grpy, gtilt, gself = posture(gq, expand(base_quat), expand(shelf_quat))
+                ga, gv, gp, gr = env._fast_ik.solve(target, gq,
                     expand(env._fast_initial[ids]), expand(env._fast_limits[ids]))
                 gj = expand(env.scene['robot'].data.default_joint_pos[ids]).clone()
                 gj[:, env._goal_reset_arm_ids] = ga
+                if randomized:
+                    gj[:, sampler.hand_ids] = ghand
+                    rejected[2] += (~gv).sum()
+                    gv &= gtilt & gself
                 gl, gh = model.boxes(gj, expand(base_local), expand(rotation_local))
-                gv &= model.clear_boxes(gl, gh, expand(centers-object_half),
-                                         expand(centers+object_half), expand(active))
-                gv &= model.lane_clear(gl, gh, expand(start), expand(goal),
-                                        expand(half[:, 0, :2].norm(dim=-1)))
+                gclear = model.clear_boxes(gl, gh, expand(centers-object_half),
+                                          expand(centers+object_half), expand(active))
+                gclear &= model.lane_clear(gl, gh, expand(start), expand(goal),
+                                          expand(half[:, 0, :2].norm(dim=-1)))
+                gv &= gclear
+                if randomized:
+                    rejected[3] += (~gclear).sum()
                 gv = gv.view(-1, count)
                 found = gv.any(-1)
                 first = gv.long().argmax(-1)[found]
@@ -302,10 +465,31 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
                 fa.view(-1, 8, 6)[solved, 0] = ga.view(-1, count, 6)[found, first]
                 fp.view(-1, 8)[solved, 0] = gp.view(-1, count)[found, first]
                 fr.view(-1, 8)[solved, 0] = gr.view(-1, count)[found, first]
+                if randomized:
+                    for dest, src in ((fq, gq), (fhand, ghand), (fdrive, gdrive), (frpy, grpy)):
+                        dest.view(len(missing), 8, -1)[solved, 0] = src.view(len(rows), count, -1)[found, first]
                 fv[solved, 0] = True
                 grid_selected[rows[found]] = True
                 pending = pending[~found]
         if not bool(fv.any(-1).all()):
+            if randomized:
+                directory = getattr(getattr(env, 'cfg', None), 'log_dir', None)
+                if directory:
+                    from pathlib import Path
+                    from time import time_ns
+                    path = Path(directory)/f'initial_pose_failure_{time_ns()}.pt'
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    torch.save(dict(env_ids=ids, failed_env_ids=ids[missing[~fv.any(-1)]],
+                        local=local, yaw=yaw, active=active, sweep_local=sweep_local,
+                        default_local=default_local, desired_local=desired_local,
+                        base_pos=base_pos, base_quat=base_quat, shelf_pos=shelf_pos,
+                        shelf_quat=shelf_quat, default_quat=default_quat, ik_params=ik_params,
+                        rng_before=rng_before, bounds=bounds,
+                        model={name: getattr(model, name) for name in
+                               ('paths', 'frames', 'center', 'half', 'links', 'hand_boxes', 'shelf_low', 'shelf_high')},
+                        initial=env._fast_initial[ids], limits=env._fast_limits[ids],
+                        default_joint_pos=env.scene['robot'].data.default_joint_pos[ids],
+                        arm_ids=env._goal_reset_arm_ids), path)
             raise RuntimeError('Collision-free initial pose budget exhausted: '+str(ids[missing[~fv.any(-1)]].tolist()))
         index = fv.long().argmax(-1)
         rows = torch.arange(len(missing), device=env.device)
@@ -313,6 +497,9 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         angles.view(n, k, 6)[missing, 0] = fa.view(-1, 8, 6)[rows, index]
         pe.view(n, k)[missing, 0] = fp.view(-1, 8)[rows, index]
         re.view(n, k)[missing, 0] = fr.view(-1, 8)[rows, index]
+        if randomized:
+            for dest, src in ((target_quat, fq), (hand, fhand), (drive, fdrive), (rpy, frpy)):
+                dest.view(n, k, -1)[missing, 0] = src.view(len(missing), 8, -1)[rows, index]
         valid[missing, 0] = True
     # Prefer the broad continuous domain. Original outside poses are fallback.
     priority = valid.float()+candidates.new_tensor([0., 0., 1., 1., 1., 1.])
@@ -337,5 +524,14 @@ def select_initial_pose(env, ids, local, yaw, active, sweep_local, default_local
         env._initial_pose_front_selected = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)
     env._initial_pose_red_selected[ids] = selected_red
     env._initial_pose_front_selected[ids] = selected_front
+    if randomized:
+        for name, source in (('_initial_pose_selected_quat_base', target_quat),
+                             ('_initial_pose_hand_targets', hand),
+                             ('_initial_pose_hand_drive', drive), ('_initial_pose_rpy', rpy)):
+            if not hasattr(env, name):
+                setattr(env, name, source.new_zeros(env.num_envs, source.shape[-1]))
+            getattr(env, name)[ids] = source.view(n, k, -1)[row, choice]
+        for reason, count in zip(('tilt', 'hand_self_collision', 'ik', 'external_or_lane'), rejected):
+            env._initial_pose_metrics[f'Reset/{reason}_rejected_fraction'] = count/tested
     return (candidates[row, choice], angles.view(n, k, 6)[row, choice],
             pe.view(n, k)[row, choice], re.view(n, k)[row, choice])

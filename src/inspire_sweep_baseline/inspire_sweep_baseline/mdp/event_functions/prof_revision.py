@@ -9,6 +9,16 @@ from ..common.stabilize_sweep_contact import cache_static_local_com
 from ..common.prof_revision_obb_gpu import observe_batch, observe_hard_batch
 
 
+def initialize_wide_geometry(env, env_ids):
+    """Child-only layout constructor; keep other startup call contracts intact."""
+    from functools import partial
+    from .wrench_refactor_relative_ik_test import initialize_fast_geometry
+    from ..common.prof_revision_layout import ProfRevisionWideLayout
+    initialize_fast_geometry(env, env_ids, layout_class=partial(
+        ProfRevisionWideLayout, workspace_inset=env.cfg.target_workspace_inset_m,
+        spawn_extra_inset=env.cfg.target_spawn_extra_inset_m))
+
+
 def _snapshot(env, ids, local, yaw, active, shelf_state, *, hard=False):
     bounds = env._revision_bounds_t[ids]
     rotations = torch.zeros((*yaw.shape, 4), device=env.device)
@@ -112,6 +122,8 @@ def reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.02,
     }
     if hard:
         env._reset_diagnostics['Reset/slot_overflow_truncations'] = diagnostics['overflow']
+        env._reset_diagnostics['Reset/layout_rank_retries'] = float(env._fast_layout.last_retries)
+    elif hasattr(env._fast_layout, 'workspace_inset'):
         env._reset_diagnostics['Reset/layout_rank_retries'] = float(env._fast_layout.last_retries)
     if ik_params.get('initial_pose_mode') in ('front_area', 'shelf_area_v1'):
         env._reset_diagnostics.update(env._initial_pose_metrics)

@@ -11,6 +11,7 @@ from ..mdp.terminations.prof_revision import ProfRevisionTerminationsCfg, ProfRe
 from ..mdp.events.prof_revision import ProfRevisionEventsCfg, ProfRevisionHardEventsCfg
 from ..mdp.events.prof_revision import ProfRevisionV0_3_3IKEventsCfg
 from ..mdp.events.prof_revision import ProfRevisionV0_3_3IKV1EventsCfg
+from ..mdp.events.prof_revision import ProfRevisionHardV0_3_4IKEventsCfg
 from ..mdp.action_functions.wrench_refactor import SweepOnlyClippedOSCAction
 from ..mdp.action_functions.sweep_simple import NormalizedFingerJointPositionAction
 from ..mdp.observation_functions.stabilize_sweep import legacy_clipped_previous_action
@@ -258,3 +259,39 @@ class ProfRevisionV0_3_3IKV1EnvCfg(ProfRevisionV0_3_3EnvCfg):
             if (len(bounds) != 2 or not all(math.isfinite(v) for v in bounds)
                     or bounds[1]-bounds[0] <= .002):
                 raise ValueError(f'{name} must be finite with width greater than 2mm')
+
+
+@configclass
+class ProfRevisionHardV0_3_4IKEnvCfg(ProfRevisionV0_3_4EnvCfg):
+    """v0_3_4 rewards with broad starts/goals and collision-checked hand resets.
+
+    Hard here names the wide-workspace variant: the parent's cylinder target,
+    six-obstacle capacity, observations, policy and physics are preserved.
+    """
+
+    events: ProfRevisionHardV0_3_4IKEventsCfg = ProfRevisionHardV0_3_4IKEventsCfg()
+    target_workspace_inset_m: float = .02
+    target_spawn_extra_inset_m: float = .06
+
+    def __post_init__(self):
+        import math
+        super().__post_init__()
+        p = self.events.object_spawn.params['ik_params']
+        for name in ('initial_x_bounds', 'front_y_bounds'):
+            bounds = p[name]
+            if len(bounds) != 2 or not all(math.isfinite(v) for v in bounds) or bounds[1]-bounds[0] <= .002:
+                raise ValueError(f'{name} must have finite width greater than 2mm')
+        if not math.isfinite(self.target_workspace_inset_m) or self.target_workspace_inset_m < 0:
+            raise ValueError('target_workspace_inset_m must be finite and nonnegative')
+        if not math.isfinite(self.target_spawn_extra_inset_m) or self.target_spawn_extra_inset_m < 0:
+            raise ValueError('target_spawn_extra_inset_m must be finite and nonnegative')
+        if (len(p['orientation_bounds_deg']) != 3
+                or not all(math.isfinite(v) and 0 <= v <= 30 for v in p['orientation_bounds_deg'])
+                or not math.isfinite(p['max_tilt_deg']) or not 0 <= p['max_tilt_deg'] <= 15):
+            raise ValueError('Invalid conservative reset orientation bounds')
+        if len(p['hand_drive_bounds']) != 6 or any(
+                len(v) != 2 or not all(math.isfinite(x) for x in v) or not 0 <= v[0] <= v[1] <= 1
+                for v in p['hand_drive_bounds']):
+            raise ValueError('hand_drive_bounds must contain six normalized intervals')
+        if not math.isfinite(p['hand_self_clearance_m']) or p['hand_self_clearance_m'] < 0:
+            raise ValueError('hand_self_clearance_m must be finite and nonnegative')

@@ -69,6 +69,12 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
     def _additional_step_metrics(self):
         return {}
 
+    def _update_geometry(self, ids=None):
+        update_geometry(self, ids)
+
+    def _target_linear_speed(self, data):
+        return data.object_lin_vel_w[:, 0].norm(dim=-1)
+
     def load_managers(self):
         shelf = self.scene['shelf'].data
         self._revision_initial_shelf_pos = shelf.root_pos_w.clone()
@@ -108,7 +114,7 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
             contacts=self._stabilize_contacts
             contacts.capture(self)
             if contacts.samples == self.cfg.decimation:
-                update_geometry(self)
+                self._update_geometry()
                 self._stabilize_state.finish(
                     self._obb_live_pos_w, self.command_manager.get_command('target_goal_pos'),
                     contacts.force_sum/contacts.samples, contacts.contact, contacts.all_valid,
@@ -161,7 +167,7 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
         goal = self.command_manager.get_command('target_goal_pos')
         distance = (self._obb_live_pos_w[:, :2] - goal[:, :2]).norm(dim=-1)
         values = torch.stack((distance, velocity.norm(dim=-1),
-                              data.object_lin_vel_w[:, 0].norm(dim=-1),
+                              self._target_linear_speed(data),
                               (distance <= self.cfg.goal_success_radius).float()), dim=-1)
         valid = torch.isfinite(values)
         valid[:, 3] = valid[:, 0]
@@ -206,7 +212,7 @@ class ProfRevisionEnv(ManagerBasedRLEnv):
         self.sensor_data_fresh[env_ids] = False
         super()._reset_idx(env_ids)
         if hasattr(self,"_stabilize_contacts"):self._stabilize_contacts.reset(env_ids)
-        update_geometry(self, env_ids)
+        self._update_geometry(env_ids)
         self._stabilize_state.reset(env_ids, self._obb_live_pos_w[env_ids],
             self.command_manager.get_command('target_goal_pos')[env_ids],
             self.scene['ee_frame'].data.target_pos_w[env_ids, 0], self.cfg.reach_near_radius)
@@ -257,3 +263,146 @@ class ProfRevisionV0_3_4Env(ProfRevisionV0_3_2Env):
         return ProfRevisionContactAlignedState(
             count, device, cfg.sweep_force_fade_inner_m, cfg.sweep_force_fade_outer_m,
             cfg.sweep_precision_radius_m, cfg.sweep_precision_max_multiplier)
+
+
+class ProfRevisionHardV0_3_4IKEnv(ProfRevisionV0_3_4Env):
+    """Keep parent step/rewards; synchronize randomized fingers after reset."""
+
+    def _reset_idx(self, env_ids):
+        super()._reset_idx(env_ids)
+        drive = self._initial_pose_hand_drive[env_ids]
+        self.action_manager.get_term('gripper_action').initialize_hold(drive, env_ids)
+        self.action_manager._action[env_ids, 6:] = drive
+        self.action_manager._prev_action[env_ids, 6:] = drive
+
+
+class ProfRevisionSequenceEnv(ProfRevisionV0_3_2Env):
+    """Play-only left/right sequence; timeout switches observations, never poses."""
+
+    def __init__(self, cfg, render_mode=None, **kwargs):
+        if cfg.scene.num_envs != 1:
+            raise ValueError('Sequence playback requires exactly one environment')
+        self.sequence_stage = 0
+        self.sequence_records = []
+        self.sequence_transitions = []
+        self.sequence_finished = False
+        self.sequence_failed = False
+        self._sequence_initializing = True
+        self._sequence_ready = False
+        self.sequence_physical_resets = 0
+        super().__init__(cfg, render_mode=render_mode, **kwargs)
+        from ..mdp.common.prof_revision_sequence import SequenceContactSamples
+        self._stabilize_contacts = SequenceContactSamples(self)
+        self._sequence_initializing = False
+
+    def reset(self, seed=None, env_ids=None, options=None):
+        self._sequence_initializing = True
+        try:
+            return super().reset(seed=seed, env_ids=env_ids, options=options)
+        finally:
+            self._sequence_initializing = False
+
+    def _update_geometry(self, ids=None):
+        update_geometry(self, ids, target_index=self.sequence_stage)
+
+    def _target_linear_speed(self, data):
+        return data.object_lin_vel_w[:, self.sequence_stage].norm(dim=-1)
+
+    def _physical_snapshot(self):
+        """Exact transition audit; these buffers must remain bitwise unchanged."""
+        robot = self.scene['robot'].data
+        values = dict(joint_pos=robot.joint_pos, joint_vel=robot.joint_vel,
+                      robot_root=robot.root_state_w,
+                      objects=self.scene['object_collection'].data.object_link_state_w,
+                      shelf=self.scene['shelf'].data.root_state_w,
+                      action=self.action_manager.action, previous_action=self.action_manager.prev_action)
+        for name,term in self.action_manager._terms.items():
+            for key,value in vars(term).items():
+                if isinstance(value,torch.Tensor):
+                    values[f'action_term/{name}/{key}'] = value
+            controller = getattr(term,'_osc',getattr(term,'_controller',None))
+            if controller is not None:
+                for key,value in vars(controller).items():
+                    if isinstance(value,torch.Tensor):
+                        values[f'controller/{name}/{key}'] = value
+        return {key:value.clone() for key,value in values.items()}
+
+    def _refresh_sequence_target(self):
+        from isaaclab.utils.math import quat_apply
+        from ..mdp.common.prof_revision_sequence import GOAL_XY, refresh_sequence_snapshot
+        index = self.sequence_stage
+        self.target_id[:,0] = index
+        data = self.scene['object_collection'].data
+        command = self.command_manager.get_term('target_goal_pos')
+        command.target_init_state_w.copy_(data.object_link_state_w[:,index])
+        goal_local = data.object_link_pos_w.new_tensor([[*GOAL_XY[index],float(self._refactor_spawn_z[0,index])]])
+        shelf = self.scene['shelf'].data
+        command.pos_command_w.copy_(shelf.root_pos_w+quat_apply(shelf.root_quat_w,goal_local))
+        self.sweep_dir.copy_(command.pos_command_w-data.object_link_pos_w[:,index])
+        self.target_width[:,0] = self._fast_visibility_radii[:,index]
+        refresh_sequence_snapshot(self,index)
+        self._update_geometry()
+        self._stabilize_contacts.select_target(self,index)
+        self._stabilize_contacts.reset(torch.tensor([0],device=self.device))
+        self._stabilize_state.reset(torch.tensor([0],device=self.device),self._obb_live_pos_w,
+            self.command_manager.get_command('target_goal_pos'),
+            self.scene['ee_frame'].data.target_pos_w[:,0],self.cfg.reach_near_radius)
+        # A new stage's obstacle reference is its actual current scene, not the original layout.
+        self._initial_object_positions_w.copy_(data.object_pos_w)
+        self.observation_manager.reset(env_ids=torch.tensor([0],device=self.device))
+        self.episode_length_buf[:] = 0
+        self._metric_sums.zero_()
+        self._metric_counts.zero_()
+        self._metric_peaks.zero_()
+        self._metric_final_distance.zero_()
+        self._metric_min_distance.fill_(float('inf'))
+        for values in self.reward_manager._episode_sums.values():
+            values.zero_()
+        # Action/controller and whole-hand/F/T histories deliberately continue.
+
+    def _reset_idx(self, env_ids):
+        from ..mdp.common.prof_revision_sequence import DIRECTIONS, SEQUENCE_COUNT
+        if self._sequence_initializing or not self._sequence_ready:
+            self.sequence_stage = 0
+            super()._reset_idx(env_ids)
+            self.sequence_records.clear()
+            self.sequence_transitions.clear()
+            self.sequence_finished = self.sequence_failed = False
+            self.sequence_physical_resets += 1
+            if hasattr(self,'_stabilize_contacts'):
+                self._refresh_sequence_target()
+                self._sequence_ready = True
+            return
+        index = self.sequence_stage
+        failures = [name for name in ('object_fall_or_tilt','shelf_failure','tcp_linear_velocity')
+                    if bool(self.termination_manager.get_term(name)[0])]
+        goal = self.command_manager.get_command('target_goal_pos')[0,:3].clone()
+        target = self._obb_live_pos_w[0].clone()
+        distance = float((target[:2]-goal[:2]).norm())
+        record = dict(stage=index+1,target_slot=index,direction=DIRECTIONS[index],
+                      steps=int(self.episode_length_buf[0]),distance_m=distance,
+                      success=bool(self.termination_manager.get_term('success')[0]),failures=failures,
+                      target_position_w=target.tolist(),goal_position_w=goal.tolist(),
+                      object_positions_w=self.scene['object_collection'].data.object_link_pos_w[0,:SEQUENCE_COUNT].tolist())
+        self.sequence_records.append(record)
+        print(f'[Sequence] stage {index+1}: success={record["success"]}, distance={distance*1000:.1f}mm, failures={failures}',flush=True)
+        if failures or index == SEQUENCE_COUNT-1:
+            self.sequence_failed = bool(failures)
+            self.sequence_finished = True
+            return
+        before = self._physical_snapshot()
+        self.sequence_stage += 1
+        self._refresh_sequence_target()
+        after = self._physical_snapshot()
+        changed = [name for name in before if not torch.equal(before[name],after[name])]
+        if changed:
+            raise RuntimeError('Sequence transition changed physical/controller state: '+str(changed))
+        self.sequence_transitions.append(dict(from_stage=index+1,to_stage=index+2,
+            physics_step_counter=self._sim_step_counter,physical_state_preserved=True,
+            checked_buffers=list(before),joint_pos=before['joint_pos'][0].tolist(),
+            joint_vel=before['joint_vel'][0].tolist(),objects=before['objects'][0,:SEQUENCE_COUNT].tolist()))
+
+    def step(self, action):
+        if self.sequence_finished:
+            raise RuntimeError('Sequence finished; refusing further physics steps or automatic reset')
+        return super().step(action)

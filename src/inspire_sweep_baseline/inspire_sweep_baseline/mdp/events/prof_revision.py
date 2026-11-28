@@ -5,6 +5,7 @@ from ..event_functions.wrench_refactor import initialize_physics
 from ..event_functions.wrench_refactor_relative_ik_test import initialize_fast_geometry, fast_reset_scene
 from ..event_functions.prof_revision import reset_scene
 from ..event_functions.prof_revision import reset_hard_scene
+from ..event_functions.prof_revision import initialize_wide_geometry
 from ..common.prof_revision_layout import ProfRevisionHardLayout
 
 @configclass
@@ -35,3 +36,15 @@ class ProfRevisionV0_3_3IKV1EventsCfg(ProfRevisionEventsCfg):
     def __post_init__(self):
         self.object_spawn.params['ik_params'].update(
             initial_pose_mode='shelf_area_v1', initial_x_bounds=(-.2, .3), front_y_bounds=(-.25, .25))
+
+
+@configclass
+class ProfRevisionHardV0_3_4IKEventsCfg(ProfRevisionV0_3_3IKV1EventsCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.object_geometry.func = initialize_wide_geometry
+        self.object_spawn.params.update(spawn_radius=None, max_goal_distance=None)
+        self.object_spawn.params['ik_params'].update(
+            front_y_bounds=(-.45, .45), orientation_bounds_deg=(10., 5., 15.), max_tilt_deg=10.,
+            hand_drive_bounds=((0., .3), (0., .55), (0., .55), (0., .55), (0., .5), (0., .15)),
+            hand_self_clearance_m=.002)

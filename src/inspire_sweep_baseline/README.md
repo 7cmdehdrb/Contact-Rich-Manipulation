@@ -1,5 +1,13 @@
 # Inspire Sweep Baseline
 
+2026-11-28 후속: Hard-v0_3_4-IK의 **초기 타겟 영역만 각 변6cm씩 추가 축소**했다. 반지름4cm 기준 중심 X±6/Y±36cm, 물체 표면–선반 테두리 최소10cm다. 목표 영역은 X±12/Y±42cm로 유지한다. 관련26검사·실제384초기화 통과. [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-28_prof_revision_hard_v0_3_4_ik_implementation.md#후속--초기-타겟-스폰-영역-축소).
+
+2026-11-28: **Hard-v0_3_4-IK 추가**. `Inspire-Sweep-Prof-Revision-Hard-v0_3_4-IK`는 v0_3_4의 보상/관측/제어/종료를 상속하고 물체·목표 영역, IK 손 위치·방향·굽힘을 확대한다. 목표 최소6cm~안전 경계, 원통 타겟·장애물0–6개, 초기 충돌 검사와 손 제어 상태 동기화. 실제 밀기 경로+시작 접근 공간을 확보한다. 실제64환경 reset/step·PPO1회 및204,800장면 기하/IK 검사 통과. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-hard-v0_3_4-ik) · [구현·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-28_prof_revision_hard_v0_3_4_ik_implementation.md).
+
+두 원통 시연의 손 시작 자세는 일반 `Inspire-Sweep-Prof-Revision-v0_3_3` 기준이다. IK-v1 checkpoint는 그대로 사용하고 단계 사이 손 자세를 유지한다.
+
+2026-11-28 후속: **원통 2개 연속 Play로 간소화**. 기존 `play_three_cylinder_sequence.py` 명령으로 중앙의 두 원통을 왼쪽→오른쪽으로 민다. 각 10초, 목표 거리 6cm, 단계 사이 물리/action/controller 상태 보존. 기본 출력은 `outputs/two_cylinder_sequence`다. [배치·실행·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-28_three_cylinder_sequence.md).
+
 2026-11-27: **Prof Revision v0_3_4 추가**. 일반 v0_3_3 직접 상속, retreat −100·팔/손 action-rate 및 joint-velocity 각각 통합·접촉과 방향 gate 일치·장애물 허용5N·손목 변화 허용5N/0.3Nm를 적용한다. 통합 비용은 기존 그룹별 cap과 합을 유지한다. [계약·학습](../../example/Contact-Rich-Manipulation-Context/02_implementation/environments/PROF_REVISION_V0.md#prof-revision-v0_3_4) · [변경·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-27_prof_revision_v0_3_4_implementation.md).
 
 2026-11-27 후속: **Prof Revision IK-v1 reset 후보 소진 수정**. 기존14후보가 모두 충돌할 때만 승인된 동일 범위의 양측9×9×3 격자를 최대3회 batch로 검사한다. 보상·Scene·EEF 범위와 기존IK 보존. 재현 회귀·2,097,152장면 후보 검사·실제128환경 검증 통과. [원인·수정·검증](../../example/Contact-Rich-Manipulation-Context/02_implementation/logs/2026-11-27_prof_revision_v0_3_3_ik_v1_implementation.md).

@@ -70,3 +70,12 @@ class NormalizedFingerJointPositionAction(FingerJointPositionAction):
         self._raw_actions[:] = actions
         self._processed_actions[:] = actions.clamp(0.0, 1.0) * self._upper_limits
         self._joint_targets[:] = self._processed_actions[:, self._drive_indices] * self._multipliers
+
+    def initialize_hold(self, actions, env_ids):
+        """Child reset only: match normalized history and physical hold targets."""
+        self._raw_actions[env_ids] = actions
+        processed = actions.clamp(0., 1.)*self._upper_limits
+        targets = processed[:, self._drive_indices]*self._multipliers
+        self._processed_actions[env_ids] = processed
+        self._joint_targets[env_ids] = targets
+        self._asset.set_joint_position_target(targets, joint_ids=self._joint_ids, env_ids=env_ids)

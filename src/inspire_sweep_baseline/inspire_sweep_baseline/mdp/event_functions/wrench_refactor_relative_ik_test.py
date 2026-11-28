@@ -286,6 +286,8 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
             env, ids, local, yaw, active, sweep_local, default_local, desired_local,
             base_pos, base_quat, shelf_pos, shelf_quat, default_quat, ik_params)
         desired_world = shelf_pos + quat_apply(shelf_quat, desired_local)
+        if 'orientation_bounds_deg' in ik_params:
+            default_quat = env._initial_pose_selected_quat_base[ids]
     else:
         angles, valid, pe, re = env._fast_ik.solve(desired_base, default_quat,
                                                  env._fast_initial[ids], env._fast_limits[ids])
@@ -301,6 +303,10 @@ def fast_reset_scene(env, env_ids, ik_params, spawn_radius=.02, edge_clearance=.
     velocity = robot.data.default_joint_vel[ids].clone()
     joints[:, env._goal_reset_arm_ids] = angles
     velocity[:, env._goal_reset_arm_ids] = 0.
+    if 'orientation_bounds_deg' in ik_params:
+        hand_ids = env._initial_hand_randomizer.hand_ids
+        joints[:, hand_ids] = env._initial_pose_hand_targets[ids]
+        velocity[:, hand_ids] = 0.
     shelf.write_root_state_to_sim(shelf_state, env_ids=ids)
     if reuse_unchanged_states:
         from .stabilize_sweep import write_test_reset_root_state, write_test_reset_object_state

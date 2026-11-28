@@ -51,7 +51,7 @@ def distance_angle_formation(gaps, normals_e, toward_center_e, distance_scale):
     return contribution.sum(-1), proximity, alignment, contribution
 
 
-def update_geometry(env, ids=None):
+def update_geometry(env, ids=None, target_index=0):
     # One common path for all fingers; reset only selected rows.
     rows = slice(None) if ids is None else ids
     data = env.scene['robot'].data
@@ -66,8 +66,8 @@ def update_geometry(env, ids=None):
     env._finger_pos_w[rows] = finger
     env._finger_pose_e[rows] = torch.cat((relative_pos, relative_quat[..., 1:], relative_quat[..., :1]), -1)
     objects = env.scene['object_collection'].data
-    oq = objects.object_link_quat_w[rows, 0]
-    center = objects.object_link_pos_w[rows, 0]+quat_apply(oq, env._obb_target_local_pos[rows])
+    oq = objects.object_link_quat_w[rows, target_index]
+    center = objects.object_link_pos_w[rows, target_index]+quat_apply(oq, env._obb_target_local_pos[rows])
     rotation = quat_mul(oq, env._obb_target_local_quat[rows])
     env._obb_live_pos_w[rows] = center
     env._obb_live_quat_w[rows] = rotation

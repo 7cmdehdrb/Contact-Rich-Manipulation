@@ -102,8 +102,8 @@ class ContactSamples:
     def begin(self):
         self.samples=0;self.force_sum.zero_();self.squeeze_sum.zero_();self.contact.zero_();self.all_valid.fill_(True)
 
-    def capture(self,env):
-        com=env.scene['object_collection'].data.object_com_pos_w[:,0]
+    def capture(self,env,target_index=0):
+        com=env.scene['object_collection'].data.object_com_pos_w[:,target_index]
         scalar,points,normals,_,counts,starts=self.view.get_contact_data(dt=env.physics_dt)
         normal,torque,load,valid=reduce_contacts(scalar.reshape(-1,1)*normals,points,counts,starts,com)
         # Reduction precedes the second API call: counts/starts are shared by PhysX.

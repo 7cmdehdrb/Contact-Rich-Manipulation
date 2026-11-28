@@ -6,6 +6,136 @@ import warp as wp
 from types import SimpleNamespace
 
 
+def sample_wide_goals(target, lower, upper, minimum, angle_draw, distance_draw):
+    """Uniform feasible angle and ray distance, without rejecting start points.
+
+    Split the circle at its (at most eight) rectangle intersections. Duplicate
+    endpoints give zero-length intervals, including tangencies and corners.
+    """
+    tau = 2 * math.pi
+    edges = torch.cat(((lower-target)/minimum, (upper-target)/minimum), -1)
+    x, y = edges[:, (0, 2)], edges[:, (1, 3)]
+    ax, ay = x.clamp(-1, 1).acos(), y.clamp(-1, 1).asin()
+    angles = torch.cat((ax, tau-ax, ay.remainder(tau), (math.pi-ay).remainder(tau)), -1)
+    exists = torch.cat((x.abs() <= 1, x.abs() <= 1, y.abs() <= 1, y.abs() <= 1), -1)
+    angles = torch.where(exists, angles, 0.)
+    cuts = torch.cat((target.new_zeros(len(target), 1), angles,
+                      target.new_full((len(target), 1), tau)), -1).sort(-1).values
+    mid = (cuts[:, 1:]+cuts[:, :-1])/2
+    endpoint = target[:, None]+minimum*torch.stack((mid.cos(), mid.sin()), -1)
+    allowed = ((endpoint >= lower[:, None]) & (endpoint <= upper[:, None])).all(-1)
+    lengths = (cuts[:, 1:]-cuts[:, :-1])*allowed
+    cumulative = lengths.cumsum(-1)
+    total = cumulative[:, -1]
+    if bool((total <= 0).any()):
+        raise ValueError('Wide target domain has no feasible minimum-distance direction')
+    rank = angle_draw*total
+    index = (cumulative <= rank[:, None]).sum(-1).clamp_max(lengths.shape[1]-1)
+    previous = torch.cat((total.new_zeros(len(total), 1), cumulative[:, :-1]), -1)
+    theta = cuts.gather(1, index[:, None]).squeeze(-1)+rank-previous.gather(1, index[:, None]).squeeze(-1)
+    direction = torch.stack((theta.cos(), theta.sin()), -1)
+    boundary = torch.where(direction >= 0, upper, lower)
+    ray = torch.where(direction.abs() > 1e-10, (boundary-target)/direction,
+                      torch.full_like(direction, float('inf'))).amin(-1)
+    if bool((ray < minimum-1e-6).any()):
+        raise RuntimeError('Feasible angle produced a ray shorter than the minimum')
+    distance = minimum+(ray-minimum)*distance_draw
+    return target+distance[:, None]*direction
+
+
+class ProfRevisionWideLayout(CircleResetLayout):
+    """v0_3_4's six-obstacle packing with broad, footprint-safe start/goal XY."""
+
+    def __init__(self, bounds, spawn_z, clearance=.01, cell_size=.005, epsilon=1e-6, *,
+                 workspace_inset=.02, spawn_extra_inset=.06):
+        super().__init__(bounds, spawn_z, clearance, cell_size, epsilon)
+        if not math.isfinite(workspace_inset) or workspace_inset < 0:
+            raise ValueError('workspace_inset must be finite and nonnegative')
+        self.workspace_inset = workspace_inset
+        if not math.isfinite(spawn_extra_inset) or spawn_extra_inset < 0:
+            raise ValueError('spawn_extra_inset must be finite and nonnegative')
+        self.spawn_extra_inset = spawn_extra_inset
+        # This child's target is the parent's known upright cylinder. Its XY
+        # footprint is a disk, not the diagonal circle around its bounding box.
+        # Use its true conservative radius while retaining all clearance terms.
+        self.radius[:, 0] = ((bounds[:, 0, 1, :2]-bounds[:, 0, 0, :2])/2).amax(-1)
+        self.expanded[:, 0] = self.radius[:, 0]+clearance
+
+    @staticmethod
+    def approach_and_lane_distance(points, start, goal):
+        """Reserve the full sweep and the initial front approach, with the
+        SAME radius/margin as the parent. Avoid filling their convex hull:
+        long cross-shelf goals otherwise consume nearly the whole shelf.
+        """
+        approach = start.clone()
+        approach[:, 0] = .2
+        def distance(end):
+            delta = end-start
+            offset = points[None]-start[:, None]
+            t = ((offset*delta[:, None]).sum(-1)/delta.square().sum(-1).clamp_min(1e-20)[:, None]).clamp(0., 1.)
+            return (offset-t[..., None]*delta[:, None]).norm(dim=-1)
+        return torch.minimum(distance(goal), distance(approach))
+
+    def _retry_circle_cells(self, points, boundary, red, target_radius, radii, requested, draws,
+                            cell_margin, cell_size):
+        from .stabilize_sweep_layout import _select_test_cells
+        result = _select_test_cells(points, boundary, red, target_radius, radii, requested,
+                                    draws, cell_margin, cell_size)
+        for attempt in range(1, 9):
+            rows = (~result.complete).nonzero().flatten()
+            if not len(rows):
+                break
+            retry_draws = draws[rows].clone()
+            retry_draws[..., 0] = (retry_draws[..., 0]+attempt*.61803398875).remainder(1.)
+            retry = _select_test_cells(points, boundary, red[rows], target_radius[rows], radii[rows],
+                                       requested[rows], retry_draws, cell_margin, cell_size)
+            for name in ('indices', 'enabled', 'complete', 'failed_slot'):
+                getattr(result, name)[rows] = getattr(retry, name)
+            self.last_retries = max(self.last_retries, attempt)
+        return result
+
+    def sample(self, ids, generator, **command_params):
+        # configure_test_layout_batch is shared with the parent. Restore this
+        # child's reservation rule on its own instance before running packing.
+        self.red_distance = self.approach_and_lane_distance
+        self.cell_selector = (self._retry_circle_cells if self.bounds.dtype == torch.float32
+                              and len(self.cells) <= 16000 else None)
+        self.last_retries = 0
+        return super().sample(ids, generator, **command_params)
+
+    def workspace_bounds(self, ids, edge_clearance=.02):
+        # Root-relative footprint after the unchanged target yaw (-pi/2).
+        bounds = self.bounds[ids, 0]
+        low = torch.stack((bounds[:, 0, 1], -bounds[:, 1, 0]), -1)
+        high = torch.stack((bounds[:, 1, 1], -bounds[:, 0, 0]), -1)
+        shelf = bounds.new_tensor([.2, .5])
+        return (-shelf+edge_clearance+self.workspace_inset-low,
+                shelf-edge_clearance-self.workspace_inset-high)
+
+    def sample_commands(self, ids, generator, spawn_radius=None, edge_clearance=.02,
+                        excluded_x_half_angle=0., min_goal_distance=.06, max_goal_distance=None):
+        if spawn_radius is not None or max_goal_distance is not None or excluded_x_half_angle != 0:
+            raise ValueError('Wide layout requires rectangular starts and uncapped, full feasible directions')
+        if (not math.isfinite(edge_clearance) or edge_clearance < .005
+                or not math.isfinite(min_goal_distance) or min_goal_distance <= 0):
+            raise ValueError('Invalid wide-layout clearance or minimum distance')
+        lower, upper = self.workspace_bounds(ids, edge_clearance)
+        if bool(((upper <= lower).any(-1) | ((upper-lower)/2).norm(dim=-1).lt(min_goal_distance)).any()):
+            raise ValueError('Wide domain must support the minimum distance from every start')
+        spawn_lower, spawn_upper = lower+self.spawn_extra_inset, upper-self.spawn_extra_inset
+        if bool((spawn_upper <= spawn_lower).any()):
+            raise ValueError('Extra spawn inset leaves no target start area')
+        draw = torch.rand((len(ids), 4), device=lower.device, dtype=lower.dtype, generator=generator)
+        target = spawn_lower+draw[:, :2]*(spawn_upper-spawn_lower)
+        goal = sample_wide_goals(target, lower, upper, min_goal_distance, draw[:, 2], draw[:, 3])
+        return target, goal
+
+    def spawn_bounds(self, ids, edge_clearance=.02):
+        """Leave hand room around initial targets; retain the wider goal domain."""
+        lower, upper = self.workspace_bounds(ids, edge_clearance)
+        return lower+self.spawn_extra_inset, upper-self.spawn_extra_inset
+
+
 class ProfRevisionHardLayout(CircleResetLayout):
     """Ten-slot box exclusion on a cached 4,000-cell shelf grid.
 
